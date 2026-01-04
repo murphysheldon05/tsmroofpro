@@ -123,6 +123,7 @@ export type Database = {
           assigned_to: string | null
           created_at: string
           description: string | null
+          file_path: string | null
           id: string
           status: string | null
           submitted_by: string
@@ -134,6 +135,7 @@ export type Database = {
           assigned_to?: string | null
           created_at?: string
           description?: string | null
+          file_path?: string | null
           id?: string
           status?: string | null
           submitted_by: string
@@ -145,6 +147,7 @@ export type Database = {
           assigned_to?: string | null
           created_at?: string
           description?: string | null
+          file_path?: string | null
           id?: string
           status?: string | null
           submitted_by?: string

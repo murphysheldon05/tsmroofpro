@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +23,11 @@ import {
   XSquare,
   Eye,
   Loader2,
+  Upload,
+  File,
+  X,
+  Download,
+  Info,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -30,6 +35,7 @@ import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { formatDistanceToNow, format } from "date-fns";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const requestTypes = [
   {
@@ -84,6 +90,7 @@ interface Request {
   assigned_to: string | null;
   created_at: string;
   updated_at: string;
+  file_path: string | null;
   profiles?: {
     full_name: string | null;
     email: string | null;
@@ -100,6 +107,26 @@ export default function Requests() {
   const [submitted, setSubmitted] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<Request | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 20 * 1024 * 1024) {
+        toast.error("File size must be less than 20MB");
+        return;
+      }
+      setSelectedFile(file);
+    }
+  };
+
+  const clearSelectedFile = () => {
+    setSelectedFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
 
   // Fetch user's own requests
   const { data: myRequests, refetch } = useQuery({
@@ -157,11 +184,27 @@ export default function Requests() {
 
     setIsSubmitting(true);
     try {
+      let filePath: string | null = null;
+
+      // Upload file if selected
+      if (selectedFile) {
+        const fileExt = selectedFile.name.split(".").pop();
+        const fileName = `${user.id}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from("request-attachments")
+          .upload(fileName, selectedFile);
+
+        if (uploadError) throw uploadError;
+        filePath = fileName;
+      }
+
       const { error } = await supabase.from("requests").insert({
         type,
         title: title.trim(),
         description: description.trim() || null,
         submitted_by: user.id,
+        file_path: filePath,
       });
 
       if (error) throw error;
@@ -171,6 +214,7 @@ export default function Requests() {
       setType("");
       setTitle("");
       setDescription("");
+      clearSelectedFile();
       refetch();
 
       setTimeout(() => setSubmitted(false), 3000);
@@ -259,6 +303,10 @@ export default function Requests() {
                 isSubmitting={isSubmitting}
                 submitted={submitted}
                 handleSubmit={handleSubmit}
+                selectedFile={selectedFile}
+                onFileSelect={handleFileSelect}
+                onClearFile={clearSelectedFile}
+                fileInputRef={fileInputRef}
               />
               <MyRequestsList requests={myRequests || []} />
             </TabsContent>
@@ -306,6 +354,10 @@ export default function Requests() {
               isSubmitting={isSubmitting}
               submitted={submitted}
               handleSubmit={handleSubmit}
+              selectedFile={selectedFile}
+              onFileSelect={handleFileSelect}
+              onClearFile={clearSelectedFile}
+              fileInputRef={fileInputRef}
             />
             <MyRequestsList requests={myRequests || []} />
           </div>
@@ -349,6 +401,29 @@ export default function Requests() {
                     </span>
                   </div>
                 </div>
+
+                {/* Attached File */}
+                {selectedRequest.file_path && (
+                  <div className="p-3 bg-secondary/50 rounded-lg">
+                    <p className="text-sm text-muted-foreground mb-2">Attached Document:</p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-2"
+                      onClick={async () => {
+                        const { data } = await supabase.storage
+                          .from("request-attachments")
+                          .createSignedUrl(selectedRequest.file_path!, 60);
+                        if (data?.signedUrl) {
+                          window.open(data.signedUrl, "_blank");
+                        }
+                      }}
+                    >
+                      <Download className="w-4 h-4" />
+                      Download File
+                    </Button>
+                  </div>
+                )}
 
                 {isManager && selectedRequest.status === 'pending' && (
                   <div className="flex gap-3 pt-4">
@@ -400,6 +475,10 @@ function SubmitRequestForm({
   isSubmitting,
   submitted,
   handleSubmit,
+  selectedFile,
+  onFileSelect,
+  onClearFile,
+  fileInputRef,
 }: {
   type: string;
   setType: (v: string) => void;
@@ -410,6 +489,10 @@ function SubmitRequestForm({
   isSubmitting: boolean;
   submitted: boolean;
   handleSubmit: (e: React.FormEvent) => void;
+  selectedFile: File | null;
+  onFileSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onClearFile: () => void;
+  fileInputRef: React.RefObject<HTMLInputElement>;
 }) {
   return (
     <div className="glass-card rounded-2xl p-6">
@@ -448,6 +531,16 @@ function SubmitRequestForm({
             ))}
           </div>
 
+          {/* Commission Form Instructions */}
+          {type === 'commission' && (
+            <Alert className="bg-primary/5 border-primary/20">
+              <Info className="h-4 w-4 text-primary" />
+              <AlertDescription className="text-sm text-foreground/80">
+                <strong>Instructions:</strong> Fill out your commission details below, then upload the completed commission form document. Include the job number, customer name, sale amount, and your calculated commission. Your manager will review and approve.
+              </AlertDescription>
+            </Alert>
+          )}
+
           <div className="space-y-2">
             <Label htmlFor="title">
               {type === 'commission' ? 'Job/Sale Reference' : 'Subject'}
@@ -477,8 +570,58 @@ function SubmitRequestForm({
             />
           </div>
 
+          {/* File Upload */}
+          <div className="space-y-2">
+            <Label>{type === 'commission' ? 'Commission Form Document' : 'Attachment (optional)'}</Label>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
+              onChange={onFileSelect}
+              className="hidden"
+            />
+            {selectedFile ? (
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50 border border-border/50">
+                <File className="w-5 h-5 text-primary flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground truncate">{selectedFile.name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={onClearFile}
+                  className="flex-shrink-0"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            ) : (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full justify-start gap-2"
+              >
+                <Upload className="w-4 h-4" />
+                {type === 'commission' ? 'Upload Commission Form' : 'Choose File'}
+              </Button>
+            )}
+            <p className="text-xs text-muted-foreground">
+              Accepted formats: PDF, Word, Excel, Images (max 20MB)
+            </p>
+          </div>
+
           <Button type="submit" variant="neon" disabled={!type || !title.trim() || isSubmitting}>
-            {isSubmitting ? "Submitting..." : type === 'commission' ? "Submit for Approval" : "Submit Request"}
+            {isSubmitting ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Submitting...
+              </>
+            ) : type === 'commission' ? "Submit for Approval" : "Submit Request"}
           </Button>
         </form>
       )}
