@@ -209,6 +209,30 @@ export default function Requests() {
 
       if (error) throw error;
 
+      // Get user profile for email notification
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("full_name, email")
+        .eq("id", user.id)
+        .single();
+
+      // Send email notification
+      try {
+        await supabase.functions.invoke("send-request-notification", {
+          body: {
+            type,
+            title: title.trim(),
+            description: description.trim() || null,
+            submitter_name: profile?.full_name || user.email || "Unknown",
+            submitter_email: user.email || "",
+            has_attachment: !!filePath,
+          },
+        });
+      } catch (emailError) {
+        console.error("Failed to send email notification:", emailError);
+        // Don't fail the submission if email fails
+      }
+
       toast.success("Request submitted successfully!");
       setSubmitted(true);
       setType("");
@@ -533,12 +557,83 @@ function SubmitRequestForm({
 
           {/* Commission Form Instructions */}
           {type === 'commission' && (
-            <Alert className="bg-primary/5 border-primary/20">
-              <Info className="h-4 w-4 text-primary" />
-              <AlertDescription className="text-sm text-foreground/80">
-                <strong>Instructions:</strong> Fill out your commission details below, then upload the completed commission form document. Include the job number, customer name, sale amount, and your calculated commission. Your manager will review and approve.
-              </AlertDescription>
-            </Alert>
+            <div className="space-y-3">
+              <Alert className="bg-primary/5 border-primary/20">
+                <Info className="h-4 w-4 text-primary" />
+                <AlertDescription className="text-sm text-foreground/80">
+                  <strong>Instructions:</strong>
+                  <ol className="list-decimal list-inside mt-2 space-y-1">
+                    <li>Download the Commission Form template below</li>
+                    <li>Fill out all required fields including job number, customer name, sale amount</li>
+                    <li>Calculate your commission based on the agreed rate</li>
+                    <li>Save the completed form and upload it below</li>
+                    <li>Add any additional notes in the Commission Details field</li>
+                    <li>Submit for manager approval</li>
+                  </ol>
+                </AlertDescription>
+              </Alert>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                onClick={() => {
+                  // Create and download a simple commission form template
+                  const templateContent = `TSM ROOFING - COMMISSION FORM
+=====================================
+
+Sales Representative: ________________________
+Date: ________________________
+
+JOB INFORMATION
+--------------
+Job Number: ________________________
+Customer Name: ________________________
+Customer Address: ________________________
+Job Type: [ ] Residential  [ ] Commercial
+
+SALE DETAILS
+--------------
+Total Contract Amount: $________________________
+Material Cost: $________________________
+Labor Cost: $________________________
+Other Expenses: $________________________
+
+COMMISSION CALCULATION
+--------------
+Commission Rate: ______%
+Gross Commission: $________________________
+Less Advances: $________________________
+Net Commission Due: $________________________
+
+NOTES
+--------------
+_________________________________________________
+_________________________________________________
+_________________________________________________
+
+SIGNATURES
+--------------
+Sales Rep Signature: ________________________  Date: ________
+Manager Approval: ________________________  Date: ________
+
+Submit this completed form through the TSM Portal for approval.`;
+
+                  const blob = new Blob([templateContent], { type: 'text/plain' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = 'TSM_Commission_Form_Template.txt';
+                  document.body.appendChild(a);
+                  a.click();
+                  document.body.removeChild(a);
+                  URL.revokeObjectURL(url);
+                }}
+              >
+                <Download className="w-4 h-4" />
+                Download Commission Form Template
+              </Button>
+            </div>
           )}
 
           <div className="space-y-2">
