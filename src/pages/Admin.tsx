@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,6 +29,10 @@ import {
   Edit,
   FolderOpen,
   GripVertical,
+  Upload,
+  X,
+  File,
+  Loader2,
 } from "lucide-react";
 import {
   useResources,
@@ -51,6 +55,9 @@ export default function Admin() {
   const [isAddingResource, setIsAddingResource] = useState(false);
   const [isAddingCategory, setIsAddingCategory] = useState(false);
   const [editingCategory, setEditingCategory] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [newResource, setNewResource] = useState({
     title: "",
@@ -94,10 +101,63 @@ export default function Admin() {
     },
   });
 
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Max 20MB
+      if (file.size > 20 * 1024 * 1024) {
+        toast.error("File size must be less than 20MB");
+        return;
+      }
+      setSelectedFile(file);
+    }
+  };
+
+  const clearSelectedFile = () => {
+    setSelectedFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
   const handleCreateResource = async () => {
     if (!newResource.title.trim() || !newResource.category_id) {
       toast.error("Title and category are required");
       return;
+    }
+
+    if (!newResource.url.trim() && !selectedFile) {
+      toast.error("Please provide a URL or upload a file");
+      return;
+    }
+
+    let filePath: string | null = null;
+
+    // Upload file if selected
+    if (selectedFile) {
+      setIsUploading(true);
+      try {
+        const fileExt = selectedFile.name.split(".").pop();
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+        const storagePath = `${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from("resource-documents")
+          .upload(storagePath, selectedFile);
+
+        if (uploadError) {
+          toast.error("Failed to upload file: " + uploadError.message);
+          setIsUploading(false);
+          return;
+        }
+
+        filePath = storagePath;
+      } catch (error) {
+        toast.error("Failed to upload file");
+        setIsUploading(false);
+        return;
+      }
+      setIsUploading(false);
     }
 
     await createResource.mutateAsync({
@@ -109,7 +169,7 @@ export default function Admin() {
       version: newResource.version,
       visibility: newResource.visibility as "admin" | "manager" | "employee",
       owner_id: null,
-      file_path: null,
+      file_path: filePath,
       effective_date: null,
     });
 
@@ -122,6 +182,10 @@ export default function Admin() {
       version: "v1.0",
       visibility: "employee",
     });
+    setSelectedFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
     setIsAddingResource(false);
   };
 
@@ -351,8 +415,55 @@ export default function Admin() {
                           setNewResource({ ...newResource, url: e.target.value })
                         }
                         placeholder="https://..."
+                        disabled={!!selectedFile}
                       />
                     </div>
+                    
+                    <div className="space-y-2">
+                      <Label>Or Upload a File</Label>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        onChange={handleFileSelect}
+                        className="hidden"
+                        accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv"
+                        disabled={!!newResource.url.trim()}
+                      />
+                      {selectedFile ? (
+                        <div className="flex items-center gap-2 p-3 bg-secondary/50 rounded-lg border border-border">
+                          <File className="w-5 h-5 text-primary" />
+                          <span className="text-sm text-foreground flex-1 truncate">
+                            {selectedFile.name}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                          </span>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={clearSelectedFile}
+                          >
+                            <X className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="w-full"
+                          onClick={() => fileInputRef.current?.click()}
+                          disabled={!!newResource.url.trim()}
+                        >
+                          <Upload className="w-4 h-4 mr-2" />
+                          Choose File
+                        </Button>
+                      )}
+                      <p className="text-xs text-muted-foreground">
+                        Max 20MB. PDF, Word, Excel, PowerPoint, TXT, CSV
+                      </p>
+                    </div>
+
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label>Tags (comma-separated)</Label>
@@ -385,9 +496,18 @@ export default function Admin() {
                       <Button
                         variant="neon"
                         onClick={handleCreateResource}
-                        disabled={createResource.isPending}
+                        disabled={createResource.isPending || isUploading}
                       >
-                        {createResource.isPending ? "Creating..." : "Create Resource"}
+                        {isUploading ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Uploading...
+                          </>
+                        ) : createResource.isPending ? (
+                          "Creating..."
+                        ) : (
+                          "Create Resource"
+                        )}
                       </Button>
                     </div>
                   </div>
