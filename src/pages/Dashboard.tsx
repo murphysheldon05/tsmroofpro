@@ -4,6 +4,7 @@ import { SearchBar } from "@/components/SearchBar";
 import { QuickLinks } from "@/components/dashboard/QuickLinks";
 import { AnnouncementCard } from "@/components/dashboard/AnnouncementCard";
 import { ResourceCard } from "@/components/dashboard/ResourceCard";
+import { PendingApprovalsWidget } from "@/components/dashboard/PendingApprovalsWidget";
 import { useAnnouncements } from "@/hooks/useAnnouncements";
 import { useRecentResources, usePopularResources } from "@/hooks/useResources";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -63,6 +64,9 @@ export default function Dashboard() {
             <p className="text-muted-foreground text-sm">No announcements at this time.</p>
           )}
         </section>
+
+        {/* Pending Approvals - Only visible to managers/admins */}
+        <PendingApprovalsWidget />
 
         {/* Resources Grid */}
         <div className="grid lg:grid-cols-2 gap-8">
