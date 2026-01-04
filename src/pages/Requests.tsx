@@ -4,22 +4,40 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Send, FileEdit, Monitor, Users, CheckCircle } from "lucide-react";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Send,
+  FileEdit,
+  Monitor,
+  Users,
+  CheckCircle,
+  DollarSign,
+  Clock,
+  CheckSquare,
+  XSquare,
+  Eye,
+  Loader2,
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, format } from "date-fns";
 
 const requestTypes = [
+  {
+    value: "commission",
+    label: "Commission Form",
+    description: "Submit commission for manager approval",
+    icon: DollarSign,
+  },
   {
     value: "sop_update",
     label: "SOP Update Request",
@@ -43,18 +61,47 @@ const requestTypes = [
 const statusColors: Record<string, string> = {
   pending: "bg-yellow-500/10 text-yellow-500 border-yellow-500/30",
   in_progress: "bg-blue-500/10 text-blue-500 border-blue-500/30",
+  approved: "bg-green-500/10 text-green-500 border-green-500/30",
   completed: "bg-green-500/10 text-green-500 border-green-500/30",
   rejected: "bg-red-500/10 text-red-500 border-red-500/30",
 };
 
+const statusLabels: Record<string, string> = {
+  pending: "Pending",
+  in_progress: "In Progress",
+  approved: "Approved",
+  completed: "Completed",
+  rejected: "Rejected",
+};
+
+interface Request {
+  id: string;
+  type: string;
+  title: string;
+  description: string | null;
+  status: string;
+  submitted_by: string;
+  assigned_to: string | null;
+  created_at: string;
+  updated_at: string;
+  profiles?: {
+    full_name: string | null;
+    email: string | null;
+  } | null;
+}
+
 export default function Requests() {
-  const { user } = useAuth();
+  const { user, isManager } = useAuth();
+  const queryClient = useQueryClient();
   const [type, setType] = useState("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [selectedRequest, setSelectedRequest] = useState<Request | null>(null);
+  const [isUpdating, setIsUpdating] = useState(false);
 
+  // Fetch user's own requests
   const { data: myRequests, refetch } = useQuery({
     queryKey: ["my-requests", user?.id],
     queryFn: async () => {
@@ -66,9 +113,42 @@ export default function Requests() {
         .order("created_at", { ascending: false });
       
       if (error) throw error;
-      return data;
+      return data as Request[];
     },
     enabled: !!user,
+  });
+
+  // Fetch all requests for managers/admins
+  const { data: allRequests, refetch: refetchAll } = useQuery({
+    queryKey: ["all-requests"],
+    queryFn: async () => {
+      // First fetch all requests
+      const { data: requestsData, error } = await supabase
+        .from("requests")
+        .select("*")
+        .order("created_at", { ascending: false });
+      
+      if (error) throw error;
+      
+      // Get unique submitter IDs
+      const submitterIds = [...new Set(requestsData.map(r => r.submitted_by))];
+      
+      // Fetch profiles for those submitters
+      const { data: profilesData } = await supabase
+        .from("profiles")
+        .select("id, full_name, email")
+        .in("id", submitterIds);
+      
+      // Create a map of profiles by ID
+      const profilesMap = new Map(profilesData?.map(p => [p.id, p]) || []);
+      
+      // Merge profiles with requests
+      return requestsData.map(request => ({
+        ...request,
+        profiles: profilesMap.get(request.submitted_by) || null,
+      })) as Request[];
+    },
+    enabled: isManager,
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -101,9 +181,36 @@ export default function Requests() {
     }
   };
 
+  const handleUpdateStatus = async (requestId: string, newStatus: string) => {
+    setIsUpdating(true);
+    try {
+      const { error } = await supabase
+        .from("requests")
+        .update({ 
+          status: newStatus,
+          assigned_to: user?.id 
+        })
+        .eq("id", requestId);
+
+      if (error) throw error;
+
+      toast.success(`Request ${newStatus === 'approved' ? 'approved' : newStatus === 'rejected' ? 'rejected' : 'updated'}!`);
+      refetchAll();
+      refetch();
+      setSelectedRequest(null);
+    } catch (error) {
+      toast.error("Failed to update request");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const pendingCount = allRequests?.filter(r => r.status === 'pending').length || 0;
+  const commissionRequests = allRequests?.filter(r => r.type === 'commission') || [];
+
   return (
     <AppLayout>
-      <div className="max-w-4xl mx-auto space-y-8">
+      <div className="max-w-5xl mx-auto space-y-8">
         {/* Header */}
         <header className="pt-4 lg:pt-0">
           <div className="flex items-center gap-3">
@@ -113,108 +220,405 @@ export default function Requests() {
             <div>
               <h1 className="text-2xl font-bold text-foreground">Forms & Requests</h1>
               <p className="text-muted-foreground text-sm">
-                Submit requests for SOP updates, IT access, or HR inquiries
+                Submit commission forms and other requests
               </p>
             </div>
           </div>
         </header>
 
-        {/* Request Form */}
-        <div className="glass-card rounded-2xl p-6">
-          <h2 className="text-lg font-semibold text-foreground mb-6">Submit a Request</h2>
+        {isManager ? (
+          <Tabs defaultValue="submit" className="space-y-6">
+            <TabsList className="bg-secondary/50">
+              <TabsTrigger value="submit" className="gap-2">
+                <Send className="w-4 h-4" />
+                Submit
+              </TabsTrigger>
+              <TabsTrigger value="review" className="gap-2">
+                <CheckSquare className="w-4 h-4" />
+                Review
+                {pendingCount > 0 && (
+                  <Badge variant="destructive" className="ml-1 h-5 px-1.5 text-xs">
+                    {pendingCount}
+                  </Badge>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="commissions" className="gap-2">
+                <DollarSign className="w-4 h-4" />
+                Commissions
+              </TabsTrigger>
+            </TabsList>
 
-          {submitted ? (
-            <div className="flex flex-col items-center justify-center py-8">
-              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-                <CheckCircle className="w-8 h-8 text-primary" />
-              </div>
-              <h3 className="text-lg font-medium text-foreground">Request Submitted!</h3>
-              <p className="text-muted-foreground">We'll get back to you soon.</p>
-            </div>
-          ) : (
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="grid sm:grid-cols-3 gap-4">
-                {requestTypes.map((reqType) => (
-                  <button
-                    key={reqType.value}
-                    type="button"
-                    onClick={() => setType(reqType.value)}
-                    className={`p-4 rounded-xl border text-left transition-all ${
-                      type === reqType.value
-                        ? "border-primary bg-primary/5"
-                        : "border-border/50 bg-card/50 hover:border-border"
-                    }`}
-                  >
-                    <reqType.icon
-                      className={`w-5 h-5 mb-2 ${
-                        type === reqType.value ? "text-primary" : "text-muted-foreground"
-                      }`}
-                    />
-                    <p className="font-medium text-foreground text-sm">{reqType.label}</p>
-                    <p className="text-xs text-muted-foreground mt-1">{reqType.description}</p>
-                  </button>
-                ))}
-              </div>
+            <TabsContent value="submit" className="space-y-6">
+              <SubmitRequestForm
+                type={type}
+                setType={setType}
+                title={title}
+                setTitle={setTitle}
+                description={description}
+                setDescription={setDescription}
+                isSubmitting={isSubmitting}
+                submitted={submitted}
+                handleSubmit={handleSubmit}
+              />
+              <MyRequestsList requests={myRequests || []} />
+            </TabsContent>
 
-              <div className="space-y-2">
-                <Label htmlFor="title">Subject</Label>
-                <Input
-                  id="title"
-                  placeholder="Brief summary of your request"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  required
-                />
-              </div>
+            <TabsContent value="review" className="space-y-4">
+              <h2 className="text-lg font-semibold text-foreground">
+                All Pending Requests ({pendingCount})
+              </h2>
+              <RequestsTable
+                requests={allRequests?.filter(r => r.status === 'pending') || []}
+                onView={setSelectedRequest}
+                showSubmitter
+              />
+              
+              <h2 className="text-lg font-semibold text-foreground mt-8">
+                Recently Processed
+              </h2>
+              <RequestsTable
+                requests={allRequests?.filter(r => r.status !== 'pending').slice(0, 10) || []}
+                onView={setSelectedRequest}
+                showSubmitter
+              />
+            </TabsContent>
 
-              <div className="space-y-2">
-                <Label htmlFor="description">Description (optional)</Label>
-                <Textarea
-                  id="description"
-                  placeholder="Provide additional details..."
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  rows={4}
-                />
-              </div>
-
-              <Button type="submit" variant="neon" disabled={!type || !title.trim() || isSubmitting}>
-                {isSubmitting ? "Submitting..." : "Submit Request"}
-              </Button>
-            </form>
-          )}
-        </div>
-
-        {/* My Requests */}
-        {myRequests && myRequests.length > 0 && (
-          <div>
-            <h2 className="text-lg font-semibold text-foreground mb-4">My Requests</h2>
-            <div className="space-y-3">
-              {myRequests.map((request) => (
-                <div
-                  key={request.id}
-                  className="p-4 rounded-xl bg-card border border-border/50"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="font-medium text-foreground">{request.title}</p>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        {request.description || "No description provided"}
-                      </p>
-                    </div>
-                    <Badge variant="outline" className={statusColors[request.status]}>
-                      {request.status.replace("_", " ")}
-                    </Badge>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-3">
-                    Submitted {formatDistanceToNow(new Date(request.created_at), { addSuffix: true })}
-                  </p>
-                </div>
-              ))}
-            </div>
+            <TabsContent value="commissions" className="space-y-4">
+              <h2 className="text-lg font-semibold text-foreground">
+                Commission Forms ({commissionRequests.length})
+              </h2>
+              <RequestsTable
+                requests={commissionRequests}
+                onView={setSelectedRequest}
+                showSubmitter
+              />
+            </TabsContent>
+          </Tabs>
+        ) : (
+          <div className="space-y-6">
+            <SubmitRequestForm
+              type={type}
+              setType={setType}
+              title={title}
+              setTitle={setTitle}
+              description={description}
+              setDescription={setDescription}
+              isSubmitting={isSubmitting}
+              submitted={submitted}
+              handleSubmit={handleSubmit}
+            />
+            <MyRequestsList requests={myRequests || []} />
           </div>
         )}
+
+        {/* Request Detail Dialog */}
+        <Dialog open={!!selectedRequest} onOpenChange={(open) => !open && setSelectedRequest(null)}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Request Details</DialogTitle>
+            </DialogHeader>
+            {selectedRequest && (
+              <div className="space-y-4 mt-4">
+                <div className="flex items-center justify-between">
+                  <Badge variant="outline" className="capitalize">
+                    {selectedRequest.type.replace("_", " ")}
+                  </Badge>
+                  <Badge variant="outline" className={statusColors[selectedRequest.status]}>
+                    {statusLabels[selectedRequest.status] || selectedRequest.status}
+                  </Badge>
+                </div>
+                
+                <div>
+                  <h3 className="font-semibold text-foreground text-lg">{selectedRequest.title}</h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {selectedRequest.description || "No description provided"}
+                  </p>
+                </div>
+
+                <div className="p-3 bg-secondary/50 rounded-lg space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Submitted by:</span>
+                    <span className="text-foreground">
+                      {selectedRequest.profiles?.full_name || selectedRequest.profiles?.email || "Unknown"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Submitted:</span>
+                    <span className="text-foreground">
+                      {format(new Date(selectedRequest.created_at), "MMM d, yyyy 'at' h:mm a")}
+                    </span>
+                  </div>
+                </div>
+
+                {isManager && selectedRequest.status === 'pending' && (
+                  <div className="flex gap-3 pt-4">
+                    <Button
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => handleUpdateStatus(selectedRequest.id, 'rejected')}
+                      disabled={isUpdating}
+                    >
+                      {isUpdating ? (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      ) : (
+                        <XSquare className="w-4 h-4 mr-2" />
+                      )}
+                      Reject
+                    </Button>
+                    <Button
+                      variant="neon"
+                      className="flex-1"
+                      onClick={() => handleUpdateStatus(selectedRequest.id, 'approved')}
+                      disabled={isUpdating}
+                    >
+                      {isUpdating ? (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      ) : (
+                        <CheckSquare className="w-4 h-4 mr-2" />
+                      )}
+                      Approve
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </AppLayout>
+  );
+}
+
+// Submit Request Form Component
+function SubmitRequestForm({
+  type,
+  setType,
+  title,
+  setTitle,
+  description,
+  setDescription,
+  isSubmitting,
+  submitted,
+  handleSubmit,
+}: {
+  type: string;
+  setType: (v: string) => void;
+  title: string;
+  setTitle: (v: string) => void;
+  description: string;
+  setDescription: (v: string) => void;
+  isSubmitting: boolean;
+  submitted: boolean;
+  handleSubmit: (e: React.FormEvent) => void;
+}) {
+  return (
+    <div className="glass-card rounded-2xl p-6">
+      <h2 className="text-lg font-semibold text-foreground mb-6">Submit a Request</h2>
+
+      {submitted ? (
+        <div className="flex flex-col items-center justify-center py-8">
+          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+            <CheckCircle className="w-8 h-8 text-primary" />
+          </div>
+          <h3 className="text-lg font-medium text-foreground">Request Submitted!</h3>
+          <p className="text-muted-foreground">We'll get back to you soon.</p>
+        </div>
+      ) : (
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {requestTypes.map((reqType) => (
+              <button
+                key={reqType.value}
+                type="button"
+                onClick={() => setType(reqType.value)}
+                className={`p-4 rounded-xl border text-left transition-all ${
+                  type === reqType.value
+                    ? "border-primary bg-primary/5"
+                    : "border-border/50 bg-card/50 hover:border-border"
+                }`}
+              >
+                <reqType.icon
+                  className={`w-5 h-5 mb-2 ${
+                    type === reqType.value ? "text-primary" : "text-muted-foreground"
+                  }`}
+                />
+                <p className="font-medium text-foreground text-sm">{reqType.label}</p>
+                <p className="text-xs text-muted-foreground mt-1">{reqType.description}</p>
+              </button>
+            ))}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="title">
+              {type === 'commission' ? 'Job/Sale Reference' : 'Subject'}
+            </Label>
+            <Input
+              id="title"
+              placeholder={type === 'commission' ? "Enter job number or customer name" : "Brief summary of your request"}
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="description">
+              {type === 'commission' ? 'Commission Details' : 'Description (optional)'}
+            </Label>
+            <Textarea
+              id="description"
+              placeholder={type === 'commission' 
+                ? "Enter commission amount, job details, and any relevant notes for your manager..."
+                : "Provide additional details..."
+              }
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={4}
+            />
+          </div>
+
+          <Button type="submit" variant="neon" disabled={!type || !title.trim() || isSubmitting}>
+            {isSubmitting ? "Submitting..." : type === 'commission' ? "Submit for Approval" : "Submit Request"}
+          </Button>
+        </form>
+      )}
+    </div>
+  );
+}
+
+// My Requests List Component
+function MyRequestsList({ requests }: { requests: Request[] }) {
+  if (!requests || requests.length === 0) return null;
+
+  return (
+    <div>
+      <h2 className="text-lg font-semibold text-foreground mb-4">My Requests</h2>
+      <div className="space-y-3">
+        {requests.map((request) => (
+          <div
+            key={request.id}
+            className="p-4 rounded-xl bg-card border border-border/50"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center gap-3">
+                {request.type === 'commission' && (
+                  <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <DollarSign className="w-4 h-4 text-primary" />
+                  </div>
+                )}
+                <div>
+                  <p className="font-medium text-foreground">{request.title}</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {request.description || "No description provided"}
+                  </p>
+                </div>
+              </div>
+              <Badge variant="outline" className={statusColors[request.status]}>
+                {statusLabels[request.status] || request.status.replace("_", " ")}
+              </Badge>
+            </div>
+            <p className="text-xs text-muted-foreground mt-3">
+              Submitted {formatDistanceToNow(new Date(request.created_at), { addSuffix: true })}
+            </p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Requests Table Component
+function RequestsTable({
+  requests,
+  onView,
+  showSubmitter = false,
+}: {
+  requests: Request[];
+  onView: (r: Request) => void;
+  showSubmitter?: boolean;
+}) {
+  if (requests.length === 0) {
+    return (
+      <div className="glass-card rounded-xl p-8 text-center text-muted-foreground">
+        No requests found
+      </div>
+    );
+  }
+
+  return (
+    <div className="glass-card rounded-xl overflow-hidden">
+      <table className="w-full">
+        <thead>
+          <tr className="border-b border-border/50">
+            <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
+              Type
+            </th>
+            <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
+              Title
+            </th>
+            {showSubmitter && (
+              <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground hidden md:table-cell">
+                Submitted By
+              </th>
+            )}
+            <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground hidden lg:table-cell">
+              Date
+            </th>
+            <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
+              Status
+            </th>
+            <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">
+              Actions
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {requests.map((request, index) => (
+            <tr
+              key={request.id}
+              className={
+                index < requests.length - 1 ? "border-b border-border/30" : ""
+              }
+            >
+              <td className="px-4 py-3">
+                <Badge variant="secondary" className="capitalize">
+                  {request.type === 'commission' ? (
+                    <DollarSign className="w-3 h-3 mr-1" />
+                  ) : null}
+                  {request.type.replace("_", " ")}
+                </Badge>
+              </td>
+              <td className="px-4 py-3">
+                <p className="font-medium text-foreground truncate max-w-[200px]">
+                  {request.title}
+                </p>
+              </td>
+              {showSubmitter && (
+                <td className="px-4 py-3 hidden md:table-cell text-muted-foreground">
+                  {request.profiles?.full_name || request.profiles?.email || "Unknown"}
+                </td>
+              )}
+              <td className="px-4 py-3 hidden lg:table-cell text-muted-foreground text-sm">
+                {formatDistanceToNow(new Date(request.created_at), { addSuffix: true })}
+              </td>
+              <td className="px-4 py-3">
+                <Badge variant="outline" className={statusColors[request.status]}>
+                  {statusLabels[request.status] || request.status}
+                </Badge>
+              </td>
+              <td className="px-4 py-3 text-right">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => onView(request)}
+                >
+                  <Eye className="w-4 h-4" />
+                </Button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
