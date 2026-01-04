@@ -39,6 +39,8 @@ import {
   useCategories,
   useCreateResource,
   useDeleteResource,
+  useUpdateResource,
+  type Resource,
 } from "@/hooks/useResources";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
@@ -51,13 +53,17 @@ export default function Admin() {
   const { data: categories } = useCategories();
   const createResource = useCreateResource();
   const deleteResource = useDeleteResource();
+  const updateResource = useUpdateResource();
 
   const [isAddingResource, setIsAddingResource] = useState(false);
   const [isAddingCategory, setIsAddingCategory] = useState(false);
   const [editingCategory, setEditingCategory] = useState<string | null>(null);
+  const [editingResource, setEditingResource] = useState<Resource | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [editSelectedFile, setEditSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const editFileInputRef = useRef<HTMLInputElement>(null);
   
   const [newResource, setNewResource] = useState({
     title: "",
@@ -85,6 +91,16 @@ export default function Admin() {
     sort_order: 0,
   });
 
+  const [editResource, setEditResource] = useState({
+    title: "",
+    description: "",
+    category_id: "",
+    url: "",
+    tags: "",
+    version: "",
+    visibility: "employee" as "admin" | "manager" | "employee",
+  });
+
   const { data: users } = useQuery({
     queryKey: ["admin-users"],
     queryFn: async () => {
@@ -101,7 +117,7 @@ export default function Admin() {
     },
   });
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>, isEdit = false) => {
     const file = e.target.files?.[0];
     if (file) {
       // Max 20MB
@@ -109,15 +125,121 @@ export default function Admin() {
         toast.error("File size must be less than 20MB");
         return;
       }
-      setSelectedFile(file);
+      if (isEdit) {
+        setEditSelectedFile(file);
+      } else {
+        setSelectedFile(file);
+      }
     }
   };
 
-  const clearSelectedFile = () => {
-    setSelectedFile(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
+  const clearSelectedFile = (isEdit = false) => {
+    if (isEdit) {
+      setEditSelectedFile(null);
+      if (editFileInputRef.current) {
+        editFileInputRef.current.value = "";
+      }
+    } else {
+      setSelectedFile(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
     }
+  };
+
+  const startEditResource = (resource: Resource) => {
+    setEditingResource(resource);
+    setEditResource({
+      title: resource.title,
+      description: resource.description || "",
+      category_id: resource.category_id || "",
+      url: resource.url || "",
+      tags: resource.tags?.join(", ") || "",
+      version: resource.version || "v1.0",
+      visibility: resource.visibility,
+    });
+    setEditSelectedFile(null);
+  };
+
+  const handleUpdateResource = async () => {
+    if (!editingResource) return;
+    
+    if (!editResource.title.trim() || !editResource.category_id) {
+      toast.error("Title and category are required");
+      return;
+    }
+
+    let filePath = editingResource.file_path;
+
+    // Upload new file if selected
+    if (editSelectedFile) {
+      setIsUploading(true);
+      try {
+        const fileExt = editSelectedFile.name.split(".").pop();
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+        const storagePath = `${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from("resource-documents")
+          .upload(storagePath, editSelectedFile);
+
+        if (uploadError) {
+          toast.error("Failed to upload file: " + uploadError.message);
+          setIsUploading(false);
+          return;
+        }
+
+        // Delete old file if exists
+        if (editingResource.file_path) {
+          await supabase.storage
+            .from("resource-documents")
+            .remove([editingResource.file_path]);
+        }
+
+        filePath = storagePath;
+      } catch (error) {
+        toast.error("Failed to upload file");
+        setIsUploading(false);
+        return;
+      }
+      setIsUploading(false);
+    }
+
+    await updateResource.mutateAsync({
+      id: editingResource.id,
+      title: editResource.title.trim(),
+      description: editResource.description.trim() || null,
+      category_id: editResource.category_id,
+      url: editResource.url.trim() || null,
+      tags: editResource.tags.split(",").map((t) => t.trim()).filter(Boolean),
+      version: editResource.version,
+      visibility: editResource.visibility,
+      file_path: filePath,
+    });
+
+    setEditingResource(null);
+    setEditSelectedFile(null);
+    if (editFileInputRef.current) {
+      editFileInputRef.current.value = "";
+    }
+  };
+
+  const handleRemoveExistingFile = async () => {
+    if (!editingResource?.file_path) return;
+    
+    // Delete from storage
+    await supabase.storage
+      .from("resource-documents")
+      .remove([editingResource.file_path]);
+    
+    // Update resource to remove file_path
+    await updateResource.mutateAsync({
+      id: editingResource.id,
+      file_path: null,
+    });
+    
+    setEditingResource({ ...editingResource, file_path: null });
+    toast.success("File removed");
   };
 
   const handleCreateResource = async () => {
@@ -442,7 +564,7 @@ export default function Admin() {
                             variant="ghost"
                             size="icon"
                             className="h-6 w-6"
-                            onClick={clearSelectedFile}
+                            onClick={() => clearSelectedFile()}
                           >
                             <X className="w-4 h-4" />
                           </Button>
@@ -544,7 +666,15 @@ export default function Admin() {
                       }
                     >
                       <td className="px-4 py-3">
-                        <p className="font-medium text-foreground">{resource.title}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium text-foreground">{resource.title}</p>
+                          {resource.file_path && (
+                            <Badge variant="outline" className="text-xs">
+                              <File className="w-3 h-3 mr-1" />
+                              File
+                            </Badge>
+                          )}
+                        </div>
                         <p className="text-xs text-muted-foreground">{resource.version}</p>
                       </td>
                       <td className="px-4 py-3 hidden md:table-cell">
@@ -559,19 +689,224 @@ export default function Admin() {
                         </span>
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleDeleteResource(resource.id)}
-                        >
-                          <Trash2 className="w-4 h-4 text-destructive" />
-                        </Button>
+                        <div className="flex justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => startEditResource(resource)}
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDeleteResource(resource.id)}
+                          >
+                            <Trash2 className="w-4 h-4 text-destructive" />
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
+            {/* Edit Resource Dialog */}
+            <Dialog open={!!editingResource} onOpenChange={(open) => !open && setEditingResource(null)}>
+              <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Edit Resource</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 mt-4">
+                  <div className="space-y-2">
+                    <Label>Title *</Label>
+                    <Input
+                      value={editResource.title}
+                      onChange={(e) =>
+                        setEditResource({ ...editResource, title: e.target.value })
+                      }
+                      placeholder="Resource title"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Description</Label>
+                    <Textarea
+                      value={editResource.description}
+                      onChange={(e) =>
+                        setEditResource({ ...editResource, description: e.target.value })
+                      }
+                      placeholder="Brief description"
+                      rows={3}
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Category *</Label>
+                      <Select
+                        value={editResource.category_id}
+                        onValueChange={(v) =>
+                          setEditResource({ ...editResource, category_id: v })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select category" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {categories?.map((cat) => (
+                            <SelectItem key={cat.id} value={cat.id}>
+                              {cat.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Visibility</Label>
+                      <Select
+                        value={editResource.visibility}
+                        onValueChange={(v: "admin" | "manager" | "employee") =>
+                          setEditResource({ ...editResource, visibility: v })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="employee">All Employees</SelectItem>
+                          <SelectItem value="manager">Managers Only</SelectItem>
+                          <SelectItem value="admin">Admins Only</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>URL (Dropbox, SharePoint, etc.)</Label>
+                    <Input
+                      value={editResource.url}
+                      onChange={(e) =>
+                        setEditResource({ ...editResource, url: e.target.value })
+                      }
+                      placeholder="https://..."
+                      disabled={!!editSelectedFile || !!editingResource?.file_path}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label>File</Label>
+                    <input
+                      ref={editFileInputRef}
+                      type="file"
+                      onChange={(e) => handleFileSelect(e, true)}
+                      className="hidden"
+                      accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv"
+                    />
+                    
+                    {editingResource?.file_path && !editSelectedFile ? (
+                      <div className="flex items-center gap-2 p-3 bg-secondary/50 rounded-lg border border-border">
+                        <File className="w-5 h-5 text-primary" />
+                        <span className="text-sm text-foreground flex-1 truncate">
+                          Current file: {editingResource.file_path.split('/').pop()}
+                        </span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => editFileInputRef.current?.click()}
+                        >
+                          Replace
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={handleRemoveExistingFile}
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ) : editSelectedFile ? (
+                      <div className="flex items-center gap-2 p-3 bg-secondary/50 rounded-lg border border-border">
+                        <File className="w-5 h-5 text-primary" />
+                        <span className="text-sm text-foreground flex-1 truncate">
+                          {editSelectedFile.name}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {(editSelectedFile.size / 1024 / 1024).toFixed(2)} MB
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={() => clearSelectedFile(true)}
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="w-full"
+                        onClick={() => editFileInputRef.current?.click()}
+                        disabled={!!editResource.url.trim()}
+                      >
+                        <Upload className="w-4 h-4 mr-2" />
+                        Upload File
+                      </Button>
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                      Max 20MB. PDF, Word, Excel, PowerPoint, TXT, CSV
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Tags (comma-separated)</Label>
+                      <Input
+                        value={editResource.tags}
+                        onChange={(e) =>
+                          setEditResource({ ...editResource, tags: e.target.value })
+                        }
+                        placeholder="sales, checklist"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Version</Label>
+                      <Input
+                        value={editResource.version}
+                        onChange={(e) =>
+                          setEditResource({ ...editResource, version: e.target.value })
+                        }
+                        placeholder="v1.0"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex justify-end gap-3 pt-4">
+                    <Button
+                      variant="outline"
+                      onClick={() => setEditingResource(null)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      variant="neon"
+                      onClick={handleUpdateResource}
+                      disabled={updateResource.isPending || isUploading}
+                    >
+                      {isUploading ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Uploading...
+                        </>
+                      ) : updateResource.isPending ? (
+                        "Saving..."
+                      ) : (
+                        "Save Changes"
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
           </TabsContent>
 
           {/* Categories Tab */}
