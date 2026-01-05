@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, parseISO } from "date-fns";
-import { ChevronLeft, ChevronRight, Plus, Pencil, Trash2, X } from "lucide-react";
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, parseISO, differenceInDays } from "date-fns";
+import { ChevronLeft, ChevronRight, Plus, Pencil, Trash2, X, GripVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -19,6 +19,7 @@ import {
   EventCategory,
 } from "@/hooks/useProductionCalendar";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 export function ProductionCalendar() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -26,6 +27,9 @@ export function ProductionCalendar() {
   const [isAddEventOpen, setIsAddEventOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<ProductionCalendarEvent | null>(null);
   const [newEvent, setNewEvent] = useState({ title: "", description: "", start_date: "", end_date: "", event_category: "other" as EventCategory });
+  const [draggedEvent, setDraggedEvent] = useState<ProductionCalendarEvent | null>(null);
+  const [dragOverDate, setDragOverDate] = useState<Date | null>(null);
+
   const { isManager, isAdmin } = useAuth();
   const canEdit = isManager || isAdmin;
 
@@ -48,6 +52,70 @@ export function ProductionCalendar() {
       const eventEnd = event.end_date ? parseISO(event.end_date) : eventStart;
       return date >= eventStart && date <= eventEnd;
     });
+  };
+
+  // Drag and drop handlers
+  const handleDragStart = (e: React.DragEvent, event: ProductionCalendarEvent) => {
+    if (!canEdit) return;
+    setDraggedEvent(event);
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", event.id);
+  };
+
+  const handleDragOver = (e: React.DragEvent, date: Date) => {
+    if (!canEdit || !draggedEvent) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    setDragOverDate(date);
+  };
+
+  const handleDragLeave = () => {
+    setDragOverDate(null);
+  };
+
+  const handleDrop = (e: React.DragEvent, targetDate: Date) => {
+    e.preventDefault();
+    if (!canEdit || !draggedEvent) return;
+
+    const originalStartDate = parseISO(draggedEvent.start_date);
+    const daysDiff = differenceInDays(targetDate, originalStartDate);
+
+    if (daysDiff === 0) {
+      setDraggedEvent(null);
+      setDragOverDate(null);
+      return;
+    }
+
+    const newStartDate = format(targetDate, "yyyy-MM-dd");
+    let newEndDate: string | null = null;
+
+    if (draggedEvent.end_date) {
+      const originalEndDate = parseISO(draggedEvent.end_date);
+      const newEnd = new Date(originalEndDate);
+      newEnd.setDate(newEnd.getDate() + daysDiff);
+      newEndDate = format(newEnd, "yyyy-MM-dd");
+    }
+
+    updateEvent.mutate(
+      {
+        id: draggedEvent.id,
+        start_date: newStartDate,
+        end_date: newEndDate,
+      },
+      {
+        onSuccess: () => {
+          toast.success("Event rescheduled");
+        },
+      }
+    );
+
+    setDraggedEvent(null);
+    setDragOverDate(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedEvent(null);
+    setDragOverDate(null);
   };
 
   const handleAddEvent = () => {
@@ -140,16 +208,21 @@ export function ProductionCalendar() {
               const dayEvents = getEventsForDate(day);
               const isSelected = selectedDate && isSameDay(day, selectedDate);
               const isToday = isSameDay(day, new Date());
+              const isDragOver = dragOverDate && isSameDay(day, dragOverDate);
 
               return (
                 <div
                   key={day.toISOString()}
                   onClick={() => handleDateClick(day)}
+                  onDragOver={(e) => handleDragOver(e, day)}
+                  onDragLeave={handleDragLeave}
+                  onDrop={(e) => handleDrop(e, day)}
                   className={cn(
-                    "h-20 p-1 border rounded cursor-pointer transition-colors hover:bg-accent/50",
+                    "h-20 p-1 border rounded cursor-pointer transition-all hover:bg-accent/50",
                     !isSameMonth(day, currentMonth) && "opacity-50",
                     isSelected && "ring-2 ring-primary",
-                    isToday && "bg-primary/10"
+                    isToday && "bg-primary/10",
+                    isDragOver && "ring-2 ring-primary bg-primary/20 scale-105"
                   )}
                 >
                   <div className={cn("text-sm font-medium", isToday && "text-primary")}>
@@ -158,13 +231,24 @@ export function ProductionCalendar() {
                   <div className="space-y-0.5 overflow-hidden">
                     {dayEvents.slice(0, 2).map((event) => {
                       const categoryInfo = EVENT_CATEGORIES[event.event_category] || EVENT_CATEGORIES.other;
+                      const isDragging = draggedEvent?.id === event.id;
                       return (
                         <div
                           key={event.id}
-                          className={cn("text-xs px-1 py-0.5 rounded truncate", categoryInfo.bgColor, categoryInfo.color)}
-                          title={`${categoryInfo.label}: ${event.title}`}
+                          draggable={canEdit}
+                          onDragStart={(e) => handleDragStart(e, event)}
+                          onDragEnd={handleDragEnd}
+                          className={cn(
+                            "text-xs px-1 py-0.5 rounded truncate flex items-center gap-0.5 transition-opacity",
+                            categoryInfo.bgColor,
+                            categoryInfo.color,
+                            canEdit && "cursor-grab active:cursor-grabbing",
+                            isDragging && "opacity-50"
+                          )}
+                          title={`${categoryInfo.label}: ${event.title}${canEdit ? " (drag to reschedule)" : ""}`}
                         >
-                          {event.title}
+                          {canEdit && <GripVertical className="h-3 w-3 flex-shrink-0 opacity-50" />}
+                          <span className="truncate">{event.title}</span>
                         </div>
                       );
                     })}
