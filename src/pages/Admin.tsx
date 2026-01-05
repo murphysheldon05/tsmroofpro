@@ -72,6 +72,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
+import { getThumbnailUrl } from "@/components/training/VideoCard";
 
 export default function Admin() {
   const queryClient = useQueryClient();
@@ -212,6 +213,7 @@ export default function Admin() {
     title: "",
     description: "",
     url: "",
+    thumbnailUrl: "",
     visibility: "employee" as "admin" | "manager" | "employee",
   });
 
@@ -219,6 +221,7 @@ export default function Admin() {
     title: "",
     description: "",
     url: "",
+    thumbnailUrl: "",
     visibility: "employee" as "admin" | "manager" | "employee",
   });
 
@@ -2358,6 +2361,17 @@ export default function Admin() {
                       </p>
                     </div>
                     <div className="space-y-2">
+                      <Label>Custom Thumbnail URL (optional)</Label>
+                      <Input
+                        value={newVideo.thumbnailUrl}
+                        onChange={(e) => setNewVideo({ ...newVideo, thumbnailUrl: e.target.value })}
+                        placeholder="https://example.com/thumbnail.jpg"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Leave empty to auto-generate from YouTube/Loom. Or paste a custom image URL.
+                      </p>
+                    </div>
+                    <div className="space-y-2">
                       <Label>Visibility</Label>
                       <Select
                         value={newVideo.visibility}
@@ -2399,11 +2413,11 @@ export default function Admin() {
                             version: "v1.0",
                             visibility: newVideo.visibility,
                             owner_id: null,
-                            file_path: null,
+                            file_path: newVideo.thumbnailUrl.trim() || null,
                             effective_date: null,
                           });
                           queryClient.invalidateQueries({ queryKey: ["video-library-resources"] });
-                          setNewVideo({ title: "", description: "", url: "", visibility: "employee" });
+                          setNewVideo({ title: "", description: "", url: "", thumbnailUrl: "", visibility: "employee" });
                           setIsAddingVideo(false);
                         }}
                         disabled={createResource.isPending}
@@ -2453,9 +2467,26 @@ export default function Admin() {
                     >
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
-                          <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                            <Play className="w-5 h-5 text-primary" />
-                          </div>
+                          {(() => {
+                            const thumbUrl = video.url ? getThumbnailUrl(video.url, video.file_path) : null;
+                            return thumbUrl ? (
+                              <div className="w-16 h-10 rounded-lg overflow-hidden flex-shrink-0 bg-secondary">
+                                <img
+                                  src={thumbUrl}
+                                  alt={video.title}
+                                  className="w-full h-full object-cover"
+                                  onError={(e) => {
+                                    e.currentTarget.style.display = 'none';
+                                    e.currentTarget.parentElement!.innerHTML = '<div class="w-full h-full flex items-center justify-center bg-primary/10"><svg class="w-4 h-4 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg></div>';
+                                  }}
+                                />
+                              </div>
+                            ) : (
+                              <div className="w-16 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                                <Play className="w-4 h-4 text-primary" />
+                              </div>
+                            );
+                          })()}
                           <div className="min-w-0">
                             <p className="font-medium text-foreground truncate">{video.title}</p>
                             {video.description && (
@@ -2494,6 +2525,7 @@ export default function Admin() {
                                   title: video.title,
                                   description: video.description || "",
                                   url: video.url || "",
+                                  thumbnailUrl: video.file_path || "",
                                   visibility: video.visibility,
                                 });
                               } else {
@@ -2534,6 +2566,17 @@ export default function Admin() {
                                   />
                                 </div>
                                 <div className="space-y-2">
+                                  <Label>Custom Thumbnail URL (optional)</Label>
+                                  <Input
+                                    value={editVideoData.thumbnailUrl}
+                                    onChange={(e) => setEditVideoData({ ...editVideoData, thumbnailUrl: e.target.value })}
+                                    placeholder="https://example.com/thumbnail.jpg"
+                                  />
+                                  <p className="text-xs text-muted-foreground">
+                                    Leave empty to auto-generate from YouTube/Loom
+                                  </p>
+                                </div>
+                                <div className="space-y-2">
                                   <Label>Visibility</Label>
                                   <Select
                                     value={editVideoData.visibility}
@@ -2562,6 +2605,7 @@ export default function Admin() {
                                       title: editVideoData.title.trim(),
                                       description: editVideoData.description.trim() || null,
                                       url: editVideoData.url.trim(),
+                                      file_path: editVideoData.thumbnailUrl.trim() || null,
                                       visibility: editVideoData.visibility,
                                     });
                                     queryClient.invalidateQueries({ queryKey: ["video-library-resources"] });

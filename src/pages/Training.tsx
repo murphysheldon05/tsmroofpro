@@ -4,7 +4,8 @@ import { SearchBar } from "@/components/SearchBar";
 import { ResourceCard } from "@/components/dashboard/ResourceCard";
 import { useResources } from "@/hooks/useResources";
 import { Skeleton } from "@/components/ui/skeleton";
-import { UserPlus, GraduationCap, Video, Play } from "lucide-react";
+import { UserPlus, GraduationCap, Video } from "lucide-react";
+import { VideoCard } from "@/components/training/VideoCard";
 
 const categoryConfig: Record<string, { title: string; description: string; icon: React.ElementType }> = {
   "new-hire": {
@@ -58,25 +59,7 @@ export default function Training() {
         {category === "video-library" && resources && resources.length > 0 ? (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {resources.map((resource) => (
-              <div
-                key={resource.id}
-                onClick={() => resource.url && window.open(resource.url, "_blank")}
-                className="group cursor-pointer"
-              >
-                <div className="aspect-video bg-card rounded-xl border border-border/50 overflow-hidden relative mb-3 group-hover:border-primary/30 transition-colors">
-                  <div className="absolute inset-0 flex items-center justify-center bg-secondary/50">
-                    <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center group-hover:bg-primary/30 transition-colors">
-                      <Play className="w-8 h-8 text-primary ml-1" />
-                    </div>
-                  </div>
-                </div>
-                <h3 className="font-medium text-foreground group-hover:text-primary transition-colors">
-                  {resource.title}
-                </h3>
-                <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
-                  {resource.description}
-                </p>
-              </div>
+              <VideoCard key={resource.id} video={resource} />
             ))}
           </div>
         ) : isLoading ? (
