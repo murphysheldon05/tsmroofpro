@@ -516,7 +516,7 @@ export default function Admin() {
     setIsCreatingUser(true);
 
     try {
-      // Create the user via Supabase Auth
+      // Create the user via Auth
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: newUser.email.trim(),
         password: newUser.password,
@@ -531,12 +531,32 @@ export default function Admin() {
         return;
       }
 
+      // Sometimes signUp won't return the user object (depending on auth settings).
+      // In that case, resolve the new user id from the profiles row created by the backend trigger.
+      let createdUserId = authData.user?.id ?? null;
+
+      if (!createdUserId) {
+        const { data: createdProfile, error: profileLookupError } = await supabase
+          .from("profiles")
+          .select("id")
+          .eq("email", newUser.email.trim())
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (profileLookupError) {
+          toast.error("User created, but could not load their profile");
+        }
+
+        createdUserId = createdProfile?.id ?? null;
+      }
+
       // Update the role if not employee (default)
-      if (authData.user && newUser.role !== "employee") {
+      if (createdUserId && newUser.role !== "employee") {
         // Use upsert to handle both cases: role exists or doesn't exist yet
         const { error: roleError } = await supabase
           .from("user_roles")
-          .upsert({ user_id: authData.user.id, role: newUser.role }, { onConflict: "user_id" });
+          .upsert({ user_id: createdUserId, role: newUser.role }, { onConflict: "user_id" });
 
         if (roleError) {
           toast.error("User created but failed to set role");
@@ -545,10 +565,10 @@ export default function Admin() {
 
       toast.success("Employee account created successfully");
       queryClient.invalidateQueries({ queryKey: ["admin-users"] });
-      
+
       // If employee role, show permissions editor
-      if (authData.user && newUser.role === "employee") {
-        setNewlyCreatedEmployeeId(authData.user.id);
+      if (createdUserId && newUser.role === "employee") {
+        setNewlyCreatedEmployeeId(createdUserId);
         setIsAddingUser(false);
       } else {
         setNewUser({ full_name: "", email: "", password: "", role: "employee" });
