@@ -102,6 +102,7 @@ export default function Admin() {
   const [isAddingUser, setIsAddingUser] = useState(false);
   const [isAddingVideo, setIsAddingVideo] = useState(false);
   const [isCreatingUser, setIsCreatingUser] = useState(false);
+  const [newlyCreatedEmployeeId, setNewlyCreatedEmployeeId] = useState<string | null>(null);
   const [editingCategory, setEditingCategory] = useState<string | null>(null);
   const [editingResource, setEditingResource] = useState<Resource | null>(null);
   const [editingPolicy, setEditingPolicy] = useState<Policy | null>(null);
@@ -544,8 +545,15 @@ export default function Admin() {
 
       toast.success("Employee account created successfully");
       queryClient.invalidateQueries({ queryKey: ["admin-users"] });
-      setNewUser({ full_name: "", email: "", password: "", role: "employee" });
-      setIsAddingUser(false);
+      
+      // If employee role, show permissions editor
+      if (authData.user && newUser.role === "employee") {
+        setNewlyCreatedEmployeeId(authData.user.id);
+        setIsAddingUser(false);
+      } else {
+        setNewUser({ full_name: "", email: "", password: "", role: "employee" });
+        setIsAddingUser(false);
+      }
     } catch (error) {
       toast.error("Failed to create user");
     }
@@ -1497,6 +1505,38 @@ export default function Admin() {
                       {isCreatingUser ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                       Create Employee Account
                     </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+
+              {/* Permissions dialog for newly created employee */}
+              <Dialog
+                open={!!newlyCreatedEmployeeId}
+                onOpenChange={(open) => {
+                  if (!open) {
+                    setNewlyCreatedEmployeeId(null);
+                    setNewUser({ full_name: "", email: "", password: "", role: "employee" });
+                  }
+                }}
+              >
+                <DialogContent className="max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>Set Permissions for {newUser.full_name}</DialogTitle>
+                  </DialogHeader>
+                  <p className="text-sm text-muted-foreground">
+                    Customize which sidebar sections this employee can access. Leave all unchecked for full access.
+                  </p>
+                  <div className="mt-4">
+                    {newlyCreatedEmployeeId && (
+                      <UserPermissionsEditor
+                        userId={newlyCreatedEmployeeId}
+                        userRole="employee"
+                        onClose={() => {
+                          setNewlyCreatedEmployeeId(null);
+                          setNewUser({ full_name: "", email: "", password: "", role: "employee" });
+                        }}
+                      />
+                    )}
                   </div>
                 </DialogContent>
               </Dialog>
