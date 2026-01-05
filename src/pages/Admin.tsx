@@ -37,6 +37,8 @@ import {
   ScrollText,
   Wrench,
   Send,
+  Video,
+  Play,
 } from "lucide-react";
 import {
   useResources,
@@ -95,6 +97,7 @@ export default function Admin() {
   const [isAddingTool, setIsAddingTool] = useState(false);
   const [isAddingRequestType, setIsAddingRequestType] = useState(false);
   const [isAddingUser, setIsAddingUser] = useState(false);
+  const [isAddingVideo, setIsAddingVideo] = useState(false);
   const [isCreatingUser, setIsCreatingUser] = useState(false);
   const [editingCategory, setEditingCategory] = useState<string | null>(null);
   const [editingResource, setEditingResource] = useState<Resource | null>(null);
@@ -102,6 +105,7 @@ export default function Admin() {
   const [editingTool, setEditingTool] = useState<Tool | null>(null);
   const [editingRequestType, setEditingRequestType] = useState<RequestType | null>(null);
   const [editingUser, setEditingUser] = useState<any | null>(null);
+  const [editingVideo, setEditingVideo] = useState<Resource | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [editSelectedFile, setEditSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -202,6 +206,37 @@ export default function Admin() {
     tags: "",
     version: "",
     visibility: "employee" as "admin" | "manager" | "employee",
+  });
+
+  const [newVideo, setNewVideo] = useState({
+    title: "",
+    description: "",
+    url: "",
+    visibility: "employee" as "admin" | "manager" | "employee",
+  });
+
+  const [editVideoData, setEditVideoData] = useState({
+    title: "",
+    description: "",
+    url: "",
+    visibility: "employee" as "admin" | "manager" | "employee",
+  });
+
+  // Video library category ID
+  const VIDEO_LIBRARY_CATEGORY_ID = "386f6baa-f5fd-4f10-a6d0-f7f8320d3a3a";
+
+  const { data: videos } = useQuery({
+    queryKey: ["video-library-resources"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("resources")
+        .select("*")
+        .eq("category_id", VIDEO_LIBRARY_CATEGORY_ID)
+        .order("created_at", { ascending: false });
+      
+      if (error) throw error;
+      return data as Resource[];
+    },
   });
 
   const { data: users } = useQuery({
@@ -637,6 +672,10 @@ export default function Admin() {
             <TabsTrigger value="request-types" className="gap-2">
               <Send className="w-4 h-4" />
               Forms
+            </TabsTrigger>
+            <TabsTrigger value="video-library" className="gap-2">
+              <Video className="w-4 h-4" />
+              Video Library
             </TabsTrigger>
             <TabsTrigger value="users" className="gap-2">
               <Users className="w-4 h-4" />
@@ -2264,6 +2303,302 @@ export default function Admin() {
                     <tr>
                       <td colSpan={4} className="px-4 py-8 text-center text-muted-foreground">
                         No form types yet. Add your first form type above.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </TabsContent>
+
+          {/* Video Library Tab */}
+          <TabsContent value="video-library" className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h2 className="text-lg font-semibold text-foreground">
+                Video Library ({videos?.length || 0})
+              </h2>
+              <Dialog open={isAddingVideo} onOpenChange={setIsAddingVideo}>
+                <DialogTrigger asChild>
+                  <Button variant="neon">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Video
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-lg">
+                  <DialogHeader>
+                    <DialogTitle>Add New Video</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 mt-4">
+                    <div className="space-y-2">
+                      <Label>Title *</Label>
+                      <Input
+                        value={newVideo.title}
+                        onChange={(e) => setNewVideo({ ...newVideo, title: e.target.value })}
+                        placeholder="Video title"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Description</Label>
+                      <Textarea
+                        value={newVideo.description}
+                        onChange={(e) => setNewVideo({ ...newVideo, description: e.target.value })}
+                        placeholder="Brief description of the video"
+                        rows={3}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Video URL (YouTube, Loom, etc.) *</Label>
+                      <Input
+                        value={newVideo.url}
+                        onChange={(e) => setNewVideo({ ...newVideo, url: e.target.value })}
+                        placeholder="https://www.youtube.com/watch?v=... or https://www.loom.com/share/..."
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Paste a YouTube, Loom, Vimeo, or other video URL
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Visibility</Label>
+                      <Select
+                        value={newVideo.visibility}
+                        onValueChange={(v: "admin" | "manager" | "employee") =>
+                          setNewVideo({ ...newVideo, visibility: v })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="employee">All Employees</SelectItem>
+                          <SelectItem value="manager">Managers Only</SelectItem>
+                          <SelectItem value="admin">Admins Only</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex justify-end gap-3 pt-4">
+                      <Button
+                        variant="outline"
+                        onClick={() => setIsAddingVideo(false)}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        variant="neon"
+                        onClick={async () => {
+                          if (!newVideo.title.trim() || !newVideo.url.trim()) {
+                            toast.error("Title and URL are required");
+                            return;
+                          }
+                          await createResource.mutateAsync({
+                            title: newVideo.title.trim(),
+                            description: newVideo.description.trim() || null,
+                            body: null,
+                            category_id: VIDEO_LIBRARY_CATEGORY_ID,
+                            url: newVideo.url.trim(),
+                            tags: [],
+                            version: "v1.0",
+                            visibility: newVideo.visibility,
+                            owner_id: null,
+                            file_path: null,
+                            effective_date: null,
+                          });
+                          queryClient.invalidateQueries({ queryKey: ["video-library-resources"] });
+                          setNewVideo({ title: "", description: "", url: "", visibility: "employee" });
+                          setIsAddingVideo(false);
+                        }}
+                        disabled={createResource.isPending}
+                      >
+                        {createResource.isPending ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Creating...
+                          </>
+                        ) : (
+                          "Add Video"
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
+
+            <div className="glass-card rounded-xl overflow-hidden">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-border/50">
+                    <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
+                      Video
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground hidden md:table-cell">
+                      Visibility
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground hidden lg:table-cell">
+                      Views
+                    </th>
+                    <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {videos?.map((video, index) => (
+                    <tr
+                      key={video.id}
+                      className={
+                        index < (videos?.length || 0) - 1
+                          ? "border-b border-border/30"
+                          : ""
+                      }
+                    >
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                            <Play className="w-5 h-5 text-primary" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="font-medium text-foreground truncate">{video.title}</p>
+                            {video.description && (
+                              <p className="text-xs text-muted-foreground line-clamp-1">{video.description}</p>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 hidden md:table-cell">
+                        <Badge variant="secondary" className="capitalize">
+                          {video.visibility === "employee" ? "All" : video.visibility}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-3 hidden lg:table-cell">
+                        <span className="flex items-center gap-1 text-muted-foreground">
+                          <Eye className="w-3 h-3" />
+                          {video.view_count}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <div className="flex justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => video.url && window.open(video.url, "_blank")}
+                            title="Watch video"
+                          >
+                            <Play className="w-4 h-4" />
+                          </Button>
+                          <Dialog
+                            open={editingVideo?.id === video.id}
+                            onOpenChange={(open) => {
+                              if (open) {
+                                setEditingVideo(video);
+                                setEditVideoData({
+                                  title: video.title,
+                                  description: video.description || "",
+                                  url: video.url || "",
+                                  visibility: video.visibility,
+                                });
+                              } else {
+                                setEditingVideo(null);
+                              }
+                            }}
+                          >
+                            <DialogTrigger asChild>
+                              <Button variant="ghost" size="icon">
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent className="max-w-lg">
+                              <DialogHeader>
+                                <DialogTitle>Edit Video</DialogTitle>
+                              </DialogHeader>
+                              <div className="space-y-4 mt-4">
+                                <div className="space-y-2">
+                                  <Label>Title *</Label>
+                                  <Input
+                                    value={editVideoData.title}
+                                    onChange={(e) => setEditVideoData({ ...editVideoData, title: e.target.value })}
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label>Description</Label>
+                                  <Textarea
+                                    value={editVideoData.description}
+                                    onChange={(e) => setEditVideoData({ ...editVideoData, description: e.target.value })}
+                                    rows={3}
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label>Video URL *</Label>
+                                  <Input
+                                    value={editVideoData.url}
+                                    onChange={(e) => setEditVideoData({ ...editVideoData, url: e.target.value })}
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label>Visibility</Label>
+                                  <Select
+                                    value={editVideoData.visibility}
+                                    onValueChange={(v: "admin" | "manager" | "employee") =>
+                                      setEditVideoData({ ...editVideoData, visibility: v })
+                                    }
+                                  >
+                                    <SelectTrigger>
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="employee">All Employees</SelectItem>
+                                      <SelectItem value="manager">Managers Only</SelectItem>
+                                      <SelectItem value="admin">Admins Only</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                <Button
+                                  onClick={async () => {
+                                    if (!editVideoData.title.trim() || !editVideoData.url.trim()) {
+                                      toast.error("Title and URL are required");
+                                      return;
+                                    }
+                                    await updateResource.mutateAsync({
+                                      id: video.id,
+                                      title: editVideoData.title.trim(),
+                                      description: editVideoData.description.trim() || null,
+                                      url: editVideoData.url.trim(),
+                                      visibility: editVideoData.visibility,
+                                    });
+                                    queryClient.invalidateQueries({ queryKey: ["video-library-resources"] });
+                                    setEditingVideo(null);
+                                  }}
+                                  className="w-full"
+                                  disabled={updateResource.isPending}
+                                >
+                                  {updateResource.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                                  Save Changes
+                                </Button>
+                              </div>
+                            </DialogContent>
+                          </Dialog>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={async () => {
+                              if (confirm("Are you sure you want to delete this video?")) {
+                                await deleteResource.mutateAsync(video.id);
+                                queryClient.invalidateQueries({ queryKey: ["video-library-resources"] });
+                              }
+                            }}
+                          >
+                            <Trash2 className="w-4 h-4 text-destructive" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {(!videos || videos.length === 0) && (
+                    <tr>
+                      <td colSpan={4} className="px-4 py-8 text-center text-muted-foreground">
+                        <div className="flex flex-col items-center gap-2">
+                          <Video className="w-10 h-10 text-muted-foreground/50" />
+                          <p>No videos yet. Add your first training video above.</p>
+                        </div>
                       </td>
                     </tr>
                   )}
