@@ -127,6 +127,42 @@ export type Database = {
         }
         Relationships: []
       }
+      production_calendar_events: {
+        Row: {
+          all_day: boolean | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          end_date: string | null
+          id: string
+          start_date: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          all_day?: boolean | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          start_date: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          all_day?: boolean | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          start_date?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null

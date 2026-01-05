@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { ResourceDetailModal } from "@/components/resources/ResourceDetailModal";
+import { ProductionCalendar } from "@/components/production/ProductionCalendar";
 import {
   Select,
   SelectContent,
@@ -127,6 +128,11 @@ export default function SOPLibrary() {
             </div>
           )}
         </div>
+
+        {/* Production Calendar - Only show for production category */}
+        {category === "production" && (
+          <ProductionCalendar />
+        )}
 
         {/* Resources Grid */}
         {isLoading ? (
