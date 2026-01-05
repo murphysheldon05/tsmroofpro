@@ -91,6 +91,83 @@ export type Database = {
           },
         ]
       }
+      crews: {
+        Row: {
+          color: string
+          created_at: string
+          id: string
+          is_active: boolean | null
+          name: string
+          sort_order: number | null
+          updated_at: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          name: string
+          sort_order?: number | null
+          updated_at?: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          sort_order?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      delivery_calendar_events: {
+        Row: {
+          all_day: boolean | null
+          created_at: string
+          created_by: string | null
+          crew_id: string | null
+          description: string | null
+          end_date: string | null
+          id: string
+          start_date: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          all_day?: boolean | null
+          created_at?: string
+          created_by?: string | null
+          crew_id?: string | null
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          start_date: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          all_day?: boolean | null
+          created_at?: string
+          created_by?: string | null
+          crew_id?: string | null
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          start_date?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_calendar_events_crew_id_fkey"
+            columns: ["crew_id"]
+            isOneToOne: false
+            referencedRelation: "crews"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       policies: {
         Row: {
           created_at: string
@@ -132,6 +209,7 @@ export type Database = {
           all_day: boolean | null
           created_at: string
           created_by: string | null
+          crew_id: string | null
           description: string | null
           end_date: string | null
           event_category: string
@@ -144,6 +222,7 @@ export type Database = {
           all_day?: boolean | null
           created_at?: string
           created_by?: string | null
+          crew_id?: string | null
           description?: string | null
           end_date?: string | null
           event_category?: string
@@ -156,6 +235,7 @@ export type Database = {
           all_day?: boolean | null
           created_at?: string
           created_by?: string | null
+          crew_id?: string | null
           description?: string | null
           end_date?: string | null
           event_category?: string
@@ -164,7 +244,15 @@ export type Database = {
           title?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "production_calendar_events_crew_id_fkey"
+            columns: ["crew_id"]
+            isOneToOne: false
+            referencedRelation: "crews"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
