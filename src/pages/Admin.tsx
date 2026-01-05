@@ -34,6 +34,7 @@ import {
   File,
   Loader2,
   Type,
+  ScrollText,
 } from "lucide-react";
 import {
   useResources,
@@ -43,6 +44,13 @@ import {
   useUpdateResource,
   type Resource,
 } from "@/hooks/useResources";
+import {
+  usePolicies,
+  useCreatePolicy,
+  useUpdatePolicy,
+  useDeletePolicy,
+  type Policy,
+} from "@/hooks/usePolicies";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -53,14 +61,20 @@ export default function Admin() {
   const queryClient = useQueryClient();
   const { data: resources } = useResources();
   const { data: categories } = useCategories();
+  const { data: policies } = usePolicies();
   const createResource = useCreateResource();
   const deleteResource = useDeleteResource();
   const updateResource = useUpdateResource();
+  const createPolicy = useCreatePolicy();
+  const updatePolicy = useUpdatePolicy();
+  const deletePolicy = useDeletePolicy();
 
   const [isAddingResource, setIsAddingResource] = useState(false);
   const [isAddingCategory, setIsAddingCategory] = useState(false);
+  const [isAddingPolicy, setIsAddingPolicy] = useState(false);
   const [editingCategory, setEditingCategory] = useState<string | null>(null);
   const [editingResource, setEditingResource] = useState<Resource | null>(null);
+  const [editingPolicy, setEditingPolicy] = useState<Policy | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [editSelectedFile, setEditSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -83,6 +97,20 @@ export default function Admin() {
     slug: "",
     description: "",
     icon: "",
+    sort_order: 0,
+  });
+
+  const [newPolicy, setNewPolicy] = useState({
+    title: "",
+    description: "",
+    url: "",
+    sort_order: 0,
+  });
+
+  const [editPolicyData, setEditPolicyData] = useState({
+    title: "",
+    description: "",
+    url: "",
     sort_order: 0,
   });
 
@@ -451,6 +479,10 @@ export default function Admin() {
             <TabsTrigger value="categories" className="gap-2">
               <FolderOpen className="w-4 h-4" />
               Categories
+            </TabsTrigger>
+            <TabsTrigger value="policies" className="gap-2">
+              <ScrollText className="w-4 h-4" />
+              Policies
             </TabsTrigger>
             <TabsTrigger value="users" className="gap-2">
               <Users className="w-4 h-4" />
@@ -1232,6 +1264,263 @@ export default function Admin() {
                       </td>
                     </tr>
                   ))}
+                </tbody>
+              </table>
+            </div>
+          </TabsContent>
+
+          {/* Policies Tab */}
+          <TabsContent value="policies" className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h2 className="text-lg font-semibold text-foreground">
+                Company Policies ({policies?.length || 0})
+              </h2>
+              <Dialog open={isAddingPolicy} onOpenChange={setIsAddingPolicy}>
+                <DialogTrigger asChild>
+                  <Button variant="neon">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Policy
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>Add New Policy</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 mt-4">
+                    <div className="space-y-2">
+                      <Label>Title *</Label>
+                      <Input
+                        value={newPolicy.title}
+                        onChange={(e) =>
+                          setNewPolicy({ ...newPolicy, title: e.target.value })
+                        }
+                        placeholder="e.g. Employee Handbook"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Description</Label>
+                      <Textarea
+                        value={newPolicy.description}
+                        onChange={(e) =>
+                          setNewPolicy({ ...newPolicy, description: e.target.value })
+                        }
+                        placeholder="Brief description"
+                        rows={2}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>URL (link to document)</Label>
+                      <Input
+                        value={newPolicy.url}
+                        onChange={(e) =>
+                          setNewPolicy({ ...newPolicy, url: e.target.value })
+                        }
+                        placeholder="https://..."
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Sort Order</Label>
+                      <Input
+                        type="number"
+                        value={newPolicy.sort_order}
+                        onChange={(e) =>
+                          setNewPolicy({ ...newPolicy, sort_order: parseInt(e.target.value) || 0 })
+                        }
+                      />
+                    </div>
+                    <Button
+                      onClick={async () => {
+                        if (!newPolicy.title.trim()) {
+                          toast.error("Title is required");
+                          return;
+                        }
+                        await createPolicy.mutateAsync({
+                          title: newPolicy.title.trim(),
+                          description: newPolicy.description.trim() || null,
+                          url: newPolicy.url.trim() || null,
+                          file_path: null,
+                          sort_order: newPolicy.sort_order,
+                          is_active: true,
+                        });
+                        setNewPolicy({ title: "", description: "", url: "", sort_order: 0 });
+                        setIsAddingPolicy(false);
+                      }}
+                      className="w-full"
+                      disabled={createPolicy.isPending}
+                    >
+                      {createPolicy.isPending ? (
+                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                      ) : null}
+                      Add Policy
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
+
+            {/* Policies List */}
+            <div className="glass-card rounded-xl overflow-hidden">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-border/50">
+                    <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
+                      Title
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground hidden md:table-cell">
+                      URL
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground hidden sm:table-cell">
+                      Order
+                    </th>
+                    <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {policies?.map((policy, index) => (
+                    <tr
+                      key={policy.id}
+                      className={
+                        index < (policies?.length || 0) - 1
+                          ? "border-b border-border/30"
+                          : ""
+                      }
+                    >
+                      <td className="px-4 py-3">
+                        <div>
+                          <p className="font-medium text-foreground">{policy.title}</p>
+                          {policy.description && (
+                            <p className="text-xs text-muted-foreground line-clamp-1">
+                              {policy.description}
+                            </p>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 hidden md:table-cell text-muted-foreground text-sm truncate max-w-[200px]">
+                        {policy.url || "—"}
+                      </td>
+                      <td className="px-4 py-3 hidden sm:table-cell text-muted-foreground">
+                        {policy.sort_order}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <Dialog
+                            open={editingPolicy?.id === policy.id}
+                            onOpenChange={(open) => {
+                              if (open) {
+                                setEditingPolicy(policy);
+                                setEditPolicyData({
+                                  title: policy.title,
+                                  description: policy.description || "",
+                                  url: policy.url || "",
+                                  sort_order: policy.sort_order,
+                                });
+                              } else {
+                                setEditingPolicy(null);
+                              }
+                            }}
+                          >
+                            <DialogTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent className="max-w-md">
+                              <DialogHeader>
+                                <DialogTitle>Edit Policy</DialogTitle>
+                              </DialogHeader>
+                              <div className="space-y-4 mt-4">
+                                <div className="space-y-2">
+                                  <Label>Title *</Label>
+                                  <Input
+                                    value={editPolicyData.title}
+                                    onChange={(e) =>
+                                      setEditPolicyData({ ...editPolicyData, title: e.target.value })
+                                    }
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label>Description</Label>
+                                  <Textarea
+                                    value={editPolicyData.description}
+                                    onChange={(e) =>
+                                      setEditPolicyData({ ...editPolicyData, description: e.target.value })
+                                    }
+                                    rows={2}
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label>URL</Label>
+                                  <Input
+                                    value={editPolicyData.url}
+                                    onChange={(e) =>
+                                      setEditPolicyData({ ...editPolicyData, url: e.target.value })
+                                    }
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label>Sort Order</Label>
+                                  <Input
+                                    type="number"
+                                    value={editPolicyData.sort_order}
+                                    onChange={(e) =>
+                                      setEditPolicyData({
+                                        ...editPolicyData,
+                                        sort_order: parseInt(e.target.value) || 0,
+                                      })
+                                    }
+                                  />
+                                </div>
+                                <Button
+                                  onClick={async () => {
+                                    if (!editPolicyData.title.trim()) {
+                                      toast.error("Title is required");
+                                      return;
+                                    }
+                                    await updatePolicy.mutateAsync({
+                                      id: policy.id,
+                                      title: editPolicyData.title.trim(),
+                                      description: editPolicyData.description.trim() || null,
+                                      url: editPolicyData.url.trim() || null,
+                                      sort_order: editPolicyData.sort_order,
+                                    });
+                                    setEditingPolicy(null);
+                                  }}
+                                  className="w-full"
+                                  disabled={updatePolicy.isPending}
+                                >
+                                  {updatePolicy.isPending ? (
+                                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                                  ) : null}
+                                  Save Changes
+                                </Button>
+                              </div>
+                            </DialogContent>
+                          </Dialog>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive"
+                            onClick={() => {
+                              if (confirm("Are you sure you want to delete this policy?")) {
+                                deletePolicy.mutate(policy.id);
+                              }
+                            }}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {(!policies || policies.length === 0) && (
+                    <tr>
+                      <td colSpan={4} className="px-4 py-8 text-center text-muted-foreground">
+                        No policies yet. Add your first policy above.
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>

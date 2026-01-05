@@ -1,5 +1,6 @@
 import { AppLayout } from "@/components/layout/AppLayout";
-import { Building2, Heart, Target, Users, CheckCircle, FileText } from "lucide-react";
+import { Building2, Heart, Target, Users, CheckCircle, FileText, ExternalLink, Loader2 } from "lucide-react";
+import { usePolicies } from "@/hooks/usePolicies";
 
 const coreValues = [
   {
@@ -30,6 +31,14 @@ const contacts = [
 ];
 
 export default function Company() {
+  const { data: policies, isLoading: policiesLoading } = usePolicies();
+
+  const handlePolicyClick = (policy: { url: string | null }) => {
+    if (policy.url) {
+      window.open(policy.url, "_blank", "noopener,noreferrer");
+    }
+  };
+
   return (
     <AppLayout>
       <div className="max-w-5xl mx-auto space-y-10">
@@ -131,21 +140,43 @@ export default function Company() {
             <FileText className="w-5 h-5 text-primary" />
             <h2 className="text-xl font-semibold text-foreground">Policies</h2>
           </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {["Employee Handbook", "Safety Manual", "IT Policies", "Time Off Policy", "Expense Policy", "Code of Conduct"].map(
-              (policy) => (
+          {policiesLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-6 h-6 animate-spin text-primary" />
+            </div>
+          ) : policies && policies.length > 0 ? (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {policies.map((policy) => (
                 <button
-                  key={policy}
+                  key={policy.id}
+                  onClick={() => handlePolicyClick(policy)}
                   className="p-4 rounded-xl bg-card border border-border/50 hover:border-primary/30 transition-all text-left group"
+                  disabled={!policy.url}
                 >
-                  <FileText className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors mb-2" />
-                  <p className="font-medium text-foreground group-hover:text-primary transition-colors">
-                    {policy}
+                  <div className="flex items-start justify-between gap-2">
+                    <FileText className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors flex-shrink-0 mt-0.5" />
+                    {policy.url && (
+                      <ExternalLink className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                    )}
+                  </div>
+                  <p className="font-medium text-foreground group-hover:text-primary transition-colors mt-2">
+                    {policy.title}
                   </p>
+                  {policy.description && (
+                    <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                      {policy.description}
+                    </p>
+                  )}
                 </button>
-              )
-            )}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12 text-muted-foreground">
+              <FileText className="w-12 h-12 mx-auto mb-3 opacity-50" />
+              <p>No policies have been added yet.</p>
+              <p className="text-sm">Admins can add policies from the Admin Panel.</p>
+            </div>
+          )}
         </section>
       </div>
     </AppLayout>
