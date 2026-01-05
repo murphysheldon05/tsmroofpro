@@ -253,7 +253,11 @@ export default function Admin() {
     },
   });
 
-  const { data: users } = useQuery({
+  const {
+    data: users,
+    isFetching: isUsersFetching,
+    refetch: refetchUsers,
+  } = useQuery({
     queryKey: ["admin-users"],
     queryFn: async () => {
       // Fetch profiles
@@ -280,6 +284,9 @@ export default function Admin() {
         role: roleByUserId.get(p.id) ?? "employee",
       }));
     },
+    // Keep the list fresh across multiple admins without needing a hard refresh.
+    refetchOnWindowFocus: true,
+    refetchInterval: 15000,
   });
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>, isEdit = false) => {
@@ -1463,75 +1470,89 @@ export default function Admin() {
               <h2 className="text-lg font-semibold text-foreground">
                 All Users ({users?.length || 0})
               </h2>
-              <Dialog open={isAddingUser} onOpenChange={setIsAddingUser}>
-                <DialogTrigger asChild>
-                  <Button variant="neon">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Invite Employee
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-md">
-                  <DialogHeader>
-                    <DialogTitle>Invite New Employee</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-4 mt-4">
-                    <div className="space-y-2">
-                      <Label>Full Name *</Label>
-                      <Input
-                        value={newUser.full_name}
-                        onChange={(e) => setNewUser({ ...newUser, full_name: e.target.value })}
-                        placeholder="John Doe"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Email *</Label>
-                      <Input
-                        type="email"
-                        value={newUser.email}
-                        onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
-                        placeholder="john@company.com"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Temporary Password *</Label>
-                      <Input
-                        type="password"
-                        value={newUser.password}
-                        onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
-                        placeholder="Minimum 6 characters"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Role</Label>
-                      <Select
-                        value={newUser.role}
-                        onValueChange={(v) => setNewUser({ ...newUser, role: v as "admin" | "manager" | "employee" })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="employee">Employee</SelectItem>
-                          <SelectItem value="manager">Manager</SelectItem>
-                          <SelectItem value="admin">Admin</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <Button
-                      onClick={handleCreateUser}
-                      className="w-full"
-                      disabled={isCreatingUser}
-                    >
-                      {isCreatingUser ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                      Create Employee Account
+
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => refetchUsers()}
+                  disabled={isUsersFetching}
+                >
+                  {isUsersFetching ? <Loader2 className="w-4 h-4 animate-spin" /> : "Refresh"}
+                </Button>
+
+                <Dialog open={isAddingUser} onOpenChange={setIsAddingUser}>
+                  <DialogTrigger asChild>
+                    <Button variant="neon">
+                      <Plus className="w-4 h-4 mr-2" />
+                      Invite Employee
                     </Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-md">
+                    <DialogHeader>
+                      <DialogTitle>Invite New Employee</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 mt-4">
+                      <div className="space-y-2">
+                        <Label>Full Name *</Label>
+                        <Input
+                          value={newUser.full_name}
+                          onChange={(e) => setNewUser({ ...newUser, full_name: e.target.value })}
+                          placeholder="John Doe"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Email *</Label>
+                        <Input
+                          type="email"
+                          value={newUser.email}
+                          onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                          placeholder="john@company.com"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Temporary Password *</Label>
+                        <Input
+                          type="password"
+                          value={newUser.password}
+                          onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                          placeholder="Minimum 6 characters"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Role</Label>
+                        <Select
+                          value={newUser.role}
+                          onValueChange={(v) =>
+                            setNewUser({ ...newUser, role: v as "admin" | "manager" | "employee" })
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="employee">Employee</SelectItem>
+                            <SelectItem value="manager">Manager</SelectItem>
+                            <SelectItem value="admin">Admin</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <Button
+                        onClick={handleCreateUser}
+                        className="w-full"
+                        disabled={isCreatingUser}
+                      >
+                        {isCreatingUser ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                        Create Employee Account
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </div>
 
               {/* Permissions dialog for newly created employee */}
-              <Dialog
-                open={!!newlyCreatedEmployeeId}
+              <Dialog open={!!newlyCreatedEmployeeId}
                 onOpenChange={(open) => {
                   if (!open) {
                     setNewlyCreatedEmployeeId(null);
