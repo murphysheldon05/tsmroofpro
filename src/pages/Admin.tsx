@@ -113,6 +113,13 @@ export default function Admin() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const editFileInputRef = useRef<HTMLInputElement>(null);
   
+  // Video thumbnail upload state
+  const [selectedThumbnail, setSelectedThumbnail] = useState<File | null>(null);
+  const [editSelectedThumbnail, setEditSelectedThumbnail] = useState<File | null>(null);
+  const [isUploadingThumbnail, setIsUploadingThumbnail] = useState(false);
+  const thumbnailInputRef = useRef<HTMLInputElement>(null);
+  const editThumbnailInputRef = useRef<HTMLInputElement>(null);
+  
   const [newUser, setNewUser] = useState({
     full_name: "",
     email: "",
@@ -2361,14 +2368,73 @@ export default function Admin() {
                       </p>
                     </div>
                     <div className="space-y-2">
-                      <Label>Custom Thumbnail URL (optional)</Label>
-                      <Input
-                        value={newVideo.thumbnailUrl}
-                        onChange={(e) => setNewVideo({ ...newVideo, thumbnailUrl: e.target.value })}
-                        placeholder="https://example.com/thumbnail.jpg"
-                      />
+                      <Label>Custom Thumbnail (optional)</Label>
+                      <div className="space-y-3">
+                        {/* Upload option */}
+                        <div className="flex items-center gap-3">
+                          <input
+                            ref={thumbnailInputRef}
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                if (file.size > 5 * 1024 * 1024) {
+                                  toast.error("Thumbnail must be less than 5MB");
+                                  return;
+                                }
+                                setSelectedThumbnail(file);
+                                setNewVideo({ ...newVideo, thumbnailUrl: "" });
+                              }
+                            }}
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => thumbnailInputRef.current?.click()}
+                            className="flex-shrink-0"
+                          >
+                            <Upload className="w-4 h-4 mr-2" />
+                            Upload Image
+                          </Button>
+                          {selectedThumbnail && (
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <span className="truncate max-w-[150px]">{selectedThumbnail.name}</span>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                onClick={() => {
+                                  setSelectedThumbnail(null);
+                                  if (thumbnailInputRef.current) thumbnailInputRef.current.value = "";
+                                }}
+                              >
+                                <X className="w-3 h-3" />
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                        {/* Or URL option */}
+                        {!selectedThumbnail && (
+                          <>
+                            <div className="flex items-center gap-2">
+                              <div className="flex-1 h-px bg-border" />
+                              <span className="text-xs text-muted-foreground">or paste URL</span>
+                              <div className="flex-1 h-px bg-border" />
+                            </div>
+                            <Input
+                              value={newVideo.thumbnailUrl}
+                              onChange={(e) => setNewVideo({ ...newVideo, thumbnailUrl: e.target.value })}
+                              placeholder="https://example.com/thumbnail.jpg"
+                            />
+                          </>
+                        )}
+                      </div>
                       <p className="text-xs text-muted-foreground">
-                        Leave empty to auto-generate from YouTube/Loom. Or paste a custom image URL.
+                        Leave empty to auto-generate from YouTube/Loom
                       </p>
                     </div>
                     <div className="space-y-2">
@@ -2403,6 +2469,39 @@ export default function Admin() {
                             toast.error("Title and URL are required");
                             return;
                           }
+                          
+                          let thumbnailPath: string | null = newVideo.thumbnailUrl.trim() || null;
+                          
+                          // Upload thumbnail if file selected
+                          if (selectedThumbnail) {
+                            setIsUploadingThumbnail(true);
+                            try {
+                              const fileExt = selectedThumbnail.name.split(".").pop();
+                              const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+                              
+                              const { error: uploadError } = await supabase.storage
+                                .from("video-thumbnails")
+                                .upload(fileName, selectedThumbnail);
+                              
+                              if (uploadError) {
+                                toast.error("Failed to upload thumbnail: " + uploadError.message);
+                                setIsUploadingThumbnail(false);
+                                return;
+                              }
+                              
+                              const { data: urlData } = supabase.storage
+                                .from("video-thumbnails")
+                                .getPublicUrl(fileName);
+                              
+                              thumbnailPath = urlData.publicUrl;
+                            } catch (error) {
+                              toast.error("Failed to upload thumbnail");
+                              setIsUploadingThumbnail(false);
+                              return;
+                            }
+                            setIsUploadingThumbnail(false);
+                          }
+                          
                           await createResource.mutateAsync({
                             title: newVideo.title.trim(),
                             description: newVideo.description.trim() || null,
@@ -2413,19 +2512,21 @@ export default function Admin() {
                             version: "v1.0",
                             visibility: newVideo.visibility,
                             owner_id: null,
-                            file_path: newVideo.thumbnailUrl.trim() || null,
+                            file_path: thumbnailPath,
                             effective_date: null,
                           });
                           queryClient.invalidateQueries({ queryKey: ["video-library-resources"] });
                           setNewVideo({ title: "", description: "", url: "", thumbnailUrl: "", visibility: "employee" });
+                          setSelectedThumbnail(null);
+                          if (thumbnailInputRef.current) thumbnailInputRef.current.value = "";
                           setIsAddingVideo(false);
                         }}
-                        disabled={createResource.isPending}
+                        disabled={createResource.isPending || isUploadingThumbnail}
                       >
-                        {createResource.isPending ? (
+                        {(createResource.isPending || isUploadingThumbnail) ? (
                           <>
                             <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                            Creating...
+                            {isUploadingThumbnail ? "Uploading..." : "Creating..."}
                           </>
                         ) : (
                           "Add Video"
@@ -2566,12 +2667,84 @@ export default function Admin() {
                                   />
                                 </div>
                                 <div className="space-y-2">
-                                  <Label>Custom Thumbnail URL (optional)</Label>
-                                  <Input
-                                    value={editVideoData.thumbnailUrl}
-                                    onChange={(e) => setEditVideoData({ ...editVideoData, thumbnailUrl: e.target.value })}
-                                    placeholder="https://example.com/thumbnail.jpg"
-                                  />
+                                  <Label>Custom Thumbnail (optional)</Label>
+                                  <div className="space-y-3">
+                                    {/* Current thumbnail preview */}
+                                    {(editVideoData.thumbnailUrl || editSelectedThumbnail) && (
+                                      <div className="flex items-center gap-3">
+                                        <div className="w-20 h-12 rounded-lg overflow-hidden bg-secondary">
+                                          <img
+                                            src={editSelectedThumbnail ? URL.createObjectURL(editSelectedThumbnail) : editVideoData.thumbnailUrl}
+                                            alt="Thumbnail preview"
+                                            className="w-full h-full object-cover"
+                                          />
+                                        </div>
+                                        <Button
+                                          type="button"
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => {
+                                            setEditVideoData({ ...editVideoData, thumbnailUrl: "" });
+                                            setEditSelectedThumbnail(null);
+                                            if (editThumbnailInputRef.current) editThumbnailInputRef.current.value = "";
+                                          }}
+                                        >
+                                          <X className="w-4 h-4 mr-1" />
+                                          Remove
+                                        </Button>
+                                      </div>
+                                    )}
+                                    {/* Upload option */}
+                                    <div className="flex items-center gap-3">
+                                      <input
+                                        ref={editThumbnailInputRef}
+                                        type="file"
+                                        accept="image/*"
+                                        className="hidden"
+                                        onChange={(e) => {
+                                          const file = e.target.files?.[0];
+                                          if (file) {
+                                            if (file.size > 5 * 1024 * 1024) {
+                                              toast.error("Thumbnail must be less than 5MB");
+                                              return;
+                                            }
+                                            setEditSelectedThumbnail(file);
+                                            setEditVideoData({ ...editVideoData, thumbnailUrl: "" });
+                                          }
+                                        }}
+                                      />
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => editThumbnailInputRef.current?.click()}
+                                        className="flex-shrink-0"
+                                      >
+                                        <Upload className="w-4 h-4 mr-2" />
+                                        Upload New Image
+                                      </Button>
+                                      {editSelectedThumbnail && (
+                                        <span className="text-sm text-muted-foreground truncate max-w-[150px]">
+                                          {editSelectedThumbnail.name}
+                                        </span>
+                                      )}
+                                    </div>
+                                    {/* Or URL option */}
+                                    {!editSelectedThumbnail && (
+                                      <>
+                                        <div className="flex items-center gap-2">
+                                          <div className="flex-1 h-px bg-border" />
+                                          <span className="text-xs text-muted-foreground">or paste URL</span>
+                                          <div className="flex-1 h-px bg-border" />
+                                        </div>
+                                        <Input
+                                          value={editVideoData.thumbnailUrl}
+                                          onChange={(e) => setEditVideoData({ ...editVideoData, thumbnailUrl: e.target.value })}
+                                          placeholder="https://example.com/thumbnail.jpg"
+                                        />
+                                      </>
+                                    )}
+                                  </div>
                                   <p className="text-xs text-muted-foreground">
                                     Leave empty to auto-generate from YouTube/Loom
                                   </p>
@@ -2600,22 +2773,63 @@ export default function Admin() {
                                       toast.error("Title and URL are required");
                                       return;
                                     }
+                                    
+                                    let thumbnailPath: string | null = editVideoData.thumbnailUrl.trim() || null;
+                                    
+                                    // Upload new thumbnail if file selected
+                                    if (editSelectedThumbnail) {
+                                      setIsUploadingThumbnail(true);
+                                      try {
+                                        const fileExt = editSelectedThumbnail.name.split(".").pop();
+                                        const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+                                        
+                                        const { error: uploadError } = await supabase.storage
+                                          .from("video-thumbnails")
+                                          .upload(fileName, editSelectedThumbnail);
+                                        
+                                        if (uploadError) {
+                                          toast.error("Failed to upload thumbnail: " + uploadError.message);
+                                          setIsUploadingThumbnail(false);
+                                          return;
+                                        }
+                                        
+                                        const { data: urlData } = supabase.storage
+                                          .from("video-thumbnails")
+                                          .getPublicUrl(fileName);
+                                        
+                                        thumbnailPath = urlData.publicUrl;
+                                      } catch (error) {
+                                        toast.error("Failed to upload thumbnail");
+                                        setIsUploadingThumbnail(false);
+                                        return;
+                                      }
+                                      setIsUploadingThumbnail(false);
+                                    }
+                                    
                                     await updateResource.mutateAsync({
                                       id: video.id,
                                       title: editVideoData.title.trim(),
                                       description: editVideoData.description.trim() || null,
                                       url: editVideoData.url.trim(),
-                                      file_path: editVideoData.thumbnailUrl.trim() || null,
+                                      file_path: thumbnailPath,
                                       visibility: editVideoData.visibility,
                                     });
                                     queryClient.invalidateQueries({ queryKey: ["video-library-resources"] });
+                                    setEditSelectedThumbnail(null);
+                                    if (editThumbnailInputRef.current) editThumbnailInputRef.current.value = "";
                                     setEditingVideo(null);
                                   }}
                                   className="w-full"
-                                  disabled={updateResource.isPending}
+                                  disabled={updateResource.isPending || isUploadingThumbnail}
                                 >
-                                  {updateResource.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                                  Save Changes
+                                  {(updateResource.isPending || isUploadingThumbnail) ? (
+                                    <>
+                                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                                      {isUploadingThumbnail ? "Uploading..." : "Saving..."}
+                                    </>
+                                  ) : (
+                                    "Save Changes"
+                                  )}
                                 </Button>
                               </div>
                             </DialogContent>
