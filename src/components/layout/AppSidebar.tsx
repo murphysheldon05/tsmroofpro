@@ -30,12 +30,21 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { useCurrentUserPermissions, isSectionVisible } from "@/hooks/useUserPermissions";
+
+interface NavChild {
+  title: string;
+  href: string;
+  icon?: React.ElementType;
+  sectionKey: string;
+}
 
 interface NavItem {
   title: string;
   href?: string;
   icon: React.ElementType;
-  children?: { title: string; href: string; icon?: React.ElementType }[];
+  sectionKey: string;
+  children?: NavChild[];
 }
 
 const navigation: NavItem[] = [
@@ -43,43 +52,49 @@ const navigation: NavItem[] = [
     title: "Dashboard",
     href: "/dashboard",
     icon: LayoutDashboard,
+    sectionKey: "dashboard",
   },
   {
     title: "SOP Library",
     icon: FileText,
+    sectionKey: "sops",
     children: [
-      { title: "Sales", href: "/sops/sales", icon: TrendingUp },
-      { title: "Production", href: "/sops/production", icon: Hammer },
-      { title: "Supplements", href: "/sops/supplements", icon: FileCode },
-      { title: "Office Admin", href: "/sops/office-admin", icon: Building2 },
-      { title: "Accounting", href: "/sops/accounting", icon: Calculator },
-      { title: "Safety / HR", href: "/sops/safety-hr", icon: Shield },
-      { title: "Templates", href: "/sops/templates-scripts", icon: FileCode },
+      { title: "Sales", href: "/sops/sales", icon: TrendingUp, sectionKey: "sops/sales" },
+      { title: "Production", href: "/sops/production", icon: Hammer, sectionKey: "sops/production" },
+      { title: "Supplements", href: "/sops/supplements", icon: FileCode, sectionKey: "sops/supplements" },
+      { title: "Office Admin", href: "/sops/office-admin", icon: Building2, sectionKey: "sops/office-admin" },
+      { title: "Accounting", href: "/sops/accounting", icon: Calculator, sectionKey: "sops/accounting" },
+      { title: "Safety / HR", href: "/sops/safety-hr", icon: Shield, sectionKey: "sops/safety-hr" },
+      { title: "Templates", href: "/sops/templates-scripts", icon: FileCode, sectionKey: "sops/templates-scripts" },
     ],
   },
   {
     title: "Training",
     icon: GraduationCap,
+    sectionKey: "training",
     children: [
-      { title: "New Hire", href: "/training/new-hire", icon: UserPlus },
-      { title: "Role Training", href: "/training/role-training", icon: GraduationCap },
-      { title: "Video Library", href: "/training/video-library", icon: Video },
+      { title: "New Hire", href: "/training/new-hire", icon: UserPlus, sectionKey: "training/new-hire" },
+      { title: "Role Training", href: "/training/role-training", icon: GraduationCap, sectionKey: "training/role-training" },
+      { title: "Video Library", href: "/training/video-library", icon: Video, sectionKey: "training/video-library" },
     ],
   },
   {
     title: "Tools & Systems",
     href: "/tools",
     icon: Wrench,
+    sectionKey: "tools",
   },
   {
     title: "Forms & Requests",
     href: "/requests",
     icon: Send,
+    sectionKey: "requests",
   },
   {
     title: "Company",
     href: "/company",
     icon: Building2,
+    sectionKey: "company",
   },
 ];
 
@@ -89,6 +104,7 @@ export function AppSidebar() {
   const { signOut, isAdmin, isManager, role, user } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [openSections, setOpenSections] = useState<string[]>(["SOP Library", "Training"]);
+  const { data: userPermissions } = useCurrentUserPermissions();
 
   const getRoleBadgeVariant = () => {
     if (role === 'admin') return 'destructive';
@@ -117,6 +133,22 @@ export function AppSidebar() {
     setMobileOpen(false);
   };
 
+  // Filter navigation based on permissions
+  const filteredNavigation = navigation
+    .filter((item) => isSectionVisible(item.sectionKey, userPermissions, role))
+    .map((item) => {
+      if (item.children) {
+        const filteredChildren = item.children.filter((child) =>
+          isSectionVisible(child.sectionKey, userPermissions, role)
+        );
+        // Only include parent if it has visible children
+        if (filteredChildren.length === 0) return null;
+        return { ...item, children: filteredChildren };
+      }
+      return item;
+    })
+    .filter(Boolean) as NavItem[];
+
   const NavContent = () => (
     <>
       <div className="p-4 border-b border-sidebar-border">
@@ -124,7 +156,7 @@ export function AppSidebar() {
       </div>
 
       <nav className="flex-1 overflow-y-auto p-3 space-y-1">
-        {navigation.map((item) => (
+        {filteredNavigation.map((item) => (
           <div key={item.title}>
             {item.children ? (
               <Collapsible

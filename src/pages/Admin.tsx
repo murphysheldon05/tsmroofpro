@@ -39,7 +39,9 @@ import {
   Send,
   Video,
   Play,
+  Shield,
 } from "lucide-react";
+import { UserPermissionsEditor } from "@/components/admin/UserPermissionsEditor";
 import {
   useResources,
   useCategories,
@@ -106,6 +108,7 @@ export default function Admin() {
   const [editingTool, setEditingTool] = useState<Tool | null>(null);
   const [editingRequestType, setEditingRequestType] = useState<RequestType | null>(null);
   const [editingUser, setEditingUser] = useState<any | null>(null);
+  const [editingUserPermissions, setEditingUserPermissions] = useState<any | null>(null);
   const [editingVideo, setEditingVideo] = useState<Resource | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [editSelectedFile, setEditSelectedFile] = useState<File | null>(null);
@@ -1553,6 +1556,37 @@ export default function Admin() {
                       </td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex items-center justify-end gap-1">
+                          {/* Permissions button - only show for employees */}
+                          {user.role === "employee" && (
+                            <Dialog
+                              open={editingUserPermissions?.id === user.id}
+                              onOpenChange={(open) => {
+                                if (open) {
+                                  setEditingUserPermissions(user);
+                                } else {
+                                  setEditingUserPermissions(null);
+                                }
+                              }}
+                            >
+                              <DialogTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8" title="Edit Permissions">
+                                  <Shield className="w-4 h-4" />
+                                </Button>
+                              </DialogTrigger>
+                              <DialogContent className="max-w-md">
+                                <DialogHeader>
+                                  <DialogTitle>Edit Permissions - {user.full_name || user.email}</DialogTitle>
+                                </DialogHeader>
+                                <div className="mt-4">
+                                  <UserPermissionsEditor
+                                    userId={user.id}
+                                    userRole={user.role || "employee"}
+                                    onClose={() => setEditingUserPermissions(null)}
+                                  />
+                                </div>
+                              </DialogContent>
+                            </Dialog>
+                          )}
                           <Dialog
                             open={editingUser?.id === user.id}
                             onOpenChange={(open) => {
