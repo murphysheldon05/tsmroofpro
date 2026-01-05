@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, parseISO, differenceInDays } from "date-fns";
-import { ChevronLeft, ChevronRight, Plus, Pencil, Trash2, X, GripVertical, Users, PlusCircle } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Pencil, Trash2, X, GripVertical, Users, PlusCircle, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -58,6 +58,7 @@ function CalendarGrid({
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [draggedEvent, setDraggedEvent] = useState<ProductionCalendarEvent | DeliveryCalendarEvent | null>(null);
   const [dragOverDate, setDragOverDate] = useState<Date | null>(null);
+  const [visibleCrews, setVisibleCrews] = useState<Set<string>>(new Set(["all"]));
 
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
@@ -65,8 +66,36 @@ function CalendarGrid({
   const startDayOfWeek = monthStart.getDay();
   const paddingDays = Array(startDayOfWeek).fill(null);
 
+  const toggleCrewFilter = (crewId: string) => {
+    setVisibleCrews((prev) => {
+      const next = new Set(prev);
+      if (crewId === "all") {
+        // If clicking "all", reset to show all
+        return new Set(["all"]);
+      }
+      // Remove "all" when selecting specific crews
+      next.delete("all");
+      if (next.has(crewId)) {
+        next.delete(crewId);
+        // If none selected, go back to "all"
+        if (next.size === 0) return new Set(["all"]);
+      } else {
+        next.add(crewId);
+      }
+      return next;
+    });
+  };
+
+  const isCrewVisible = (crewId: string | null) => {
+    if (visibleCrews.has("all")) return true;
+    if (crewId === null) return visibleCrews.has("unassigned");
+    return visibleCrews.has(crewId);
+  };
+
+  const filteredEvents = events.filter((event) => isCrewVisible(event.crew_id));
+
   const getEventsForDate = (date: Date) => {
-    return events.filter((event) => {
+    return filteredEvents.filter((event) => {
       const eventStart = parseISO(event.start_date);
       const eventEnd = event.end_date ? parseISO(event.end_date) : eventStart;
       return date >= eventStart && date <= eventEnd;
@@ -216,17 +245,55 @@ function CalendarGrid({
           })}
         </div>
 
-        {/* Crew Legend */}
-        <div className="mt-4 flex flex-wrap gap-3">
-          {crews.map((crew) => (
-            <div key={crew.id} className="flex items-center gap-1.5">
-              <div className="w-3 h-3 rounded" style={{ backgroundColor: crew.color }} />
-              <span className="text-xs">{crew.name}</span>
-            </div>
-          ))}
-          <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded bg-slate-500" />
-            <span className="text-xs text-muted-foreground">Unassigned</span>
+        {/* Crew Filter Legend */}
+        <div className="mt-4 border rounded-lg p-3 bg-muted/30">
+          <div className="flex items-center gap-2 mb-2">
+            <Filter className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm font-medium">Filter by Crew</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => toggleCrewFilter("all")}
+              className={cn(
+                "flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium transition-all border",
+                visibleCrews.has("all")
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "bg-background text-muted-foreground border-border hover:bg-accent"
+              )}
+            >
+              All Crews
+            </button>
+            {crews.map((crew) => (
+              <button
+                key={crew.id}
+                onClick={() => toggleCrewFilter(crew.id)}
+                className={cn(
+                  "flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium transition-all border",
+                  visibleCrews.has(crew.id)
+                    ? "text-white border-transparent"
+                    : "bg-background text-muted-foreground border-border hover:bg-accent"
+                )}
+                style={visibleCrews.has(crew.id) ? { backgroundColor: crew.color } : undefined}
+              >
+                <div
+                  className="w-2.5 h-2.5 rounded-sm"
+                  style={{ backgroundColor: crew.color }}
+                />
+                {crew.name}
+              </button>
+            ))}
+            <button
+              onClick={() => toggleCrewFilter("unassigned")}
+              className={cn(
+                "flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium transition-all border",
+                visibleCrews.has("unassigned")
+                  ? "bg-slate-500 text-white border-transparent"
+                  : "bg-background text-muted-foreground border-border hover:bg-accent"
+              )}
+            >
+              <div className="w-2.5 h-2.5 rounded-sm bg-slate-500" />
+              Unassigned
+            </button>
           </div>
         </div>
 
