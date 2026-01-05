@@ -14,7 +14,9 @@ export function ResourceCard({ resource, compact = false, onClick }: ResourceCar
   const handleClick = () => {
     if (onClick) {
       onClick();
+      return; // If onClick is provided, let it handle the action
     }
+    // Fallback: open URL if no onClick handler
     if (resource.url) {
       window.open(resource.url, "_blank", "noopener,noreferrer");
     }
