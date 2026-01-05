@@ -28,6 +28,8 @@ import {
   X,
   Download,
   Info,
+  Calendar,
+  HelpCircle,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -37,33 +39,25 @@ import { Badge } from "@/components/ui/badge";
 import { formatDistanceToNow, format } from "date-fns";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { FileSpreadsheet, FileText } from "lucide-react";
+import { useRequestTypes, type RequestType } from "@/hooks/useRequestTypes";
 
-const requestTypes = [
-  {
-    value: "commission",
-    label: "Commission Form",
-    description: "Submit commission for manager approval",
-    icon: DollarSign,
-  },
-  {
-    value: "sop_update",
-    label: "SOP Update Request",
-    description: "Request changes or additions to SOPs",
-    icon: FileEdit,
-  },
-  {
-    value: "it_access",
-    label: "IT / Access Request",
-    description: "Request system access or IT support",
-    icon: Monitor,
-  },
-  {
-    value: "hr",
-    label: "HR Request",
-    description: "HR-related requests and inquiries",
-    icon: Users,
-  },
-];
+// Icon map for dynamic icon rendering
+const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
+  DollarSign,
+  FileEdit,
+  Monitor,
+  Users,
+  Clock,
+  Calendar,
+  HelpCircle,
+  Send,
+  File,
+};
+
+const getIcon = (iconName: string | null) => {
+  if (!iconName) return HelpCircle;
+  return iconMap[iconName] || HelpCircle;
+};
 
 const statusColors: Record<string, string> = {
   pending: "bg-yellow-500/10 text-yellow-500 border-yellow-500/30",
@@ -101,6 +95,7 @@ interface Request {
 export default function Requests() {
   const { user, isManager } = useAuth();
   const queryClient = useQueryClient();
+  const { data: requestTypes = [] } = useRequestTypes();
   const [type, setType] = useState("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -332,6 +327,7 @@ export default function Requests() {
                 onFileSelect={handleFileSelect}
                 onClearFile={clearSelectedFile}
                 fileInputRef={fileInputRef}
+                requestTypes={requestTypes}
               />
               <MyRequestsList requests={myRequests || []} />
             </TabsContent>
@@ -383,6 +379,7 @@ export default function Requests() {
               onFileSelect={handleFileSelect}
               onClearFile={clearSelectedFile}
               fileInputRef={fileInputRef}
+              requestTypes={requestTypes}
             />
             <MyRequestsList requests={myRequests || []} />
           </div>
@@ -504,6 +501,7 @@ function SubmitRequestForm({
   onFileSelect,
   onClearFile,
   fileInputRef,
+  requestTypes,
 }: {
   type: string;
   setType: (v: string) => void;
@@ -518,6 +516,7 @@ function SubmitRequestForm({
   onFileSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onClearFile: () => void;
   fileInputRef: React.RefObject<HTMLInputElement>;
+  requestTypes: RequestType[];
 }) {
   return (
     <div className="glass-card rounded-2xl p-6">
@@ -534,26 +533,29 @@ function SubmitRequestForm({
       ) : (
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {requestTypes.map((reqType) => (
-              <button
-                key={reqType.value}
-                type="button"
-                onClick={() => setType(reqType.value)}
-                className={`p-4 rounded-xl border text-left transition-all ${
-                  type === reqType.value
-                    ? "border-primary bg-primary/5"
-                    : "border-border/50 bg-card/50 hover:border-border"
-                }`}
-              >
-                <reqType.icon
-                  className={`w-5 h-5 mb-2 ${
-                    type === reqType.value ? "text-primary" : "text-muted-foreground"
+            {requestTypes.map((reqType) => {
+              const IconComponent = getIcon(reqType.icon);
+              return (
+                <button
+                  key={reqType.value}
+                  type="button"
+                  onClick={() => setType(reqType.value)}
+                  className={`p-4 rounded-xl border text-left transition-all ${
+                    type === reqType.value
+                      ? "border-primary bg-primary/5"
+                      : "border-border/50 bg-card/50 hover:border-border"
                   }`}
-                />
-                <p className="font-medium text-foreground text-sm">{reqType.label}</p>
-                <p className="text-xs text-muted-foreground mt-1">{reqType.description}</p>
-              </button>
-            ))}
+                >
+                  <IconComponent
+                    className={`w-5 h-5 mb-2 ${
+                      type === reqType.value ? "text-primary" : "text-muted-foreground"
+                    }`}
+                  />
+                  <p className="font-medium text-foreground text-sm">{reqType.label}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{reqType.description}</p>
+                </button>
+              );
+            })}
           </div>
 
           {/* Commission Form Instructions */}

@@ -35,6 +35,8 @@ import {
   Loader2,
   Type,
   ScrollText,
+  Wrench,
+  Send,
 } from "lucide-react";
 import {
   useResources,
@@ -51,6 +53,18 @@ import {
   useDeletePolicy,
   type Policy,
 } from "@/hooks/usePolicies";
+import {
+  useTools,
+  useCreateTool,
+  useUpdateTool,
+  type Tool,
+} from "@/hooks/useTools";
+import {
+  useRequestTypes,
+  useCreateRequestType,
+  useUpdateRequestType,
+  type RequestType,
+} from "@/hooks/useRequestTypes";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -62,19 +76,29 @@ export default function Admin() {
   const { data: resources } = useResources();
   const { data: categories } = useCategories();
   const { data: policies } = usePolicies();
+  const { data: tools } = useTools();
+  const { data: requestTypes } = useRequestTypes();
   const createResource = useCreateResource();
   const deleteResource = useDeleteResource();
   const updateResource = useUpdateResource();
   const createPolicy = useCreatePolicy();
   const updatePolicy = useUpdatePolicy();
   const deletePolicy = useDeletePolicy();
+  const createTool = useCreateTool();
+  const updateTool = useUpdateTool();
+  const createRequestType = useCreateRequestType();
+  const updateRequestType = useUpdateRequestType();
 
   const [isAddingResource, setIsAddingResource] = useState(false);
   const [isAddingCategory, setIsAddingCategory] = useState(false);
   const [isAddingPolicy, setIsAddingPolicy] = useState(false);
+  const [isAddingTool, setIsAddingTool] = useState(false);
+  const [isAddingRequestType, setIsAddingRequestType] = useState(false);
   const [editingCategory, setEditingCategory] = useState<string | null>(null);
   const [editingResource, setEditingResource] = useState<Resource | null>(null);
   const [editingPolicy, setEditingPolicy] = useState<Policy | null>(null);
+  const [editingTool, setEditingTool] = useState<Tool | null>(null);
+  const [editingRequestType, setEditingRequestType] = useState<RequestType | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [editSelectedFile, setEditSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -111,6 +135,38 @@ export default function Admin() {
     title: "",
     description: "",
     url: "",
+    sort_order: 0,
+  });
+
+  const [newTool, setNewTool] = useState({
+    name: "",
+    description: "",
+    url: "",
+    category: "",
+    sort_order: 0,
+  });
+
+  const [editToolData, setEditToolData] = useState({
+    name: "",
+    description: "",
+    url: "",
+    category: "",
+    sort_order: 0,
+  });
+
+  const [newRequestType, setNewRequestType] = useState({
+    value: "",
+    label: "",
+    description: "",
+    icon: "",
+    sort_order: 0,
+  });
+
+  const [editRequestTypeData, setEditRequestTypeData] = useState({
+    value: "",
+    label: "",
+    description: "",
+    icon: "",
     sort_order: 0,
   });
 
@@ -471,7 +527,7 @@ export default function Admin() {
 
         {/* Tabs */}
         <Tabs defaultValue="resources" className="space-y-6">
-          <TabsList className="bg-secondary/50">
+          <TabsList className="bg-secondary/50 flex-wrap">
             <TabsTrigger value="resources" className="gap-2">
               <FileText className="w-4 h-4" />
               Resources
@@ -483,6 +539,14 @@ export default function Admin() {
             <TabsTrigger value="policies" className="gap-2">
               <ScrollText className="w-4 h-4" />
               Policies
+            </TabsTrigger>
+            <TabsTrigger value="tools" className="gap-2">
+              <Wrench className="w-4 h-4" />
+              Tools
+            </TabsTrigger>
+            <TabsTrigger value="request-types" className="gap-2">
+              <Send className="w-4 h-4" />
+              Forms
             </TabsTrigger>
             <TabsTrigger value="users" className="gap-2">
               <Users className="w-4 h-4" />
@@ -1518,6 +1582,449 @@ export default function Admin() {
                     <tr>
                       <td colSpan={4} className="px-4 py-8 text-center text-muted-foreground">
                         No policies yet. Add your first policy above.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </TabsContent>
+
+          {/* Tools Tab */}
+          <TabsContent value="tools" className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h2 className="text-lg font-semibold text-foreground">
+                Tools & Systems ({tools?.length || 0})
+              </h2>
+              <Dialog open={isAddingTool} onOpenChange={setIsAddingTool}>
+                <DialogTrigger asChild>
+                  <Button variant="neon">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Tool
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Add New Tool</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 mt-4">
+                    <div className="space-y-2">
+                      <Label>Name *</Label>
+                      <Input
+                        value={newTool.name}
+                        onChange={(e) => setNewTool({ ...newTool, name: e.target.value })}
+                        placeholder="Tool name"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Description</Label>
+                      <Textarea
+                        value={newTool.description}
+                        onChange={(e) => setNewTool({ ...newTool, description: e.target.value })}
+                        placeholder="Brief description"
+                        rows={2}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>URL *</Label>
+                      <Input
+                        value={newTool.url}
+                        onChange={(e) => setNewTool({ ...newTool, url: e.target.value })}
+                        placeholder="https://..."
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Category *</Label>
+                        <Input
+                          value={newTool.category}
+                          onChange={(e) => setNewTool({ ...newTool, category: e.target.value })}
+                          placeholder="e.g., Project Management"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Sort Order</Label>
+                        <Input
+                          type="number"
+                          value={newTool.sort_order}
+                          onChange={(e) => setNewTool({ ...newTool, sort_order: parseInt(e.target.value) || 0 })}
+                        />
+                      </div>
+                    </div>
+                    <Button
+                      onClick={async () => {
+                        if (!newTool.name.trim() || !newTool.url.trim() || !newTool.category.trim()) {
+                          toast.error("Name, URL, and category are required");
+                          return;
+                        }
+                        await createTool.mutateAsync({
+                          name: newTool.name.trim(),
+                          description: newTool.description.trim() || undefined,
+                          url: newTool.url.trim(),
+                          category: newTool.category.trim(),
+                          sort_order: newTool.sort_order,
+                        });
+                        setNewTool({ name: "", description: "", url: "", category: "", sort_order: 0 });
+                        setIsAddingTool(false);
+                      }}
+                      className="w-full"
+                      disabled={createTool.isPending}
+                    >
+                      {createTool.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                      Add Tool
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
+
+            <div className="border border-border/50 rounded-lg overflow-hidden">
+              <table className="w-full">
+                <thead className="bg-secondary/50">
+                  <tr>
+                    <th className="text-left px-4 py-3 text-sm font-medium text-muted-foreground">Name</th>
+                    <th className="text-left px-4 py-3 text-sm font-medium text-muted-foreground">Category</th>
+                    <th className="text-left px-4 py-3 text-sm font-medium text-muted-foreground">URL</th>
+                    <th className="text-right px-4 py-3 text-sm font-medium text-muted-foreground">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/50">
+                  {tools?.map((tool) => (
+                    <tr key={tool.id} className="hover:bg-secondary/30">
+                      <td className="px-4 py-3">
+                        <div className="font-medium text-foreground">{tool.name}</div>
+                        {tool.description && (
+                          <div className="text-sm text-muted-foreground truncate max-w-xs">{tool.description}</div>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <Badge variant="outline">{tool.category}</Badge>
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground text-sm truncate max-w-xs">
+                        {tool.url}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <Dialog
+                            open={editingTool?.id === tool.id}
+                            onOpenChange={(open) => {
+                              if (open) {
+                                setEditingTool(tool);
+                                setEditToolData({
+                                  name: tool.name,
+                                  description: tool.description || "",
+                                  url: tool.url,
+                                  category: tool.category,
+                                  sort_order: tool.sort_order,
+                                });
+                              } else {
+                                setEditingTool(null);
+                              }
+                            }}
+                          >
+                            <DialogTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent>
+                              <DialogHeader>
+                                <DialogTitle>Edit Tool</DialogTitle>
+                              </DialogHeader>
+                              <div className="space-y-4 mt-4">
+                                <div className="space-y-2">
+                                  <Label>Name *</Label>
+                                  <Input
+                                    value={editToolData.name}
+                                    onChange={(e) => setEditToolData({ ...editToolData, name: e.target.value })}
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label>Description</Label>
+                                  <Textarea
+                                    value={editToolData.description}
+                                    onChange={(e) => setEditToolData({ ...editToolData, description: e.target.value })}
+                                    rows={2}
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label>URL *</Label>
+                                  <Input
+                                    value={editToolData.url}
+                                    onChange={(e) => setEditToolData({ ...editToolData, url: e.target.value })}
+                                  />
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                  <div className="space-y-2">
+                                    <Label>Category *</Label>
+                                    <Input
+                                      value={editToolData.category}
+                                      onChange={(e) => setEditToolData({ ...editToolData, category: e.target.value })}
+                                    />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label>Sort Order</Label>
+                                    <Input
+                                      type="number"
+                                      value={editToolData.sort_order}
+                                      onChange={(e) => setEditToolData({ ...editToolData, sort_order: parseInt(e.target.value) || 0 })}
+                                    />
+                                  </div>
+                                </div>
+                                <Button
+                                  onClick={async () => {
+                                    if (!editToolData.name.trim() || !editToolData.url.trim() || !editToolData.category.trim()) {
+                                      toast.error("Name, URL, and category are required");
+                                      return;
+                                    }
+                                    await updateTool.mutateAsync({
+                                      id: tool.id,
+                                      name: editToolData.name.trim(),
+                                      description: editToolData.description.trim() || null,
+                                      url: editToolData.url.trim(),
+                                      category: editToolData.category.trim(),
+                                      sort_order: editToolData.sort_order,
+                                    });
+                                    setEditingTool(null);
+                                  }}
+                                  className="w-full"
+                                  disabled={updateTool.isPending}
+                                >
+                                  {updateTool.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                                  Save Changes
+                                </Button>
+                              </div>
+                            </DialogContent>
+                          </Dialog>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {(!tools || tools.length === 0) && (
+                    <tr>
+                      <td colSpan={4} className="px-4 py-8 text-center text-muted-foreground">
+                        No tools yet. Add your first tool above.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </TabsContent>
+
+          {/* Request Types Tab */}
+          <TabsContent value="request-types" className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h2 className="text-lg font-semibold text-foreground">
+                Form Types ({requestTypes?.length || 0})
+              </h2>
+              <Dialog open={isAddingRequestType} onOpenChange={setIsAddingRequestType}>
+                <DialogTrigger asChild>
+                  <Button variant="neon">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Form Type
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Add New Form Type</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 mt-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Value (unique ID) *</Label>
+                        <Input
+                          value={newRequestType.value}
+                          onChange={(e) => setNewRequestType({ ...newRequestType, value: e.target.value.toLowerCase().replace(/\s+/g, '_') })}
+                          placeholder="e.g., time_off"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Label *</Label>
+                        <Input
+                          value={newRequestType.label}
+                          onChange={(e) => setNewRequestType({ ...newRequestType, label: e.target.value })}
+                          placeholder="e.g., Time Off Request"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Description</Label>
+                      <Textarea
+                        value={newRequestType.description}
+                        onChange={(e) => setNewRequestType({ ...newRequestType, description: e.target.value })}
+                        placeholder="Brief description of this form type"
+                        rows={2}
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Icon Name</Label>
+                        <Input
+                          value={newRequestType.icon}
+                          onChange={(e) => setNewRequestType({ ...newRequestType, icon: e.target.value })}
+                          placeholder="e.g., Calendar, Clock"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Sort Order</Label>
+                        <Input
+                          type="number"
+                          value={newRequestType.sort_order}
+                          onChange={(e) => setNewRequestType({ ...newRequestType, sort_order: parseInt(e.target.value) || 0 })}
+                        />
+                      </div>
+                    </div>
+                    <Button
+                      onClick={async () => {
+                        if (!newRequestType.value.trim() || !newRequestType.label.trim()) {
+                          toast.error("Value and label are required");
+                          return;
+                        }
+                        await createRequestType.mutateAsync({
+                          value: newRequestType.value.trim(),
+                          label: newRequestType.label.trim(),
+                          description: newRequestType.description.trim() || undefined,
+                          icon: newRequestType.icon.trim() || undefined,
+                          sort_order: newRequestType.sort_order,
+                        });
+                        setNewRequestType({ value: "", label: "", description: "", icon: "", sort_order: 0 });
+                        setIsAddingRequestType(false);
+                      }}
+                      className="w-full"
+                      disabled={createRequestType.isPending}
+                    >
+                      {createRequestType.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                      Add Form Type
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
+
+            <div className="border border-border/50 rounded-lg overflow-hidden">
+              <table className="w-full">
+                <thead className="bg-secondary/50">
+                  <tr>
+                    <th className="text-left px-4 py-3 text-sm font-medium text-muted-foreground">Label</th>
+                    <th className="text-left px-4 py-3 text-sm font-medium text-muted-foreground">Value</th>
+                    <th className="text-left px-4 py-3 text-sm font-medium text-muted-foreground">Description</th>
+                    <th className="text-right px-4 py-3 text-sm font-medium text-muted-foreground">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/50">
+                  {requestTypes?.map((rt) => (
+                    <tr key={rt.id} className="hover:bg-secondary/30">
+                      <td className="px-4 py-3 font-medium text-foreground">{rt.label}</td>
+                      <td className="px-4 py-3">
+                        <Badge variant="outline" className="font-mono text-xs">{rt.value}</Badge>
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground text-sm truncate max-w-xs">
+                        {rt.description || "-"}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <Dialog
+                            open={editingRequestType?.id === rt.id}
+                            onOpenChange={(open) => {
+                              if (open) {
+                                setEditingRequestType(rt);
+                                setEditRequestTypeData({
+                                  value: rt.value,
+                                  label: rt.label,
+                                  description: rt.description || "",
+                                  icon: rt.icon || "",
+                                  sort_order: rt.sort_order,
+                                });
+                              } else {
+                                setEditingRequestType(null);
+                              }
+                            }}
+                          >
+                            <DialogTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent>
+                              <DialogHeader>
+                                <DialogTitle>Edit Form Type</DialogTitle>
+                              </DialogHeader>
+                              <div className="space-y-4 mt-4">
+                                <div className="grid grid-cols-2 gap-4">
+                                  <div className="space-y-2">
+                                    <Label>Value (unique ID) *</Label>
+                                    <Input
+                                      value={editRequestTypeData.value}
+                                      onChange={(e) => setEditRequestTypeData({ ...editRequestTypeData, value: e.target.value.toLowerCase().replace(/\s+/g, '_') })}
+                                    />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label>Label *</Label>
+                                    <Input
+                                      value={editRequestTypeData.label}
+                                      onChange={(e) => setEditRequestTypeData({ ...editRequestTypeData, label: e.target.value })}
+                                    />
+                                  </div>
+                                </div>
+                                <div className="space-y-2">
+                                  <Label>Description</Label>
+                                  <Textarea
+                                    value={editRequestTypeData.description}
+                                    onChange={(e) => setEditRequestTypeData({ ...editRequestTypeData, description: e.target.value })}
+                                    rows={2}
+                                  />
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                  <div className="space-y-2">
+                                    <Label>Icon Name</Label>
+                                    <Input
+                                      value={editRequestTypeData.icon}
+                                      onChange={(e) => setEditRequestTypeData({ ...editRequestTypeData, icon: e.target.value })}
+                                    />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label>Sort Order</Label>
+                                    <Input
+                                      type="number"
+                                      value={editRequestTypeData.sort_order}
+                                      onChange={(e) => setEditRequestTypeData({ ...editRequestTypeData, sort_order: parseInt(e.target.value) || 0 })}
+                                    />
+                                  </div>
+                                </div>
+                                <Button
+                                  onClick={async () => {
+                                    if (!editRequestTypeData.value.trim() || !editRequestTypeData.label.trim()) {
+                                      toast.error("Value and label are required");
+                                      return;
+                                    }
+                                    await updateRequestType.mutateAsync({
+                                      id: rt.id,
+                                      value: editRequestTypeData.value.trim(),
+                                      label: editRequestTypeData.label.trim(),
+                                      description: editRequestTypeData.description.trim() || null,
+                                      icon: editRequestTypeData.icon.trim() || null,
+                                      sort_order: editRequestTypeData.sort_order,
+                                    });
+                                    setEditingRequestType(null);
+                                  }}
+                                  className="w-full"
+                                  disabled={updateRequestType.isPending}
+                                >
+                                  {updateRequestType.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                                  Save Changes
+                                </Button>
+                              </div>
+                            </DialogContent>
+                          </Dialog>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {(!requestTypes || requestTypes.length === 0) && (
+                    <tr>
+                      <td colSpan={4} className="px-4 py-8 text-center text-muted-foreground">
+                        No form types yet. Add your first form type above.
                       </td>
                     </tr>
                   )}

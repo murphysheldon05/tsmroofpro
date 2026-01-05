@@ -1,46 +1,10 @@
 import { AppLayout } from "@/components/layout/AppLayout";
-import { ExternalLink, Wrench } from "lucide-react";
-
-const tools = [
-  {
-    name: "AccuLynx",
-    description: "Project management and CRM for roofing contractors",
-    url: "https://www.acculynx.com/",
-    category: "Project Management",
-  },
-  {
-    name: "CompanyCam",
-    description: "Photo documentation and collaboration app",
-    url: "https://www.companycam.com/",
-    category: "Documentation",
-  },
-  {
-    name: "Xactimate",
-    description: "Estimating software for insurance claims",
-    url: "https://www.xactware.com/",
-    category: "Estimating",
-  },
-  {
-    name: "EagleView",
-    description: "Aerial roof measurement reports",
-    url: "https://www.eagleview.com/",
-    category: "Measurements",
-  },
-  {
-    name: "Roofr",
-    description: "Instant roof measurements and proposals",
-    url: "https://www.roofr.com/",
-    category: "Measurements",
-  },
-  {
-    name: "Microsoft 365",
-    description: "Outlook, Teams, and productivity apps",
-    url: "https://www.office.com/",
-    category: "Productivity",
-  },
-];
+import { ExternalLink, Wrench, Loader2 } from "lucide-react";
+import { useTools } from "@/hooks/useTools";
 
 export default function Tools() {
+  const { data: tools, isLoading } = useTools();
+
   return (
     <AppLayout>
       <div className="max-w-5xl mx-auto space-y-6">
@@ -60,31 +24,42 @@ export default function Tools() {
         </header>
 
         {/* Tools Grid */}
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {tools.map((tool) => (
-            <a
-              key={tool.name}
-              href={tool.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="group p-6 rounded-xl bg-card border border-border/50 hover:border-primary/30 transition-all hover-lift"
-            >
-              <div className="flex items-start justify-between mb-4">
-                <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center">
-                  <span className="text-lg font-bold text-primary">
-                    {tool.name.charAt(0)}
-                  </span>
+        {isLoading ? (
+          <div className="flex items-center justify-center h-64">
+            <Loader2 className="w-6 h-6 animate-spin text-primary" />
+          </div>
+        ) : (
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {tools?.map((tool) => (
+              <a
+                key={tool.id}
+                href={tool.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group p-6 rounded-xl bg-card border border-border/50 hover:border-primary/30 transition-all hover-lift"
+              >
+                <div className="flex items-start justify-between mb-4">
+                  <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center">
+                    <span className="text-lg font-bold text-primary">
+                      {tool.name.charAt(0)}
+                    </span>
+                  </div>
+                  <ExternalLink className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                 </div>
-                <ExternalLink className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                <span className="text-xs text-primary font-medium">{tool.category}</span>
+                <h3 className="font-semibold text-foreground mt-1 group-hover:text-primary transition-colors">
+                  {tool.name}
+                </h3>
+                <p className="text-sm text-muted-foreground mt-2">{tool.description}</p>
+              </a>
+            ))}
+            {(!tools || tools.length === 0) && (
+              <div className="col-span-full text-center py-12 text-muted-foreground">
+                No tools configured yet. Contact an administrator to add tools.
               </div>
-              <span className="text-xs text-primary font-medium">{tool.category}</span>
-              <h3 className="font-semibold text-foreground mt-1 group-hover:text-primary transition-colors">
-                {tool.name}
-              </h3>
-              <p className="text-sm text-muted-foreground mt-2">{tool.description}</p>
-            </a>
-          ))}
-        </div>
+            )}
+          </div>
+        )}
       </div>
     </AppLayout>
   );
