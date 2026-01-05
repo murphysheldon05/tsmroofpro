@@ -36,7 +36,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { formatDistanceToNow, format } from "date-fns";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { generateCommissionFormPDF } from "@/utils/generateCommissionFormPDF";
+import { FileSpreadsheet, FileText } from "lucide-react";
 
 const requestTypes = [
   {
@@ -558,31 +558,50 @@ function SubmitRequestForm({
 
           {/* Commission Form Instructions */}
           {type === 'commission' && (
-            <div className="space-y-3">
+            <div className="space-y-4">
               <Alert className="bg-primary/5 border-primary/20">
                 <Info className="h-4 w-4 text-primary" />
                 <AlertDescription className="text-sm text-foreground/80">
-                  <strong>Instructions:</strong>
+                  <strong>Commission Submission Process:</strong>
                   <ol className="list-decimal list-inside mt-2 space-y-1">
-                    <li>Download the Commission Form template below</li>
-                    <li>Fill out all required fields including job number, customer name, sale amount</li>
-                    <li>Calculate your commission based on the agreed rate</li>
-                    <li>Save the completed form and upload it below</li>
-                    <li>Add any additional notes in the Commission Details field</li>
-                    <li>Submit for manager approval</li>
+                    <li>Review the Commission Submission Instructions document</li>
+                    <li>Download and complete the Commission Form (Excel)</li>
+                    <li>Verify all eligibility requirements are met</li>
+                    <li>Upload the completed form and submit for manager approval</li>
                   </ol>
                 </AlertDescription>
               </Alert>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="gap-2"
-                onClick={generateCommissionFormPDF}
-              >
-                <Download className="w-4 h-4" />
-                Download Commission Form Template (PDF)
-              </Button>
+              <div className="flex flex-wrap gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  asChild
+                >
+                  <a href="/documents/TSM_Commission_Instructions_2026.docx" download>
+                    <FileText className="w-4 h-4" />
+                    Download Instructions (Word)
+                  </a>
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  asChild
+                >
+                  <a 
+                    href="https://www.dropbox.com/scl/fi/fiufmou5h804bsvm6226t/2026_commission_splits_1-version-1-.xlsb.xlsx?rlkey=8svj22saqtipmvljq8tfgeisa&st=yavb6f4s&dl=1" 
+                    download
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <FileSpreadsheet className="w-4 h-4" />
+                    Download Commission Form (Excel)
+                  </a>
+                </Button>
+              </div>
             </div>
           )}
 
