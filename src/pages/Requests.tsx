@@ -36,6 +36,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { formatDistanceToNow, format } from "date-fns";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { generateCommissionFormPDF } from "@/utils/generateCommissionFormPDF";
 
 const requestTypes = [
   {
@@ -577,61 +578,10 @@ function SubmitRequestForm({
                 variant="outline"
                 size="sm"
                 className="gap-2"
-                onClick={() => {
-                  // Create and download a simple commission form template
-                  const templateContent = `TSM ROOFING - COMMISSION FORM
-=====================================
-
-Sales Representative: ________________________
-Date: ________________________
-
-JOB INFORMATION
---------------
-Job Number: ________________________
-Customer Name: ________________________
-Customer Address: ________________________
-Job Type: [ ] Residential  [ ] Commercial
-
-SALE DETAILS
---------------
-Total Contract Amount: $________________________
-Material Cost: $________________________
-Labor Cost: $________________________
-Other Expenses: $________________________
-
-COMMISSION CALCULATION
---------------
-Commission Rate: ______%
-Gross Commission: $________________________
-Less Advances: $________________________
-Net Commission Due: $________________________
-
-NOTES
---------------
-_________________________________________________
-_________________________________________________
-_________________________________________________
-
-SIGNATURES
---------------
-Sales Rep Signature: ________________________  Date: ________
-Manager Approval: ________________________  Date: ________
-
-Submit this completed form through the TSM Portal for approval.`;
-
-                  const blob = new Blob([templateContent], { type: 'text/plain' });
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement('a');
-                  a.href = url;
-                  a.download = 'TSM_Commission_Form_Template.txt';
-                  document.body.appendChild(a);
-                  a.click();
-                  document.body.removeChild(a);
-                  URL.revokeObjectURL(url);
-                }}
+                onClick={generateCommissionFormPDF}
               >
                 <Download className="w-4 h-4" />
-                Download Commission Form Template
+                Download Commission Form Template (PDF)
               </Button>
             </div>
           )}
