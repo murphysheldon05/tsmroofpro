@@ -252,16 +252,29 @@ export default function Admin() {
   const { data: users } = useQuery({
     queryKey: ["admin-users"],
     queryFn: async () => {
-      const { data: profiles, error } = await supabase
+      // Fetch profiles
+      const { data: profiles, error: profilesError } = await supabase
         .from("profiles")
-        .select(`
-          *,
-          user_roles (role)
-        `)
+        .select("*")
         .order("created_at", { ascending: false });
-      
-      if (error) throw error;
-      return profiles;
+
+      if (profilesError) throw profilesError;
+
+      // Fetch roles (there is no FK relationship, so we join client-side)
+      const { data: roles, error: rolesError } = await supabase
+        .from("user_roles")
+        .select("user_id, role");
+
+      if (rolesError) throw rolesError;
+
+      const roleByUserId = new Map<string, "admin" | "manager" | "employee">(
+        (roles ?? []).map((r) => [r.user_id, r.role])
+      );
+
+      return (profiles ?? []).map((p) => ({
+        ...p,
+        role: roleByUserId.get(p.id) ?? "employee",
+      }));
     },
   });
 
@@ -472,9 +485,11 @@ export default function Admin() {
   const handleUpdateUserRole = async (userId: string, newRole: string) => {
     const { error } = await supabase
       .from("user_roles")
-      .update({ role: newRole as "admin" | "manager" | "employee" })
-      .eq("user_id", userId);
-    
+      .upsert(
+        { user_id: userId, role: newRole as "admin" | "manager" | "employee" },
+        { onConflict: "user_id" }
+      );
+
     if (error) {
       toast.error("Failed to update role");
     } else {
@@ -1522,7 +1537,8 @@ export default function Admin() {
                       </td>
                       <td className="px-4 py-3">
                         <Select
-                          defaultValue={(user.user_roles as any)?.[0]?.role || "employee"}
+                          key={`${user.id}-${user.role}`}
+                          defaultValue={user.role || "employee"}
                           onValueChange={(v) => handleUpdateUserRole(user.id, v)}
                         >
                           <SelectTrigger className="w-32">
