@@ -2,11 +2,12 @@ import { useParams } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { SearchBar } from "@/components/SearchBar";
 import { ResourceCard } from "@/components/dashboard/ResourceCard";
-import { useResources, useCategories } from "@/hooks/useResources";
+import { useResources, useCategories, Resource } from "@/hooks/useResources";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { ResourceDetailModal } from "@/components/resources/ResourceDetailModal";
 import {
   Select,
   SelectContent,
@@ -39,6 +40,13 @@ export default function SOPLibrary() {
   const { data: resources, isLoading } = useResources(category);
   const { data: categories } = useCategories();
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
+  const [selectedResource, setSelectedResource] = useState<Resource | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
+
+  const handleResourceClick = (resource: Resource) => {
+    setSelectedResource(resource);
+    setModalOpen(true);
+  };
 
   const currentCategory = categories?.find((c) => c.slug === category);
   const Icon = category ? categoryIcons[category] || FileText : FileText;
@@ -130,7 +138,11 @@ export default function SOPLibrary() {
         ) : filteredResources && filteredResources.length > 0 ? (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredResources.map((resource) => (
-              <ResourceCard key={resource.id} resource={resource} />
+              <ResourceCard 
+                key={resource.id} 
+                resource={resource} 
+                onClick={() => handleResourceClick(resource)}
+              />
             ))}
           </div>
         ) : (
@@ -144,6 +156,14 @@ export default function SOPLibrary() {
             </p>
           </div>
         )}
+
+        {/* Resource Detail Modal */}
+        <ResourceDetailModal
+          resource={selectedResource}
+          open={modalOpen}
+          onOpenChange={setModalOpen}
+          categorySlug={category}
+        />
       </div>
     </AppLayout>
   );

@@ -10,6 +10,7 @@ import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import SOPLibrary from "./pages/SOPLibrary";
+import ResourceDetail from "./pages/ResourceDetail";
 import Training from "./pages/Training";
 import Tools from "./pages/Tools";
 import Requests from "./pages/Requests";
@@ -45,6 +46,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <SOPLibrary />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/sops/:category/resource/:resourceId"
+              element={
+                <ProtectedRoute>
+                  <ResourceDetail />
                 </ProtectedRoute>
               }
             />
