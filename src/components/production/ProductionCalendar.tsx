@@ -692,14 +692,14 @@ export function ProductionCalendar() {
             <div>
               <Label htmlFor="prod-crew">Assign Crew</Label>
               <Select
-                value={newProductionEvent.crew_id}
-                onValueChange={(value) => setNewProductionEvent({ ...newProductionEvent, crew_id: value })}
+                value={newProductionEvent.crew_id || "none"}
+                onValueChange={(value) => setNewProductionEvent({ ...newProductionEvent, crew_id: value === "none" ? "" : value })}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select a crew" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Unassigned</SelectItem>
+                  <SelectItem value="none">Unassigned</SelectItem>
                   {crews.map((crew) => (
                     <SelectItem key={crew.id} value={crew.id}>
                       <div className="flex items-center gap-2">
@@ -789,14 +789,14 @@ export function ProductionCalendar() {
               <div>
                 <Label htmlFor="edit-prod-crew">Assign Crew</Label>
                 <Select
-                  value={editingProductionEvent.crew_id || ""}
-                  onValueChange={(value) => setEditingProductionEvent({ ...editingProductionEvent, crew_id: value || null })}
+                  value={editingProductionEvent.crew_id || "none"}
+                  onValueChange={(value) => setEditingProductionEvent({ ...editingProductionEvent, crew_id: value === "none" ? null : value })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select a crew" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Unassigned</SelectItem>
+                    <SelectItem value="none">Unassigned</SelectItem>
                     {crews.map((crew) => (
                       <SelectItem key={crew.id} value={crew.id}>
                         <div className="flex items-center gap-2">
@@ -886,14 +886,14 @@ export function ProductionCalendar() {
             <div>
               <Label htmlFor="del-crew">Assign Crew</Label>
               <Select
-                value={newDeliveryEvent.crew_id}
-                onValueChange={(value) => setNewDeliveryEvent({ ...newDeliveryEvent, crew_id: value })}
+                value={newDeliveryEvent.crew_id || "none"}
+                onValueChange={(value) => setNewDeliveryEvent({ ...newDeliveryEvent, crew_id: value === "none" ? "" : value })}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select a crew" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Unassigned</SelectItem>
+                  <SelectItem value="none">Unassigned</SelectItem>
                   {crews.map((crew) => (
                     <SelectItem key={crew.id} value={crew.id}>
                       <div className="flex items-center gap-2">
@@ -965,14 +965,14 @@ export function ProductionCalendar() {
               <div>
                 <Label htmlFor="edit-del-crew">Assign Crew</Label>
                 <Select
-                  value={editingDeliveryEvent.crew_id || ""}
-                  onValueChange={(value) => setEditingDeliveryEvent({ ...editingDeliveryEvent, crew_id: value || null })}
+                  value={editingDeliveryEvent.crew_id || "none"}
+                  onValueChange={(value) => setEditingDeliveryEvent({ ...editingDeliveryEvent, crew_id: value === "none" ? null : value })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select a crew" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Unassigned</SelectItem>
+                    <SelectItem value="none">Unassigned</SelectItem>
                     {crews.map((crew) => (
                       <SelectItem key={crew.id} value={crew.id}>
                         <div className="flex items-center gap-2">
