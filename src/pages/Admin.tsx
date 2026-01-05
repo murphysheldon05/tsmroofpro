@@ -94,16 +94,31 @@ export default function Admin() {
   const [isAddingPolicy, setIsAddingPolicy] = useState(false);
   const [isAddingTool, setIsAddingTool] = useState(false);
   const [isAddingRequestType, setIsAddingRequestType] = useState(false);
+  const [isAddingUser, setIsAddingUser] = useState(false);
+  const [isCreatingUser, setIsCreatingUser] = useState(false);
   const [editingCategory, setEditingCategory] = useState<string | null>(null);
   const [editingResource, setEditingResource] = useState<Resource | null>(null);
   const [editingPolicy, setEditingPolicy] = useState<Policy | null>(null);
   const [editingTool, setEditingTool] = useState<Tool | null>(null);
   const [editingRequestType, setEditingRequestType] = useState<RequestType | null>(null);
+  const [editingUser, setEditingUser] = useState<any | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [editSelectedFile, setEditSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const editFileInputRef = useRef<HTMLInputElement>(null);
+  
+  const [newUser, setNewUser] = useState({
+    full_name: "",
+    email: "",
+    password: "",
+    role: "employee" as "admin" | "manager" | "employee",
+  });
+
+  const [editUserData, setEditUserData] = useState({
+    full_name: "",
+    email: "",
+  });
   
   const [newResource, setNewResource] = useState({
     title: "",
@@ -419,6 +434,81 @@ export default function Admin() {
       toast.error("Failed to update role");
     } else {
       toast.success("Role updated successfully");
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+    }
+  };
+
+  const handleCreateUser = async () => {
+    if (!newUser.full_name.trim() || !newUser.email.trim() || !newUser.password) {
+      toast.error("Full name, email, and password are required");
+      return;
+    }
+
+    if (newUser.password.length < 6) {
+      toast.error("Password must be at least 6 characters");
+      return;
+    }
+
+    setIsCreatingUser(true);
+
+    try {
+      // Create the user via Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: newUser.email.trim(),
+        password: newUser.password,
+        options: {
+          data: { full_name: newUser.full_name.trim() },
+        },
+      });
+
+      if (authError) {
+        toast.error("Failed to create user: " + authError.message);
+        setIsCreatingUser(false);
+        return;
+      }
+
+      // Update the role if not employee (default)
+      if (authData.user && newUser.role !== "employee") {
+        const { error: roleError } = await supabase
+          .from("user_roles")
+          .update({ role: newUser.role })
+          .eq("user_id", authData.user.id);
+
+        if (roleError) {
+          toast.error("User created but failed to set role");
+        }
+      }
+
+      toast.success("Employee account created successfully");
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+      setNewUser({ full_name: "", email: "", password: "", role: "employee" });
+      setIsAddingUser(false);
+    } catch (error) {
+      toast.error("Failed to create user");
+    }
+
+    setIsCreatingUser(false);
+  };
+
+  const handleDeleteUser = async (userId: string, userName: string) => {
+    if (!confirm(`Are you sure you want to remove ${userName}? This action cannot be undone.`)) {
+      return;
+    }
+
+    // Note: Deleting a user from auth.users requires admin API or service role
+    // For now, we'll just remove their role which effectively disables access
+    const { error } = await supabase
+      .from("user_roles")
+      .delete()
+      .eq("user_id", userId);
+
+    if (error) {
+      toast.error("Failed to remove user access");
+    } else {
+      // Also delete profile
+      await supabase.from("profiles").delete().eq("id", userId);
+      toast.success("User access removed successfully");
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
     }
   };
 
@@ -1274,9 +1364,76 @@ export default function Admin() {
 
           {/* Users Tab */}
           <TabsContent value="users" className="space-y-4">
-            <h2 className="text-lg font-semibold text-foreground">
-              All Users ({users?.length || 0})
-            </h2>
+            <div className="flex justify-between items-center">
+              <h2 className="text-lg font-semibold text-foreground">
+                All Users ({users?.length || 0})
+              </h2>
+              <Dialog open={isAddingUser} onOpenChange={setIsAddingUser}>
+                <DialogTrigger asChild>
+                  <Button variant="neon">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Invite Employee
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>Invite New Employee</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 mt-4">
+                    <div className="space-y-2">
+                      <Label>Full Name *</Label>
+                      <Input
+                        value={newUser.full_name}
+                        onChange={(e) => setNewUser({ ...newUser, full_name: e.target.value })}
+                        placeholder="John Doe"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Email *</Label>
+                      <Input
+                        type="email"
+                        value={newUser.email}
+                        onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                        placeholder="john@company.com"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Temporary Password *</Label>
+                      <Input
+                        type="password"
+                        value={newUser.password}
+                        onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                        placeholder="Minimum 6 characters"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Role</Label>
+                      <Select
+                        value={newUser.role}
+                        onValueChange={(v) => setNewUser({ ...newUser, role: v as "admin" | "manager" | "employee" })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="employee">Employee</SelectItem>
+                          <SelectItem value="manager">Manager</SelectItem>
+                          <SelectItem value="admin">Admin</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button
+                      onClick={handleCreateUser}
+                      className="w-full"
+                      disabled={isCreatingUser}
+                    >
+                      {isCreatingUser ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                      Create Employee Account
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
 
             <div className="glass-card rounded-xl overflow-hidden">
               <table className="w-full">
@@ -1290,6 +1447,9 @@ export default function Admin() {
                     </th>
                     <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
                       Role
+                    </th>
+                    <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">
+                      Actions
                     </th>
                   </tr>
                 </thead>
@@ -1325,6 +1485,85 @@ export default function Admin() {
                             <SelectItem value="admin">Admin</SelectItem>
                           </SelectContent>
                         </Select>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <Dialog
+                            open={editingUser?.id === user.id}
+                            onOpenChange={(open) => {
+                              if (open) {
+                                setEditingUser(user);
+                                setEditUserData({
+                                  full_name: user.full_name || "",
+                                  email: user.email || "",
+                                });
+                              } else {
+                                setEditingUser(null);
+                              }
+                            }}
+                          >
+                            <DialogTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent>
+                              <DialogHeader>
+                                <DialogTitle>Edit Employee</DialogTitle>
+                              </DialogHeader>
+                              <div className="space-y-4 mt-4">
+                                <div className="space-y-2">
+                                  <Label>Full Name</Label>
+                                  <Input
+                                    value={editUserData.full_name}
+                                    onChange={(e) => setEditUserData({ ...editUserData, full_name: e.target.value })}
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label>Email</Label>
+                                  <Input
+                                    type="email"
+                                    value={editUserData.email}
+                                    disabled
+                                    className="opacity-50"
+                                  />
+                                  <p className="text-xs text-muted-foreground">Email cannot be changed</p>
+                                </div>
+                                <Button
+                                  onClick={async () => {
+                                    if (!editUserData.full_name.trim()) {
+                                      toast.error("Full name is required");
+                                      return;
+                                    }
+                                    const { error } = await supabase
+                                      .from("profiles")
+                                      .update({ full_name: editUserData.full_name.trim() })
+                                      .eq("id", user.id);
+                                    
+                                    if (error) {
+                                      toast.error("Failed to update employee");
+                                    } else {
+                                      toast.success("Employee updated successfully");
+                                      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+                                      setEditingUser(null);
+                                    }
+                                  }}
+                                  className="w-full"
+                                >
+                                  Save Changes
+                                </Button>
+                              </div>
+                            </DialogContent>
+                          </Dialog>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive"
+                            onClick={() => handleDeleteUser(user.id, user.full_name || user.email || "this user")}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   ))}
