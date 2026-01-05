@@ -514,10 +514,10 @@ export default function Admin() {
 
       // Update the role if not employee (default)
       if (authData.user && newUser.role !== "employee") {
+        // Use upsert to handle both cases: role exists or doesn't exist yet
         const { error: roleError } = await supabase
           .from("user_roles")
-          .update({ role: newUser.role })
-          .eq("user_id", authData.user.id);
+          .upsert({ user_id: authData.user.id, role: newUser.role }, { onConflict: "user_id" });
 
         if (roleError) {
           toast.error("User created but failed to set role");
