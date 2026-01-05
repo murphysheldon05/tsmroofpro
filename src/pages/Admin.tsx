@@ -523,39 +523,28 @@ export default function Admin() {
     setIsCreatingUser(true);
 
     try {
-      // Create the user via Auth
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: newUser.email.trim(),
-        password: newUser.password,
-        options: {
-          data: { full_name: newUser.full_name.trim() },
+      // Create user via backend (service role) so profile + role are created reliably
+      const { data, error } = await supabase.functions.invoke("admin-create-user", {
+        body: {
+          email: newUser.email.trim(),
+          password: newUser.password,
+          full_name: newUser.full_name.trim(),
+          role: newUser.role,
         },
       });
 
-      if (authError) {
-        toast.error("Failed to create user: " + authError.message);
+      if (error) {
+        toast.error("Failed to create user: " + error.message);
         setIsCreatingUser(false);
         return;
       }
 
-      // Sometimes signUp won't return the user object (depending on auth settings).
-      // In that case, resolve the new user id from the profiles row created by the backend trigger.
-      let createdUserId = authData.user?.id ?? null;
+      const createdUserId = (data as any)?.user_id as string | undefined;
 
       if (!createdUserId) {
-        const { data: createdProfile, error: profileLookupError } = await supabase
-          .from("profiles")
-          .select("id")
-          .eq("email", newUser.email.trim())
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        if (profileLookupError) {
-          toast.error("User created, but could not load their profile");
-        }
-
-        createdUserId = createdProfile?.id ?? null;
+        toast.error("User created, but could not load their id");
+        setIsCreatingUser(false);
+        return;
       }
 
       // Update the role if not employee (default)
