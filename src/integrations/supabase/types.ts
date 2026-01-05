@@ -159,6 +159,7 @@ export type Database = {
       }
       resources: {
         Row: {
+          body: string | null
           category_id: string | null
           created_at: string
           description: string | null
@@ -175,6 +176,7 @@ export type Database = {
           visibility: Database["public"]["Enums"]["app_role"]
         }
         Insert: {
+          body?: string | null
           category_id?: string | null
           created_at?: string
           description?: string | null
@@ -191,6 +193,7 @@ export type Database = {
           visibility?: Database["public"]["Enums"]["app_role"]
         }
         Update: {
+          body?: string | null
           category_id?: string | null
           created_at?: string
           description?: string | null

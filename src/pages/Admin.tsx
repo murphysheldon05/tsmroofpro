@@ -33,6 +33,7 @@ import {
   X,
   File,
   Loader2,
+  Type,
 } from "lucide-react";
 import {
   useResources,
@@ -46,6 +47,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
 
 export default function Admin() {
   const queryClient = useQueryClient();
@@ -68,6 +70,7 @@ export default function Admin() {
   const [newResource, setNewResource] = useState({
     title: "",
     description: "",
+    body: "",
     category_id: "",
     url: "",
     tags: "",
@@ -94,6 +97,7 @@ export default function Admin() {
   const [editResource, setEditResource] = useState({
     title: "",
     description: "",
+    body: "",
     category_id: "",
     url: "",
     tags: "",
@@ -152,6 +156,7 @@ export default function Admin() {
     setEditResource({
       title: resource.title,
       description: resource.description || "",
+      body: resource.body || "",
       category_id: resource.category_id || "",
       url: resource.url || "",
       tags: resource.tags?.join(", ") || "",
@@ -209,6 +214,7 @@ export default function Admin() {
       id: editingResource.id,
       title: editResource.title.trim(),
       description: editResource.description.trim() || null,
+      body: editResource.body.trim() || null,
       category_id: editResource.category_id,
       url: editResource.url.trim() || null,
       tags: editResource.tags.split(",").map((t) => t.trim()).filter(Boolean),
@@ -248,8 +254,8 @@ export default function Admin() {
       return;
     }
 
-    if (!newResource.url.trim() && !selectedFile) {
-      toast.error("Please provide a URL or upload a file");
+    if (!newResource.url.trim() && !selectedFile && !newResource.body.trim()) {
+      toast.error("Please provide a URL, upload a file, or add body content");
       return;
     }
 
@@ -285,6 +291,7 @@ export default function Admin() {
     await createResource.mutateAsync({
       title: newResource.title.trim(),
       description: newResource.description.trim() || null,
+      body: newResource.body.trim() || null,
       category_id: newResource.category_id,
       url: newResource.url.trim() || null,
       tags: newResource.tags.split(",").map((t) => t.trim()).filter(Boolean),
@@ -298,6 +305,7 @@ export default function Admin() {
     setNewResource({
       title: "",
       description: "",
+      body: "",
       category_id: "",
       url: "",
       tags: "",
@@ -529,6 +537,32 @@ export default function Admin() {
                         </Select>
                       </div>
                     </div>
+                    
+                    {/* Content Options */}
+                    <div className="space-y-2">
+                      <Label className="flex items-center gap-2">
+                        <Type className="w-4 h-4" />
+                        Body Content (paste or type directly)
+                      </Label>
+                      <RichTextEditor
+                        content={newResource.body}
+                        onChange={(content) => setNewResource({ ...newResource, body: content })}
+                        placeholder="Paste or type your content here..."
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        You can paste formatted text directly, or use URL/file upload below
+                      </p>
+                    </div>
+
+                    <div className="relative">
+                      <div className="absolute inset-0 flex items-center">
+                        <span className="w-full border-t border-border" />
+                      </div>
+                      <div className="relative flex justify-center text-xs uppercase">
+                        <span className="bg-background px-2 text-muted-foreground">Or link/upload</span>
+                      </div>
+                    </div>
+
                     <div className="space-y-2">
                       <Label>URL (Dropbox, SharePoint, etc.)</Label>
                       <Input
@@ -779,6 +813,29 @@ export default function Admin() {
                       </Select>
                     </div>
                   </div>
+                  
+                  {/* Body Content Editor */}
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-2">
+                      <Type className="w-4 h-4" />
+                      Body Content
+                    </Label>
+                    <RichTextEditor
+                      content={editResource.body}
+                      onChange={(content) => setEditResource({ ...editResource, body: content })}
+                      placeholder="Paste or type your content here..."
+                    />
+                  </div>
+
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <span className="w-full border-t border-border" />
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                      <span className="bg-background px-2 text-muted-foreground">Or link/upload</span>
+                    </div>
+                  </div>
+
                   <div className="space-y-2">
                     <Label>URL (Dropbox, SharePoint, etc.)</Label>
                     <Input
