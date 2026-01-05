@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   useProductionCalendarEvents,
@@ -14,6 +15,8 @@ import {
   useUpdateCalendarEvent,
   useDeleteCalendarEvent,
   ProductionCalendarEvent,
+  EVENT_CATEGORIES,
+  EventCategory,
 } from "@/hooks/useProductionCalendar";
 import { cn } from "@/lib/utils";
 
@@ -22,8 +25,7 @@ export function ProductionCalendar() {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [isAddEventOpen, setIsAddEventOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<ProductionCalendarEvent | null>(null);
-  const [newEvent, setNewEvent] = useState({ title: "", description: "", start_date: "", end_date: "" });
-
+  const [newEvent, setNewEvent] = useState({ title: "", description: "", start_date: "", end_date: "", event_category: "other" as EventCategory });
   const { isManager, isAdmin } = useAuth();
   const canEdit = isManager || isAdmin;
 
@@ -56,11 +58,12 @@ export function ProductionCalendar() {
         description: newEvent.description || undefined,
         start_date: newEvent.start_date,
         end_date: newEvent.end_date || undefined,
+        event_category: newEvent.event_category,
       },
       {
         onSuccess: () => {
           setIsAddEventOpen(false);
-          setNewEvent({ title: "", description: "", start_date: "", end_date: "" });
+          setNewEvent({ title: "", description: "", start_date: "", end_date: "", event_category: "other" });
         },
       }
     );
@@ -75,6 +78,7 @@ export function ProductionCalendar() {
         description: editingEvent.description || undefined,
         start_date: editingEvent.start_date,
         end_date: editingEvent.end_date,
+        event_category: editingEvent.event_category,
       },
       {
         onSuccess: () => setEditingEvent(null),
@@ -152,15 +156,18 @@ export function ProductionCalendar() {
                     {format(day, "d")}
                   </div>
                   <div className="space-y-0.5 overflow-hidden">
-                    {dayEvents.slice(0, 2).map((event) => (
-                      <div
-                        key={event.id}
-                        className="text-xs bg-primary/20 text-primary-foreground px-1 py-0.5 rounded truncate"
-                        title={event.title}
-                      >
-                        {event.title}
-                      </div>
-                    ))}
+                    {dayEvents.slice(0, 2).map((event) => {
+                      const categoryInfo = EVENT_CATEGORIES[event.event_category] || EVENT_CATEGORIES.other;
+                      return (
+                        <div
+                          key={event.id}
+                          className={cn("text-xs px-1 py-0.5 rounded truncate", categoryInfo.bgColor, categoryInfo.color)}
+                          title={`${categoryInfo.label}: ${event.title}`}
+                        >
+                          {event.title}
+                        </div>
+                      );
+                    })}
                     {dayEvents.length > 2 && (
                       <div className="text-xs text-muted-foreground">+{dayEvents.length - 2} more</div>
                     )}
@@ -170,6 +177,16 @@ export function ProductionCalendar() {
             })}
           </div>
         )}
+
+        {/* Category Legend */}
+        <div className="mt-4 flex flex-wrap gap-3">
+          {Object.entries(EVENT_CATEGORIES).map(([key, { label, color, bgColor }]) => (
+            <div key={key} className="flex items-center gap-1.5">
+              <div className={cn("w-3 h-3 rounded", bgColor)} />
+              <span className={cn("text-xs", color)}>{label}</span>
+            </div>
+          ))}
+        </div>
 
         {/* Selected date panel */}
         {selectedDate && (
@@ -184,29 +201,37 @@ export function ProductionCalendar() {
               <p className="text-sm text-muted-foreground">No events scheduled</p>
             ) : (
               <div className="space-y-2">
-                {selectedDateEvents.map((event) => (
-                  <div key={event.id} className="flex items-start justify-between p-2 bg-background rounded border">
-                    <div>
-                      <div className="font-medium">{event.title}</div>
-                      {event.description && <p className="text-sm text-muted-foreground">{event.description}</p>}
-                      {event.end_date && event.end_date !== event.start_date && (
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {format(parseISO(event.start_date), "MMM d")} - {format(parseISO(event.end_date), "MMM d")}
-                        </p>
+                {selectedDateEvents.map((event) => {
+                  const categoryInfo = EVENT_CATEGORIES[event.event_category] || EVENT_CATEGORIES.other;
+                  return (
+                    <div key={event.id} className={cn("flex items-start justify-between p-2 rounded border", categoryInfo.bgColor)}>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className={cn("text-xs px-1.5 py-0.5 rounded", categoryInfo.bgColor, categoryInfo.color, "font-medium")}>
+                            {categoryInfo.label}
+                          </span>
+                          <span className="font-medium">{event.title}</span>
+                        </div>
+                        {event.description && <p className="text-sm text-muted-foreground mt-1">{event.description}</p>}
+                        {event.end_date && event.end_date !== event.start_date && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {format(parseISO(event.start_date), "MMM d")} - {format(parseISO(event.end_date), "MMM d")}
+                          </p>
+                        )}
+                      </div>
+                      {canEdit && (
+                        <div className="flex gap-1">
+                          <Button variant="ghost" size="icon" onClick={() => setEditingEvent(event)}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => handleDeleteEvent(event.id)}>
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
                       )}
                     </div>
-                    {canEdit && (
-                      <div className="flex gap-1">
-                        <Button variant="ghost" size="icon" onClick={() => setEditingEvent(event)}>
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleDeleteEvent(event.id)}>
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -228,6 +253,24 @@ export function ProductionCalendar() {
                 onChange={(e) => setNewEvent({ ...newEvent, title: e.target.value })}
                 placeholder="e.g., Smith Residence Roof Install"
               />
+            </div>
+            <div>
+              <Label htmlFor="category">Category</Label>
+              <Select
+                value={newEvent.event_category}
+                onValueChange={(value: EventCategory) => setNewEvent({ ...newEvent, event_category: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(EVENT_CATEGORIES).map(([key, { label }]) => (
+                    <SelectItem key={key} value={key}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <Label htmlFor="description">Description</Label>
@@ -285,6 +328,24 @@ export function ProductionCalendar() {
                   value={editingEvent.title}
                   onChange={(e) => setEditingEvent({ ...editingEvent, title: e.target.value })}
                 />
+              </div>
+              <div>
+                <Label htmlFor="edit-category">Category</Label>
+                <Select
+                  value={editingEvent.event_category}
+                  onValueChange={(value: EventCategory) => setEditingEvent({ ...editingEvent, event_category: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(EVENT_CATEGORIES).map(([key, { label }]) => (
+                      <SelectItem key={key} value={key}>
+                        {label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div>
                 <Label htmlFor="edit-description">Description</Label>
