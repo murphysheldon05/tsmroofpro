@@ -148,6 +148,36 @@
   .glow-effect:hover::before {
     opacity: 0.5;
   }
+
+  /* TipTap Editor Styles */
+  .ProseMirror {
+    @apply min-h-[150px] outline-none;
+  }
+  
+  .ProseMirror p.is-editor-empty:first-child::before {
+    @apply text-muted-foreground pointer-events-none float-left h-0;
+    content: attr(data-placeholder);
+  }
+
+  .ProseMirror h2 {
+    @apply text-lg font-semibold mt-4 mb-2;
+  }
+
+  .ProseMirror p {
+    @apply mb-2;
+  }
+
+  .ProseMirror ul {
+    @apply list-disc pl-5 mb-2;
+  }
+
+  .ProseMirror ol {
+    @apply list-decimal pl-5 mb-2;
+  }
+
+  .ProseMirror li {
+    @apply mb-1;
+  }
 }
 
 @layer utilities {

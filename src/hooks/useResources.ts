@@ -6,6 +6,7 @@ export interface Resource {
   id: string;
   title: string;
   description: string | null;
+  body: string | null;
   category_id: string | null;
   tags: string[];
   owner_id: string | null;
