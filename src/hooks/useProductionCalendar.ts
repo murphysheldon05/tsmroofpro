@@ -21,6 +21,7 @@ export interface ProductionCalendarEvent {
   end_date: string | null;
   all_day: boolean;
   event_category: EventCategory;
+  crew_id: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;
@@ -51,6 +52,7 @@ export function useCreateCalendarEvent() {
       start_date: string;
       end_date?: string;
       event_category?: EventCategory;
+      crew_id?: string;
     }) => {
       const { data: user } = await supabase.auth.getUser();
       const { data, error } = await supabase
@@ -89,6 +91,7 @@ export function useUpdateCalendarEvent() {
       start_date?: string;
       end_date?: string | null;
       event_category?: EventCategory;
+      crew_id?: string | null;
     }) => {
       const { data, error } = await supabase
         .from("production_calendar_events")
