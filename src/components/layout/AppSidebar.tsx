@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Logo } from "@/components/Logo";
 import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 import {
   LayoutDashboard,
   FileText,
@@ -85,9 +86,21 @@ const navigation: NavItem[] = [
 export function AppSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { signOut, isAdmin } = useAuth();
+  const { signOut, isAdmin, isManager, role, user } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [openSections, setOpenSections] = useState<string[]>(["SOP Library", "Training"]);
+
+  const getRoleBadgeVariant = () => {
+    if (role === 'admin') return 'destructive';
+    if (role === 'manager') return 'default';
+    return 'secondary';
+  };
+
+  const getRoleLabel = () => {
+    if (role === 'admin') return 'Admin';
+    if (role === 'manager') return 'Manager';
+    return 'Employee';
+  };
 
   const toggleSection = (title: string) => {
     setOpenSections((prev) =>
@@ -175,7 +188,19 @@ export function AppSidebar() {
         ))}
       </nav>
 
-      <div className="p-3 border-t border-sidebar-border space-y-1">
+      <div className="p-3 border-t border-sidebar-border space-y-2">
+        {/* User info with role badge */}
+        <div className="flex items-center justify-between px-3 py-2 bg-sidebar-accent/30 rounded-lg">
+          <div className="flex flex-col min-w-0">
+            <span className="text-xs text-muted-foreground truncate">
+              {user?.email}
+            </span>
+          </div>
+          <Badge variant={getRoleBadgeVariant()} className="ml-2 shrink-0">
+            {getRoleLabel()}
+          </Badge>
+        </div>
+
         {isAdmin && (
           <button
             onClick={() => handleNavClick("/admin")}
