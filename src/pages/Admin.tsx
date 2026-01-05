@@ -530,6 +530,7 @@ export default function Admin() {
           password: newUser.password,
           full_name: newUser.full_name.trim(),
           role: newUser.role,
+          send_invite_email: true,
         },
       });
 
@@ -540,6 +541,7 @@ export default function Admin() {
       }
 
       const createdUserId = (data as any)?.user_id as string | undefined;
+      const emailSent = (data as any)?.email_sent as boolean | undefined;
 
       if (!createdUserId) {
         toast.error("User created, but could not load their id");
@@ -559,7 +561,12 @@ export default function Admin() {
         }
       }
 
-      toast.success("Employee account created successfully");
+      if (emailSent) {
+        toast.success("Employee account created and invite email sent!");
+      } else {
+        toast.success("Employee account created. Email could not be sent - please share credentials manually.");
+      }
+      
       queryClient.invalidateQueries({ queryKey: ["admin-users"] });
 
       // If employee role, show permissions editor

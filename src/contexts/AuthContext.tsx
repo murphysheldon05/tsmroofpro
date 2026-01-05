@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { PasswordResetPrompt } from '@/components/auth/PasswordResetPrompt';
 
 type AppRole = 'admin' | 'manager' | 'employee';
 
@@ -23,6 +24,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [role, setRole] = useState<AppRole | null>(null);
+  const [mustResetPassword, setMustResetPassword] = useState(false);
 
   const fetchUserRole = async (userId: string) => {
     const { data } = await supabase
@@ -38,6 +40,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const checkMustResetPassword = async (userId: string) => {
+    const { data } = await supabase
+      .from('profiles')
+      .select('must_reset_password')
+      .eq('id', userId)
+      .maybeSingle();
+    
+    if (data?.must_reset_password) {
+      setMustResetPassword(true);
+    }
+  };
+
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
@@ -47,9 +61,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (session?.user) {
           setTimeout(() => {
             fetchUserRole(session.user.id);
+            checkMustResetPassword(session.user.id);
           }, 0);
         } else {
           setRole(null);
+          setMustResetPassword(false);
         }
         
         setLoading(false);
@@ -61,6 +77,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(session?.user ?? null);
       if (session?.user) {
         fetchUserRole(session.user.id);
+        checkMustResetPassword(session.user.id);
       }
       setLoading(false);
     });
@@ -89,6 +106,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     await supabase.auth.signOut();
     setRole(null);
+    setMustResetPassword(false);
+  };
+
+  const handlePasswordReset = () => {
+    setMustResetPassword(false);
   };
 
   const value = {
@@ -103,7 +125,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isManager: role === 'manager' || role === 'admin',
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+      <PasswordResetPrompt 
+        open={mustResetPassword && !!user} 
+        onPasswordReset={handlePasswordReset} 
+      />
+    </AuthContext.Provider>
+  );
 }
 
 export function useAuth() {
