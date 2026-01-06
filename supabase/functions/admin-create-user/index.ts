@@ -193,7 +193,7 @@ serve(async (req: Request): Promise<Response> => {
         const roleLabel = role.charAt(0).toUpperCase() + role.slice(1);
 
         const emailResponse = await resend.emails.send({
-          from: "TSM Roofing <onboarding@resend.dev>",
+          from: "TSM Roofing <noreply@tsmroofs.com>",
           to: [email],
           subject: template.subject,
           html: `
