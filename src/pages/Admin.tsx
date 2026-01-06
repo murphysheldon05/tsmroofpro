@@ -1679,6 +1679,9 @@ export default function Admin() {
                     <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground hidden sm:table-cell">
                       Status
                     </th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground hidden lg:table-cell">
+                      Last Login
+                    </th>
                     <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
                       Role
                     </th>
@@ -1716,6 +1719,19 @@ export default function Admin() {
                             <CheckCircle className="w-3 h-3" />
                             Active
                           </Badge>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 hidden lg:table-cell text-muted-foreground text-sm">
+                        {user.last_login_at ? (
+                          new Date(user.last_login_at).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric',
+                            hour: 'numeric',
+                            minute: '2-digit',
+                          })
+                        ) : (
+                          <span className="text-muted-foreground/50">Never</span>
                         )}
                       </td>
                       <td className="px-4 py-3">
