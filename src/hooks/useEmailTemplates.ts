@@ -60,3 +60,32 @@ export function useUpdateEmailTemplate() {
     },
   });
 }
+
+export function useSendTestEmail() {
+  return useMutation({
+    mutationFn: async ({
+      recipientEmail,
+      templateKey,
+    }: {
+      recipientEmail: string;
+      templateKey: string;
+    }) => {
+      const { data, error } = await supabase.functions.invoke("send-test-email", {
+        body: {
+          recipient_email: recipientEmail,
+          template_key: templateKey,
+        },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: () => {
+      toast.success("Test email sent successfully! Check your inbox.");
+    },
+    onError: (error: any) => {
+      toast.error("Failed to send test email: " + error.message);
+    },
+  });
+}
