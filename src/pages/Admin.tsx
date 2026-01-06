@@ -40,6 +40,9 @@ import {
   Video,
   Play,
   Shield,
+  Mail,
+  CheckCircle,
+  Clock,
 } from "lucide-react";
 import { UserPermissionsEditor } from "@/components/admin/UserPermissionsEditor";
 import {
@@ -102,6 +105,9 @@ export default function Admin() {
   const [isAddingUser, setIsAddingUser] = useState(false);
   const [isAddingVideo, setIsAddingVideo] = useState(false);
   const [isCreatingUser, setIsCreatingUser] = useState(false);
+  const [resendingInviteFor, setResendingInviteFor] = useState<string | null>(null);
+  const [resendInviteDialog, setResendInviteDialog] = useState<{ userId: string; email: string; fullName: string } | null>(null);
+  const [resendPassword, setResendPassword] = useState("");
   const [newlyCreatedEmployeeId, setNewlyCreatedEmployeeId] = useState<string | null>(null);
   const [editingCategory, setEditingCategory] = useState<string | null>(null);
   const [editingResource, setEditingResource] = useState<Resource | null>(null);
@@ -1579,6 +1585,87 @@ export default function Admin() {
               </Dialog>
             </div>
 
+            {/* Resend Invite Dialog */}
+            <Dialog 
+              open={!!resendInviteDialog} 
+              onOpenChange={(open) => {
+                if (!open) {
+                  setResendInviteDialog(null);
+                  setResendPassword("");
+                }
+              }}
+            >
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Resend Invite Email</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 mt-4">
+                  <p className="text-sm text-muted-foreground">
+                    Send new login credentials to <strong>{resendInviteDialog?.fullName || resendInviteDialog?.email}</strong>
+                  </p>
+                  <div className="space-y-2">
+                    <Label>New Temporary Password *</Label>
+                    <Input
+                      type="password"
+                      value={resendPassword}
+                      onChange={(e) => setResendPassword(e.target.value)}
+                      placeholder="Minimum 6 characters"
+                    />
+                  </div>
+                  <Button
+                    onClick={async () => {
+                      if (!resendInviteDialog || !resendPassword) {
+                        toast.error("Please enter a new password");
+                        return;
+                      }
+                      if (resendPassword.length < 6) {
+                        toast.error("Password must be at least 6 characters");
+                        return;
+                      }
+
+                      setResendingInviteFor(resendInviteDialog.userId);
+                      try {
+                        const { data, error } = await supabase.functions.invoke("resend-invite", {
+                          body: {
+                            user_id: resendInviteDialog.userId,
+                            new_password: resendPassword,
+                          },
+                        });
+
+                        if (error) {
+                          toast.error("Failed to resend invite: " + error.message);
+                        } else if (data?.email_sent) {
+                          toast.success("Invite email sent successfully!");
+                          queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+                        } else {
+                          toast.success("Password updated. Email could not be sent - please share credentials manually.");
+                        }
+                      } catch (err) {
+                        toast.error("Failed to resend invite");
+                      }
+                      setResendingInviteFor(null);
+                      setResendInviteDialog(null);
+                      setResendPassword("");
+                    }}
+                    className="w-full"
+                    disabled={resendingInviteFor === resendInviteDialog?.userId}
+                  >
+                    {resendingInviteFor === resendInviteDialog?.userId ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                        Sending...
+                      </>
+                    ) : (
+                      <>
+                        <Mail className="w-4 h-4 mr-2" />
+                        Send Invite Email
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+
             <div className="glass-card rounded-xl overflow-hidden">
               <table className="w-full">
                 <thead>
@@ -1588,6 +1675,9 @@ export default function Admin() {
                     </th>
                     <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground hidden md:table-cell">
                       Email
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground hidden sm:table-cell">
+                      Status
                     </th>
                     <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
                       Role
@@ -1614,6 +1704,19 @@ export default function Admin() {
                       </td>
                       <td className="px-4 py-3 hidden md:table-cell text-muted-foreground">
                         {user.email}
+                      </td>
+                      <td className="px-4 py-3 hidden sm:table-cell">
+                        {user.must_reset_password ? (
+                          <Badge variant="outline" className="gap-1 text-amber-600 border-amber-300 bg-amber-50">
+                            <Clock className="w-3 h-3" />
+                            Pending
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="gap-1 text-emerald-600 border-emerald-300 bg-emerald-50">
+                            <CheckCircle className="w-3 h-3" />
+                            Active
+                          </Badge>
+                        )}
                       </td>
                       <td className="px-4 py-3">
                         <Select
@@ -1731,6 +1834,19 @@ export default function Admin() {
                               </div>
                             </DialogContent>
                           </Dialog>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            title="Resend Invite"
+                            onClick={() => setResendInviteDialog({
+                              userId: user.id,
+                              email: user.email || "",
+                              fullName: user.full_name || "",
+                            })}
+                          >
+                            <Mail className="w-4 h-4" />
+                          </Button>
                           <Button
                             variant="ghost"
                             size="icon"
