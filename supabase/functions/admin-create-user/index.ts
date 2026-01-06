@@ -154,9 +154,8 @@ serve(async (req: Request): Promise<Response> => {
     let emailSent = false;
     if (sendInviteEmail) {
       try {
-        const appUrl = Deno.env.get("SUPABASE_URL")?.replace(".supabase.co", "") || "https://app.tsmroofing.com";
-        const loginUrl = `${appUrl}/auth`;
-        
+        // Use the Lovable preview URL or custom domain
+        const loginUrl = "https://rrcbxpgbgahjrdizktrt.lovableproject.com/auth";
         const roleLabel = role.charAt(0).toUpperCase() + role.slice(1);
 
         const emailResponse = await resend.emails.send({
