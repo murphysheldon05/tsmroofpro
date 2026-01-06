@@ -17,6 +17,14 @@ interface CreateUserPayload {
   send_invite_email?: boolean;
 }
 
+interface EmailTemplate {
+  subject: string;
+  heading: string;
+  intro_text: string;
+  button_text: string;
+  footer_text: string | null;
+}
+
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
 serve(async (req: Request): Promise<Response> => {
@@ -154,14 +162,29 @@ serve(async (req: Request): Promise<Response> => {
     let emailSent = false;
     if (sendInviteEmail) {
       try {
-        // Use the Lovable preview URL or custom domain
+        // Fetch email template from database
+        const { data: templateData } = await admin
+          .from("email_templates")
+          .select("subject, heading, intro_text, button_text, footer_text")
+          .eq("template_key", "user_invite")
+          .single();
+
+        // Use template values or defaults
+        const template: EmailTemplate = templateData || {
+          subject: "Welcome to TSM Roofing Portal - Your Account Details",
+          heading: "Welcome to TSM Roofing",
+          intro_text: "Your account has been created for the TSM Roofing Employee Portal. Here are your login credentials:",
+          button_text: "Login to Portal",
+          footer_text: "If you have any questions, please contact your manager or the admin team.",
+        };
+
         const loginUrl = "https://rrcbxpgbgahjrdizktrt.lovableproject.com/auth";
         const roleLabel = role.charAt(0).toUpperCase() + role.slice(1);
 
         const emailResponse = await resend.emails.send({
           from: "TSM Roofing <onboarding@resend.dev>",
           to: [email],
-          subject: "Welcome to TSM Roofing Portal - Your Account Details",
+          subject: template.subject,
           html: `
             <!DOCTYPE html>
             <html>
@@ -171,14 +194,14 @@ serve(async (req: Request): Promise<Response> => {
             </head>
             <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
               <div style="background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%); padding: 30px; border-radius: 10px 10px 0 0; text-align: center;">
-                <h1 style="color: white; margin: 0; font-size: 24px;">Welcome to TSM Roofing</h1>
+                <h1 style="color: white; margin: 0; font-size: 24px;">${template.heading}</h1>
               </div>
               
               <div style="background: #f8fafc; padding: 30px; border: 1px solid #e2e8f0; border-top: none;">
                 <p style="font-size: 16px; margin-bottom: 20px;">Hello <strong>${fullName}</strong>,</p>
                 
                 <p style="font-size: 16px; margin-bottom: 20px;">
-                  Your account has been created for the TSM Roofing Employee Portal. Here are your login credentials:
+                  ${template.intro_text}
                 </p>
                 
                 <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin: 20px 0;">
@@ -206,13 +229,11 @@ serve(async (req: Request): Promise<Response> => {
                 
                 <div style="text-align: center; margin: 30px 0;">
                   <a href="${loginUrl}" style="display: inline-block; background: #2563eb; color: white; padding: 14px 30px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
-                    Login to Portal
+                    ${template.button_text}
                   </a>
                 </div>
                 
-                <p style="font-size: 14px; color: #64748b; margin-top: 30px;">
-                  If you have any questions, please contact your manager or the admin team.
-                </p>
+                ${template.footer_text ? `<p style="font-size: 14px; color: #64748b; margin-top: 30px;">${template.footer_text}</p>` : ""}
               </div>
               
               <div style="background: #1e3a5f; padding: 20px; border-radius: 0 0 10px 10px; text-align: center;">
