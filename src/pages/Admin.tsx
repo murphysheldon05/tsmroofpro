@@ -43,6 +43,7 @@ import {
   Mail,
   CheckCircle,
   Clock,
+  Bell,
 } from "lucide-react";
 import { UserPermissionsEditor } from "@/components/admin/UserPermissionsEditor";
 import { EmailTemplateEditor } from "@/components/admin/EmailTemplateEditor";
@@ -79,6 +80,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { getThumbnailUrl } from "@/components/training/VideoCard";
+import { NotificationSettingsManager } from "@/components/admin/NotificationSettingsManager";
 
 export default function Admin() {
   const queryClient = useQueryClient();
@@ -774,6 +776,10 @@ export default function Admin() {
             <TabsTrigger value="email-templates" className="gap-2">
               <Mail className="w-4 h-4" />
               Email Templates
+            </TabsTrigger>
+            <TabsTrigger value="notifications" className="gap-2">
+              <Bell className="w-4 h-4" />
+              Notifications
             </TabsTrigger>
           </TabsList>
 
@@ -3279,6 +3285,11 @@ export default function Admin() {
               </h2>
             </div>
             <EmailTemplateEditor />
+          </TabsContent>
+
+          {/* Notifications Tab */}
+          <TabsContent value="notifications" className="space-y-4">
+            <NotificationSettingsManager />
           </TabsContent>
         </Tabs>
       </div>

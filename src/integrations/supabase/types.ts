@@ -204,6 +204,36 @@ export type Database = {
         }
         Relationships: []
       }
+      notification_settings: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          notification_type: string
+          recipient_email: string
+          recipient_name: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          notification_type: string
+          recipient_email: string
+          recipient_name?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          notification_type?: string
+          recipient_email?: string
+          recipient_name?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       policies: {
         Row: {
           created_at: string
