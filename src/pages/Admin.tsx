@@ -545,7 +545,20 @@ export default function Admin() {
       });
 
       if (error) {
-        toast.error("Failed to create user: " + error.message);
+        // Try to parse the actual error message from the response
+        let errorMsg = error.message;
+        try {
+          const parsed = JSON.parse(error.message.replace(/^Edge function returned \d+: /, ''));
+          if (parsed.error) {
+            errorMsg = parsed.error;
+          }
+        } catch {
+          // If parsing fails, check for common patterns
+          if (error.message.includes("already been registered") || error.message.includes("email_exists")) {
+            errorMsg = "A user with this email already exists. Use 'Resend Invite' to send a new invite.";
+          }
+        }
+        toast.error(errorMsg);
         setIsCreatingUser(false);
         return;
       }
