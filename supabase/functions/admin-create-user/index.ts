@@ -71,7 +71,7 @@ serve(async (req: Request): Promise<Response> => {
 
     const payload: CreateUserPayload = await req.json();
 
-const email = (payload.email ?? "").trim().toLowerCase();
+    const email = (payload.email ?? "").trim().toLowerCase();
     const password = payload.password ?? "";
     const fullName = (payload.full_name ?? "").trim();
     const role: AppRole = (payload.role ?? "employee") as AppRole;
@@ -84,21 +84,9 @@ const email = (payload.email ?? "").trim().toLowerCase();
       });
     }
 
-    // Blocked disposable/temporary email domains
-    const blockedDomains = [
-      "tempmail.com", "temp-mail.org", "guerrillamail.com", "guerrillamail.org",
-      "mailinator.com", "10minutemail.com", "throwaway.email", "fakeinbox.com",
-      "trashmail.com", "getnada.com", "yopmail.com", "sharklasers.com",
-      "maildrop.cc", "mailnesia.com", "tempail.com", "dispostable.com",
-      "mailcatch.com", "spamgourmet.com", "mytrashmail.com", "getairmail.com",
-      "throwawaymail.com", "burnermail.io", "tempr.email", "discard.email",
-      "fakemailgenerator.com", "emailondeck.com", "mohmal.com", "tempinbox.com",
-      "mintemail.com", "mailforspam.com", "spamfree24.org", "trash-mail.com"
-    ];
-
-    const emailDomain = email.split("@")[1];
-    if (!emailDomain || blockedDomains.includes(emailDomain)) {
-      return new Response(JSON.stringify({ error: "This email domain is not allowed. Please use a valid work email." }), {
+    // Basic email format validation only
+    if (!email.includes("@") || !email.includes(".")) {
+      return new Response(JSON.stringify({ error: "Invalid email format" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
