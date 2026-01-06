@@ -108,6 +108,9 @@ export default function Admin() {
   const [resendingInviteFor, setResendingInviteFor] = useState<string | null>(null);
   const [resendInviteDialog, setResendInviteDialog] = useState<{ userId: string; email: string; fullName: string } | null>(null);
   const [resendPassword, setResendPassword] = useState("");
+  const [resendAllDialog, setResendAllDialog] = useState(false);
+  const [resendAllPassword, setResendAllPassword] = useState("");
+  const [isResendingAll, setIsResendingAll] = useState(false);
   const [newlyCreatedEmployeeId, setNewlyCreatedEmployeeId] = useState<string | null>(null);
   const [editingCategory, setEditingCategory] = useState<string | null>(null);
   const [editingResource, setEditingResource] = useState<Resource | null>(null);
@@ -1484,6 +1487,20 @@ export default function Admin() {
                   {isUsersFetching ? <Loader2 className="w-4 h-4 animate-spin" /> : "Refresh"}
                 </Button>
 
+                {/* Resend All Invites Button */}
+                {users?.some(u => u.must_reset_password) && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setResendAllDialog(true)}
+                    className="gap-1"
+                  >
+                    <Mail className="w-4 h-4" />
+                    Resend All Invites
+                  </Button>
+                )}
+
                 <Dialog open={isAddingUser} onOpenChange={setIsAddingUser}>
                   <DialogTrigger asChild>
                     <Button variant="neon">
@@ -1659,6 +1676,110 @@ export default function Admin() {
                       <>
                         <Mail className="w-4 h-4 mr-2" />
                         Send Invite Email
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+
+            {/* Resend All Invites Dialog */}
+            <Dialog 
+              open={resendAllDialog} 
+              onOpenChange={(open) => {
+                if (!open) {
+                  setResendAllDialog(false);
+                  setResendAllPassword("");
+                }
+              }}
+            >
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Resend All Pending Invites</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 mt-4">
+                  <p className="text-sm text-muted-foreground">
+                    This will send invite emails to all <strong>{users?.filter(u => u.must_reset_password).length || 0}</strong> users with pending status.
+                  </p>
+                  <div className="space-y-2">
+                    <Label>New Temporary Password for All *</Label>
+                    <Input
+                      type="password"
+                      value={resendAllPassword}
+                      onChange={(e) => setResendAllPassword(e.target.value)}
+                      placeholder="Minimum 6 characters"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      All pending users will receive this same password
+                    </p>
+                  </div>
+                  <Button
+                    onClick={async () => {
+                      if (!resendAllPassword) {
+                        toast.error("Please enter a password");
+                        return;
+                      }
+                      if (resendAllPassword.length < 6) {
+                        toast.error("Password must be at least 6 characters");
+                        return;
+                      }
+
+                      const pendingUsers = users?.filter(u => u.must_reset_password) || [];
+                      if (pendingUsers.length === 0) {
+                        toast.info("No pending users to send invites to");
+                        return;
+                      }
+
+                      setIsResendingAll(true);
+                      let successCount = 0;
+                      let failCount = 0;
+
+                      for (const user of pendingUsers) {
+                        try {
+                          const { data, error } = await supabase.functions.invoke("resend-invite", {
+                            body: {
+                              user_id: user.id,
+                              new_password: resendAllPassword,
+                            },
+                          });
+
+                          if (error) {
+                            failCount++;
+                          } else if (data?.email_sent) {
+                            successCount++;
+                          } else {
+                            failCount++;
+                          }
+                        } catch {
+                          failCount++;
+                        }
+                      }
+
+                      setIsResendingAll(false);
+                      setResendAllDialog(false);
+                      setResendAllPassword("");
+                      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+
+                      if (failCount === 0) {
+                        toast.success(`Successfully sent ${successCount} invite emails!`);
+                      } else if (successCount === 0) {
+                        toast.error(`Failed to send all ${failCount} invites`);
+                      } else {
+                        toast.warning(`Sent ${successCount} invites, ${failCount} failed`);
+                      }
+                    }}
+                    className="w-full"
+                    disabled={isResendingAll}
+                  >
+                    {isResendingAll ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                        Sending Invites...
+                      </>
+                    ) : (
+                      <>
+                        <Mail className="w-4 h-4 mr-2" />
+                        Send All Invites
                       </>
                     )}
                   </Button>
