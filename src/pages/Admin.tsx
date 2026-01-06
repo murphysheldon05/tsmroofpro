@@ -45,6 +45,7 @@ import {
   Clock,
 } from "lucide-react";
 import { UserPermissionsEditor } from "@/components/admin/UserPermissionsEditor";
+import { EmailTemplateEditor } from "@/components/admin/EmailTemplateEditor";
 import {
   useResources,
   useCategories,
@@ -756,6 +757,10 @@ export default function Admin() {
             <TabsTrigger value="users" className="gap-2">
               <Users className="w-4 h-4" />
               Users
+            </TabsTrigger>
+            <TabsTrigger value="email-templates" className="gap-2">
+              <Mail className="w-4 h-4" />
+              Email Templates
             </TabsTrigger>
           </TabsList>
 
@@ -3251,6 +3256,16 @@ export default function Admin() {
                 </tbody>
               </table>
             </div>
+          </TabsContent>
+
+          {/* Email Templates Tab */}
+          <TabsContent value="email-templates" className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h2 className="text-lg font-semibold text-foreground">
+                Email Templates
+              </h2>
+            </div>
+            <EmailTemplateEditor />
           </TabsContent>
         </Tabs>
       </div>

@@ -168,6 +168,42 @@ export type Database = {
           },
         ]
       }
+      email_templates: {
+        Row: {
+          button_text: string
+          created_at: string
+          footer_text: string | null
+          heading: string
+          id: string
+          intro_text: string
+          subject: string
+          template_key: string
+          updated_at: string
+        }
+        Insert: {
+          button_text?: string
+          created_at?: string
+          footer_text?: string | null
+          heading: string
+          id?: string
+          intro_text: string
+          subject: string
+          template_key: string
+          updated_at?: string
+        }
+        Update: {
+          button_text?: string
+          created_at?: string
+          footer_text?: string | null
+          heading?: string
+          id?: string
+          intro_text?: string
+          subject?: string
+          template_key?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       policies: {
         Row: {
           created_at: string
