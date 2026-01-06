@@ -127,13 +127,15 @@ serve(async (req: Request): Promise<Response> => {
       });
     }
 
-    // Ensure role exists
+    // Ensure role exists - delete any existing role first, then insert new one
+    await admin.from("user_roles").delete().eq("user_id", userId);
+    
     const { error: roleError } = await admin
       .from("user_roles")
-      .upsert({ user_id: userId, role }, { onConflict: "user_id" });
+      .insert({ user_id: userId, role });
 
     if (roleError) {
-      console.error("Role upsert error:", roleError);
+      console.error("Role insert error:", roleError);
       return new Response(JSON.stringify({ error: "User created but role failed" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
