@@ -114,7 +114,18 @@ serve(async (req: Request): Promise<Response> => {
 
     if (createError || !created.user) {
       console.error("Create user error:", createError);
-      return new Response(JSON.stringify({ error: createError?.message ?? "Failed to create user" }), {
+      
+      // Provide more specific error messages
+      let errorMessage = createError?.message ?? "Failed to create user";
+      let errorCode = "unknown";
+      
+      if (createError?.message?.includes("already been registered") || 
+          (createError as any)?.code === "email_exists") {
+        errorMessage = "A user with this email address already exists. Use 'Resend Invite' to send a new invite to existing users.";
+        errorCode = "email_exists";
+      }
+      
+      return new Response(JSON.stringify({ error: errorMessage, code: errorCode }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
