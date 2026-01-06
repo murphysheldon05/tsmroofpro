@@ -105,14 +105,56 @@ serve(async (req: Request): Promise<Response> => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    const { data: created, error: createError } = await admin.auth.admin.createUser({
+    let { data: created, error: createError } = await admin.auth.admin.createUser({
       email,
       password,
       email_confirm: true,
       user_metadata: { full_name: fullName },
     });
 
-    if (createError || !created.user) {
+    // Handle orphaned auth users (exist in auth but not in profiles)
+    if (createError?.message?.includes("already been registered") || 
+        (createError as any)?.code === "email_exists") {
+      console.log("User exists in auth, checking if orphaned...");
+      
+      // Check if user exists in profiles
+      const { data: existingProfile } = await admin
+        .from("profiles")
+        .select("id")
+        .eq("email", email)
+        .single();
+      
+      if (!existingProfile) {
+        // User is orphaned - exists in auth but not in profiles
+        // Find and delete the orphaned auth user, then recreate
+        console.log("Orphaned user detected, cleaning up...");
+        
+        const { data: authUsers } = await admin.auth.admin.listUsers();
+        const orphanedUser = authUsers?.users?.find(u => u.email?.toLowerCase() === email);
+        
+        if (orphanedUser) {
+          console.log("Deleting orphaned auth user:", orphanedUser.id);
+          
+          // Clean up any related data
+          await admin.from("user_roles").delete().eq("user_id", orphanedUser.id);
+          await admin.from("user_permissions").delete().eq("user_id", orphanedUser.id);
+          await admin.auth.admin.deleteUser(orphanedUser.id);
+          
+          // Retry creating the user
+          const retryResult = await admin.auth.admin.createUser({
+            email,
+            password,
+            email_confirm: true,
+            user_metadata: { full_name: fullName },
+          });
+          
+          created = retryResult.data;
+          createError = retryResult.error;
+        }
+      }
+    }
+
+    if (createError || !created?.user) {
       console.error("Create user error:", createError);
       
       // Provide more specific error messages
