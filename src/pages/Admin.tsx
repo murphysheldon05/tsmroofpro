@@ -594,24 +594,32 @@ export default function Admin() {
   };
 
   const handleDeleteUser = async (userId: string, userName: string) => {
-    if (!confirm(`Are you sure you want to remove ${userName}? This action cannot be undone.`)) {
+    if (!confirm(`Are you sure you want to delete ${userName}? This will permanently remove their account and cannot be undone.`)) {
       return;
     }
 
-    // Note: Deleting a user from auth.users requires admin API or service role
-    // For now, we'll just remove their role which effectively disables access
-    const { error } = await supabase
-      .from("user_roles")
-      .delete()
-      .eq("user_id", userId);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
 
-    if (error) {
-      toast.error("Failed to remove user access");
-    } else {
-      // Also delete profile
-      await supabase.from("profiles").delete().eq("id", userId);
-      toast.success("User access removed successfully");
+      if (!token) {
+        toast.error("Not authenticated");
+        return;
+      }
+
+      const response = await supabase.functions.invoke("admin-delete-user", {
+        body: { user_id: userId },
+      });
+
+      if (response.error) {
+        toast.error(response.error.message || "Failed to delete user");
+        return;
+      }
+
+      toast.success("User deleted successfully");
       queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+    } catch (error: any) {
+      toast.error(error.message || "Failed to delete user");
     }
   };
 
