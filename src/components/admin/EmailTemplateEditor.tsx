@@ -4,13 +4,25 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Save, Eye, EyeOff } from "lucide-react";
-import { useEmailTemplate, useUpdateEmailTemplate } from "@/hooks/useEmailTemplates";
+import { Loader2, Save, Eye, EyeOff, Send, Mail } from "lucide-react";
+import { useEmailTemplate, useUpdateEmailTemplate, useSendTestEmail } from "@/hooks/useEmailTemplates";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 export function EmailTemplateEditor() {
   const { data: template, isLoading } = useEmailTemplate("user_invite");
   const updateTemplate = useUpdateEmailTemplate();
+  const sendTestEmail = useSendTestEmail();
   const [showPreview, setShowPreview] = useState(false);
+  const [testEmailDialogOpen, setTestEmailDialogOpen] = useState(false);
+  const [testEmailAddress, setTestEmailAddress] = useState("");
 
   const [formData, setFormData] = useState({
     subject: "",
@@ -45,6 +57,23 @@ export function EmailTemplateEditor() {
     });
   };
 
+  const handleSendTestEmail = () => {
+    if (!testEmailAddress.trim()) return;
+    
+    sendTestEmail.mutate(
+      {
+        recipientEmail: testEmailAddress.trim(),
+        templateKey: "user_invite",
+      },
+      {
+        onSuccess: () => {
+          setTestEmailDialogOpen(false);
+          setTestEmailAddress("");
+        },
+      }
+    );
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-8">
@@ -57,25 +86,88 @@ export function EmailTemplateEditor() {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center justify-between">
+          <CardTitle className="flex items-center justify-between flex-wrap gap-2">
             <span>User Invite Email Template</span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowPreview(!showPreview)}
-            >
-              {showPreview ? (
-                <>
-                  <EyeOff className="h-4 w-4 mr-2" />
-                  Hide Preview
-                </>
-              ) : (
-                <>
-                  <Eye className="h-4 w-4 mr-2" />
-                  Show Preview
-                </>
-              )}
-            </Button>
+            <div className="flex items-center gap-2">
+              <Dialog open={testEmailDialogOpen} onOpenChange={setTestEmailDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <Send className="h-4 w-4 mr-2" />
+                    Send Test Email
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                      <Mail className="h-5 w-5" />
+                      Send Test Email
+                    </DialogTitle>
+                    <DialogDescription>
+                      Send a preview of the current email template to yourself. The email will contain sample data to show how it will look.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="test-email">Your Email Address</Label>
+                      <Input
+                        id="test-email"
+                        type="email"
+                        placeholder="your.email@example.com"
+                        value={testEmailAddress}
+                        onChange={(e) => setTestEmailAddress(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            handleSendTestEmail();
+                          }
+                        }}
+                      />
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Note: Make sure to save your template changes before sending a test email to see the latest version.
+                    </p>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setTestEmailDialogOpen(false)}>
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={handleSendTestEmail}
+                      disabled={!testEmailAddress.trim() || sendTestEmail.isPending}
+                    >
+                      {sendTestEmail.isPending ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Sending...
+                        </>
+                      ) : (
+                        <>
+                          <Send className="h-4 w-4 mr-2" />
+                          Send Test
+                        </>
+                      )}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowPreview(!showPreview)}
+              >
+                {showPreview ? (
+                  <>
+                    <EyeOff className="h-4 w-4 mr-2" />
+                    Hide Preview
+                  </>
+                ) : (
+                  <>
+                    <Eye className="h-4 w-4 mr-2" />
+                    Show Preview
+                  </>
+                )}
+              </Button>
+            </div>
           </CardTitle>
           <CardDescription>
             Customize the email sent to new users when they are invited to the portal.
