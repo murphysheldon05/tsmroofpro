@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { Resend } from "https://esm.sh/resend@2.0.0";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.89.0?target=deno";
+import { Resend } from "https://esm.sh/resend@2.0.0?target=deno";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -231,7 +231,8 @@ serve(async (req: Request): Promise<Response> => {
           footer_text: "If you have any questions, please contact your manager or the admin team.",
         };
 
-        const loginUrl = "https://rrcbxpgbgahjrdizktrt.lovableproject.com/auth";
+        const origin = req.headers.get("origin") ?? "https://rrcbxpgbgahjrdizktrt.lovableproject.com";
+        const loginUrl = `${origin}/auth`;
         const roleLabel = role.charAt(0).toUpperCase() + role.slice(1);
 
         const emailResponse = await resend.emails.send({
