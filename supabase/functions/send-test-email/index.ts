@@ -128,7 +128,8 @@ serve(async (req: Request): Promise<Response> => {
       role: "Employee",
     };
 
-    const loginUrl = "https://rrcbxpgbgahjrdizktrt.lovableproject.com/auth";
+    const appBaseUrl = Deno.env.get("APP_BASE_URL") ?? "https://hub.tsmroofs.com";
+    const loginUrl = `${appBaseUrl}/auth`;
 
     const emailHtml = `
       <!DOCTYPE html>
