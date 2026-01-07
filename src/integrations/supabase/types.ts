@@ -322,31 +322,40 @@ export type Database = {
       }
       profiles: {
         Row: {
+          approved_at: string | null
+          approved_by: string | null
           avatar_url: string | null
           created_at: string
           email: string | null
           full_name: string | null
           id: string
+          is_approved: boolean | null
           last_login_at: string | null
           must_reset_password: boolean | null
           updated_at: string
         }
         Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
           avatar_url?: string | null
           created_at?: string
           email?: string | null
           full_name?: string | null
           id: string
+          is_approved?: boolean | null
           last_login_at?: string | null
           must_reset_password?: boolean | null
           updated_at?: string
         }
         Update: {
+          approved_at?: string | null
+          approved_by?: string | null
           avatar_url?: string | null
           created_at?: string
           email?: string | null
           full_name?: string | null
           id?: string
+          is_approved?: boolean | null
           last_login_at?: string | null
           must_reset_password?: boolean | null
           updated_at?: string
