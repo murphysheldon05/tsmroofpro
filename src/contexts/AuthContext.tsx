@@ -10,6 +10,7 @@ interface AuthContextType {
   session: Session | null;
   loading: boolean;
   role: AppRole | null;
+  isApproved: boolean | null;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
@@ -24,6 +25,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [role, setRole] = useState<AppRole | null>(null);
+  const [isApproved, setIsApproved] = useState<boolean | null>(null);
   const [mustResetPassword, setMustResetPassword] = useState(false);
 
   const fetchUserRole = async (userId: string) => {
@@ -40,15 +42,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const checkMustResetPassword = async (userId: string) => {
+  const checkProfileStatus = async (userId: string) => {
     const { data } = await supabase
       .from('profiles')
-      .select('must_reset_password')
+      .select('must_reset_password, is_approved')
       .eq('id', userId)
       .maybeSingle();
     
-    if (data?.must_reset_password) {
-      setMustResetPassword(true);
+    if (data) {
+      if (data.must_reset_password) {
+        setMustResetPassword(true);
+      }
+      setIsApproved(data.is_approved ?? false);
     }
   };
 
@@ -61,10 +66,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (session?.user) {
           setTimeout(() => {
             fetchUserRole(session.user.id);
-            checkMustResetPassword(session.user.id);
+            checkProfileStatus(session.user.id);
           }, 0);
         } else {
           setRole(null);
+          setIsApproved(null);
           setMustResetPassword(false);
         }
         
@@ -77,7 +83,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(session?.user ?? null);
       if (session?.user) {
         fetchUserRole(session.user.id);
-        checkMustResetPassword(session.user.id);
+        checkProfileStatus(session.user.id);
       }
       setLoading(false);
     });
@@ -102,7 +108,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signUp = async (email: string, password: string, fullName: string) => {
     const redirectUrl = `${window.location.origin}/`;
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -110,12 +116,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         data: { full_name: fullName },
       },
     });
+
+    // Notify admins about new signup (fire and forget)
+    if (!error && data.user) {
+      supabase.functions.invoke("notify-new-signup", {
+        body: {
+          user_id: data.user.id,
+          email: email,
+          full_name: fullName,
+        },
+      }).catch(console.error);
+    }
+
     return { error };
   };
 
   const signOut = async () => {
     await supabase.auth.signOut();
     setRole(null);
+    setIsApproved(null);
     setMustResetPassword(false);
   };
 
@@ -128,6 +147,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     session,
     loading,
     role,
+    isApproved,
     signIn,
     signUp,
     signOut,
@@ -139,7 +159,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     <AuthContext.Provider value={value}>
       {children}
       <PasswordResetPrompt 
-        open={mustResetPassword && !!user} 
+        open={mustResetPassword && !!user && isApproved === true} 
         onPasswordReset={handlePasswordReset} 
       />
     </AuthContext.Provider>

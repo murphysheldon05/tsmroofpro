@@ -47,6 +47,7 @@ import {
 } from "lucide-react";
 import { UserPermissionsEditor } from "@/components/admin/UserPermissionsEditor";
 import { EmailTemplateEditor } from "@/components/admin/EmailTemplateEditor";
+import { PendingApprovals } from "@/components/admin/PendingApprovals";
 import {
   useResources,
   useCategories,
@@ -522,91 +523,8 @@ export default function Admin() {
   };
 
   const handleCreateUser = async () => {
-    if (!newUser.full_name.trim() || !newUser.email.trim() || !newUser.password) {
-      toast.error("Full name, email, and password are required");
-      return;
-    }
-
-    if (newUser.password.length < 6) {
-      toast.error("Password must be at least 6 characters");
-      return;
-    }
-
-    setIsCreatingUser(true);
-
-    try {
-      // Create user via backend (service role) so profile + role are created reliably
-      const { data, error } = await supabase.functions.invoke("admin-create-user", {
-        body: {
-          email: newUser.email.trim(),
-          password: newUser.password,
-          full_name: newUser.full_name.trim(),
-          role: newUser.role,
-          send_invite_email: true,
-        },
-      });
-
-      if (error) {
-        // Try to parse the actual error message from the response
-        let errorMsg = error.message;
-        try {
-          const parsed = JSON.parse(error.message.replace(/^Edge function returned \d+: /, ''));
-          if (parsed.error) {
-            errorMsg = parsed.error;
-          }
-        } catch {
-          // If parsing fails, check for common patterns
-          if (error.message.includes("already been registered") || error.message.includes("email_exists")) {
-            errorMsg = "A user with this email already exists. Use 'Resend Invite' to send a new invite.";
-          }
-        }
-        toast.error(errorMsg);
-        setIsCreatingUser(false);
-        return;
-      }
-
-      const createdUserId = (data as any)?.user_id as string | undefined;
-      const emailSent = (data as any)?.email_sent as boolean | undefined;
-
-      if (!createdUserId) {
-        toast.error("User created, but could not load their id");
-        setIsCreatingUser(false);
-        return;
-      }
-
-      // Update the role if not employee (default)
-      if (createdUserId && newUser.role !== "employee") {
-        // Use upsert to handle both cases: role exists or doesn't exist yet
-        const { error: roleError } = await supabase
-          .from("user_roles")
-          .upsert({ user_id: createdUserId, role: newUser.role }, { onConflict: "user_id" });
-
-        if (roleError) {
-          toast.error("User created but failed to set role");
-        }
-      }
-
-      if (emailSent) {
-        toast.success("Employee account created and invite email sent!");
-      } else {
-        toast.success("Employee account created. Email could not be sent - please share credentials manually.");
-      }
-      
-      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
-
-      // If employee role, show permissions editor
-      if (createdUserId && newUser.role === "employee") {
-        setNewlyCreatedEmployeeId(createdUserId);
-        setIsAddingUser(false);
-      } else {
-        setNewUser({ full_name: "", email: "", password: "", role: "employee" });
-        setIsAddingUser(false);
-      }
-    } catch (error) {
-      toast.error("Failed to create user");
-    }
-
-    setIsCreatingUser(false);
+    toast.info("New users can now sign up directly and will await your approval.");
+    setIsAddingUser(false);
   };
 
   const handleDeleteUser = async (userId: string, userName: string) => {
@@ -1502,7 +1420,13 @@ export default function Admin() {
           </TabsContent>
 
           {/* Users Tab */}
-          <TabsContent value="users" className="space-y-4">
+          <TabsContent value="users" className="space-y-6">
+            {/* Pending Approvals Section */}
+            <div>
+              <h2 className="text-lg font-semibold text-foreground mb-4">Pending Approvals</h2>
+              <PendingApprovals />
+            </div>
+
             <div className="flex justify-between items-center">
               <h2 className="text-lg font-semibold text-foreground">
                 All Users ({users?.length || 0})
