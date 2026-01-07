@@ -179,11 +179,17 @@ serve(async (req: Request): Promise<Response> => {
             </p>
           </div>
           
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="${loginUrl}" style="display: inline-block; background: #2563eb; color: white; padding: 14px 30px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
-              ${template.button_text}
-            </a>
-          </div>
+           <div style="text-align: center; margin: 30px 0;">
+             <a href="${loginUrl}" style="display: inline-block; background: #2563eb; color: white; padding: 14px 30px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
+               ${template.button_text}
+             </a>
+           </div>
+
+           <p style="font-size: 13px; color: #64748b; margin: 0 0 10px; text-align: center;">
+             If the button doesn’t work, copy and paste this link:
+             <br />
+             <a href="${loginUrl}" style="color: #2563eb; word-break: break-all;">${loginUrl}</a>
+           </p>
           
           ${template.footer_text ? `<p style="font-size: 14px; color: #64748b; margin-top: 30px;">${template.footer_text}</p>` : ""}
         </div>
