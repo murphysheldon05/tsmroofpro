@@ -11,6 +11,8 @@ export interface Tool {
   icon: string | null;
   sort_order: number;
   is_active: boolean;
+  ios_app_url: string | null;
+  android_app_url: string | null;
   created_at: string;
   updated_at: string;
 }

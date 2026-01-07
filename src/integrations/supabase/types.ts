@@ -492,11 +492,13 @@ export type Database = {
       }
       tools: {
         Row: {
+          android_app_url: string | null
           category: string
           created_at: string
           description: string | null
           icon: string | null
           id: string
+          ios_app_url: string | null
           is_active: boolean | null
           name: string
           sort_order: number | null
@@ -504,11 +506,13 @@ export type Database = {
           url: string
         }
         Insert: {
+          android_app_url?: string | null
           category: string
           created_at?: string
           description?: string | null
           icon?: string | null
           id?: string
+          ios_app_url?: string | null
           is_active?: boolean | null
           name: string
           sort_order?: number | null
@@ -516,11 +520,13 @@ export type Database = {
           url: string
         }
         Update: {
+          android_app_url?: string | null
           category?: string
           created_at?: string
           description?: string | null
           icon?: string | null
           id?: string
+          ios_app_url?: string | null
           is_active?: boolean | null
           name?: string
           sort_order?: number | null
