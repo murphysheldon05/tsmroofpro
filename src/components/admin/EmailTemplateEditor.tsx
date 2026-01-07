@@ -4,8 +4,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Save, Eye, EyeOff, Send, Mail } from "lucide-react";
+import { Loader2, Save, Eye, EyeOff, Send, Mail, UserCheck } from "lucide-react";
 import { useEmailTemplate, useUpdateEmailTemplate, useSendTestEmail } from "@/hooks/useEmailTemplates";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   Dialog,
   DialogContent,
@@ -17,12 +18,14 @@ import {
 } from "@/components/ui/dialog";
 
 export function EmailTemplateEditor() {
+  const { user } = useAuth();
   const { data: template, isLoading } = useEmailTemplate("user_invite");
   const updateTemplate = useUpdateEmailTemplate();
   const sendTestEmail = useSendTestEmail();
   const [showPreview, setShowPreview] = useState(false);
   const [testEmailDialogOpen, setTestEmailDialogOpen] = useState(false);
   const [testEmailAddress, setTestEmailAddress] = useState("");
+  const [isSendingToSelf, setIsSendingToSelf] = useState(false);
 
   const [formData, setFormData] = useState({
     subject: "",
@@ -74,6 +77,23 @@ export function EmailTemplateEditor() {
     );
   };
 
+  const handleSendTestToSelf = () => {
+    if (!user?.email) return;
+    
+    setIsSendingToSelf(true);
+    sendTestEmail.mutate(
+      {
+        recipientEmail: user.email,
+        templateKey: "user_invite",
+      },
+      {
+        onSettled: () => {
+          setIsSendingToSelf(false);
+        },
+      }
+    );
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-8">
@@ -89,6 +109,26 @@ export function EmailTemplateEditor() {
           <CardTitle className="flex items-center justify-between flex-wrap gap-2">
             <span>User Invite Email Template</span>
             <div className="flex items-center gap-2">
+              {user?.email && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleSendTestToSelf}
+                  disabled={isSendingToSelf}
+                >
+                  {isSendingToSelf ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    <>
+                      <UserCheck className="h-4 w-4 mr-2" />
+                      Send Me a Test
+                    </>
+                  )}
+                </Button>
+              )}
               <Dialog open={testEmailDialogOpen} onOpenChange={setTestEmailDialogOpen}>
                 <DialogTrigger asChild>
                   <Button variant="outline" size="sm">
