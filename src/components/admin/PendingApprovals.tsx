@@ -35,7 +35,7 @@ export function PendingApprovals() {
     refetchInterval: 30000, // Refresh every 30 seconds
   });
 
-  const handleApprove = async (userId: string) => {
+  const handleApprove = async (userId: string, userEmail: string | null, userName: string | null) => {
     setApprovingId(userId);
     try {
       const { error } = await supabase
@@ -48,6 +48,21 @@ export function PendingApprovals() {
         .eq("id", userId);
 
       if (error) throw error;
+
+      // Send approval notification email
+      if (userEmail) {
+        try {
+          await supabase.functions.invoke("send-approval-notification", {
+            body: {
+              user_email: userEmail,
+              user_name: userName || "",
+            },
+          });
+        } catch (emailError) {
+          console.error("Failed to send approval email:", emailError);
+          // Don't fail the approval if email fails
+        }
+      }
 
       toast.success("User approved successfully!");
       queryClient.invalidateQueries({ queryKey: ["pending-approvals"] });
@@ -154,7 +169,7 @@ export function PendingApprovals() {
                       size="sm"
                       variant="outline"
                       className="gap-1 text-emerald-600 border-emerald-300 hover:bg-emerald-50"
-                      onClick={() => handleApprove(pendingUser.id)}
+                      onClick={() => handleApprove(pendingUser.id, pendingUser.email, pendingUser.full_name)}
                       disabled={approvingId === pendingUser.id || rejectingId === pendingUser.id}
                     >
                       {approvingId === pendingUser.id ? (
