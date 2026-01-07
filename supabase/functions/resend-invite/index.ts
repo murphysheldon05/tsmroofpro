@@ -161,7 +161,10 @@ serve(async (req: Request): Promise<Response> => {
     // Send invite email
     let emailSent = false;
     try {
-      const appBaseUrl = Deno.env.get("APP_BASE_URL") ?? "https://hub.tsmroofs.com";
+      const rawBaseUrl = (Deno.env.get("APP_BASE_URL") ?? "https://hub.tsmroofs.com").trim();
+      const appBaseUrl = (rawBaseUrl.startsWith("http://") || rawBaseUrl.startsWith("https://"))
+        ? rawBaseUrl.replace(/\/$/, "")
+        : `https://${rawBaseUrl.replace(/\/$/, "")}`;
       const loginUrl = `${appBaseUrl}/auth`;
       const roleLabel = role.charAt(0).toUpperCase() + role.slice(1);
 
@@ -212,7 +215,7 @@ serve(async (req: Request): Promise<Response> => {
               </div>
               
                <div style="text-align: center; margin: 30px 0;">
-                 <a href="${loginUrl}" style="display: inline-block; background: #2563eb; color: white; padding: 14px 30px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
+                 <a href="${loginUrl}" target="_blank" rel="noopener noreferrer" style="display: inline-block; background: #2563eb; color: white; padding: 14px 30px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
                    ${template.button_text}
                  </a>
                </div>
