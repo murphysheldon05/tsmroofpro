@@ -231,8 +231,8 @@ serve(async (req: Request): Promise<Response> => {
           footer_text: "If you have any questions, please contact your manager or the admin team.",
         };
 
-        const origin = req.headers.get("origin") ?? "https://rrcbxpgbgahjrdizktrt.lovableproject.com";
-        const loginUrl = `${origin}/auth`;
+        const appBaseUrl = Deno.env.get("APP_BASE_URL") ?? "https://hub.tsmroofs.com";
+        const loginUrl = `${appBaseUrl}/auth`;
         const roleLabel = role.charAt(0).toUpperCase() + role.slice(1);
 
         const emailResponse = await resend.emails.send({
