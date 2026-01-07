@@ -113,26 +113,18 @@ serve(async (req: Request): Promise<Response> => {
     }
 
     const template: EmailTemplate = templateData || {
-      subject: "Welcome to TSM Roofing Portal - Your Account Details",
+      subject: "You're Invited to TSM Roofing Hub",
       heading: "Welcome to TSM Roofing",
-      intro_text: "Your account has been created for the TSM Roofing Employee Portal. Here are your login credentials:",
-      button_text: "Login to Portal",
+      intro_text: "You've been invited to join the TSM Roofing Employee Hub. Click the button below to create your account and get started.",
+      button_text: "Create My Account",
       footer_text: "If you have any questions, please contact your manager or the admin team.",
-    };
-
-    // Sample data for preview
-    const sampleData = {
-      fullName: "John Doe",
-      email: "john.doe@example.com",
-      password: "TestPass123!",
-      role: "Employee",
     };
 
     const rawBaseUrl = (Deno.env.get("APP_BASE_URL") ?? "https://hub.tsmroofs.com").trim();
     const appBaseUrl = (rawBaseUrl.startsWith("http://") || rawBaseUrl.startsWith("https://"))
       ? rawBaseUrl.replace(/\/$/, "")
       : `https://${rawBaseUrl.replace(/\/$/, "")}`;
-    const loginUrl = `${appBaseUrl}/auth`;
+    const signupUrl = `${appBaseUrl}/auth`;
 
     const emailHtml = `
       <!DOCTYPE html>
@@ -142,56 +134,31 @@ serve(async (req: Request): Promise<Response> => {
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
       </head>
       <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <div style="background: #fef3c7; border: 1px solid #f59e0b; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
-          <p style="margin: 0; font-size: 14px; color: #92400e;">
-            <strong>🧪 TEST EMAIL:</strong> This is a preview of your email template with sample data.
-          </p>
-        </div>
-
         <div style="background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%); padding: 30px; border-radius: 10px 10px 0 0; text-align: center;">
           <h1 style="color: white; margin: 0; font-size: 24px;">${template.heading}</h1>
         </div>
         
         <div style="background: #f8fafc; padding: 30px; border: 1px solid #e2e8f0; border-top: none;">
-          <p style="font-size: 16px; margin-bottom: 20px;">Hello <strong>${sampleData.fullName}</strong>,</p>
-          
           <p style="font-size: 16px; margin-bottom: 20px;">
             ${template.intro_text}
           </p>
           
-          <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin: 20px 0;">
-            <table style="width: 100%; border-collapse: collapse;">
-              <tr>
-                <td style="padding: 8px 0; color: #64748b; font-size: 14px;">Email:</td>
-                <td style="padding: 8px 0; font-weight: 600; font-size: 14px;">${sampleData.email}</td>
-              </tr>
-              <tr>
-                <td style="padding: 8px 0; color: #64748b; font-size: 14px;">Temporary Password:</td>
-                <td style="padding: 8px 0; font-weight: 600; font-size: 14px; font-family: monospace; background: #fef3c7; padding: 4px 8px; border-radius: 4px;">${sampleData.password}</td>
-              </tr>
-              <tr>
-                <td style="padding: 8px 0; color: #64748b; font-size: 14px;">Role:</td>
-                <td style="padding: 8px 0; font-weight: 600; font-size: 14px;">${sampleData.role}</td>
-              </tr>
-            </table>
-          </div>
-          
-          <div style="background: #fef3c7; border: 1px solid #f59e0b; border-radius: 8px; padding: 15px; margin: 20px 0;">
-            <p style="margin: 0; font-size: 14px; color: #92400e;">
-              <strong>⚠️ Important:</strong> For security, you will be prompted to change your password on your first login.
+          <div style="background: #e0f2fe; border: 1px solid #0ea5e9; border-radius: 8px; padding: 15px; margin: 20px 0;">
+            <p style="margin: 0; font-size: 14px; color: #0369a1;">
+              <strong>📧 Your Email:</strong> ${recipientEmail}
             </p>
           </div>
           
            <div style="text-align: center; margin: 30px 0;">
-             <a href="${loginUrl}" target="_blank" rel="noopener noreferrer" style="display: inline-block; background: #2563eb; color: white; padding: 14px 30px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
+             <a href="${signupUrl}" target="_blank" rel="noopener noreferrer" style="display: inline-block; background: #2563eb; color: white; padding: 14px 30px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
                ${template.button_text}
              </a>
            </div>
 
            <p style="font-size: 13px; color: #64748b; margin: 0 0 10px; text-align: center;">
-             If the button doesn’t work, copy and paste this link:
+             If the button doesn't work, copy and paste this link:
              <br />
-             <a href="${loginUrl}" style="color: #2563eb; word-break: break-all;">${loginUrl}</a>
+             <a href="${signupUrl}" style="color: #2563eb; word-break: break-all;">${signupUrl}</a>
            </p>
           
           ${template.footer_text ? `<p style="font-size: 14px; color: #64748b; margin-top: 30px;">${template.footer_text}</p>` : ""}
@@ -209,13 +176,13 @@ serve(async (req: Request): Promise<Response> => {
     const emailResponse = await resend.emails.send({
       from: "TSM Roofing <noreply@hub.tsmroofs.com>",
       to: [recipientEmail],
-      subject: `[TEST] ${template.subject}`,
+      subject: template.subject,
       html: emailHtml,
     });
 
-    console.log("Test email sent successfully:", emailResponse);
+    console.log("Invite email sent successfully:", emailResponse);
 
-    return new Response(JSON.stringify({ success: true, message: "Test email sent" }), {
+    return new Response(JSON.stringify({ success: true, message: "Invite sent" }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
