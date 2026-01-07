@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Logo } from "@/components/Logo";
 import { toast } from "sonner";
-import { Eye, EyeOff, ArrowLeft } from "lucide-react";
+import { Eye, EyeOff, ArrowLeft, Clock, CheckCircle } from "lucide-react";
 import { z } from "zod";
 
 const authSchema = z.object({
@@ -23,15 +23,17 @@ export default function Auth() {
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [signupComplete, setSignupComplete] = useState(false);
 
-  const { signIn, signUp, user, loading } = useAuth();
+  const { signIn, signUp, user, loading, isApproved, signOut } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!loading && user) {
+    // Only redirect if user is logged in AND approved
+    if (!loading && user && isApproved === true) {
       navigate("/dashboard");
     }
-  }, [user, loading, navigate]);
+  }, [user, loading, isApproved, navigate]);
 
   const validateForm = () => {
     try {
@@ -74,7 +76,7 @@ export default function Auth() {
           }
         } else {
           toast.success("Welcome back!");
-          navigate("/dashboard");
+          // Navigation will happen via useEffect when isApproved is checked
         }
       } else {
         if (!fullName.trim()) {
@@ -90,8 +92,8 @@ export default function Auth() {
             toast.error(error.message);
           }
         } else {
-          toast.success("Account created! You can now sign in.");
-          setIsLogin(true);
+          setSignupComplete(true);
+          toast.success("Account created! Waiting for admin approval.");
         }
       }
     } catch (error) {
@@ -105,6 +107,80 @@ export default function Auth() {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  // Show pending approval screen if user is logged in but not approved
+  if (user && isApproved === false) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col">
+        <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top_right,_hsl(var(--primary)/0.08)_0%,_transparent_50%)]" />
+        
+        <main className="relative z-10 flex-1 flex items-center justify-center px-4">
+          <div className="w-full max-w-md text-center">
+            <Logo size="lg" className="justify-center mb-6" />
+            
+            <div className="glass-card rounded-2xl p-8">
+              <div className="w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center mx-auto mb-4">
+                <Clock className="w-8 h-8 text-amber-600" />
+              </div>
+              <h1 className="text-2xl font-bold text-foreground mb-2">
+                Approval Pending
+              </h1>
+              <p className="text-muted-foreground mb-6">
+                Your account is awaiting admin approval. You'll be able to access the portal once an administrator approves your account.
+              </p>
+              <Button
+                variant="outline"
+                onClick={() => signOut()}
+                className="w-full"
+              >
+                Sign Out
+              </Button>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  // Show signup complete screen
+  if (signupComplete) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col">
+        <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top_right,_hsl(var(--primary)/0.08)_0%,_transparent_50%)]" />
+        
+        <main className="relative z-10 flex-1 flex items-center justify-center px-4">
+          <div className="w-full max-w-md text-center">
+            <Logo size="lg" className="justify-center mb-6" />
+            
+            <div className="glass-card rounded-2xl p-8">
+              <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-4">
+                <CheckCircle className="w-8 h-8 text-emerald-600" />
+              </div>
+              <h1 className="text-2xl font-bold text-foreground mb-2">
+                Account Created!
+              </h1>
+              <p className="text-muted-foreground mb-6">
+                Your account has been created and is pending admin approval. You'll receive access once an administrator approves your request.
+              </p>
+              <Button
+                variant="neon"
+                onClick={() => {
+                  setSignupComplete(false);
+                  setIsLogin(true);
+                  setEmail("");
+                  setPassword("");
+                  setFullName("");
+                }}
+                className="w-full"
+              >
+                Back to Sign In
+              </Button>
+            </div>
+          </div>
+        </main>
       </div>
     );
   }
