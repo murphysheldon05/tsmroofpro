@@ -1,8 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { Resend } from "https://esm.sh/resend@2.0.0?target=deno";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
+const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -60,64 +59,83 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Send email to all HR recipients
      for (const recipient of recipients) {
-       const emailResponse = await resend.emails.send({
+       if (!RESEND_API_KEY) {
+         throw new Error("Missing RESEND_API_KEY secret");
+       }
+
+       const emailPayload = {
          from: "TSM Roofing <onboarding@resend.dev>",
          to: [recipient.recipient_email],
          subject: `New Hire Alert: ${newHireName} - Action Required`,
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <div style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); padding: 30px; text-align: center;">
-              <h1 style="color: white; margin: 0;">New Hire Onboarding</h1>
-            </div>
-            <div style="padding: 30px; background: #f8fafc;">
-              <p style="font-size: 16px; color: #334155;">Hi ${recipient.recipient_name || 'HR Team'},</p>
-              <p style="font-size: 16px; color: #334155;">A new hire has been submitted and requires account setup.</p>
-              
-              <div style="background: white; border-radius: 8px; padding: 20px; margin: 20px 0; border-left: 4px solid #3b82f6;">
-                <h3 style="margin-top: 0; color: #1e40af;">New Hire Details</h3>
-                <table style="width: 100%; border-collapse: collapse;">
-                  <tr>
-                    <td style="padding: 8px 0; color: #64748b; width: 140px;">Name:</td>
-                    <td style="padding: 8px 0; color: #1e293b; font-weight: 600;">${newHireName}</td>
-                  </tr>
-                  <tr>
-                    <td style="padding: 8px 0; color: #64748b;">Personal Email:</td>
-                    <td style="padding: 8px 0; color: #1e293b;">${personalEmail}</td>
-                  </tr>
-                  <tr>
-                    <td style="padding: 8px 0; color: #64748b;">Phone:</td>
-                    <td style="padding: 8px 0; color: #1e293b;">${phoneNumber || 'Not provided'}</td>
-                  </tr>
-                  <tr>
-                    <td style="padding: 8px 0; color: #64748b;">Submitted By:</td>
-                    <td style="padding: 8px 0; color: #1e293b;">${submittedByName}</td>
-                  </tr>
-                </table>
-              </div>
+         html: `
+           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+             <div style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); padding: 30px; text-align: center;">
+               <h1 style="color: white; margin: 0;">New Hire Onboarding</h1>
+             </div>
+             <div style="padding: 30px; background: #f8fafc;">
+               <p style="font-size: 16px; color: #334155;">Hi ${recipient.recipient_name || 'HR Team'},</p>
+               <p style="font-size: 16px; color: #334155;">A new hire has been submitted and requires account setup.</p>
+               
+               <div style="background: white; border-radius: 8px; padding: 20px; margin: 20px 0; border-left: 4px solid #3b82f6;">
+                 <h3 style="margin-top: 0; color: #1e40af;">New Hire Details</h3>
+                 <table style="width: 100%; border-collapse: collapse;">
+                   <tr>
+                     <td style="padding: 8px 0; color: #64748b; width: 140px;">Name:</td>
+                     <td style="padding: 8px 0; color: #1e293b; font-weight: 600;">${newHireName}</td>
+                   </tr>
+                   <tr>
+                     <td style="padding: 8px 0; color: #64748b;">Personal Email:</td>
+                     <td style="padding: 8px 0; color: #1e293b;">${personalEmail}</td>
+                   </tr>
+                   <tr>
+                     <td style="padding: 8px 0; color: #64748b;">Phone:</td>
+                     <td style="padding: 8px 0; color: #1e293b;">${phoneNumber || 'Not provided'}</td>
+                   </tr>
+                   <tr>
+                     <td style="padding: 8px 0; color: #64748b;">Submitted By:</td>
+                     <td style="padding: 8px 0; color: #1e293b;">${submittedByName}</td>
+                   </tr>
+                 </table>
+               </div>
 
-              <div style="background: white; border-radius: 8px; padding: 20px; margin: 20px 0;">
-                <h3 style="margin-top: 0; color: #1e40af;">Required Access</h3>
-                <ul style="color: #334155; margin: 0; padding-left: 20px;">
-                  ${accessList}
-                </ul>
-              </div>
+               <div style="background: white; border-radius: 8px; padding: 20px; margin: 20px 0;">
+                 <h3 style="margin-top: 0; color: #1e40af;">Required Access</h3>
+                 <ul style="color: #334155; margin: 0; padding-left: 20px;">
+                   ${accessList}
+                 </ul>
+               </div>
 
-              <div style="text-align: center; margin-top: 30px;">
-                <a href="${appBaseUrl}/training/new-hire" 
-                   style="display: inline-block; background: #3b82f6; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: 600;">
-                  View in Portal
-                </a>
-              </div>
-            </div>
-            <div style="padding: 20px; text-align: center; color: #64748b; font-size: 12px;">
-              <p>TSM Roofing Employee Portal</p>
-            </div>
-          </div>
-        `,
-      });
+               <div style="text-align: center; margin-top: 30px;">
+                 <a href="${appBaseUrl}/training/new-hire" 
+                    style="display: inline-block; background: #3b82f6; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: 600;">
+                   View in Portal
+                 </a>
+               </div>
+             </div>
+             <div style="padding: 20px; text-align: center; color: #64748b; font-size: 12px;">
+               <p>TSM Roofing Employee Portal</p>
+             </div>
+           </div>
+         `,
+       };
 
-      console.log("Email sent to:", recipient.recipient_email, emailResponse);
-    }
+       const res = await fetch("https://api.resend.com/emails", {
+         method: "POST",
+         headers: {
+           Authorization: `Bearer ${RESEND_API_KEY}`,
+           "Content-Type": "application/json",
+         },
+         body: JSON.stringify(emailPayload),
+       });
+
+       const resText = await res.text();
+       if (!res.ok) {
+         console.error("Resend API error:", res.status, resText);
+         throw new Error(`Resend API error ${res.status}: ${resText}`);
+       }
+
+       console.log("Email sent to:", recipient.recipient_email, resText);
+     }
 
     return new Response(
       JSON.stringify({ success: true, recipientCount: recipients.length }),
