@@ -38,6 +38,7 @@ interface NavChild {
   href: string;
   icon?: React.ElementType;
   sectionKey: string;
+  managerOnly?: boolean;
 }
 
 interface NavItem {
@@ -74,7 +75,7 @@ const navigation: NavItem[] = [
     icon: GraduationCap,
     sectionKey: "training",
     children: [
-      { title: "New Hire", href: "/training/new-hire", icon: UserPlus, sectionKey: "training/new-hire" },
+      { title: "New Hire", href: "/training/new-hire", icon: UserPlus, sectionKey: "training/new-hire", managerOnly: true },
       { title: "Role Training", href: "/training/role-training", icon: GraduationCap, sectionKey: "training/role-training" },
       { title: "Video Library", href: "/training/video-library", icon: Video, sectionKey: "training/video-library" },
     ],
@@ -139,9 +140,11 @@ export function AppSidebar() {
     .filter((item) => isSectionVisible(item.sectionKey, userPermissions, role))
     .map((item) => {
       if (item.children) {
-        const filteredChildren = item.children.filter((child) =>
-          isSectionVisible(child.sectionKey, userPermissions, role)
-        );
+        const filteredChildren = item.children.filter((child) => {
+          // Check managerOnly flag
+          if (child.managerOnly && !isManager && !isAdmin) return false;
+          return isSectionVisible(child.sectionKey, userPermissions, role);
+        });
         // Only include parent if it has visible children
         if (filteredChildren.length === 0) return null;
         return { ...item, children: filteredChildren };
