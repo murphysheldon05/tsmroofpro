@@ -1,11 +1,14 @@
+import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNewHires, useUpdateNewHireStatus, useDeleteNewHire, NewHire } from "@/hooks/useNewHires";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Users, Trash2, Clock, CheckCircle2, AlertCircle } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Loader2, Users, Trash2, Clock, CheckCircle2, AlertCircle, ChevronDown, ChevronUp, KeyRound } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { AccessCredentialForm } from "./AccessCredentialForm";
 
 const statusConfig: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; icon: React.ElementType }> = {
   pending: { label: "Pending", variant: "secondary", icon: Clock },
@@ -76,85 +79,120 @@ export function NewHireList() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {newHires.map((hire) => {
-          const config = statusConfig[hire.status] || statusConfig.pending;
-          const StatusIcon = config.icon;
-          
-          return (
-            <div
-              key={hire.id}
-              className="border rounded-lg p-4 space-y-3"
-            >
-              <div className="flex items-start justify-between gap-4">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <h4 className="font-semibold">{hire.full_name}</h4>
-                    <Badge variant={config.variant} className="flex items-center gap-1">
-                      <StatusIcon className="w-3 h-3" />
-                      {config.label}
-                    </Badge>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    {hire.personal_email}
-                    {hire.phone_number && ` • ${hire.phone_number}`}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Submitted {formatDistanceToNow(new Date(hire.created_at), { addSuffix: true })}
-                  </p>
-                </div>
-                
-                <div className="flex items-center gap-2">
-                  {isAdmin && (
-                    <>
-                      <Select
-                        value={hire.status}
-                        onValueChange={(value) => handleStatusChange(hire.id, value)}
-                      >
-                        <SelectTrigger className="w-[140px]">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="pending">Pending</SelectItem>
-                          <SelectItem value="in_progress">In Progress</SelectItem>
-                          <SelectItem value="completed">Completed</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDelete(hire.id)}
-                        className="text-destructive hover:text-destructive"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </>
-                  )}
-                </div>
-              </div>
-
-              {hire.required_access && hire.required_access.length > 0 && (
-                <div>
-                  <p className="text-sm font-medium mb-1">Required Access:</p>
-                  <div className="flex flex-wrap gap-1">
-                    {hire.required_access.map((access) => (
-                      <Badge key={access} variant="outline" className="text-xs">
-                        {access}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {hire.notes && (
-                <div>
-                  <p className="text-sm font-medium mb-1">Notes:</p>
-                  <p className="text-sm text-muted-foreground">{hire.notes}</p>
-                </div>
-              )}
-            </div>
-          );
-        })}
+        {newHires.map((hire) => (
+          <NewHireCard 
+            key={hire.id} 
+            hire={hire} 
+            isAdmin={isAdmin}
+            onStatusChange={handleStatusChange}
+            onDelete={handleDelete}
+          />
+        ))}
       </CardContent>
     </Card>
+  );
+}
+
+interface NewHireCardProps {
+  hire: NewHire;
+  isAdmin: boolean;
+  onStatusChange: (id: string, status: string) => void;
+  onDelete: (id: string) => void;
+}
+
+function NewHireCard({ hire, isAdmin, onStatusChange, onDelete }: NewHireCardProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const config = statusConfig[hire.status] || statusConfig.pending;
+  const StatusIcon = config.icon;
+  const hasRequiredAccess = hire.required_access && hire.required_access.length > 0;
+
+  return (
+    <div className="border rounded-lg p-4 space-y-3">
+      <div className="flex items-start justify-between gap-4">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <h4 className="font-semibold">{hire.full_name}</h4>
+            <Badge variant={config.variant} className="flex items-center gap-1">
+              <StatusIcon className="w-3 h-3" />
+              {config.label}
+            </Badge>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            {hire.personal_email}
+            {hire.phone_number && ` • ${hire.phone_number}`}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Submitted {formatDistanceToNow(new Date(hire.created_at), { addSuffix: true })}
+          </p>
+        </div>
+        
+        <div className="flex items-center gap-2">
+          {isAdmin && (
+            <>
+              <Select
+                value={hire.status}
+                onValueChange={(value) => onStatusChange(hire.id, value)}
+              >
+                <SelectTrigger className="w-[140px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="in_progress">In Progress</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => onDelete(hire.id)}
+                className="text-destructive hover:text-destructive"
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
+            </>
+          )}
+        </div>
+      </div>
+
+      {hasRequiredAccess && (
+        <div>
+          <p className="text-sm font-medium mb-1">Required Access:</p>
+          <div className="flex flex-wrap gap-1">
+            {hire.required_access.map((access) => (
+              <Badge key={access} variant="outline" className="text-xs">
+                {access}
+              </Badge>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {hire.notes && (
+        <div>
+          <p className="text-sm font-medium mb-1">Notes:</p>
+          <p className="text-sm text-muted-foreground">{hire.notes}</p>
+        </div>
+      )}
+
+      {isAdmin && hasRequiredAccess && (
+        <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+          <CollapsibleTrigger asChild>
+            <Button variant="outline" size="sm" className="w-full flex items-center gap-2">
+              <KeyRound className="w-4 h-4" />
+              {isOpen ? "Hide" : "Manage"} Access Credentials
+              {isOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <AccessCredentialForm
+              newHireId={hire.id}
+              newHireName={hire.full_name}
+              requiredAccess={hire.required_access}
+            />
+          </CollapsibleContent>
+        </Collapsible>
+      )}
+    </div>
   );
 }

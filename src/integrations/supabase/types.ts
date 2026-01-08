@@ -204,6 +204,53 @@ export type Database = {
         }
         Relationships: []
       }
+      new_hire_access_credentials: {
+        Row: {
+          access_type: string
+          created_at: string
+          created_by: string
+          email: string | null
+          id: string
+          invite_sent: boolean | null
+          new_hire_id: string
+          notes: string | null
+          password: string | null
+          updated_at: string
+        }
+        Insert: {
+          access_type: string
+          created_at?: string
+          created_by: string
+          email?: string | null
+          id?: string
+          invite_sent?: boolean | null
+          new_hire_id: string
+          notes?: string | null
+          password?: string | null
+          updated_at?: string
+        }
+        Update: {
+          access_type?: string
+          created_at?: string
+          created_by?: string
+          email?: string | null
+          id?: string
+          invite_sent?: boolean | null
+          new_hire_id?: string
+          notes?: string | null
+          password?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "new_hire_access_credentials_new_hire_id_fkey"
+            columns: ["new_hire_id"]
+            isOneToOne: false
+            referencedRelation: "new_hires"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       new_hires: {
         Row: {
           created_at: string
