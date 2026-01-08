@@ -94,11 +94,21 @@ serve(async (req: Request): Promise<Response> => {
 
     console.log("Sending notification for request:", { type, title, submitter_name });
 
-    // Fetch notification recipients from database
+    // Determine which notification type to use based on request type
+    let notificationType = "request_submission"; // default for general requests
+    if (type === "hr") {
+      notificationType = "hr_request";
+    } else if (type === "it_access") {
+      notificationType = "it_request";
+    }
+
+    console.log("Using notification type:", notificationType);
+
+    // Fetch notification recipients from database based on request type
     const { data: recipients, error: recipientsError } = await supabaseAdmin
       .from("notification_settings")
       .select("recipient_email")
-      .eq("notification_type", "request_submission")
+      .eq("notification_type", notificationType)
       .eq("is_active", true);
 
     if (recipientsError) {
@@ -109,12 +119,26 @@ serve(async (req: Request): Promise<Response> => {
       );
     }
 
+    // If no type-specific recipients, fall back to general request_submission recipients
+    let recipientEmails: string[] = [];
     if (!recipients || recipients.length === 0) {
+      console.log("No type-specific recipients, checking general request_submission...");
+      const { data: fallbackRecipients } = await supabaseAdmin
+        .from("notification_settings")
+        .select("recipient_email")
+        .eq("notification_type", "request_submission")
+        .eq("is_active", true);
+      
+      recipientEmails = fallbackRecipients?.map(r => r.recipient_email) || [];
+    } else {
+      recipientEmails = recipients.map(r => r.recipient_email);
+    }
+
+    if (recipientEmails.length === 0) {
       console.warn("No active notification recipients configured");
       // Still send confirmation to submitter even if no managers are configured
     }
 
-    const recipientEmails = recipients?.map(r => r.recipient_email) || [];
     console.log("Notification recipients:", recipientEmails);
 
     const requestLabel = requestTypeLabels[type] || type;
