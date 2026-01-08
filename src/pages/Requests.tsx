@@ -580,8 +580,8 @@ function SubmitRequestForm({
             })}
           </div>
 
-          {/* HR Request - Sub-type selection */}
-          {type === 'hr' && (
+          {/* HR Request - Sub-type selection (only for admins/managers) */}
+          {type === 'hr' && canSubmitNewHire && (
             <div className="border-t border-border/50 pt-6 -mx-6 px-6 space-y-4">
               <p className="text-sm font-medium text-foreground">Select HR request type:</p>
               <div className="grid sm:grid-cols-2 gap-4">
@@ -602,25 +602,23 @@ function SubmitRequestForm({
                   <p className="font-medium text-foreground text-sm">General HR Request</p>
                   <p className="text-xs text-muted-foreground mt-1">Submit a general HR inquiry or request</p>
                 </button>
-                {canSubmitNewHire && (
-                  <button
-                    type="button"
-                    onClick={() => setHrSubType("new-hire")}
-                    className={`p-4 rounded-xl border text-left transition-all ${
-                      hrSubType === "new-hire"
-                        ? "border-primary bg-primary/5"
-                        : "border-border/50 bg-card/50 hover:border-border"
+                <button
+                  type="button"
+                  onClick={() => setHrSubType("new-hire")}
+                  className={`p-4 rounded-xl border text-left transition-all ${
+                    hrSubType === "new-hire"
+                      ? "border-primary bg-primary/5"
+                      : "border-border/50 bg-card/50 hover:border-border"
+                  }`}
+                >
+                  <UserPlus
+                    className={`w-5 h-5 mb-2 ${
+                      hrSubType === "new-hire" ? "text-primary" : "text-muted-foreground"
                     }`}
-                  >
-                    <UserPlus
-                      className={`w-5 h-5 mb-2 ${
-                        hrSubType === "new-hire" ? "text-primary" : "text-muted-foreground"
-                      }`}
-                    />
-                    <p className="font-medium text-foreground text-sm">New Hire Request</p>
-                    <p className="text-xs text-muted-foreground mt-1">Submit a new hire for onboarding</p>
-                  </button>
-                )}
+                  />
+                  <p className="font-medium text-foreground text-sm">New Hire Request</p>
+                  <p className="text-xs text-muted-foreground mt-1">Submit a new hire for onboarding</p>
+                </button>
               </div>
 
               {/* New Hire Form */}
@@ -681,8 +679,8 @@ function SubmitRequestForm({
             </div>
           )}
 
-          {/* Regular form fields - hidden when HR new-hire type is selected */}
-          {(type !== 'hr' || hrSubType === 'simple') && (
+          {/* Regular form fields - shown for non-HR types, or for simple HR requests (employees auto-get simple) */}
+          {(type !== 'hr' || hrSubType === 'simple' || (!canSubmitNewHire && type === 'hr')) && (
             <>
               <div className="space-y-2">
                 <Label htmlFor="title">
