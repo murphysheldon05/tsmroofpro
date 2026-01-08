@@ -13,16 +13,29 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Plus, Trash2, Mail, Bell, UserPlus } from "lucide-react";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   useNotificationSettings,
   useCreateNotificationSetting,
   useUpdateNotificationSetting,
   useDeleteNotificationSetting,
 } from "@/hooks/useNotificationSettings";
 
-const NOTIFICATION_TYPE_LABELS: Record<string, { label: string; description: string }> = {
+const NOTIFICATION_TYPE_LABELS: Record<string, { label: string; description: string; icon: string }> = {
   request_submission: {
     label: "Request Submissions",
     description: "Notified when employees submit requests (commission forms, HR, IT access, etc.)",
+    icon: "bell",
+  },
+  new_hire: {
+    label: "New Hire Onboarding",
+    description: "HR receives notifications when managers submit new hire requests for account setup",
+    icon: "user-plus",
   },
 };
 
@@ -134,15 +147,26 @@ export function NotificationSettingsManager() {
               </div>
               <div className="space-y-2">
                 <Label>Notification Type</Label>
-                <div className="p-3 bg-secondary/50 rounded-lg border border-border">
-                  <div className="flex items-center gap-2">
-                    <Bell className="w-4 h-4 text-primary" />
-                    <span className="font-medium">Request Submissions</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Receives notifications when employees submit requests
-                  </p>
-                </div>
+                <Select
+                  value={newRecipient.notification_type}
+                  onValueChange={(value) =>
+                    setNewRecipient({ ...newRecipient, notification_type: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(NOTIFICATION_TYPE_LABELS).map(([type, { label }]) => (
+                      <SelectItem key={type} value={type}>
+                        {label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  {NOTIFICATION_TYPE_LABELS[newRecipient.notification_type]?.description}
+                </p>
               </div>
               <Button
                 onClick={handleAddRecipient}
