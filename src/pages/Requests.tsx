@@ -30,6 +30,7 @@ import {
   Info,
   Calendar,
   HelpCircle,
+  UserPlus,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -40,6 +41,9 @@ import { formatDistanceToNow, format } from "date-fns";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { FileSpreadsheet, FileText } from "lucide-react";
 import { useRequestTypes, type RequestType } from "@/hooks/useRequestTypes";
+import { NewHireForm } from "@/components/training/NewHireForm";
+import { NewHireList } from "@/components/training/NewHireList";
+import { useNewHires } from "@/hooks/useNewHires";
 
 // Icon map for dynamic icon rendering
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -52,6 +56,7 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   HelpCircle,
   Send,
   File,
+  UserPlus,
 };
 
 const getIcon = (iconName: string | null) => {
@@ -271,6 +276,8 @@ export default function Requests() {
 
   const pendingCount = allRequests?.filter(r => r.status === 'pending').length || 0;
   const commissionRequests = allRequests?.filter(r => r.type === 'commission') || [];
+  const { data: newHires } = useNewHires();
+  const pendingNewHires = newHires?.filter(h => h.status === 'pending').length || 0;
 
   return (
     <AppLayout>
@@ -309,6 +316,15 @@ export default function Requests() {
               <TabsTrigger value="commissions" className="gap-2">
                 <DollarSign className="w-4 h-4" />
                 Commissions
+              </TabsTrigger>
+              <TabsTrigger value="new-hires" className="gap-2">
+                <UserPlus className="w-4 h-4" />
+                New Hires
+                {pendingNewHires > 0 && (
+                  <Badge variant="destructive" className="ml-1 h-5 px-1.5 text-xs">
+                    {pendingNewHires}
+                  </Badge>
+                )}
               </TabsTrigger>
             </TabsList>
 
@@ -361,6 +377,13 @@ export default function Requests() {
                 onView={setSelectedRequest}
                 showSubmitter
               />
+            </TabsContent>
+
+            <TabsContent value="new-hires" className="space-y-6">
+              <div className="grid lg:grid-cols-2 gap-6">
+                <NewHireForm />
+                <NewHireList />
+              </div>
             </TabsContent>
           </Tabs>
         ) : (
