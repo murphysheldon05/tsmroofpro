@@ -68,6 +68,7 @@ const statusColors: Record<string, string> = {
   approved: "bg-green-500/10 text-green-500 border-green-500/30",
   completed: "bg-green-500/10 text-green-500 border-green-500/30",
   rejected: "bg-red-500/10 text-red-500 border-red-500/30",
+  closed: "bg-gray-500/10 text-gray-500 border-gray-500/30",
 };
 
 const statusLabels: Record<string, string> = {
@@ -76,7 +77,11 @@ const statusLabels: Record<string, string> = {
   approved: "Approved",
   completed: "Completed",
   rejected: "Rejected",
+  closed: "Closed",
 };
+
+// Request types that use support-style workflow (In Progress → Completed)
+const supportRequestTypes = ["hr", "it_access"];
 
 interface Request {
   id: string;
@@ -460,32 +465,108 @@ export default function Requests() {
                 )}
 
                 {isManager && selectedRequest.status === 'pending' && (
+                  <div className="space-y-3 pt-4">
+                    {supportRequestTypes.includes(selectedRequest.type) ? (
+                      <>
+                        {/* IT/HR Support workflow */}
+                        <div className="flex gap-3">
+                          <Button
+                            variant="outline"
+                            className="flex-1"
+                            onClick={() => handleUpdateStatus(selectedRequest.id, 'in_progress')}
+                            disabled={isUpdating}
+                          >
+                            {isUpdating ? (
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            ) : (
+                              <Clock className="w-4 h-4 mr-2" />
+                            )}
+                            Mark In Progress
+                          </Button>
+                          <Button
+                            variant="neon"
+                            className="flex-1"
+                            onClick={() => handleUpdateStatus(selectedRequest.id, 'completed')}
+                            disabled={isUpdating}
+                          >
+                            {isUpdating ? (
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            ) : (
+                              <CheckCircle className="w-4 h-4 mr-2" />
+                            )}
+                            Mark Completed
+                          </Button>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          className="w-full text-muted-foreground"
+                          onClick={() => handleUpdateStatus(selectedRequest.id, 'closed')}
+                          disabled={isUpdating}
+                        >
+                          <XSquare className="w-4 h-4 mr-2" />
+                          Close Request
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        {/* Standard Approve/Reject workflow */}
+                        <div className="flex gap-3">
+                          <Button
+                            variant="outline"
+                            className="flex-1"
+                            onClick={() => handleUpdateStatus(selectedRequest.id, 'rejected')}
+                            disabled={isUpdating}
+                          >
+                            {isUpdating ? (
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            ) : (
+                              <XSquare className="w-4 h-4 mr-2" />
+                            )}
+                            Reject
+                          </Button>
+                          <Button
+                            variant="neon"
+                            className="flex-1"
+                            onClick={() => handleUpdateStatus(selectedRequest.id, 'approved')}
+                            disabled={isUpdating}
+                          >
+                            {isUpdating ? (
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            ) : (
+                              <CheckSquare className="w-4 h-4 mr-2" />
+                            )}
+                            Approve
+                          </Button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+
+                {/* Show additional actions for in_progress requests */}
+                {isManager && selectedRequest.status === 'in_progress' && (
                   <div className="flex gap-3 pt-4">
-                    <Button
-                      variant="outline"
-                      className="flex-1"
-                      onClick={() => handleUpdateStatus(selectedRequest.id, 'rejected')}
-                      disabled={isUpdating}
-                    >
-                      {isUpdating ? (
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      ) : (
-                        <XSquare className="w-4 h-4 mr-2" />
-                      )}
-                      Reject
-                    </Button>
                     <Button
                       variant="neon"
                       className="flex-1"
-                      onClick={() => handleUpdateStatus(selectedRequest.id, 'approved')}
+                      onClick={() => handleUpdateStatus(selectedRequest.id, 'completed')}
                       disabled={isUpdating}
                     >
                       {isUpdating ? (
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                       ) : (
-                        <CheckSquare className="w-4 h-4 mr-2" />
+                        <CheckCircle className="w-4 h-4 mr-2" />
                       )}
-                      Approve
+                      Mark Completed
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      className="text-muted-foreground"
+                      onClick={() => handleUpdateStatus(selectedRequest.id, 'closed')}
+                      disabled={isUpdating}
+                    >
+                      <XSquare className="w-4 h-4 mr-2" />
+                      Close
                     </Button>
                   </div>
                 )}
