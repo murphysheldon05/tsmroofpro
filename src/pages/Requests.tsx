@@ -96,10 +96,11 @@ interface Request {
 }
 
 export default function Requests() {
-  const { user, isManager } = useAuth();
+  const { user, isManager, isAdmin } = useAuth();
   const queryClient = useQueryClient();
   const { data: requestTypes = [] } = useRequestTypes();
   const [type, setType] = useState("");
+  const [hrSubType, setHrSubType] = useState<"simple" | "new-hire" | null>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -318,7 +319,9 @@ export default function Requests() {
             <TabsContent value="submit" className="space-y-6">
               <SubmitRequestForm
                 type={type}
-                setType={setType}
+                setType={(v) => { setType(v); setHrSubType(null); }}
+                hrSubType={hrSubType}
+                setHrSubType={setHrSubType}
                 title={title}
                 setTitle={setTitle}
                 description={description}
@@ -331,6 +334,8 @@ export default function Requests() {
                 onClearFile={clearSelectedFile}
                 fileInputRef={fileInputRef}
                 requestTypes={requestTypes}
+                isManager={isManager}
+                isAdmin={isAdmin}
               />
               <MyRequestsList requests={myRequests || []} />
             </TabsContent>
@@ -368,9 +373,11 @@ export default function Requests() {
           </Tabs>
         ) : (
           <div className="space-y-6">
-            <SubmitRequestForm
+          <SubmitRequestForm
               type={type}
-              setType={setType}
+              setType={(v) => { setType(v); setHrSubType(null); }}
+              hrSubType={hrSubType}
+              setHrSubType={setHrSubType}
               title={title}
               setTitle={setTitle}
               description={description}
@@ -383,6 +390,8 @@ export default function Requests() {
               onClearFile={clearSelectedFile}
               fileInputRef={fileInputRef}
               requestTypes={requestTypes}
+              isManager={isManager}
+              isAdmin={isAdmin}
             />
             <MyRequestsList requests={myRequests || []} />
           </div>
@@ -493,6 +502,8 @@ export default function Requests() {
 function SubmitRequestForm({
   type,
   setType,
+  hrSubType,
+  setHrSubType,
   title,
   setTitle,
   description,
@@ -505,9 +516,13 @@ function SubmitRequestForm({
   onClearFile,
   fileInputRef,
   requestTypes,
+  isManager,
+  isAdmin,
 }: {
   type: string;
   setType: (v: string) => void;
+  hrSubType: "simple" | "new-hire" | null;
+  setHrSubType: (v: "simple" | "new-hire" | null) => void;
   title: string;
   setTitle: (v: string) => void;
   description: string;
@@ -520,7 +535,11 @@ function SubmitRequestForm({
   onClearFile: () => void;
   fileInputRef: React.RefObject<HTMLInputElement>;
   requestTypes: RequestType[];
+  isManager: boolean;
+  isAdmin: boolean;
 }) {
+  const canSubmitNewHire = isManager || isAdmin;
+
   return (
     <div className="glass-card rounded-2xl p-6">
       <h2 className="text-lg font-semibold text-foreground mb-6">Submit a Request</h2>
@@ -561,10 +580,55 @@ function SubmitRequestForm({
             })}
           </div>
 
-          {/* HR Request - New Hire Form */}
+          {/* HR Request - Sub-type selection */}
           {type === 'hr' && (
-            <div className="border-t border-border/50 pt-6 -mx-6 px-6">
-              <NewHireForm onSuccess={() => setType("")} />
+            <div className="border-t border-border/50 pt-6 -mx-6 px-6 space-y-4">
+              <p className="text-sm font-medium text-foreground">Select HR request type:</p>
+              <div className="grid sm:grid-cols-2 gap-4">
+                <button
+                  type="button"
+                  onClick={() => setHrSubType("simple")}
+                  className={`p-4 rounded-xl border text-left transition-all ${
+                    hrSubType === "simple"
+                      ? "border-primary bg-primary/5"
+                      : "border-border/50 bg-card/50 hover:border-border"
+                  }`}
+                >
+                  <FileText
+                    className={`w-5 h-5 mb-2 ${
+                      hrSubType === "simple" ? "text-primary" : "text-muted-foreground"
+                    }`}
+                  />
+                  <p className="font-medium text-foreground text-sm">General HR Request</p>
+                  <p className="text-xs text-muted-foreground mt-1">Submit a general HR inquiry or request</p>
+                </button>
+                {canSubmitNewHire && (
+                  <button
+                    type="button"
+                    onClick={() => setHrSubType("new-hire")}
+                    className={`p-4 rounded-xl border text-left transition-all ${
+                      hrSubType === "new-hire"
+                        ? "border-primary bg-primary/5"
+                        : "border-border/50 bg-card/50 hover:border-border"
+                    }`}
+                  >
+                    <UserPlus
+                      className={`w-5 h-5 mb-2 ${
+                        hrSubType === "new-hire" ? "text-primary" : "text-muted-foreground"
+                      }`}
+                    />
+                    <p className="font-medium text-foreground text-sm">New Hire Request</p>
+                    <p className="text-xs text-muted-foreground mt-1">Submit a new hire for onboarding</p>
+                  </button>
+                )}
+              </div>
+
+              {/* New Hire Form */}
+              {hrSubType === "new-hire" && (
+                <div className="pt-4">
+                  <NewHireForm onSuccess={() => { setType(""); setHrSubType(null); }} />
+                </div>
+              )}
             </div>
           )}
 
@@ -617,8 +681,8 @@ function SubmitRequestForm({
             </div>
           )}
 
-          {/* Regular form fields - hidden when HR type is selected */}
-          {type !== 'hr' && (
+          {/* Regular form fields - hidden when HR new-hire type is selected */}
+          {(type !== 'hr' || hrSubType === 'simple') && (
             <>
               <div className="space-y-2">
                 <Label htmlFor="title">
