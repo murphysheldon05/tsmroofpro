@@ -620,6 +620,7 @@ function SubmitRequestForm({
   isAdmin: boolean;
 }) {
   const canSubmitNewHire = isManager || isAdmin;
+  const isNewHireFlow = type === "hr" && canSubmitNewHire && hrSubType === "new-hire";
 
   return (
     <div className="glass-card rounded-2xl p-6">
@@ -634,7 +635,8 @@ function SubmitRequestForm({
           <p className="text-muted-foreground">We'll get back to you soon.</p>
         </div>
       ) : (
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="space-y-6">
+          {/* Request type selection */}
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {requestTypes.map((reqType) => {
               const IconComponent = getIcon(reqType.icon);
@@ -662,7 +664,7 @@ function SubmitRequestForm({
           </div>
 
           {/* HR Request - Sub-type selection (only for admins/managers) */}
-          {type === 'hr' && canSubmitNewHire && (
+          {type === "hr" && canSubmitNewHire && (
             <div className="border-t border-border/50 pt-6 -mx-6 px-6 space-y-4">
               <p className="text-sm font-medium text-foreground">Select HR request type:</p>
               <div className="grid sm:grid-cols-2 gap-4">
@@ -681,8 +683,11 @@ function SubmitRequestForm({
                     }`}
                   />
                   <p className="font-medium text-foreground text-sm">General HR Request</p>
-                  <p className="text-xs text-muted-foreground mt-1">Submit a general HR inquiry or request</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Submit a general HR inquiry or request
+                  </p>
                 </button>
+
                 <button
                   type="button"
                   onClick={() => setHrSubType("new-hire")}
@@ -701,157 +706,164 @@ function SubmitRequestForm({
                   <p className="text-xs text-muted-foreground mt-1">Submit a new hire for onboarding</p>
                 </button>
               </div>
-
-              {/* New Hire Form */}
-              {hrSubType === "new-hire" && (
-                <div className="pt-4">
-                  <NewHireForm onSuccess={() => { setType(""); setHrSubType(null); }} />
-                </div>
-              )}
             </div>
           )}
 
-          {/* Commission Form Instructions */}
-          {type === 'commission' && (
-            <div className="space-y-4">
-              <Alert className="bg-primary/5 border-primary/20">
-                <Info className="h-4 w-4 text-primary" />
-                <AlertDescription className="text-sm text-foreground/80">
-                  <strong>Commission Submission Process:</strong>
-                  <ol className="list-decimal list-inside mt-2 space-y-1">
-                    <li>Review the Commission Submission Instructions document</li>
-                    <li>Download and complete the Commission Form (Excel)</li>
-                    <li>Verify all eligibility requirements are met</li>
-                    <li>Upload the completed form and submit for manager approval</li>
-                  </ol>
-                </AlertDescription>
-              </Alert>
-              <div className="flex flex-wrap gap-3">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="gap-2"
-                  asChild
-                >
-                  <a href="/documents/TSM_Commission_Instructions_2026.docx" download>
-                    <FileText className="w-4 h-4" />
-                    Download Instructions (Word)
-                  </a>
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="gap-2"
-                  asChild
-                >
-                  <a 
-                    href="https://www.dropbox.com/scl/fi/fiufmou5h804bsvm6226t/2026_commission_splits_1-version-1-.xlsb.xlsx?rlkey=8svj22saqtipmvljq8tfgeisa&st=yavb6f4s&dl=1" 
-                    download
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <FileSpreadsheet className="w-4 h-4" />
-                    Download Commission Form (Excel)
-                  </a>
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {/* Regular form fields - shown for non-HR types, or for simple HR requests (employees auto-get simple) */}
-          {(type !== 'hr' || hrSubType === 'simple' || (!canSubmitNewHire && type === 'hr')) && (
-            <>
-              <div className="space-y-2">
-                <Label htmlFor="title">
-                  {type === 'commission' ? 'Job/Sale Reference' : 'Subject'}
-                </Label>
-                <Input
-                  id="title"
-                  placeholder={type === 'commission' ? "Enter job number or customer name" : "Brief summary of your request"}
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="description">
-                  {type === 'commission' ? 'Commission Details' : 'Description (optional)'}
-                </Label>
-                <Textarea
-                  id="description"
-                  placeholder={type === 'commission' 
-                    ? "Enter commission amount, job details, and any relevant notes for your manager..."
-                    : "Provide additional details..."
-                  }
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  rows={4}
-                />
-              </div>
-
-              {/* File Upload */}
-              <div className="space-y-2">
-                <Label>{type === 'commission' ? 'Commission Form Document' : 'Attachment (optional)'}</Label>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
-                  onChange={onFileSelect}
-                  className="hidden"
-                />
-                {selectedFile ? (
-                  <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50 border border-border/50">
-                    <File className="w-5 h-5 text-primary flex-shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-foreground truncate">{selectedFile.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
-                      </p>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={onClearFile}
-                      className="flex-shrink-0"
-                    >
-                      <X className="w-4 h-4" />
+          {/* New Hire flow renders its own form (no nested forms) */}
+          {isNewHireFlow ? (
+            <NewHireForm
+              onSuccess={() => {
+                setType("");
+                setHrSubType(null);
+              }}
+            />
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Commission Form Instructions */}
+              {type === "commission" && (
+                <div className="space-y-4">
+                  <Alert className="bg-primary/5 border-primary/20">
+                    <Info className="h-4 w-4 text-primary" />
+                    <AlertDescription className="text-sm text-foreground/80">
+                      <strong>Commission Submission Process:</strong>
+                      <ol className="list-decimal list-inside mt-2 space-y-1">
+                        <li>Review the Commission Submission Instructions document</li>
+                        <li>Download and complete the Commission Form (Excel)</li>
+                        <li>Verify all eligibility requirements are met</li>
+                        <li>Upload the completed form and submit for manager approval</li>
+                      </ol>
+                    </AlertDescription>
+                  </Alert>
+                  <div className="flex flex-wrap gap-3">
+                    <Button type="button" variant="outline" size="sm" className="gap-2" asChild>
+                      <a href="/documents/TSM_Commission_Instructions_2026.docx" download>
+                        <FileText className="w-4 h-4" />
+                        Download Instructions (Word)
+                      </a>
+                    </Button>
+                    <Button type="button" variant="outline" size="sm" className="gap-2" asChild>
+                      <a
+                        href="https://www.dropbox.com/scl/fi/fiufmou5h804bsvm6226t/2026_commission_splits_1-version-1-.xlsb.xlsx?rlkey=8svj22saqtipmvljq8tfgeisa&st=yavb6f4s&dl=1"
+                        download
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <FileSpreadsheet className="w-4 h-4" />
+                        Download Commission Form (Excel)
+                      </a>
                     </Button>
                   </div>
-                ) : (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="w-full justify-start gap-2"
-                  >
-                    <Upload className="w-4 h-4" />
-                    {type === 'commission' ? 'Upload Commission Form' : 'Choose File'}
-                  </Button>
-                )}
-                <p className="text-xs text-muted-foreground">
-                  Accepted formats: PDF, Word, Excel, Images (max 20MB)
-                </p>
-              </div>
+                </div>
+              )}
 
-              <Button type="submit" variant="neon" disabled={!type || !title.trim() || isSubmitting}>
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Submitting...
-                  </>
-                ) : type === 'commission' ? "Submit for Approval" : "Submit Request"}
-              </Button>
-            </>
+              {/* Regular form fields - shown for non-HR types, or for simple HR requests (employees auto-get simple) */}
+              {(type !== "hr" || hrSubType === "simple" || (!canSubmitNewHire && type === "hr")) && (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="title">
+                      {type === "commission" ? "Job/Sale Reference" : "Subject"}
+                    </Label>
+                    <Input
+                      id="title"
+                      placeholder={
+                        type === "commission"
+                          ? "Enter job number or customer name"
+                          : "Brief summary of your request"
+                      }
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="description">
+                      {type === "commission" ? "Commission Details" : "Description (optional)"}
+                    </Label>
+                    <Textarea
+                      id="description"
+                      placeholder={
+                        type === "commission"
+                          ? "Enter commission amount, job details, and any relevant notes for your manager..."
+                          : "Provide additional details..."
+                      }
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      rows={4}
+                    />
+                  </div>
+
+                  {/* File Upload */}
+                  <div className="space-y-2">
+                    <Label>
+                      {type === "commission" ? "Commission Form Document" : "Attachment (optional)"}
+                    </Label>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
+                      onChange={onFileSelect}
+                      className="hidden"
+                    />
+
+                    {selectedFile ? (
+                      <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50 border border-border/50">
+                        <File className="w-5 h-5 text-primary flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-foreground truncate">{selectedFile.name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                          </p>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={onClearFile}
+                          className="flex-shrink-0"
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="w-full justify-start gap-2"
+                      >
+                        <Upload className="w-4 h-4" />
+                        {type === "commission" ? "Upload Commission Form" : "Choose File"}
+                      </Button>
+                    )}
+
+                    <p className="text-xs text-muted-foreground">
+                      Accepted formats: PDF, Word, Excel, Images (max 20MB)
+                    </p>
+                  </div>
+
+                  <Button type="submit" variant="neon" disabled={!type || !title.trim() || isSubmitting}>
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Submitting...
+                      </>
+                    ) : type === "commission" ? (
+                      "Submit for Approval"
+                    ) : (
+                      "Submit Request"
+                    )}
+                  </Button>
+                </>
+              )}
+            </form>
           )}
-        </form>
+        </div>
       )}
     </div>
   );
 }
+
 
 // My Requests List Component
 function MyRequestsList({ requests }: { requests: Request[] }) {
