@@ -42,8 +42,6 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { FileSpreadsheet, FileText } from "lucide-react";
 import { useRequestTypes, type RequestType } from "@/hooks/useRequestTypes";
 import { NewHireForm } from "@/components/training/NewHireForm";
-import { NewHireList } from "@/components/training/NewHireList";
-import { useNewHires } from "@/hooks/useNewHires";
 
 // Icon map for dynamic icon rendering
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -276,8 +274,6 @@ export default function Requests() {
 
   const pendingCount = allRequests?.filter(r => r.status === 'pending').length || 0;
   const commissionRequests = allRequests?.filter(r => r.type === 'commission') || [];
-  const { data: newHires } = useNewHires();
-  const pendingNewHires = newHires?.filter(h => h.status === 'pending').length || 0;
 
   return (
     <AppLayout>
@@ -316,15 +312,6 @@ export default function Requests() {
               <TabsTrigger value="commissions" className="gap-2">
                 <DollarSign className="w-4 h-4" />
                 Commissions
-              </TabsTrigger>
-              <TabsTrigger value="new-hires" className="gap-2">
-                <UserPlus className="w-4 h-4" />
-                New Hires
-                {pendingNewHires > 0 && (
-                  <Badge variant="destructive" className="ml-1 h-5 px-1.5 text-xs">
-                    {pendingNewHires}
-                  </Badge>
-                )}
               </TabsTrigger>
             </TabsList>
 
@@ -377,13 +364,6 @@ export default function Requests() {
                 onView={setSelectedRequest}
                 showSubmitter
               />
-            </TabsContent>
-
-            <TabsContent value="new-hires" className="space-y-6">
-              <div className="grid lg:grid-cols-2 gap-6">
-                <NewHireForm />
-                <NewHireList />
-              </div>
             </TabsContent>
           </Tabs>
         ) : (
@@ -581,6 +561,13 @@ function SubmitRequestForm({
             })}
           </div>
 
+          {/* HR Request - New Hire Form */}
+          {type === 'hr' && (
+            <div className="border-t border-border/50 pt-6 -mx-6 px-6">
+              <NewHireForm onSuccess={() => setType("")} />
+            </div>
+          )}
+
           {/* Commission Form Instructions */}
           {type === 'commission' && (
             <div className="space-y-4">
@@ -630,88 +617,93 @@ function SubmitRequestForm({
             </div>
           )}
 
-          <div className="space-y-2">
-            <Label htmlFor="title">
-              {type === 'commission' ? 'Job/Sale Reference' : 'Subject'}
-            </Label>
-            <Input
-              id="title"
-              placeholder={type === 'commission' ? "Enter job number or customer name" : "Brief summary of your request"}
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="description">
-              {type === 'commission' ? 'Commission Details' : 'Description (optional)'}
-            </Label>
-            <Textarea
-              id="description"
-              placeholder={type === 'commission' 
-                ? "Enter commission amount, job details, and any relevant notes for your manager..."
-                : "Provide additional details..."
-              }
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={4}
-            />
-          </div>
-
-          {/* File Upload */}
-          <div className="space-y-2">
-            <Label>{type === 'commission' ? 'Commission Form Document' : 'Attachment (optional)'}</Label>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
-              onChange={onFileSelect}
-              className="hidden"
-            />
-            {selectedFile ? (
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50 border border-border/50">
-                <File className="w-5 h-5 text-primary flex-shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-foreground truncate">{selectedFile.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
-                  </p>
-                </div>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={onClearFile}
-                  className="flex-shrink-0"
-                >
-                  <X className="w-4 h-4" />
-                </Button>
+          {/* Regular form fields - hidden when HR type is selected */}
+          {type !== 'hr' && (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="title">
+                  {type === 'commission' ? 'Job/Sale Reference' : 'Subject'}
+                </Label>
+                <Input
+                  id="title"
+                  placeholder={type === 'commission' ? "Enter job number or customer name" : "Brief summary of your request"}
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  required
+                />
               </div>
-            ) : (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => fileInputRef.current?.click()}
-                className="w-full justify-start gap-2"
-              >
-                <Upload className="w-4 h-4" />
-                {type === 'commission' ? 'Upload Commission Form' : 'Choose File'}
-              </Button>
-            )}
-            <p className="text-xs text-muted-foreground">
-              Accepted formats: PDF, Word, Excel, Images (max 20MB)
-            </p>
-          </div>
 
-          <Button type="submit" variant="neon" disabled={!type || !title.trim() || isSubmitting}>
-            {isSubmitting ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Submitting...
-              </>
-            ) : type === 'commission' ? "Submit for Approval" : "Submit Request"}
-          </Button>
+              <div className="space-y-2">
+                <Label htmlFor="description">
+                  {type === 'commission' ? 'Commission Details' : 'Description (optional)'}
+                </Label>
+                <Textarea
+                  id="description"
+                  placeholder={type === 'commission' 
+                    ? "Enter commission amount, job details, and any relevant notes for your manager..."
+                    : "Provide additional details..."
+                  }
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  rows={4}
+                />
+              </div>
+
+              {/* File Upload */}
+              <div className="space-y-2">
+                <Label>{type === 'commission' ? 'Commission Form Document' : 'Attachment (optional)'}</Label>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
+                  onChange={onFileSelect}
+                  className="hidden"
+                />
+                {selectedFile ? (
+                  <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50 border border-border/50">
+                    <File className="w-5 h-5 text-primary flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate">{selectedFile.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={onClearFile}
+                      className="flex-shrink-0"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full justify-start gap-2"
+                  >
+                    <Upload className="w-4 h-4" />
+                    {type === 'commission' ? 'Upload Commission Form' : 'Choose File'}
+                  </Button>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  Accepted formats: PDF, Word, Excel, Images (max 20MB)
+                </p>
+              </div>
+
+              <Button type="submit" variant="neon" disabled={!type || !title.trim() || isSubmitting}>
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Submitting...
+                  </>
+                ) : type === 'commission' ? "Submit for Approval" : "Submit Request"}
+              </Button>
+            </>
+          )}
         </form>
       )}
     </div>
