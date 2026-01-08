@@ -28,8 +28,18 @@ import {
 
 const NOTIFICATION_TYPE_LABELS: Record<string, { label: string; description: string; icon: string }> = {
   request_submission: {
-    label: "Request Submissions",
-    description: "Notified when employees submit requests (commission forms, HR, IT access, etc.)",
+    label: "General Requests",
+    description: "Notified when employees submit general requests (commission forms, SOP updates, etc.)",
+    icon: "bell",
+  },
+  hr_request: {
+    label: "HR Requests",
+    description: "Notified when employees submit HR-related requests",
+    icon: "user-plus",
+  },
+  it_request: {
+    label: "IT Requests",
+    description: "Notified when employees submit IT access requests",
     icon: "bell",
   },
   new_hire: {
