@@ -28,7 +28,7 @@ const handler = async (req: Request): Promise<Response> => {
     const appUrl = Deno.env.get("APP_BASE_URL") || "https://hub.tsmroofs.com";
 
     const emailResponse = await resend.emails.send({
-      from: "TSM Hub <noreply@tsmroofs.com>",
+      from: "TSM Hub <notifications@tsmroofs.com>",
       to: [user_email],
       subject: "Your TSM Hub Account Has Been Approved!",
       html: `
