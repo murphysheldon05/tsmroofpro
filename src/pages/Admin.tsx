@@ -662,7 +662,7 @@ export default function Admin() {
 
         {/* Tabs */}
         <Tabs defaultValue="resources" className="space-y-6">
-          <TabsList className="bg-secondary/50 flex-wrap">
+          <TabsList className="bg-secondary/50 flex-wrap h-auto gap-1 p-1">
             <TabsTrigger value="resources" className="gap-2">
               <FileText className="w-4 h-4" />
               Resources
