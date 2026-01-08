@@ -59,11 +59,11 @@ const handler = async (req: Request): Promise<Response> => {
     const appBaseUrl = Deno.env.get("APP_BASE_URL") || "https://app.example.com";
 
     // Send email to all HR recipients
-    for (const recipient of recipients) {
-      const emailResponse = await resend.emails.send({
-        from: "TSM Roofing <noreply@tsmroofing.net>",
-        to: [recipient.recipient_email],
-        subject: `New Hire Alert: ${newHireName} - Action Required`,
+     for (const recipient of recipients) {
+       const emailResponse = await resend.emails.send({
+         from: "TSM Roofing <onboarding@resend.dev>",
+         to: [recipient.recipient_email],
+         subject: `New Hire Alert: ${newHireName} - Action Required`,
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <div style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); padding: 30px; text-align: center;">
