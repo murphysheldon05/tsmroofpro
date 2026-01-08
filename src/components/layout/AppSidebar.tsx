@@ -74,6 +74,7 @@ const navigation: NavItem[] = [
     icon: GraduationCap,
     sectionKey: "training",
     children: [
+      { title: "New Hire", href: "/training/new-hire", icon: UserPlus, sectionKey: "training/new-hire" },
       { title: "Role Training", href: "/training/role-training", icon: GraduationCap, sectionKey: "training/role-training" },
       { title: "Video Library", href: "/training/video-library", icon: Video, sectionKey: "training/video-library" },
     ],
