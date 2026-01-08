@@ -332,6 +332,7 @@ export type Database = {
           is_approved: boolean | null
           last_login_at: string | null
           must_reset_password: boolean | null
+          phone_number: string | null
           updated_at: string
         }
         Insert: {
@@ -345,6 +346,7 @@ export type Database = {
           is_approved?: boolean | null
           last_login_at?: string | null
           must_reset_password?: boolean | null
+          phone_number?: string | null
           updated_at?: string
         }
         Update: {
@@ -358,6 +360,7 @@ export type Database = {
           is_approved?: boolean | null
           last_login_at?: string | null
           must_reset_password?: boolean | null
+          phone_number?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -541,6 +544,36 @@ export type Database = {
           sort_order?: number | null
           updated_at?: string
           url?: string
+        }
+        Relationships: []
+      }
+      user_files: {
+        Row: {
+          created_at: string
+          file_name: string
+          file_path: string
+          file_size: number | null
+          file_type: string | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          file_name: string
+          file_path: string
+          file_size?: number | null
+          file_type?: string | null
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          file_name?: string
+          file_path?: string
+          file_size?: number | null
+          file_type?: string | null
+          id?: string
+          user_id?: string
         }
         Relationships: []
       }

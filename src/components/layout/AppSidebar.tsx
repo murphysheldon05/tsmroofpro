@@ -23,6 +23,7 @@ import {
   Video,
   Menu,
   X,
+  User,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -222,8 +223,17 @@ export function AppSidebar() {
 
       <div className="p-3 border-t border-sidebar-border space-y-2">
         {/* User info with role badge */}
-        <div className="flex items-center justify-between px-3 py-2 bg-sidebar-accent/30 rounded-lg">
-          <div className="flex flex-col min-w-0">
+        <button
+          onClick={() => handleNavClick("/profile")}
+          className={cn(
+            "w-full flex items-center justify-between px-3 py-2 rounded-lg transition-colors",
+            isActive("/profile")
+              ? "bg-primary/10"
+              : "bg-sidebar-accent/30 hover:bg-sidebar-accent/50"
+          )}
+        >
+          <div className="flex items-center gap-2 min-w-0">
+            <User className="w-4 h-4 flex-shrink-0" />
             <span className="text-xs text-muted-foreground truncate">
               {user?.email}
             </span>
@@ -231,7 +241,7 @@ export function AppSidebar() {
           <Badge variant={getRoleBadgeVariant()} className="ml-2 shrink-0">
             {getRoleLabel()}
           </Badge>
-        </div>
+        </button>
 
         {isAdmin && (
           <button
