@@ -175,7 +175,7 @@ serve(async (req: Request): Promise<Response> => {
 
     const userId = created.user.id;
 
-    // Ensure profile exists with must_reset_password flag
+    // Ensure profile exists with must_reset_password flag and pre-approved status
     const { error: profileError } = await admin
       .from("profiles")
       .upsert(
@@ -184,6 +184,9 @@ serve(async (req: Request): Promise<Response> => {
           email,
           full_name: fullName,
           must_reset_password: true,
+          is_approved: true,
+          approved_at: new Date().toISOString(),
+          approved_by: caller.id,
         },
         { onConflict: "id" }
       );
