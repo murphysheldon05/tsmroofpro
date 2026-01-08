@@ -64,8 +64,8 @@ const handler = async (req: Request): Promise<Response> => {
        }
 
         const emailPayload = {
-          from: "TSM Roofing <notifications@tsmroofs.com>",
-         to: [recipient.recipient_email],
+          from: "TSM Roofing <notifications@hub.tsmroofs.com>",
+          to: [recipient.recipient_email],
          subject: `New Hire Alert: ${newHireName} - Action Required`,
          html: `
            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
