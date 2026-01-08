@@ -174,7 +174,7 @@ serve(async (req: Request): Promise<Response> => {
     `;
 
     const emailResponse = await resend.emails.send({
-      from: "TSM Roofing <noreply@hub.tsmroofs.com>",
+      from: "TSM Roofing <notifications@tsmroofs.com>",
       to: [recipientEmail],
       subject: template.subject,
       html: emailHtml,

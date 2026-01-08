@@ -63,8 +63,8 @@ const handler = async (req: Request): Promise<Response> => {
          throw new Error("Missing RESEND_API_KEY secret");
        }
 
-       const emailPayload = {
-         from: "TSM Roofing <onboarding@resend.dev>",
+        const emailPayload = {
+          from: "TSM Roofing <notifications@tsmroofs.com>",
          to: [recipient.recipient_email],
          subject: `New Hire Alert: ${newHireName} - Action Required`,
          html: `
