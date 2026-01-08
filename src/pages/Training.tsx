@@ -12,7 +12,7 @@ import { NewHireList } from "@/components/training/NewHireList";
 const categoryConfig: Record<string, { title: string; description: string; icon: React.ElementType }> = {
   "new-hire": {
     title: "New Hire Orientation",
-    description: "Track new hire onboarding progress.",
+    description: "Resources and information for new team members.",
     icon: UserPlus,
   },
   "role-training": {
@@ -35,7 +35,7 @@ export default function Training() {
   const config = category ? categoryConfig[category] : null;
   const Icon = config?.icon || GraduationCap;
 
-  // Special layout for new-hire category - show list only (form is in Requests)
+  // Special layout for new-hire category
   if (category === "new-hire") {
     return (
       <AppLayout>
@@ -57,13 +57,29 @@ export default function Training() {
             </div>
           </header>
 
-          {(isAdmin || isManager) ? (
+          {/* New Hire Queue - Admin/Manager only */}
+          {(isAdmin || isManager) && (
             <NewHireList />
+          )}
+
+          {/* Orientation Resources - visible to all */}
+          {isLoading ? (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <Skeleton key={i} className="h-48 w-full rounded-xl" />
+              ))}
+            </div>
+          ) : resources && resources.length > 0 ? (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {resources.map((resource) => (
+                <ResourceCard key={resource.id} resource={resource} />
+              ))}
+            </div>
           ) : (
             <div className="text-center py-16">
               <UserPlus className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-foreground mb-2">New Hire Tracking</h3>
-              <p className="text-muted-foreground">Contact your manager for new hire information.</p>
+              <h3 className="text-lg font-medium text-foreground mb-2">New Hire Orientation</h3>
+              <p className="text-muted-foreground">Orientation resources will appear here soon.</p>
             </div>
           )}
         </div>
