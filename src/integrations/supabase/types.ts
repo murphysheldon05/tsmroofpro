@@ -204,6 +204,51 @@ export type Database = {
         }
         Relationships: []
       }
+      new_hires: {
+        Row: {
+          created_at: string
+          full_name: string
+          id: string
+          notes: string | null
+          personal_email: string
+          phone_number: string | null
+          processed_at: string | null
+          processed_by: string | null
+          required_access: string[] | null
+          status: string
+          submitted_by: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          full_name: string
+          id?: string
+          notes?: string | null
+          personal_email: string
+          phone_number?: string | null
+          processed_at?: string | null
+          processed_by?: string | null
+          required_access?: string[] | null
+          status?: string
+          submitted_by: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          full_name?: string
+          id?: string
+          notes?: string | null
+          personal_email?: string
+          phone_number?: string | null
+          processed_at?: string | null
+          processed_by?: string | null
+          required_access?: string[] | null
+          status?: string
+          submitted_by?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       notification_settings: {
         Row: {
           created_at: string | null

@@ -14,3 +14,9 @@ verify_jwt = false
 
 [functions.send-test-email]
 verify_jwt = false
+
+[functions.send-approval-notification]
+verify_jwt = false
+
+[functions.notify-new-hire]
+verify_jwt = false

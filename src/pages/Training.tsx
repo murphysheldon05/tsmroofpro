@@ -3,14 +3,17 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { SearchBar } from "@/components/SearchBar";
 import { ResourceCard } from "@/components/dashboard/ResourceCard";
 import { useResources } from "@/hooks/useResources";
+import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import { UserPlus, GraduationCap, Video } from "lucide-react";
 import { VideoCard } from "@/components/training/VideoCard";
+import { NewHireForm } from "@/components/training/NewHireForm";
+import { NewHireList } from "@/components/training/NewHireList";
 
 const categoryConfig: Record<string, { title: string; description: string; icon: React.ElementType }> = {
   "new-hire": {
     title: "New Hire Orientation",
-    description: "Welcome to TSM Roofing! Complete these materials to get started.",
+    description: "Submit new hires and track onboarding progress.",
     icon: UserPlus,
   },
   "role-training": {
@@ -28,9 +31,48 @@ const categoryConfig: Record<string, { title: string; description: string; icon:
 export default function Training() {
   const { category } = useParams<{ category: string }>();
   const { data: resources, isLoading } = useResources(category);
+  const { isAdmin, isManager } = useAuth();
 
   const config = category ? categoryConfig[category] : null;
   const Icon = config?.icon || GraduationCap;
+
+  // Special layout for new-hire category
+  if (category === "new-hire") {
+    return (
+      <AppLayout>
+        <div className="max-w-7xl mx-auto space-y-6">
+          {/* Header */}
+          <header className="pt-4 lg:pt-0">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                <UserPlus className="w-6 h-6 text-primary" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-foreground">
+                  {config?.title}
+                </h1>
+                <p className="text-muted-foreground text-sm">
+                  {config?.description}
+                </p>
+              </div>
+            </div>
+          </header>
+
+          <div className="grid lg:grid-cols-2 gap-6">
+            {/* Form for managers/admins */}
+            {(isAdmin || isManager) && (
+              <NewHireForm />
+            )}
+            
+            {/* List of new hires */}
+            <div className={isAdmin || isManager ? "" : "lg:col-span-2"}>
+              <NewHireList />
+            </div>
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout>
