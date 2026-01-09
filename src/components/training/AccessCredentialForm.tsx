@@ -72,10 +72,12 @@ export function AccessCredentialForm({ newHireId, newHireName, requiredAccess, s
 
       if (error) throw error;
 
-      toast.success(`Credentials sent to the manager who requested this new hire`);
-    } catch (error: any) {
-      console.error("Error sending credentials:", error);
-      toast.error("Failed to send credentials: " + error.message);
+      const sentTo = (data as any)?.sentTo as string | undefined;
+      toast.success(
+        sentTo
+          ? `Credentials sent to ${sentTo}. (If you don't see it, check spam/quarantine.)`
+          : "Credentials sent to the requester. (If you don't see it, check spam/quarantine.)"
+      );
     } finally {
       setIsSending(false);
     }
