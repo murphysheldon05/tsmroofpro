@@ -11,6 +11,10 @@ export interface NewHire {
   required_access: string[];
   notes: string | null;
   submitted_by: string;
+  submitted_by_profile?: {
+    full_name: string | null;
+    email: string | null;
+  } | null;
   processed_by: string | null;
   processed_at: string | null;
   created_at: string;
@@ -21,13 +25,26 @@ export function useNewHires() {
   return useQuery({
     queryKey: ["new-hires"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data: hires, error } = await supabase
         .from("new_hires")
         .select("*")
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      return data as NewHire[];
+      
+      // Fetch submitter profiles
+      const submitterIds = [...new Set(hires.map(h => h.submitted_by))];
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, full_name, email")
+        .in("id", submitterIds);
+      
+      const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
+      
+      return hires.map(hire => ({
+        ...hire,
+        submitted_by_profile: profileMap.get(hire.submitted_by) || null,
+      })) as NewHire[];
     },
   });
 }

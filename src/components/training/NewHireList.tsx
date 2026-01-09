@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Loader2, Users, Trash2, Clock, CheckCircle2, AlertCircle, ChevronDown, ChevronUp, KeyRound } from "lucide-react";
+import { Loader2, Users, Trash2, Clock, CheckCircle2, AlertCircle, ChevronDown, ChevronUp, KeyRound, User } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { AccessCredentialForm } from "./AccessCredentialForm";
 
@@ -121,8 +121,11 @@ function NewHireCard({ hire, isAdmin, onStatusChange, onDelete }: NewHireCardPro
             {hire.personal_email}
             {hire.phone_number && ` • ${hire.phone_number}`}
           </p>
-          <p className="text-xs text-muted-foreground">
-            Submitted {formatDistanceToNow(new Date(hire.created_at), { addSuffix: true })}
+          <p className="text-xs text-muted-foreground flex items-center gap-1">
+            <User className="w-3 h-3" />
+            Requested by: {hire.submitted_by_profile?.full_name || hire.submitted_by_profile?.email || "Unknown"}
+            {" • "}
+            {formatDistanceToNow(new Date(hire.created_at), { addSuffix: true })}
           </p>
         </div>
         
