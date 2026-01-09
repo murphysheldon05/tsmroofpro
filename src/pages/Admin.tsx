@@ -46,6 +46,7 @@ import {
   Bell,
 } from "lucide-react";
 import { UserPermissionsEditor } from "@/components/admin/UserPermissionsEditor";
+import { TeamAssignmentManager } from "@/components/admin/TeamAssignmentManager";
 import { EmailTemplateEditor } from "@/components/admin/EmailTemplateEditor";
 import { PendingApprovals } from "@/components/admin/PendingApprovals";
 import {
@@ -698,6 +699,10 @@ export default function Admin() {
             <TabsTrigger value="notifications" className="gap-2">
               <Bell className="w-4 h-4" />
               Notifications
+            </TabsTrigger>
+            <TabsTrigger value="teams" className="gap-2">
+              <Users className="w-4 h-4" />
+              Teams
             </TabsTrigger>
           </TabsList>
 
@@ -3214,6 +3219,18 @@ export default function Admin() {
           {/* Notifications Tab */}
           <TabsContent value="notifications" className="space-y-4">
             <NotificationSettingsManager />
+          </TabsContent>
+
+          {/* Teams Tab */}
+          <TabsContent value="teams" className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h2 className="text-lg font-semibold text-foreground">Team Management</h2>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Assign employees to managers for commission approval workflow. When an employee submits a commission form, 
+              it will first go to their assigned manager for approval, then to admin for final approval.
+            </p>
+            <TeamAssignmentManager />
           </TabsContent>
         </Tabs>
       </div>
