@@ -22,6 +22,8 @@ interface SendCredentialsRequest {
   submitterId: string;
   credentials: CredentialInfo[];
   generalNotes?: string | null;
+  cc?: string | null;
+  bcc?: string | null;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -39,7 +41,7 @@ const handler = async (req: Request): Promise<Response> => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    const { newHireId, newHireName, submitterId, credentials, generalNotes }: SendCredentialsRequest = await req.json();
+    const { newHireId, newHireName, submitterId, credentials, generalNotes, cc, bcc }: SendCredentialsRequest = await req.json();
 
     console.log("Sending credentials for new hire:", newHireName, "to submitter:", submitterId);
 
@@ -98,7 +100,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     const appBaseUrl = Deno.env.get("APP_BASE_URL") || "https://app.example.com";
 
-    const emailPayload = {
+    const emailPayload: Record<string, unknown> = {
       from: "TSM Roofing <notifications@hub.tsmroofs.com>",
       to: [submitterProfile.email],
       subject: `Access Credentials Ready: ${newHireName}`,
@@ -142,6 +144,18 @@ const handler = async (req: Request): Promise<Response> => {
         </div>
       `,
     };
+
+    // Add CC if provided
+    if (cc) {
+      emailPayload.cc = [cc];
+      console.log("Adding CC:", cc);
+    }
+    
+    // Add BCC if provided
+    if (bcc) {
+      emailPayload.bcc = [bcc];
+      console.log("Adding BCC:", bcc);
+    }
 
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",

@@ -22,6 +22,9 @@ export function AccessCredentialForm({ newHireId, newHireName, requiredAccess, s
   const { data: existingCredentials, isLoading } = useNewHireAccessCredentials(newHireId);
   const upsertCredential = useUpsertAccessCredential();
   const [isSending, setIsSending] = useState(false);
+  const [showCcBcc, setShowCcBcc] = useState(false);
+  const [ccEmail, setCcEmail] = useState("");
+  const [bccEmail, setBccEmail] = useState("");
 
   if (isLoading) {
     return (
@@ -67,6 +70,8 @@ export function AccessCredentialForm({ newHireId, newHireName, requiredAccess, s
           submitterId: submittedBy,
           credentials,
           generalNotes: generalNotesCredential?.notes || null,
+          cc: ccEmail.trim() || null,
+          bcc: bccEmail.trim() || null,
         },
       });
 
@@ -78,6 +83,13 @@ export function AccessCredentialForm({ newHireId, newHireName, requiredAccess, s
           ? `Credentials sent to ${sentTo}. (If you don't see it, check spam/quarantine.)`
           : "Credentials sent to the requester. (If you don't see it, check spam/quarantine.)"
       );
+      // Reset CC/BCC fields after successful send
+      setCcEmail("");
+      setBccEmail("");
+      setShowCcBcc(false);
+    } catch (error: any) {
+      console.error("Error sending credentials:", error);
+      toast.error("Failed to send credentials: " + error.message);
     } finally {
       setIsSending(false);
     }
@@ -88,21 +100,62 @@ export function AccessCredentialForm({ newHireId, newHireName, requiredAccess, s
       <div className="flex items-center justify-between">
         <h4 className="text-sm font-semibold text-muted-foreground">Access Credentials for {newHireName}</h4>
         {actualCredentials.length > 0 && (
-          <Button
-            size="sm"
-            variant={allCredentialsComplete ? "default" : "outline"}
-            onClick={handleSendToSubmitter}
-            disabled={isSending}
-          >
-            {isSending ? (
-              <Loader2 className="w-3 h-3 animate-spin mr-1" />
-            ) : (
-              <Send className="w-3 h-3 mr-1" />
-            )}
-            Send to Requester
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setShowCcBcc(!showCcBcc)}
+              className="text-xs"
+            >
+              {showCcBcc ? "Hide" : "CC/BCC"}
+            </Button>
+            <Button
+              size="sm"
+              variant={allCredentialsComplete ? "default" : "outline"}
+              onClick={handleSendToSubmitter}
+              disabled={isSending}
+            >
+              {isSending ? (
+                <Loader2 className="w-3 h-3 animate-spin mr-1" />
+              ) : (
+                <Send className="w-3 h-3 mr-1" />
+              )}
+              Send to Requester
+            </Button>
+          </div>
         )}
       </div>
+      
+      {showCcBcc && (
+        <Card className="bg-muted/20">
+          <CardContent className="py-3 px-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label htmlFor="cc-email" className="text-xs">CC (optional)</Label>
+                <Input
+                  id="cc-email"
+                  type="email"
+                  value={ccEmail}
+                  onChange={(e) => setCcEmail(e.target.value)}
+                  placeholder="hr@tsmroofs.com"
+                  className="h-8 text-sm"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="bcc-email" className="text-xs">BCC (optional)</Label>
+                <Input
+                  id="bcc-email"
+                  type="email"
+                  value={bccEmail}
+                  onChange={(e) => setBccEmail(e.target.value)}
+                  placeholder="records@tsmroofs.com"
+                  className="h-8 text-sm"
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
       <div className="grid gap-3">
         {requiredAccess.map((access) => (
           <AccessItemForm
