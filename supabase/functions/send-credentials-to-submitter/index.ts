@@ -21,6 +21,7 @@ interface SendCredentialsRequest {
   newHireName: string;
   submitterId: string;
   credentials: CredentialInfo[];
+  generalNotes?: string | null;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -38,7 +39,7 @@ const handler = async (req: Request): Promise<Response> => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    const { newHireId, newHireName, submitterId, credentials }: SendCredentialsRequest = await req.json();
+    const { newHireId, newHireName, submitterId, credentials, generalNotes }: SendCredentialsRequest = await req.json();
 
     console.log("Sending credentials for new hire:", newHireName, "to submitter:", submitterId);
 
@@ -61,7 +62,7 @@ const handler = async (req: Request): Promise<Response> => {
       let statusHtml = "";
       
       if (cred.inviteSent) {
-        statusHtml = `<p style="color: #059669; font-weight: 600;">✓ Invite sent to personal email</p>`;
+        statusHtml = `<p style="color: #059669; font-weight: 600;">✓ Invite sent to tsmroofs.com email</p>`;
       }
       
       if (cred.email || cred.password) {
@@ -114,6 +115,13 @@ const handler = async (req: Request): Promise<Response> => {
               <h3 style="color: #1e40af; margin-bottom: 16px;">Access Details</h3>
               ${credentialsHtml}
             </div>
+
+            ${generalNotes ? `
+            <div style="background: #e0f2fe; border-radius: 8px; padding: 16px; margin: 20px 0;">
+              <h4 style="margin: 0 0 8px 0; color: #0369a1;">Additional Notes</h4>
+              <p style="margin: 0; color: #0c4a6e; font-size: 14px;">${generalNotes}</p>
+            </div>
+            ` : ''}
 
             <div style="background: #fef3c7; border-radius: 8px; padding: 16px; margin: 20px 0;">
               <p style="margin: 0; color: #92400e; font-size: 14px;">

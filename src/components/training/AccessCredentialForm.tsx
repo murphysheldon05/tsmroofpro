@@ -35,20 +35,24 @@ export function AccessCredentialForm({ newHireId, newHireName, requiredAccess, s
     return existingCredentials?.find(c => c.access_type === accessType);
   };
 
+  // Filter out the __general_notes__ item from actual credentials
+  const actualCredentials = existingCredentials?.filter(c => c.access_type !== '__general_notes__') || [];
+  const generalNotesCredential = existingCredentials?.find(c => c.access_type === '__general_notes__');
+
   const allCredentialsComplete = requiredAccess.every(access => {
     const cred = getExistingCredential(access);
     return cred && (cred.email || cred.invite_sent);
   });
 
   const handleSendToSubmitter = async () => {
-    if (!existingCredentials || existingCredentials.length === 0) {
+    if (actualCredentials.length === 0) {
       toast.error("Please save at least one credential first");
       return;
     }
 
     setIsSending(true);
     try {
-      const credentials = existingCredentials.map(cred => ({
+      const credentials = actualCredentials.map(cred => ({
         accessType: cred.access_type,
         email: cred.email,
         password: cred.password,
@@ -62,6 +66,7 @@ export function AccessCredentialForm({ newHireId, newHireName, requiredAccess, s
           newHireName,
           submitterId: submittedBy,
           credentials,
+          generalNotes: generalNotesCredential?.notes || null,
         },
       });
 
@@ -80,7 +85,7 @@ export function AccessCredentialForm({ newHireId, newHireName, requiredAccess, s
     <div className="space-y-3 mt-4 pt-4 border-t">
       <div className="flex items-center justify-between">
         <h4 className="text-sm font-semibold text-muted-foreground">Access Credentials for {newHireName}</h4>
-        {existingCredentials && existingCredentials.length > 0 && (
+        {actualCredentials.length > 0 && (
           <Button
             size="sm"
             variant={allCredentialsComplete ? "default" : "outline"}
