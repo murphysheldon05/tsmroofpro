@@ -108,6 +108,9 @@ export function AccessCredentialForm({ newHireId, newHireName, requiredAccess, s
           />
         ))}
       </div>
+      
+      {/* General Notes Section */}
+      <GeneralNotesSection newHireId={newHireId} existingCredentials={existingCredentials} onSave={upsertCredential.mutate} isSaving={upsertCredential.isPending} />
     </div>
   );
 }
@@ -246,7 +249,7 @@ function AccessItemForm({ newHireId, accessType, existingCredential, onSave, isS
             onCheckedChange={(checked) => setInviteSent(checked === true)}
           />
           <Label htmlFor={`invite-${accessType}`} className="text-xs">
-            Invite sent to personal email
+            Invite sent to tsmroofs.com email
           </Label>
         </div>
 
@@ -272,6 +275,84 @@ function AccessItemForm({ newHireId, accessType, existingCredential, onSave, isS
           <Button size="sm" onClick={handleSave} disabled={isSaving}>
             {isSaving ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Save className="w-3 h-3 mr-1" />}
             Save
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+interface GeneralNotesSectionProps {
+  newHireId: string;
+  existingCredentials?: NewHireAccessCredential[];
+  onSave: (data: {
+    new_hire_id: string;
+    access_type: string;
+    email?: string;
+    password?: string;
+    invite_sent?: boolean;
+    notes?: string;
+  }) => void;
+  isSaving: boolean;
+}
+
+function GeneralNotesSection({ newHireId, existingCredentials, onSave, isSaving }: GeneralNotesSectionProps) {
+  const generalNotes = existingCredentials?.find(c => c.access_type === '__general_notes__');
+  const [notes, setNotes] = useState(generalNotes?.notes || "");
+  const [isEditing, setIsEditing] = useState(!generalNotes);
+
+  useEffect(() => {
+    if (generalNotes) {
+      setNotes(generalNotes.notes || "");
+    }
+  }, [generalNotes]);
+
+  const handleSave = () => {
+    onSave({
+      new_hire_id: newHireId,
+      access_type: '__general_notes__',
+      notes: notes || undefined,
+    });
+    setIsEditing(false);
+  };
+
+  if (!isEditing && generalNotes?.notes) {
+    return (
+      <Card className="bg-muted/30">
+        <CardContent className="py-3 px-4">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm font-medium">Additional Notes</p>
+            <Button variant="ghost" size="sm" onClick={() => setIsEditing(true)}>
+              Edit
+            </Button>
+          </div>
+          <p className="text-sm text-muted-foreground">{generalNotes.notes}</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader className="py-3 px-4">
+        <CardTitle className="text-sm">Additional Notes</CardTitle>
+      </CardHeader>
+      <CardContent className="py-3 px-4 space-y-3">
+        <Textarea
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          placeholder="General notes about this new hire's onboarding..."
+          className="min-h-[80px] text-sm"
+        />
+        <div className="flex justify-end gap-2">
+          {generalNotes && (
+            <Button variant="ghost" size="sm" onClick={() => setIsEditing(false)}>
+              Cancel
+            </Button>
+          )}
+          <Button size="sm" onClick={handleSave} disabled={isSaving}>
+            {isSaving ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Save className="w-3 h-3 mr-1" />}
+            Save Notes
           </Button>
         </div>
       </CardContent>
