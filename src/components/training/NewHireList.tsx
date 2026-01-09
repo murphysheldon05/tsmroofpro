@@ -189,6 +189,7 @@ function NewHireCard({ hire, isAdmin, onStatusChange, onDelete }: NewHireCardPro
               newHireId={hire.id}
               newHireName={hire.full_name}
               requiredAccess={hire.required_access}
+              submittedBy={hire.submitted_by}
             />
           </CollapsibleContent>
         </Collapsible>

@@ -6,18 +6,22 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Save, Mail, Key, Eye, EyeOff, Check } from "lucide-react";
+import { Loader2, Save, Mail, Key, Eye, EyeOff, Check, Send } from "lucide-react";
 import { useNewHireAccessCredentials, useUpsertAccessCredential, NewHireAccessCredential } from "@/hooks/useNewHireAccessCredentials";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface AccessCredentialFormProps {
   newHireId: string;
   newHireName: string;
   requiredAccess: string[];
+  submittedBy: string;
 }
 
-export function AccessCredentialForm({ newHireId, newHireName, requiredAccess }: AccessCredentialFormProps) {
+export function AccessCredentialForm({ newHireId, newHireName, requiredAccess, submittedBy }: AccessCredentialFormProps) {
   const { data: existingCredentials, isLoading } = useNewHireAccessCredentials(newHireId);
   const upsertCredential = useUpsertAccessCredential();
+  const [isSending, setIsSending] = useState(false);
 
   if (isLoading) {
     return (
@@ -31,9 +35,67 @@ export function AccessCredentialForm({ newHireId, newHireName, requiredAccess }:
     return existingCredentials?.find(c => c.access_type === accessType);
   };
 
+  const allCredentialsComplete = requiredAccess.every(access => {
+    const cred = getExistingCredential(access);
+    return cred && (cred.email || cred.invite_sent);
+  });
+
+  const handleSendToSubmitter = async () => {
+    if (!existingCredentials || existingCredentials.length === 0) {
+      toast.error("Please save at least one credential first");
+      return;
+    }
+
+    setIsSending(true);
+    try {
+      const credentials = existingCredentials.map(cred => ({
+        accessType: cred.access_type,
+        email: cred.email,
+        password: cred.password,
+        inviteSent: cred.invite_sent,
+        notes: cred.notes,
+      }));
+
+      const { data, error } = await supabase.functions.invoke('send-credentials-to-submitter', {
+        body: {
+          newHireId,
+          newHireName,
+          submitterId: submittedBy,
+          credentials,
+        },
+      });
+
+      if (error) throw error;
+
+      toast.success(`Credentials sent to the manager who requested this new hire`);
+    } catch (error: any) {
+      console.error("Error sending credentials:", error);
+      toast.error("Failed to send credentials: " + error.message);
+    } finally {
+      setIsSending(false);
+    }
+  };
+
   return (
     <div className="space-y-3 mt-4 pt-4 border-t">
-      <h4 className="text-sm font-semibold text-muted-foreground">Access Credentials for {newHireName}</h4>
+      <div className="flex items-center justify-between">
+        <h4 className="text-sm font-semibold text-muted-foreground">Access Credentials for {newHireName}</h4>
+        {existingCredentials && existingCredentials.length > 0 && (
+          <Button
+            size="sm"
+            variant={allCredentialsComplete ? "default" : "outline"}
+            onClick={handleSendToSubmitter}
+            disabled={isSending}
+          >
+            {isSending ? (
+              <Loader2 className="w-3 h-3 animate-spin mr-1" />
+            ) : (
+              <Send className="w-3 h-3 mr-1" />
+            )}
+            Send to Requester
+          </Button>
+        )}
+      </div>
       <div className="grid gap-3">
         {requiredAccess.map((access) => (
           <AccessItemForm
