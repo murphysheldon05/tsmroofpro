@@ -20,3 +20,9 @@ verify_jwt = false
 
 [functions.notify-new-hire]
 verify_jwt = false
+
+[functions.notify-new-signup]
+verify_jwt = false
+
+[functions.send-credentials-to-submitter]
+verify_jwt = false
