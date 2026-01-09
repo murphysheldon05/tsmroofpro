@@ -5,10 +5,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Loader2, Users, Trash2, Clock, CheckCircle2, AlertCircle, ChevronDown, ChevronUp, KeyRound, User } from "lucide-react";
+import { Loader2, Users, Trash2, Clock, CheckCircle2, AlertCircle, KeyRound, User } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { AccessCredentialForm } from "./AccessCredentialForm";
+
 
 const statusConfig: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; icon: React.ElementType }> = {
   pending: { label: "Pending", variant: "secondary", icon: Clock },
@@ -132,6 +132,17 @@ function NewHireCard({ hire, isAdmin, onStatusChange, onDelete }: NewHireCardPro
         <div className="flex items-center gap-2">
           {isAdmin && (
             <>
+              {hasRequiredAccess && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsOpen((v) => !v)}
+                  className="flex items-center gap-2"
+                >
+                  <KeyRound className="w-4 h-4" />
+                  {isOpen ? "Hide" : "Manage"}
+                </Button>
+              )}
               <Select
                 value={hire.status}
                 onValueChange={(value) => onStatusChange(hire.id, value)}
@@ -178,24 +189,13 @@ function NewHireCard({ hire, isAdmin, onStatusChange, onDelete }: NewHireCardPro
         </div>
       )}
 
-      {isAdmin && hasRequiredAccess && (
-        <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-          <CollapsibleTrigger asChild>
-            <Button variant="outline" size="sm" className="w-full flex items-center gap-2">
-              <KeyRound className="w-4 h-4" />
-              {isOpen ? "Hide" : "Manage"} Access Credentials
-              {isOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-            </Button>
-          </CollapsibleTrigger>
-          <CollapsibleContent>
-            <AccessCredentialForm
-              newHireId={hire.id}
-              newHireName={hire.full_name}
-              requiredAccess={hire.required_access}
-              submittedBy={hire.submitted_by}
-            />
-          </CollapsibleContent>
-        </Collapsible>
+      {isAdmin && hasRequiredAccess && isOpen && (
+        <AccessCredentialForm
+          newHireId={hire.id}
+          newHireName={hire.full_name}
+          requiredAccess={hire.required_access}
+          submittedBy={hire.submitted_by}
+        />
       )}
     </div>
   );
