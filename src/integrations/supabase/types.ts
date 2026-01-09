@@ -495,11 +495,15 @@ export type Database = {
       }
       requests: {
         Row: {
+          approval_stage: string | null
+          assigned_manager_id: string | null
           assigned_to: string | null
           created_at: string
           description: string | null
           file_path: string | null
           id: string
+          manager_approved_at: string | null
+          manager_notes: string | null
           status: string | null
           submitted_by: string
           title: string
@@ -507,11 +511,15 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          approval_stage?: string | null
+          assigned_manager_id?: string | null
           assigned_to?: string | null
           created_at?: string
           description?: string | null
           file_path?: string | null
           id?: string
+          manager_approved_at?: string | null
+          manager_notes?: string | null
           status?: string | null
           submitted_by: string
           title: string
@@ -519,11 +527,15 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          approval_stage?: string | null
+          assigned_manager_id?: string | null
           assigned_to?: string | null
           created_at?: string
           description?: string | null
           file_path?: string | null
           id?: string
+          manager_approved_at?: string | null
+          manager_notes?: string | null
           status?: string | null
           submitted_by?: string
           title?: string
@@ -593,6 +605,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      team_assignments: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          employee_id: string
+          id: string
+          manager_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          employee_id: string
+          id?: string
+          manager_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          employee_id?: string
+          id?: string
+          manager_id?: string
+        }
+        Relationships: []
       }
       tools: {
         Row: {

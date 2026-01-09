@@ -64,6 +64,8 @@ const getIcon = (iconName: string | null) => {
 
 const statusColors: Record<string, string> = {
   pending: "bg-yellow-500/10 text-yellow-500 border-yellow-500/30",
+  pending_manager: "bg-amber-500/10 text-amber-500 border-amber-500/30",
+  manager_approved: "bg-blue-500/10 text-blue-500 border-blue-500/30",
   in_progress: "bg-blue-500/10 text-blue-500 border-blue-500/30",
   approved: "bg-green-500/10 text-green-500 border-green-500/30",
   completed: "bg-green-500/10 text-green-500 border-green-500/30",
@@ -73,6 +75,8 @@ const statusColors: Record<string, string> = {
 
 const statusLabels: Record<string, string> = {
   pending: "Pending",
+  pending_manager: "Pending Manager Review",
+  manager_approved: "Manager Approved",
   in_progress: "In Progress",
   approved: "Approved",
   completed: "Completed",
@@ -94,7 +98,15 @@ interface Request {
   created_at: string;
   updated_at: string;
   file_path: string | null;
+  approval_stage: string | null;
+  assigned_manager_id: string | null;
+  manager_approved_at: string | null;
+  manager_notes: string | null;
   profiles?: {
+    full_name: string | null;
+    email: string | null;
+  } | null;
+  manager_profile?: {
     full_name: string | null;
     email: string | null;
   } | null;
@@ -152,7 +164,7 @@ export default function Requests() {
 
   // Fetch all requests for managers/admins
   const { data: allRequests, refetch: refetchAll } = useQuery({
-    queryKey: ["all-requests"],
+    queryKey: ["all-requests", user?.id, isManager, isAdmin],
     queryFn: async () => {
       // First fetch all requests
       const { data: requestsData, error } = await supabase
@@ -162,14 +174,16 @@ export default function Requests() {
       
       if (error) throw error;
       
-      // Get unique submitter IDs
+      // Get unique submitter IDs and manager IDs
       const submitterIds = [...new Set(requestsData.map(r => r.submitted_by))];
+      const managerIds = [...new Set(requestsData.map(r => r.assigned_manager_id).filter(Boolean))] as string[];
+      const allUserIds = [...new Set([...submitterIds, ...managerIds])];
       
-      // Fetch profiles for those submitters
+      // Fetch profiles for all users
       const { data: profilesData } = await supabase
         .from("profiles")
         .select("id, full_name, email")
-        .in("id", submitterIds);
+        .in("id", allUserIds);
       
       // Create a map of profiles by ID
       const profilesMap = new Map(profilesData?.map(p => [p.id, p]) || []);
@@ -178,6 +192,7 @@ export default function Requests() {
       return requestsData.map(request => ({
         ...request,
         profiles: profilesMap.get(request.submitted_by) || null,
+        manager_profile: request.assigned_manager_id ? profilesMap.get(request.assigned_manager_id) : null,
       })) as Request[];
     },
     enabled: isManager,
@@ -204,12 +219,32 @@ export default function Requests() {
         filePath = fileName;
       }
 
+      // Check if this is a commission request and user has a manager assigned
+      let approvalStage = "pending";
+      let assignedManagerId: string | null = null;
+
+      if (type === "commission") {
+        // Check if the user has a manager assigned
+        const { data: assignment } = await supabase
+          .from("team_assignments")
+          .select("manager_id")
+          .eq("employee_id", user.id)
+          .maybeSingle();
+
+        if (assignment?.manager_id) {
+          approvalStage = "pending_manager";
+          assignedManagerId = assignment.manager_id;
+        }
+      }
+
       const { error } = await supabase.from("requests").insert({
         type,
         title: title.trim(),
         description: description.trim() || null,
         submitted_by: user.id,
         file_path: filePath,
+        approval_stage: approvalStage,
+        assigned_manager_id: assignedManagerId,
       });
 
       if (error) throw error;
@@ -254,6 +289,74 @@ export default function Requests() {
     }
   };
 
+  // Handle manager approval (stage 1 for commission requests)
+  const handleManagerApproval = async (requestId: string, approved: boolean, notes?: string) => {
+    setIsUpdating(true);
+    try {
+      if (approved) {
+        // Manager approved - move to admin review
+        const { error } = await supabase
+          .from("requests")
+          .update({ 
+            approval_stage: "manager_approved",
+            manager_approved_at: new Date().toISOString(),
+            manager_notes: notes || null,
+          })
+          .eq("id", requestId);
+
+        if (error) throw error;
+        toast.success("Commission approved and sent to admin for final review!");
+      } else {
+        // Manager rejected
+        const { error } = await supabase
+          .from("requests")
+          .update({ 
+            status: "rejected",
+            approval_stage: "rejected",
+            manager_notes: notes || null,
+          })
+          .eq("id", requestId);
+
+        if (error) throw error;
+        toast.success("Commission rejected.");
+      }
+
+      refetchAll();
+      refetch();
+      setSelectedRequest(null);
+    } catch (error) {
+      toast.error("Failed to update request");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  // Handle admin final approval (stage 2 for commission requests)
+  const handleAdminApproval = async (requestId: string, approved: boolean) => {
+    setIsUpdating(true);
+    try {
+      const { error } = await supabase
+        .from("requests")
+        .update({ 
+          status: approved ? "approved" : "rejected",
+          approval_stage: approved ? "approved" : "rejected",
+          assigned_to: user?.id,
+        })
+        .eq("id", requestId);
+
+      if (error) throw error;
+
+      toast.success(`Commission ${approved ? 'approved' : 'rejected'}!`);
+      refetchAll();
+      refetch();
+      setSelectedRequest(null);
+    } catch (error) {
+      toast.error("Failed to update request");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
   const handleUpdateStatus = async (requestId: string, newStatus: string) => {
     setIsUpdating(true);
     try {
@@ -278,7 +381,39 @@ export default function Requests() {
     }
   };
 
-  const pendingCount = allRequests?.filter(r => r.status === 'pending').length || 0;
+  // Filter requests based on role and approval stage
+  const getMyPendingRequests = () => {
+    if (!allRequests) return [];
+    
+    if (isAdmin) {
+      // Admins see:
+      // 1. All pending non-commission requests
+      // 2. Commission requests that are manager_approved (waiting for admin)
+      // 3. Commission requests with no manager assigned (pending)
+      return allRequests.filter(r => {
+        if (r.status !== 'pending') return false;
+        if (r.type === 'commission') {
+          return r.approval_stage === 'pending' || r.approval_stage === 'manager_approved';
+        }
+        return true;
+      });
+    } else {
+      // Managers see:
+      // 1. Commission requests pending_manager where they are the assigned manager
+      // 2. Other pending requests (non-commission)
+      return allRequests.filter(r => {
+        if (r.status !== 'pending') return false;
+        if (r.type === 'commission') {
+          return r.approval_stage === 'pending_manager' && r.assigned_manager_id === user?.id;
+        }
+        // Non-commission requests visible to all managers
+        return true;
+      });
+    }
+  };
+
+  const pendingRequests = getMyPendingRequests();
+  const pendingCount = pendingRequests.length;
   const commissionRequests = allRequests?.filter(r => r.type === 'commission') || [];
 
   return (
@@ -347,12 +482,18 @@ export default function Requests() {
 
             <TabsContent value="review" className="space-y-4">
               <h2 className="text-lg font-semibold text-foreground">
-                All Pending Requests ({pendingCount})
+                {isAdmin ? "Pending Requests" : "Requests Needing Your Approval"} ({pendingCount})
               </h2>
+              {!isAdmin && (
+                <p className="text-sm text-muted-foreground">
+                  Commission forms from your team members will appear here for your approval before going to admin.
+                </p>
+              )}
               <RequestsTable
-                requests={allRequests?.filter(r => r.status === 'pending') || []}
+                requests={pendingRequests}
                 onView={setSelectedRequest}
                 showSubmitter
+                showApprovalStage
               />
               
               <h2 className="text-lg font-semibold text-foreground mt-8">
@@ -362,6 +503,7 @@ export default function Requests() {
                 requests={allRequests?.filter(r => r.status !== 'pending').slice(0, 10) || []}
                 onView={setSelectedRequest}
                 showSubmitter
+                showApprovalStage
               />
             </TabsContent>
 
@@ -373,6 +515,7 @@ export default function Requests() {
                 requests={commissionRequests}
                 onView={setSelectedRequest}
                 showSubmitter
+                showApprovalStage
               />
             </TabsContent>
           </Tabs>
@@ -466,9 +609,69 @@ export default function Requests() {
 
                 {isManager && selectedRequest.status === 'pending' && (
                   <div className="space-y-3 pt-4">
-                    {supportRequestTypes.includes(selectedRequest.type) ? (
+                    {/* Commission two-stage approval workflow */}
+                    {selectedRequest.type === 'commission' && selectedRequest.approval_stage === 'pending_manager' && !isAdmin && (
                       <>
-                        {/* IT/HR Support workflow */}
+                        <p className="text-sm text-muted-foreground">
+                          This commission form needs your approval before going to admin.
+                        </p>
+                        <div className="flex gap-3">
+                          <Button
+                            variant="outline"
+                            className="flex-1"
+                            onClick={() => handleManagerApproval(selectedRequest.id, false)}
+                            disabled={isUpdating}
+                          >
+                            {isUpdating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <XSquare className="w-4 h-4 mr-2" />}
+                            Reject
+                          </Button>
+                          <Button
+                            variant="neon"
+                            className="flex-1"
+                            onClick={() => handleManagerApproval(selectedRequest.id, true)}
+                            disabled={isUpdating}
+                          >
+                            {isUpdating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CheckSquare className="w-4 h-4 mr-2" />}
+                            Approve & Send to Admin
+                          </Button>
+                        </div>
+                      </>
+                    )}
+
+                    {/* Commission admin final approval */}
+                    {selectedRequest.type === 'commission' && (selectedRequest.approval_stage === 'manager_approved' || (selectedRequest.approval_stage === 'pending' && isAdmin)) && isAdmin && (
+                      <>
+                        {selectedRequest.approval_stage === 'manager_approved' && (
+                          <p className="text-sm text-green-600 bg-green-50 p-2 rounded">
+                            ✓ Manager approved this commission
+                          </p>
+                        )}
+                        <div className="flex gap-3">
+                          <Button
+                            variant="outline"
+                            className="flex-1"
+                            onClick={() => handleAdminApproval(selectedRequest.id, false)}
+                            disabled={isUpdating}
+                          >
+                            {isUpdating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <XSquare className="w-4 h-4 mr-2" />}
+                            Reject
+                          </Button>
+                          <Button
+                            variant="neon"
+                            className="flex-1"
+                            onClick={() => handleAdminApproval(selectedRequest.id, true)}
+                            disabled={isUpdating}
+                          >
+                            {isUpdating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CheckSquare className="w-4 h-4 mr-2" />}
+                            Final Approve
+                          </Button>
+                        </div>
+                      </>
+                    )}
+
+                    {/* IT/HR Support workflow */}
+                    {supportRequestTypes.includes(selectedRequest.type) && (
+                      <>
                         <div className="flex gap-3">
                           <Button
                             variant="outline"
@@ -476,11 +679,7 @@ export default function Requests() {
                             onClick={() => handleUpdateStatus(selectedRequest.id, 'in_progress')}
                             disabled={isUpdating}
                           >
-                            {isUpdating ? (
-                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                            ) : (
-                              <Clock className="w-4 h-4 mr-2" />
-                            )}
+                            {isUpdating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Clock className="w-4 h-4 mr-2" />}
                             Mark In Progress
                           </Button>
                           <Button
@@ -489,11 +688,7 @@ export default function Requests() {
                             onClick={() => handleUpdateStatus(selectedRequest.id, 'completed')}
                             disabled={isUpdating}
                           >
-                            {isUpdating ? (
-                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                            ) : (
-                              <CheckCircle className="w-4 h-4 mr-2" />
-                            )}
+                            {isUpdating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CheckCircle className="w-4 h-4 mr-2" />}
                             Mark Completed
                           </Button>
                         </div>
@@ -507,38 +702,30 @@ export default function Requests() {
                           Close Request
                         </Button>
                       </>
-                    ) : (
-                      <>
-                        {/* Standard Approve/Reject workflow */}
-                        <div className="flex gap-3">
-                          <Button
-                            variant="outline"
-                            className="flex-1"
-                            onClick={() => handleUpdateStatus(selectedRequest.id, 'rejected')}
-                            disabled={isUpdating}
-                          >
-                            {isUpdating ? (
-                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                            ) : (
-                              <XSquare className="w-4 h-4 mr-2" />
-                            )}
-                            Reject
-                          </Button>
-                          <Button
-                            variant="neon"
-                            className="flex-1"
-                            onClick={() => handleUpdateStatus(selectedRequest.id, 'approved')}
-                            disabled={isUpdating}
-                          >
-                            {isUpdating ? (
-                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                            ) : (
-                              <CheckSquare className="w-4 h-4 mr-2" />
-                            )}
-                            Approve
-                          </Button>
-                        </div>
-                      </>
+                    )}
+
+                    {/* Standard Approve/Reject for non-commission, non-support requests */}
+                    {selectedRequest.type !== 'commission' && !supportRequestTypes.includes(selectedRequest.type) && (
+                      <div className="flex gap-3">
+                        <Button
+                          variant="outline"
+                          className="flex-1"
+                          onClick={() => handleUpdateStatus(selectedRequest.id, 'rejected')}
+                          disabled={isUpdating}
+                        >
+                          {isUpdating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <XSquare className="w-4 h-4 mr-2" />}
+                          Reject
+                        </Button>
+                        <Button
+                          variant="neon"
+                          className="flex-1"
+                          onClick={() => handleUpdateStatus(selectedRequest.id, 'approved')}
+                          disabled={isUpdating}
+                        >
+                          {isUpdating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CheckSquare className="w-4 h-4 mr-2" />}
+                          Approve
+                        </Button>
+                      </div>
                     )}
                   </div>
                 )}
@@ -911,10 +1098,12 @@ function RequestsTable({
   requests,
   onView,
   showSubmitter = false,
+  showApprovalStage = false,
 }: {
   requests: Request[];
   onView: (r: Request) => void;
   showSubmitter?: boolean;
+  showApprovalStage?: boolean;
 }) {
   if (requests.length === 0) {
     return (
@@ -923,6 +1112,14 @@ function RequestsTable({
       </div>
     );
   }
+
+  const approvalStageLabels: Record<string, string> = {
+    pending: "Direct to Admin",
+    pending_manager: "Awaiting Manager",
+    manager_approved: "Awaiting Admin",
+    approved: "Approved",
+    rejected: "Rejected",
+  };
 
   return (
     <div className="glass-card rounded-xl overflow-hidden">
@@ -981,9 +1178,16 @@ function RequestsTable({
                 {formatDistanceToNow(new Date(request.created_at), { addSuffix: true })}
               </td>
               <td className="px-4 py-3">
-                <Badge variant="outline" className={statusColors[request.status]}>
-                  {statusLabels[request.status] || request.status}
-                </Badge>
+                <div className="flex flex-col gap-1">
+                  <Badge variant="outline" className={statusColors[request.status]}>
+                    {statusLabels[request.status] || request.status}
+                  </Badge>
+                  {showApprovalStage && request.type === 'commission' && request.approval_stage && (
+                    <span className="text-xs text-muted-foreground">
+                      {approvalStageLabels[request.approval_stage] || request.approval_stage}
+                    </span>
+                  )}
+                </div>
               </td>
               <td className="px-4 py-3 text-right">
                 <Button
