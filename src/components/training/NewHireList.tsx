@@ -132,17 +132,6 @@ function NewHireCard({ hire, isAdmin, onStatusChange, onDelete }: NewHireCardPro
         <div className="flex items-center gap-2">
           {isAdmin && (
             <>
-              {hasRequiredAccess && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsOpen((v) => !v)}
-                  className="flex items-center gap-2"
-                >
-                  <KeyRound className="w-4 h-4" />
-                  {isOpen ? "Hide" : "Manage"}
-                </Button>
-              )}
               <Select
                 value={hire.status}
                 onValueChange={(value) => onStatusChange(hire.id, value)}
@@ -189,13 +178,26 @@ function NewHireCard({ hire, isAdmin, onStatusChange, onDelete }: NewHireCardPro
         </div>
       )}
 
-      {isAdmin && hasRequiredAccess && isOpen && (
-        <AccessCredentialForm
-          newHireId={hire.id}
-          newHireName={hire.full_name}
-          requiredAccess={hire.required_access}
-          submittedBy={hire.submitted_by}
-        />
+      {isAdmin && hasRequiredAccess && (
+        <>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsOpen((v) => !v)}
+            className="w-full flex items-center justify-center gap-2"
+          >
+            <KeyRound className="w-4 h-4" />
+            {isOpen ? "Hide" : "Manage"} Access Credentials
+          </Button>
+          {isOpen && (
+            <AccessCredentialForm
+              newHireId={hire.id}
+              newHireName={hire.full_name}
+              requiredAccess={hire.required_access}
+              submittedBy={hire.submitted_by}
+            />
+          )}
+        </>
       )}
     </div>
   );
