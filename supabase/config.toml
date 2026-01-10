@@ -26,3 +26,6 @@ verify_jwt = false
 
 [functions.send-credentials-to-submitter]
 verify_jwt = false
+
+[functions.send-commission-notification]
+verify_jwt = false
