@@ -44,6 +44,7 @@ import {
   CheckCircle,
   Clock,
   Bell,
+  FlaskConical,
 } from "lucide-react";
 import { UserPermissionsEditor } from "@/components/admin/UserPermissionsEditor";
 import { TeamAssignmentManager } from "@/components/admin/TeamAssignmentManager";
@@ -83,6 +84,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { getThumbnailUrl } from "@/components/training/VideoCard";
 import { NotificationSettingsManager } from "@/components/admin/NotificationSettingsManager";
+import { CommissionWorkflowTester } from "@/components/admin/CommissionWorkflowTester";
 
 export default function Admin() {
   const queryClient = useQueryClient();
@@ -703,6 +705,10 @@ export default function Admin() {
             <TabsTrigger value="teams" className="gap-2">
               <Users className="w-4 h-4" />
               Teams
+            </TabsTrigger>
+            <TabsTrigger value="workflow-tester" className="gap-2">
+              <FlaskConical className="w-4 h-4" />
+              Workflow Test
             </TabsTrigger>
           </TabsList>
 
@@ -3231,6 +3237,17 @@ export default function Admin() {
               it will first go to their assigned manager for approval, then to admin for final approval.
             </p>
             <TeamAssignmentManager />
+          </TabsContent>
+
+          {/* Workflow Tester Tab */}
+          <TabsContent value="workflow-tester" className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h2 className="text-lg font-semibold text-foreground">Commission Workflow Tester</h2>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Test the commission approval email workflow without switching accounts. Send test notifications at each stage to verify emails are delivered correctly.
+            </p>
+            <CommissionWorkflowTester />
           </TabsContent>
         </Tabs>
       </div>
