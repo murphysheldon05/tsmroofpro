@@ -222,6 +222,7 @@ export default function Requests() {
       // Check if this is a commission request and user has a manager assigned
       let approvalStage = "pending";
       let assignedManagerId: string | null = null;
+      let managerProfile: { full_name: string | null; email: string | null } | null = null;
 
       if (type === "commission") {
         // Check if the user has a manager assigned
@@ -234,6 +235,15 @@ export default function Requests() {
         if (assignment?.manager_id) {
           approvalStage = "pending_manager";
           assignedManagerId = assignment.manager_id;
+          
+          // Get manager's profile for email notification
+          const { data: manager } = await supabase
+            .from("profiles")
+            .select("full_name, email")
+            .eq("id", assignment.manager_id)
+            .single();
+          
+          managerProfile = manager;
         }
       }
 
@@ -256,18 +266,35 @@ export default function Requests() {
         .eq("id", user.id)
         .single();
 
-      // Send email notification
+      // Send email notification based on request type
       try {
-        await supabase.functions.invoke("send-request-notification", {
-          body: {
-            type,
-            title: title.trim(),
-            description: description.trim() || null,
-            submitter_name: profile?.full_name || user.email || "Unknown",
-            submitter_email: user.email || "",
-            has_attachment: !!filePath,
-          },
-        });
+        if (type === "commission" && assignedManagerId && managerProfile?.email) {
+          // Send commission-specific notification to manager
+          await supabase.functions.invoke("send-commission-notification", {
+            body: {
+              notification_type: "manager_review",
+              request_id: "",
+              title: title.trim(),
+              submitter_name: profile?.full_name || user.email || "Unknown",
+              submitter_email: user.email || "",
+              manager_name: managerProfile.full_name || "Manager",
+              manager_email: managerProfile.email,
+              has_attachment: !!filePath,
+            },
+          });
+        } else {
+          // Send general request notification
+          await supabase.functions.invoke("send-request-notification", {
+            body: {
+              type,
+              title: title.trim(),
+              description: description.trim() || null,
+              submitter_name: profile?.full_name || user.email || "Unknown",
+              submitter_email: user.email || "",
+              has_attachment: !!filePath,
+            },
+          });
+        }
       } catch (emailError) {
         console.error("Failed to send email notification:", emailError);
         // Don't fail the submission if email fails
@@ -293,6 +320,24 @@ export default function Requests() {
   const handleManagerApproval = async (requestId: string, approved: boolean, notes?: string) => {
     setIsUpdating(true);
     try {
+      // Get the request details first
+      const request = allRequests?.find(r => r.id === requestId);
+      if (!request) throw new Error("Request not found");
+
+      // Get submitter profile
+      const { data: submitterProfile } = await supabase
+        .from("profiles")
+        .select("full_name, email")
+        .eq("id", request.submitted_by)
+        .single();
+
+      // Get manager profile (current user)
+      const { data: managerProfile } = await supabase
+        .from("profiles")
+        .select("full_name, email")
+        .eq("id", user!.id)
+        .single();
+
       if (approved) {
         // Manager approved - move to admin review
         const { error } = await supabase
@@ -305,7 +350,26 @@ export default function Requests() {
           .eq("id", requestId);
 
         if (error) throw error;
-        toast.success("Commission approved and sent to admin for final review!");
+
+        // Send notification to accounting department
+        try {
+          await supabase.functions.invoke("send-commission-notification", {
+            body: {
+              notification_type: "accounting_review",
+              request_id: requestId,
+              title: request.title,
+              submitter_name: submitterProfile?.full_name || "Employee",
+              submitter_email: submitterProfile?.email || "",
+              manager_name: managerProfile?.full_name || "Manager",
+              manager_notes: notes || null,
+              has_attachment: !!request.file_path,
+            },
+          });
+        } catch (emailError) {
+          console.error("Failed to send commission notification:", emailError);
+        }
+
+        toast.success("Commission approved and sent to accounting for processing!");
       } else {
         // Manager rejected
         const { error } = await supabase
@@ -318,6 +382,24 @@ export default function Requests() {
           .eq("id", requestId);
 
         if (error) throw error;
+
+        // Send rejection notification to submitter
+        try {
+          await supabase.functions.invoke("send-commission-notification", {
+            body: {
+              notification_type: "rejected",
+              request_id: requestId,
+              title: request.title,
+              submitter_name: submitterProfile?.full_name || "Employee",
+              submitter_email: submitterProfile?.email || "",
+              manager_notes: notes || null,
+              has_attachment: !!request.file_path,
+            },
+          });
+        } catch (emailError) {
+          console.error("Failed to send rejection notification:", emailError);
+        }
+
         toast.success("Commission rejected.");
       }
 
@@ -335,6 +417,17 @@ export default function Requests() {
   const handleAdminApproval = async (requestId: string, approved: boolean) => {
     setIsUpdating(true);
     try {
+      // Get the request details first
+      const request = allRequests?.find(r => r.id === requestId);
+      if (!request) throw new Error("Request not found");
+
+      // Get submitter profile
+      const { data: submitterProfile } = await supabase
+        .from("profiles")
+        .select("full_name, email")
+        .eq("id", request.submitted_by)
+        .single();
+
       const { error } = await supabase
         .from("requests")
         .update({ 
@@ -345,6 +438,22 @@ export default function Requests() {
         .eq("id", requestId);
 
       if (error) throw error;
+
+      // Send notification to submitter
+      try {
+        await supabase.functions.invoke("send-commission-notification", {
+          body: {
+            notification_type: approved ? "approved" : "rejected",
+            request_id: requestId,
+            title: request.title,
+            submitter_name: submitterProfile?.full_name || "Employee",
+            submitter_email: submitterProfile?.email || "",
+            has_attachment: !!request.file_path,
+          },
+        });
+      } catch (emailError) {
+        console.error("Failed to send notification:", emailError);
+      }
 
       toast.success(`Commission ${approved ? 'approved' : 'rejected'}!`);
       refetchAll();
