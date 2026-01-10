@@ -12,6 +12,8 @@ import {
 import { Eye, EyeOff, Lock, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { PasswordStrengthIndicator } from "@/components/ui/password-strength-indicator";
+import { validatePassword } from "@/lib/passwordValidation";
 
 interface PasswordResetPromptProps {
   open: boolean;
@@ -29,8 +31,10 @@ export function PasswordResetPrompt({ open, onPasswordReset }: PasswordResetProm
     e.preventDefault();
     setError("");
 
-    if (newPassword.length < 6) {
-      setError("Password must be at least 6 characters");
+    // Validate password strength
+    const validation = validatePassword(newPassword);
+    if (!validation.valid) {
+      setError(validation.errors[0]);
       return;
     }
 
@@ -63,6 +67,8 @@ export function PasswordResetPrompt({ open, onPasswordReset }: PasswordResetProm
       }
 
       toast.success("Password updated successfully!");
+      setNewPassword("");
+      setConfirmPassword("");
       onPasswordReset();
     } catch (err: any) {
       setError(err.message || "Failed to update password");
@@ -70,6 +76,9 @@ export function PasswordResetPrompt({ open, onPasswordReset }: PasswordResetProm
 
     setIsSubmitting(false);
   };
+
+  const passwordValidation = validatePassword(newPassword);
+  const isPasswordValid = passwordValidation.valid && newPassword === confirmPassword;
 
   return (
     <Dialog open={open} onOpenChange={() => {}}>
@@ -82,7 +91,7 @@ export function PasswordResetPrompt({ open, onPasswordReset }: PasswordResetProm
             <DialogTitle className="text-xl">Set Your Password</DialogTitle>
           </div>
           <DialogDescription>
-            For security, please create a new password to replace your temporary one.
+            For security, please create a strong password with at least 12 characters including uppercase, lowercase, numbers, and symbols.
           </DialogDescription>
         </DialogHeader>
 
@@ -107,6 +116,7 @@ export function PasswordResetPrompt({ open, onPasswordReset }: PasswordResetProm
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
+            <PasswordStrengthIndicator password={newPassword} />
           </div>
 
           <div className="space-y-2">
@@ -117,14 +127,22 @@ export function PasswordResetPrompt({ open, onPasswordReset }: PasswordResetProm
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               placeholder="Confirm new password"
+              className={confirmPassword && newPassword !== confirmPassword ? "border-destructive" : ""}
             />
+            {confirmPassword && newPassword !== confirmPassword && (
+              <p className="text-xs text-destructive">Passwords do not match</p>
+            )}
           </div>
 
           {error && (
             <p className="text-sm text-destructive">{error}</p>
           )}
 
-          <Button type="submit" className="w-full" disabled={isSubmitting}>
+          <Button 
+            type="submit" 
+            className="w-full" 
+            disabled={isSubmitting || !isPasswordValid}
+          >
             {isSubmitting ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
