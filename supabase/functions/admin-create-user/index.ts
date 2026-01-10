@@ -100,6 +100,37 @@ serve(async (req: Request): Promise<Response> => {
       });
     }
 
+    // Password strength validation
+    const PASSWORD_MIN_LENGTH = 12;
+    const passwordErrors: string[] = [];
+    
+    if (password.length < PASSWORD_MIN_LENGTH) {
+      passwordErrors.push(`Password must be at least ${PASSWORD_MIN_LENGTH} characters`);
+    }
+    if (!/[A-Z]/.test(password)) {
+      passwordErrors.push("Password must contain at least one uppercase letter");
+    }
+    if (!/[a-z]/.test(password)) {
+      passwordErrors.push("Password must contain at least one lowercase letter");
+    }
+    if (!/[0-9]/.test(password)) {
+      passwordErrors.push("Password must contain at least one number");
+    }
+    if (!/[^A-Za-z0-9]/.test(password)) {
+      passwordErrors.push("Password must contain at least one special character");
+    }
+    
+    if (passwordErrors.length > 0) {
+      return new Response(JSON.stringify({ 
+        error: passwordErrors[0],
+        errors: passwordErrors,
+        code: "weak_password"
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const admin = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
