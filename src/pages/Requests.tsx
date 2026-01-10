@@ -1230,6 +1230,20 @@ function RequestsTable({
     rejected: "Rejected",
   };
 
+  const handleDownloadAttachment = async (filePath: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      const { data } = await supabase.storage
+        .from("request-attachments")
+        .createSignedUrl(filePath, 60);
+      if (data?.signedUrl) {
+        window.open(data.signedUrl, "_blank");
+      }
+    } catch (error) {
+      console.error("Failed to download attachment:", error);
+    }
+  };
+
   return (
     <div className="glass-card rounded-xl overflow-hidden">
       <table className="w-full">
@@ -1251,6 +1265,9 @@ function RequestsTable({
             </th>
             <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
               Status
+            </th>
+            <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground hidden sm:table-cell">
+              File
             </th>
             <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">
               Actions
@@ -1297,6 +1314,21 @@ function RequestsTable({
                     </span>
                   )}
                 </div>
+              </td>
+              <td className="px-4 py-3 hidden sm:table-cell">
+                {request.file_path ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="gap-1.5 text-primary hover:text-primary"
+                    onClick={(e) => handleDownloadAttachment(request.file_path!, e)}
+                  >
+                    <Download className="w-4 h-4" />
+                    <span className="hidden md:inline">Download</span>
+                  </Button>
+                ) : (
+                  <span className="text-muted-foreground text-sm">—</span>
+                )}
               </td>
               <td className="px-4 py-3 text-right">
                 <Button
