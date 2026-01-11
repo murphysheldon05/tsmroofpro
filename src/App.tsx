@@ -18,6 +18,7 @@ import Requests from "./pages/Requests";
 import Company from "./pages/Company";
 import Admin from "./pages/Admin";
 import Profile from "./pages/Profile";
+import UserDirectory from "./pages/UserDirectory";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -105,6 +106,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <Profile />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/directory"
+              element={
+                <ProtectedRoute>
+                  <UserDirectory />
                 </ProtectedRoute>
               }
             />
