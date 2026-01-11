@@ -61,8 +61,11 @@ export default function Landing() {
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center animate-slide-up" style={{ animationDelay: "0.2s" }}>
             <Button onClick={() => navigate("/auth")} variant="neon" size="xl">
-              Access Portal
+              Sign In
               <ArrowRight className="w-5 h-5" />
+            </Button>
+            <Button onClick={() => navigate("/signup")} variant="outline" size="xl">
+              Create Account
             </Button>
           </div>
         </div>

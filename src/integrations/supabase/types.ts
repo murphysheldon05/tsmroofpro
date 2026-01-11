@@ -168,6 +168,71 @@ export type Database = {
           },
         ]
       }
+      department_managers: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          department_id: string
+          id: string
+          is_team_lead: boolean | null
+          manager_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          department_id: string
+          id?: string
+          is_team_lead?: boolean | null
+          manager_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          department_id?: string
+          id?: string
+          is_team_lead?: boolean | null
+          manager_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "department_managers_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      departments: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          sort_order: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          sort_order?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          sort_order?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       email_templates: {
         Row: {
           button_text: string
@@ -418,6 +483,9 @@ export type Database = {
           approved_by: string | null
           avatar_url: string | null
           created_at: string
+          data_consent_given: boolean | null
+          data_consent_given_at: string | null
+          department_id: string | null
           email: string | null
           full_name: string | null
           id: string
@@ -432,6 +500,9 @@ export type Database = {
           approved_by?: string | null
           avatar_url?: string | null
           created_at?: string
+          data_consent_given?: boolean | null
+          data_consent_given_at?: string | null
+          department_id?: string | null
           email?: string | null
           full_name?: string | null
           id: string
@@ -446,6 +517,9 @@ export type Database = {
           approved_by?: string | null
           avatar_url?: string | null
           created_at?: string
+          data_consent_given?: boolean | null
+          data_consent_given_at?: string | null
+          department_id?: string | null
           email?: string | null
           full_name?: string | null
           id?: string
@@ -455,7 +529,15 @@ export type Database = {
           phone_number?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       request_types: {
         Row: {
@@ -763,6 +845,10 @@ export type Database = {
     Functions: {
       can_access_resource_file: {
         Args: { file_path: string }
+        Returns: boolean
+      }
+      can_view_profile: {
+        Args: { _target_id: string; _viewer_id: string }
         Returns: boolean
       }
       get_user_role: {
