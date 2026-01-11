@@ -45,11 +45,14 @@ import {
   Clock,
   Bell,
   FlaskConical,
+  Building2,
 } from "lucide-react";
 import { UserPermissionsEditor } from "@/components/admin/UserPermissionsEditor";
 import { TeamAssignmentManager } from "@/components/admin/TeamAssignmentManager";
 import { EmailTemplateEditor } from "@/components/admin/EmailTemplateEditor";
 import { PendingApprovals } from "@/components/admin/PendingApprovals";
+import { DepartmentManager } from "@/components/admin/DepartmentManager";
+import { useDepartments } from "@/hooks/useDepartments";
 import {
   useResources,
   useCategories,
@@ -88,6 +91,7 @@ import { CommissionWorkflowTester } from "@/components/admin/CommissionWorkflowT
 
 export default function Admin() {
   const queryClient = useQueryClient();
+  const { data: departments } = useDepartments();
   const { data: resources } = useResources();
   const { data: categories } = useCategories();
   const { data: policies } = usePolicies();
@@ -150,6 +154,7 @@ export default function Admin() {
   const [editUserData, setEditUserData] = useState({
     full_name: "",
     email: "",
+    department_id: "" as string | null,
   });
   
   const [newResource, setNewResource] = useState({
@@ -701,6 +706,10 @@ export default function Admin() {
             <TabsTrigger value="notifications" className="gap-2">
               <Bell className="w-4 h-4" />
               Notifications
+            </TabsTrigger>
+            <TabsTrigger value="departments" className="gap-2">
+              <Building2 className="w-4 h-4" />
+              Departments
             </TabsTrigger>
             <TabsTrigger value="teams" className="gap-2">
               <Users className="w-4 h-4" />
@@ -1879,6 +1888,7 @@ export default function Admin() {
                                 setEditUserData({
                                   full_name: user.full_name || "",
                                   email: user.email || "",
+                                  department_id: user.department_id || null,
                                 });
                               } else {
                                 setEditingUser(null);
@@ -1912,6 +1922,25 @@ export default function Admin() {
                                   />
                                   <p className="text-xs text-muted-foreground">Email cannot be changed</p>
                                 </div>
+                                <div className="space-y-2">
+                                  <Label>Department</Label>
+                                  <Select
+                                    value={editUserData.department_id || "none"}
+                                    onValueChange={(v) => setEditUserData({ ...editUserData, department_id: v === "none" ? null : v })}
+                                  >
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="No department" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="none">No department</SelectItem>
+                                      {departments?.map((dept) => (
+                                        <SelectItem key={dept.id} value={dept.id}>
+                                          {dept.name}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
                                 <Button
                                   onClick={async () => {
                                     if (!editUserData.full_name.trim()) {
@@ -1920,7 +1949,10 @@ export default function Admin() {
                                     }
                                     const { error } = await supabase
                                       .from("profiles")
-                                      .update({ full_name: editUserData.full_name.trim() })
+                                      .update({ 
+                                        full_name: editUserData.full_name.trim(),
+                                        department_id: editUserData.department_id,
+                                      })
                                       .eq("id", user.id);
                                     
                                     if (error) {
@@ -3225,6 +3257,11 @@ export default function Admin() {
           {/* Notifications Tab */}
           <TabsContent value="notifications" className="space-y-4">
             <NotificationSettingsManager />
+          </TabsContent>
+
+          {/* Departments Tab */}
+          <TabsContent value="departments" className="space-y-4">
+            <DepartmentManager />
           </TabsContent>
 
           {/* Teams Tab */}
