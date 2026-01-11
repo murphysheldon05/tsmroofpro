@@ -18,6 +18,9 @@ interface CommissionNotification {
   manager_email?: string;
   manager_notes?: string;
   has_attachment: boolean;
+  total_payout_requested?: number;
+  approved_amount?: number;
+  rejection_reason?: string;
 }
 
 async function sendEmail(to: string[], subject: string, html: string) {
@@ -85,9 +88,11 @@ serve(async (req: Request): Promise<Response> => {
     const payload: CommissionNotification = await req.json();
     console.log("Commission notification payload:", payload);
 
-    const { notification_type, request_id, title, submitter_name, submitter_email, manager_name, manager_email, manager_notes, has_attachment } = payload;
+    const { notification_type, request_id, title, submitter_name, submitter_email, manager_name, manager_email, manager_notes, has_attachment, total_payout_requested, approved_amount, rejection_reason } = payload;
     const attachmentNote = has_attachment ? "📎 This commission includes an attached document." : "";
     const appUrl = Deno.env.get("APP_BASE_URL") || "https://hub.tsmroofs.com";
+    const payoutDisplay = total_payout_requested ? `$${total_payout_requested.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : null;
+    const approvedDisplay = approved_amount ? `$${approved_amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : null;
 
     const emailsSent: string[] = [];
 
@@ -130,6 +135,7 @@ serve(async (req: Request): Promise<Response> => {
             </div>
             <div class="content">
               <span class="badge">Commission Form</span>
+              ${payoutDisplay ? `<span style="display: inline-block; background: #059669; color: white; padding: 4px 12px; border-radius: 9999px; font-size: 14px; font-weight: 700; margin-left: 8px;">💰 ${payoutDisplay} Requested</span>` : ''}
               
               <div class="details">
                 <div class="detail-row">
@@ -144,6 +150,10 @@ serve(async (req: Request): Promise<Response> => {
                   <div class="label">Email:</div>
                   <div class="value">${submitter_email}</div>
                 </div>
+                ${payoutDisplay ? `<div class="detail-row" style="background: #f0fdf4; padding: 12px; border-radius: 6px; margin-top: 8px;">
+                  <div class="label">Total Commission Payout Requested:</div>
+                  <div class="value" style="font-size: 18px; color: #059669;">${payoutDisplay}</div>
+                </div>` : ''}
               </div>
               
               ${attachmentNote ? `<div class="attachment-note">${attachmentNote}</div>` : ''}
@@ -345,6 +355,10 @@ serve(async (req: Request): Promise<Response> => {
             <div class="content">
               <p>Hi ${submitter_name},</p>
               <p>Congratulations! Your commission form titled "<strong>${title}</strong>" has been fully approved and is being processed by accounting.</p>
+              ${approvedDisplay ? `<div style="background: #f0fdf4; border: 2px solid #10b981; padding: 16px; border-radius: 8px; margin: 16px 0; text-align: center;">
+                <p style="margin: 0; color: #059669; font-size: 14px;">Approved Amount</p>
+                <p style="margin: 4px 0 0 0; color: #059669; font-size: 24px; font-weight: 700;">${approvedDisplay}</p>
+              </div>` : ''}
               <p style="margin-top: 24px;">Thank you,<br>TSM Roofing Team</p>
             </div>
             <div class="footer">
@@ -382,9 +396,9 @@ serve(async (req: Request): Promise<Response> => {
             </div>
             <div class="content">
               <p>Hi ${submitter_name},</p>
-              <p>Unfortunately, your commission form titled "<strong>${title}</strong>" has been rejected.</p>
-              ${manager_notes ? `<div class="notes"><strong>Reason:</strong><br>${manager_notes}</div>` : ''}
-              <p style="margin-top: 20px;">Please review the feedback and submit a new request if needed.</p>
+              <p>Your commission form titled "<strong>${title}</strong>" requires revisions before it can be approved.</p>
+              ${rejection_reason || manager_notes ? `<div class="notes"><strong>Revisions Requested:</strong><br>${rejection_reason || manager_notes}</div>` : ''}
+              <p style="margin-top: 20px;"><strong>Next Steps:</strong> Please review the feedback above, make the necessary corrections, and submit a new commission request.</p>
               <p style="margin-top: 24px;">Thank you,<br>TSM Roofing Team</p>
             </div>
             <div class="footer">

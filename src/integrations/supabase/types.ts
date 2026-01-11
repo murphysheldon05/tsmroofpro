@@ -496,6 +496,7 @@ export type Database = {
       requests: {
         Row: {
           approval_stage: string | null
+          approved_amount: number | null
           assigned_manager_id: string | null
           assigned_to: string | null
           created_at: string
@@ -504,14 +505,17 @@ export type Database = {
           id: string
           manager_approved_at: string | null
           manager_notes: string | null
+          rejection_reason: string | null
           status: string | null
           submitted_by: string
           title: string
+          total_payout_requested: number | null
           type: string
           updated_at: string
         }
         Insert: {
           approval_stage?: string | null
+          approved_amount?: number | null
           assigned_manager_id?: string | null
           assigned_to?: string | null
           created_at?: string
@@ -520,14 +524,17 @@ export type Database = {
           id?: string
           manager_approved_at?: string | null
           manager_notes?: string | null
+          rejection_reason?: string | null
           status?: string | null
           submitted_by: string
           title: string
+          total_payout_requested?: number | null
           type: string
           updated_at?: string
         }
         Update: {
           approval_stage?: string | null
+          approved_amount?: number | null
           assigned_manager_id?: string | null
           assigned_to?: string | null
           created_at?: string
@@ -536,9 +543,11 @@ export type Database = {
           id?: string
           manager_approved_at?: string | null
           manager_notes?: string | null
+          rejection_reason?: string | null
           status?: string | null
           submitted_by?: string
           title?: string
+          total_payout_requested?: number | null
           type?: string
           updated_at?: string
         }
