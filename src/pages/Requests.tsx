@@ -10,7 +10,14 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import {
   Send,
   FileEdit,
@@ -31,13 +38,15 @@ import {
   Calendar,
   HelpCircle,
   UserPlus,
+  CalendarDays,
+  Package,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
-import { formatDistanceToNow, format } from "date-fns";
+import { formatDistanceToNow, format, isWithinInterval, startOfDay, endOfDay } from "date-fns";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { FileSpreadsheet, FileText } from "lucide-react";
 import { useRequestTypes, type RequestType } from "@/hooks/useRequestTypes";
@@ -66,6 +75,7 @@ const statusColors: Record<string, string> = {
   pending: "bg-yellow-500/10 text-yellow-500 border-yellow-500/30",
   pending_manager: "bg-amber-500/10 text-amber-500 border-amber-500/30",
   manager_approved: "bg-blue-500/10 text-blue-500 border-blue-500/30",
+  payment_pending: "bg-indigo-500/10 text-indigo-500 border-indigo-500/30",
   in_progress: "bg-blue-500/10 text-blue-500 border-blue-500/30",
   approved: "bg-green-500/10 text-green-500 border-green-500/30",
   completed: "bg-green-500/10 text-green-500 border-green-500/30",
@@ -76,11 +86,12 @@ const statusColors: Record<string, string> = {
 const statusLabels: Record<string, string> = {
   pending: "Pending",
   pending_manager: "Pending Manager Review",
-  manager_approved: "Manager Approved",
+  manager_approved: "Payment Approved & Requested",
+  payment_pending: "Payment Pending",
   in_progress: "In Progress",
   approved: "Approved",
   completed: "Completed",
-  rejected: "Rejected",
+  rejected: "Rejected - Revisions Requested",
   closed: "Closed",
 };
 
@@ -102,6 +113,9 @@ interface Request {
   assigned_manager_id: string | null;
   manager_approved_at: string | null;
   manager_notes: string | null;
+  total_payout_requested: number | null;
+  approved_amount: number | null;
+  rejection_reason: string | null;
   profiles?: {
     full_name: string | null;
     email: string | null;
@@ -120,12 +134,36 @@ export default function Requests() {
   const [hrSubType, setHrSubType] = useState<"simple" | "new-hire" | null>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [totalPayoutRequested, setTotalPayoutRequested] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<Request | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const bulkFileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Rejection dialog state
+  const [showRejectionDialog, setShowRejectionDialog] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState("");
+  const [pendingRejection, setPendingRejection] = useState<{ requestId: string; isManagerReject: boolean } | null>(null);
+  
+  // Approval dialog state with amount
+  const [showApprovalDialog, setShowApprovalDialog] = useState(false);
+  const [approvedAmount, setApprovedAmount] = useState("");
+  const [approvalNotes, setApprovalNotes] = useState("");
+  const [pendingApproval, setPendingApproval] = useState<{ requestId: string; isManagerApproval: boolean } | null>(null);
+  
+  // Bulk download state
+  const [showBulkDownloadDialog, setShowBulkDownloadDialog] = useState(false);
+  const [bulkDownloadStartDate, setBulkDownloadStartDate] = useState<Date | undefined>(undefined);
+  const [bulkDownloadEndDate, setBulkDownloadEndDate] = useState<Date | undefined>(undefined);
+  const [isBulkDownloading, setIsBulkDownloading] = useState(false);
+  
+  // Bulk upload state
+  const [showBulkUploadDialog, setShowBulkUploadDialog] = useState(false);
+  const [isBulkUploading, setIsBulkUploading] = useState(false);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -138,11 +176,27 @@ export default function Requests() {
     }
   };
 
+  const handleBulkFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    const validFiles = files.filter(file => {
+      if (file.size > 20 * 1024 * 1024) {
+        toast.error(`${file.name} is too large (max 20MB)`);
+        return false;
+      }
+      return true;
+    });
+    setSelectedFiles(prev => [...prev, ...validFiles]);
+  };
+
   const clearSelectedFile = () => {
     setSelectedFile(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
+  };
+
+  const removeBulkFile = (index: number) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
   // Fetch user's own requests
@@ -202,6 +256,12 @@ export default function Requests() {
     e.preventDefault();
     if (!user || !type || !title.trim()) return;
 
+    // Validate total payout for commission requests
+    if (type === "commission" && !totalPayoutRequested) {
+      toast.error("Total commission payout amount is required");
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       let filePath: string | null = null;
@@ -247,6 +307,8 @@ export default function Requests() {
         }
       }
 
+      const payoutAmount = type === "commission" ? parseFloat(totalPayoutRequested) : null;
+
       const { error } = await supabase.from("requests").insert({
         type,
         title: title.trim(),
@@ -255,6 +317,7 @@ export default function Requests() {
         file_path: filePath,
         approval_stage: approvalStage,
         assigned_manager_id: assignedManagerId,
+        total_payout_requested: payoutAmount,
       });
 
       if (error) throw error;
@@ -280,6 +343,7 @@ export default function Requests() {
               manager_name: managerProfile.full_name || "Manager",
               manager_email: managerProfile.email,
               has_attachment: !!filePath,
+              total_payout_requested: payoutAmount,
             },
           });
         } else {
@@ -305,6 +369,7 @@ export default function Requests() {
       setType("");
       setTitle("");
       setDescription("");
+      setTotalPayoutRequested("");
       clearSelectedFile();
       refetch();
 
@@ -316,11 +381,36 @@ export default function Requests() {
     }
   };
 
+  // Open approval dialog
+  const openApprovalDialog = (requestId: string, isManagerApproval: boolean) => {
+    const request = allRequests?.find(r => r.id === requestId);
+    if (request?.total_payout_requested) {
+      setApprovedAmount(request.total_payout_requested.toString());
+    } else {
+      setApprovedAmount("");
+    }
+    setApprovalNotes("");
+    setPendingApproval({ requestId, isManagerApproval });
+    setShowApprovalDialog(true);
+  };
+
+  // Open rejection dialog
+  const openRejectionDialog = (requestId: string, isManagerReject: boolean) => {
+    setRejectionReason("");
+    setPendingRejection({ requestId, isManagerReject });
+    setShowRejectionDialog(true);
+  };
+
   // Handle manager approval (stage 1 for commission requests)
-  const handleManagerApproval = async (requestId: string, approved: boolean, notes?: string) => {
+  const handleManagerApproval = async () => {
+    if (!pendingApproval || !approvedAmount) {
+      toast.error("Please enter the approved amount");
+      return;
+    }
+    
     setIsUpdating(true);
     try {
-      // Get the request details first
+      const { requestId } = pendingApproval;
       const request = allRequests?.find(r => r.id === requestId);
       if (!request) throw new Error("Request not found");
 
@@ -338,74 +428,45 @@ export default function Requests() {
         .eq("id", user!.id)
         .single();
 
-      if (approved) {
-        // Manager approved - move to admin review
-        const { error } = await supabase
-          .from("requests")
-          .update({ 
-            approval_stage: "manager_approved",
-            manager_approved_at: new Date().toISOString(),
-            manager_notes: notes || null,
-          })
-          .eq("id", requestId);
+      // Manager approved - move to admin review
+      const { error } = await supabase
+        .from("requests")
+        .update({ 
+          approval_stage: "manager_approved",
+          manager_approved_at: new Date().toISOString(),
+          manager_notes: approvalNotes || null,
+          approved_amount: parseFloat(approvedAmount),
+        })
+        .eq("id", requestId);
 
-        if (error) throw error;
+      if (error) throw error;
 
-        // Send notification to accounting department
-        try {
-          await supabase.functions.invoke("send-commission-notification", {
-            body: {
-              notification_type: "accounting_review",
-              request_id: requestId,
-              title: request.title,
-              submitter_name: submitterProfile?.full_name || "Employee",
-              submitter_email: submitterProfile?.email || "",
-              manager_name: managerProfile?.full_name || "Manager",
-              manager_notes: notes || null,
-              has_attachment: !!request.file_path,
-            },
-          });
-        } catch (emailError) {
-          console.error("Failed to send commission notification:", emailError);
-        }
-
-        toast.success("Commission approved and sent to accounting for processing!");
-      } else {
-        // Manager rejected
-        const { error } = await supabase
-          .from("requests")
-          .update({ 
-            status: "rejected",
-            approval_stage: "rejected",
-            manager_notes: notes || null,
-          })
-          .eq("id", requestId);
-
-        if (error) throw error;
-
-        // Send rejection notification to submitter
-        try {
-          await supabase.functions.invoke("send-commission-notification", {
-            body: {
-              notification_type: "rejected",
-              request_id: requestId,
-              title: request.title,
-              submitter_name: submitterProfile?.full_name || "Employee",
-              submitter_email: submitterProfile?.email || "",
-              manager_notes: notes || null,
-              has_attachment: !!request.file_path,
-            },
-          });
-        } catch (emailError) {
-          console.error("Failed to send rejection notification:", emailError);
-        }
-
-        toast.success("Commission rejected.");
+      // Send notification to accounting department
+      try {
+        await supabase.functions.invoke("send-commission-notification", {
+          body: {
+            notification_type: "accounting_review",
+            request_id: requestId,
+            title: request.title,
+            submitter_name: submitterProfile?.full_name || "Employee",
+            submitter_email: submitterProfile?.email || "",
+            manager_name: managerProfile?.full_name || "Manager",
+            manager_notes: approvalNotes || null,
+            has_attachment: !!request.file_path,
+            total_payout_requested: request.total_payout_requested,
+            approved_amount: parseFloat(approvedAmount),
+          },
+        });
+      } catch (emailError) {
+        console.error("Failed to send commission notification:", emailError);
       }
 
+      toast.success("Commission approved and sent to accounting for processing!");
       refetchAll();
       refetch();
       setSelectedRequest(null);
+      setShowApprovalDialog(false);
+      setPendingApproval(null);
     } catch (error) {
       toast.error("Failed to update request");
     } finally {
@@ -413,11 +474,16 @@ export default function Requests() {
     }
   };
 
-  // Handle admin final approval (stage 2 for commission requests)
-  const handleAdminApproval = async (requestId: string, approved: boolean) => {
+  // Handle rejection with required reason
+  const handleRejection = async () => {
+    if (!pendingRejection || !rejectionReason.trim()) {
+      toast.error("Please provide a reason for rejection");
+      return;
+    }
+    
     setIsUpdating(true);
     try {
-      // Get the request details first
+      const { requestId, isManagerReject } = pendingRejection;
       const request = allRequests?.find(r => r.id === requestId);
       if (!request) throw new Error("Request not found");
 
@@ -431,9 +497,82 @@ export default function Requests() {
       const { error } = await supabase
         .from("requests")
         .update({ 
-          status: approved ? "approved" : "rejected",
-          approval_stage: approved ? "approved" : "rejected",
+          status: "rejected",
+          approval_stage: "rejected",
+          manager_notes: isManagerReject ? rejectionReason : request.manager_notes,
+          rejection_reason: rejectionReason,
+        })
+        .eq("id", requestId);
+
+      if (error) throw error;
+
+      // Send rejection notification to submitter with revision request
+      try {
+        await supabase.functions.invoke("send-commission-notification", {
+          body: {
+            notification_type: "rejected",
+            request_id: requestId,
+            title: request.title,
+            submitter_name: submitterProfile?.full_name || "Employee",
+            submitter_email: submitterProfile?.email || "",
+            manager_notes: rejectionReason,
+            has_attachment: !!request.file_path,
+            rejection_reason: rejectionReason,
+          },
+        });
+      } catch (emailError) {
+        console.error("Failed to send rejection notification:", emailError);
+      }
+
+      toast.success("Commission rejected. Submitter has been notified to make revisions.");
+      refetchAll();
+      refetch();
+      setSelectedRequest(null);
+      setShowRejectionDialog(false);
+      setPendingRejection(null);
+      setRejectionReason("");
+    } catch (error) {
+      toast.error("Failed to update request");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  // Handle admin final approval (stage 2 for commission requests)
+  const handleAdminApproval = async (requestId: string, approved: boolean) => {
+    if (approved) {
+      openApprovalDialog(requestId, false);
+      return;
+    }
+    openRejectionDialog(requestId, false);
+  };
+
+  // Process admin approval with amount
+  const processAdminApproval = async () => {
+    if (!pendingApproval) return;
+    
+    setIsUpdating(true);
+    try {
+      const { requestId } = pendingApproval;
+      const request = allRequests?.find(r => r.id === requestId);
+      if (!request) throw new Error("Request not found");
+
+      // Get submitter profile
+      const { data: submitterProfile } = await supabase
+        .from("profiles")
+        .select("full_name, email")
+        .eq("id", request.submitted_by)
+        .single();
+
+      const finalAmount = approvedAmount ? parseFloat(approvedAmount) : request.approved_amount;
+
+      const { error } = await supabase
+        .from("requests")
+        .update({ 
+          status: "approved",
+          approval_stage: "approved",
           assigned_to: user?.id,
+          approved_amount: finalAmount,
         })
         .eq("id", requestId);
 
@@ -443,22 +582,25 @@ export default function Requests() {
       try {
         await supabase.functions.invoke("send-commission-notification", {
           body: {
-            notification_type: approved ? "approved" : "rejected",
+            notification_type: "approved",
             request_id: requestId,
             title: request.title,
             submitter_name: submitterProfile?.full_name || "Employee",
             submitter_email: submitterProfile?.email || "",
             has_attachment: !!request.file_path,
+            approved_amount: finalAmount,
           },
         });
       } catch (emailError) {
         console.error("Failed to send notification:", emailError);
       }
 
-      toast.success(`Commission ${approved ? 'approved' : 'rejected'}!`);
+      toast.success("Commission approved!");
       refetchAll();
       refetch();
       setSelectedRequest(null);
+      setShowApprovalDialog(false);
+      setPendingApproval(null);
     } catch (error) {
       toast.error("Failed to update request");
     } finally {
@@ -487,6 +629,158 @@ export default function Requests() {
       toast.error("Failed to update request");
     } finally {
       setIsUpdating(false);
+    }
+  };
+
+  // Bulk download attachments
+  const handleBulkDownload = async () => {
+    if (!bulkDownloadStartDate || !bulkDownloadEndDate) {
+      toast.error("Please select both start and end dates");
+      return;
+    }
+
+    setIsBulkDownloading(true);
+    try {
+      const commissionRequests = allRequests?.filter(r => 
+        r.type === 'commission' && 
+        r.file_path &&
+        isWithinInterval(new Date(r.created_at), {
+          start: startOfDay(bulkDownloadStartDate),
+          end: endOfDay(bulkDownloadEndDate)
+        })
+      ) || [];
+
+      if (commissionRequests.length === 0) {
+        toast.error("No commission attachments found in the selected date range");
+        return;
+      }
+
+      // Download each file
+      for (const request of commissionRequests) {
+        if (request.file_path) {
+          const { data } = await supabase.storage
+            .from("request-attachments")
+            .createSignedUrl(request.file_path, 60);
+          if (data?.signedUrl) {
+            // Create a temporary link to download
+            const link = document.createElement('a');
+            link.href = data.signedUrl;
+            link.download = `${request.title.replace(/[^a-z0-9]/gi, '_')}_${format(new Date(request.created_at), 'yyyy-MM-dd')}.${request.file_path.split('.').pop()}`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            // Small delay between downloads
+            await new Promise(resolve => setTimeout(resolve, 500));
+          }
+        }
+      }
+
+      toast.success(`Downloaded ${commissionRequests.length} attachments`);
+      setShowBulkDownloadDialog(false);
+    } catch (error) {
+      console.error("Bulk download error:", error);
+      toast.error("Failed to download some attachments");
+    } finally {
+      setIsBulkDownloading(false);
+    }
+  };
+
+  // Bulk upload commission requests
+  const handleBulkUpload = async () => {
+    if (selectedFiles.length === 0) {
+      toast.error("Please select files to upload");
+      return;
+    }
+
+    setIsBulkUploading(true);
+    try {
+      // Get manager assignment
+      let approvalStage = "pending";
+      let assignedManagerId: string | null = null;
+      let managerProfile: { full_name: string | null; email: string | null } | null = null;
+
+      const { data: assignment } = await supabase
+        .from("team_assignments")
+        .select("manager_id")
+        .eq("employee_id", user!.id)
+        .maybeSingle();
+
+      if (assignment?.manager_id) {
+        approvalStage = "pending_manager";
+        assignedManagerId = assignment.manager_id;
+        
+        const { data: manager } = await supabase
+          .from("profiles")
+          .select("full_name, email")
+          .eq("id", assignment.manager_id)
+          .single();
+        
+        managerProfile = manager;
+      }
+
+      let successCount = 0;
+      for (const file of selectedFiles) {
+        const fileExt = file.name.split(".").pop();
+        const fileName = `${user!.id}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from("request-attachments")
+          .upload(fileName, file);
+
+        if (uploadError) {
+          console.error(`Failed to upload ${file.name}:`, uploadError);
+          continue;
+        }
+
+        const { error } = await supabase.from("requests").insert({
+          type: "commission",
+          title: file.name.replace(/\.[^/.]+$/, ""),
+          description: "Bulk uploaded commission form",
+          submitted_by: user!.id,
+          file_path: fileName,
+          approval_stage: approvalStage,
+          assigned_manager_id: assignedManagerId,
+        });
+
+        if (!error) successCount++;
+      }
+
+      // Send notification to manager if assigned
+      if (assignedManagerId && managerProfile?.email && successCount > 0) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("full_name, email")
+          .eq("id", user!.id)
+          .single();
+
+        try {
+          await supabase.functions.invoke("send-commission-notification", {
+            body: {
+              notification_type: "manager_review",
+              request_id: "",
+              title: `Bulk Upload: ${successCount} Commission Form(s)`,
+              submitter_name: profile?.full_name || user!.email || "Unknown",
+              submitter_email: user!.email || "",
+              manager_name: managerProfile.full_name || "Manager",
+              manager_email: managerProfile.email,
+              has_attachment: true,
+            },
+          });
+        } catch (emailError) {
+          console.error("Failed to send bulk upload notification:", emailError);
+        }
+      }
+
+      toast.success(`Successfully uploaded ${successCount} of ${selectedFiles.length} files`);
+      setShowBulkUploadDialog(false);
+      setSelectedFiles([]);
+      refetch();
+      refetchAll();
+    } catch (error) {
+      console.error("Bulk upload error:", error);
+      toast.error("Failed to complete bulk upload");
+    } finally {
+      setIsBulkUploading(false);
     }
   };
 
@@ -575,6 +869,8 @@ export default function Requests() {
                 setTitle={setTitle}
                 description={description}
                 setDescription={setDescription}
+                totalPayoutRequested={totalPayoutRequested}
+                setTotalPayoutRequested={setTotalPayoutRequested}
                 isSubmitting={isSubmitting}
                 submitted={submitted}
                 handleSubmit={handleSubmit}
@@ -585,8 +881,9 @@ export default function Requests() {
                 requestTypes={requestTypes}
                 isManager={isManager}
                 isAdmin={isAdmin}
+                onOpenBulkUpload={() => setShowBulkUploadDialog(true)}
               />
-              <MyRequestsList requests={myRequests || []} />
+              <MyRequestsList requests={myRequests || []} isSubmitter />
             </TabsContent>
 
             <TabsContent value="review" className="space-y-4">
@@ -603,6 +900,7 @@ export default function Requests() {
                 onView={setSelectedRequest}
                 showSubmitter
                 showApprovalStage
+                showAmounts
               />
               
               <h2 className="text-lg font-semibold text-foreground mt-8">
@@ -613,18 +911,31 @@ export default function Requests() {
                 onView={setSelectedRequest}
                 showSubmitter
                 showApprovalStage
+                showAmounts
               />
             </TabsContent>
 
             <TabsContent value="commissions" className="space-y-4">
-              <h2 className="text-lg font-semibold text-foreground">
-                Commission Forms ({commissionRequests.length})
-              </h2>
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold text-foreground">
+                  Commission Forms ({commissionRequests.length})
+                </h2>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  onClick={() => setShowBulkDownloadDialog(true)}
+                >
+                  <Package className="w-4 h-4" />
+                  Bulk Download
+                </Button>
+              </div>
               <RequestsTable
                 requests={commissionRequests}
                 onView={setSelectedRequest}
                 showSubmitter
                 showApprovalStage
+                showAmounts
               />
             </TabsContent>
           </Tabs>
@@ -639,6 +950,8 @@ export default function Requests() {
               setTitle={setTitle}
               description={description}
               setDescription={setDescription}
+              totalPayoutRequested={totalPayoutRequested}
+              setTotalPayoutRequested={setTotalPayoutRequested}
               isSubmitting={isSubmitting}
               submitted={submitted}
               handleSubmit={handleSubmit}
@@ -649,14 +962,15 @@ export default function Requests() {
               requestTypes={requestTypes}
               isManager={isManager}
               isAdmin={isAdmin}
+              onOpenBulkUpload={() => setShowBulkUploadDialog(true)}
             />
-            <MyRequestsList requests={myRequests || []} />
+            <MyRequestsList requests={myRequests || []} isSubmitter />
           </div>
         )}
 
         {/* Request Detail Dialog */}
         <Dialog open={!!selectedRequest} onOpenChange={(open) => !open && setSelectedRequest(null)}>
-          <DialogContent className="max-w-lg">
+          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Request Details</DialogTitle>
             </DialogHeader>
@@ -691,7 +1005,77 @@ export default function Requests() {
                       {format(new Date(selectedRequest.created_at), "MMM d, yyyy 'at' h:mm a")}
                     </span>
                   </div>
+                  {selectedRequest.type === 'commission' && selectedRequest.total_payout_requested && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Total Payout Requested:</span>
+                      <span className="text-foreground font-semibold text-primary">
+                        ${selectedRequest.total_payout_requested.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                  )}
+                  {selectedRequest.type === 'commission' && selectedRequest.approved_amount && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Approved Amount:</span>
+                      <span className="text-foreground font-semibold text-green-600">
+                        ${selectedRequest.approved_amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                  )}
                 </div>
+
+                {/* Approval Stage Info for Submitter */}
+                {selectedRequest.type === 'commission' && selectedRequest.submitted_by === user?.id && (
+                  <div className="p-3 bg-primary/5 border border-primary/20 rounded-lg">
+                    <p className="text-sm font-medium text-foreground mb-2">Approval Progress:</p>
+                    <div className="flex items-center gap-2 text-sm">
+                      {selectedRequest.approval_stage === 'pending_manager' && (
+                        <>
+                          <Clock className="w-4 h-4 text-amber-500" />
+                          <span>Awaiting manager review</span>
+                        </>
+                      )}
+                      {selectedRequest.approval_stage === 'manager_approved' && (
+                        <>
+                          <CheckCircle className="w-4 h-4 text-blue-500" />
+                          <span>Manager approved - Payment approved & requested</span>
+                          {selectedRequest.approved_amount && (
+                            <Badge variant="secondary" className="ml-2">
+                              ${selectedRequest.approved_amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                            </Badge>
+                          )}
+                        </>
+                      )}
+                      {selectedRequest.approval_stage === 'approved' && (
+                        <>
+                          <CheckCircle className="w-4 h-4 text-green-500" />
+                          <span>Fully approved - Payment processing</span>
+                        </>
+                      )}
+                      {selectedRequest.approval_stage === 'rejected' && (
+                        <>
+                          <XSquare className="w-4 h-4 text-red-500" />
+                          <span>Rejected - Revisions requested</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Rejection Reason Display */}
+                {selectedRequest.rejection_reason && (
+                  <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                    <p className="text-sm font-medium text-red-700 dark:text-red-400 mb-1">Rejection Reason:</p>
+                    <p className="text-sm text-red-600 dark:text-red-300">{selectedRequest.rejection_reason}</p>
+                  </div>
+                )}
+
+                {/* Manager Notes Display */}
+                {selectedRequest.manager_notes && !selectedRequest.rejection_reason && (
+                  <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                    <p className="text-sm font-medium text-blue-700 dark:text-blue-400 mb-1">Manager Notes:</p>
+                    <p className="text-sm text-blue-600 dark:text-blue-300">{selectedRequest.manager_notes}</p>
+                  </div>
+                )}
 
                 {/* Attached File */}
                 {selectedRequest.file_path && (
@@ -723,24 +1107,29 @@ export default function Requests() {
                       <>
                         <p className="text-sm text-muted-foreground">
                           This commission form needs your approval before going to admin.
+                          {selectedRequest.total_payout_requested && (
+                            <span className="block mt-1 font-medium text-primary">
+                              Requested Amount: ${selectedRequest.total_payout_requested.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                            </span>
+                          )}
                         </p>
                         <div className="flex gap-3">
                           <Button
                             variant="outline"
                             className="flex-1"
-                            onClick={() => handleManagerApproval(selectedRequest.id, false)}
+                            onClick={() => openRejectionDialog(selectedRequest.id, true)}
                             disabled={isUpdating}
                           >
-                            {isUpdating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <XSquare className="w-4 h-4 mr-2" />}
-                            Reject
+                            <XSquare className="w-4 h-4 mr-2" />
+                            Request Revisions
                           </Button>
                           <Button
                             variant="neon"
                             className="flex-1"
-                            onClick={() => handleManagerApproval(selectedRequest.id, true)}
+                            onClick={() => openApprovalDialog(selectedRequest.id, true)}
                             disabled={isUpdating}
                           >
-                            {isUpdating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CheckSquare className="w-4 h-4 mr-2" />}
+                            <CheckSquare className="w-4 h-4 mr-2" />
                             Approve & Send to Admin
                           </Button>
                         </div>
@@ -751,9 +1140,14 @@ export default function Requests() {
                     {selectedRequest.type === 'commission' && (selectedRequest.approval_stage === 'manager_approved' || (selectedRequest.approval_stage === 'pending' && isAdmin)) && isAdmin && (
                       <>
                         {selectedRequest.approval_stage === 'manager_approved' && (
-                          <p className="text-sm text-green-600 bg-green-50 p-2 rounded">
-                            ✓ Manager approved this commission
-                          </p>
+                          <div className="text-sm bg-green-50 dark:bg-green-900/20 p-3 rounded-lg border border-green-200 dark:border-green-800">
+                            <p className="text-green-700 dark:text-green-400 font-medium">✓ Manager approved this commission</p>
+                            {selectedRequest.approved_amount && (
+                              <p className="text-green-600 dark:text-green-300 mt-1">
+                                Approved Amount: ${selectedRequest.approved_amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                              </p>
+                            )}
+                          </div>
                         )}
                         <div className="flex gap-3">
                           <Button
@@ -762,7 +1156,7 @@ export default function Requests() {
                             onClick={() => handleAdminApproval(selectedRequest.id, false)}
                             disabled={isUpdating}
                           >
-                            {isUpdating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <XSquare className="w-4 h-4 mr-2" />}
+                            <XSquare className="w-4 h-4 mr-2" />
                             Reject
                           </Button>
                           <Button
@@ -771,7 +1165,7 @@ export default function Requests() {
                             onClick={() => handleAdminApproval(selectedRequest.id, true)}
                             disabled={isUpdating}
                           >
-                            {isUpdating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CheckSquare className="w-4 h-4 mr-2" />}
+                            <CheckSquare className="w-4 h-4 mr-2" />
                             Final Approve
                           </Button>
                         </div>
@@ -870,6 +1264,236 @@ export default function Requests() {
             )}
           </DialogContent>
         </Dialog>
+
+        {/* Rejection Dialog */}
+        <Dialog open={showRejectionDialog} onOpenChange={setShowRejectionDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Request Revisions</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <p className="text-sm text-muted-foreground">
+                Please provide a reason for rejection. The submitter will be notified and asked to make revisions.
+              </p>
+              <div className="space-y-2">
+                <Label htmlFor="rejection-reason">Reason for Rejection *</Label>
+                <Textarea
+                  id="rejection-reason"
+                  placeholder="Explain what needs to be revised..."
+                  value={rejectionReason}
+                  onChange={(e) => setRejectionReason(e.target.value)}
+                  rows={4}
+                  required
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowRejectionDialog(false)}>
+                Cancel
+              </Button>
+              <Button 
+                variant="destructive" 
+                onClick={handleRejection}
+                disabled={!rejectionReason.trim() || isUpdating}
+              >
+                {isUpdating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                Send Rejection
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Approval Dialog with Amount */}
+        <Dialog open={showApprovalDialog} onOpenChange={setShowApprovalDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Approve Commission</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="approved-amount">Approved Dollar Amount *</Label>
+                <div className="relative">
+                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    id="approved-amount"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="0.00"
+                    value={approvedAmount}
+                    onChange={(e) => setApprovedAmount(e.target.value)}
+                    className="pl-9"
+                    required
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="approval-notes">Notes (optional)</Label>
+                <Textarea
+                  id="approval-notes"
+                  placeholder="Any additional notes..."
+                  value={approvalNotes}
+                  onChange={(e) => setApprovalNotes(e.target.value)}
+                  rows={3}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowApprovalDialog(false)}>
+                Cancel
+              </Button>
+              <Button 
+                variant="neon" 
+                onClick={pendingApproval?.isManagerApproval ? handleManagerApproval : processAdminApproval}
+                disabled={!approvedAmount || isUpdating}
+              >
+                {isUpdating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CheckSquare className="w-4 h-4 mr-2" />}
+                Approve
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Bulk Download Dialog */}
+        <Dialog open={showBulkDownloadDialog} onOpenChange={setShowBulkDownloadDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Bulk Download Attachments</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <p className="text-sm text-muted-foreground">
+                Select a date range to download all commission form attachments.
+              </p>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Start Date</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="w-full justify-start text-left font-normal">
+                        <CalendarDays className="mr-2 h-4 w-4" />
+                        {bulkDownloadStartDate ? format(bulkDownloadStartDate, "PPP") : "Pick a date"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <CalendarComponent
+                        mode="single"
+                        selected={bulkDownloadStartDate}
+                        onSelect={setBulkDownloadStartDate}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                <div className="space-y-2">
+                  <Label>End Date</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="w-full justify-start text-left font-normal">
+                        <CalendarDays className="mr-2 h-4 w-4" />
+                        {bulkDownloadEndDate ? format(bulkDownloadEndDate, "PPP") : "Pick a date"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <CalendarComponent
+                        mode="single"
+                        selected={bulkDownloadEndDate}
+                        onSelect={setBulkDownloadEndDate}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowBulkDownloadDialog(false)}>
+                Cancel
+              </Button>
+              <Button 
+                variant="neon" 
+                onClick={handleBulkDownload}
+                disabled={!bulkDownloadStartDate || !bulkDownloadEndDate || isBulkDownloading}
+              >
+                {isBulkDownloading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
+                Download All
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Bulk Upload Dialog */}
+        <Dialog open={showBulkUploadDialog} onOpenChange={setShowBulkUploadDialog}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Bulk Upload Commission Forms</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <p className="text-sm text-muted-foreground">
+                Upload multiple commission forms at once. Each file will create a separate request.
+              </p>
+              
+              <input
+                ref={bulkFileInputRef}
+                type="file"
+                accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
+                multiple
+                onChange={handleBulkFileSelect}
+                className="hidden"
+              />
+
+              <Button
+                variant="outline"
+                onClick={() => bulkFileInputRef.current?.click()}
+                className="w-full justify-start gap-2"
+              >
+                <Upload className="w-4 h-4" />
+                Add Files
+              </Button>
+
+              {selectedFiles.length > 0 && (
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {selectedFiles.map((file, index) => (
+                    <div key={index} className="flex items-center gap-3 p-2 rounded-lg bg-secondary/50 border border-border/50">
+                      <File className="w-4 h-4 text-primary flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-foreground truncate">{file.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {(file.size / 1024 / 1024).toFixed(2)} MB
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeBulkFile(index)}
+                        className="flex-shrink-0"
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <p className="text-xs text-muted-foreground">
+                {selectedFiles.length} file(s) selected • Accepted formats: PDF, Word, Excel, Images (max 20MB each)
+              </p>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => { setShowBulkUploadDialog(false); setSelectedFiles([]); }}>
+                Cancel
+              </Button>
+              <Button 
+                variant="neon" 
+                onClick={handleBulkUpload}
+                disabled={selectedFiles.length === 0 || isBulkUploading}
+              >
+                {isBulkUploading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}
+                Upload {selectedFiles.length} File(s)
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </AppLayout>
   );
@@ -885,6 +1509,8 @@ function SubmitRequestForm({
   setTitle,
   description,
   setDescription,
+  totalPayoutRequested,
+  setTotalPayoutRequested,
   isSubmitting,
   submitted,
   handleSubmit,
@@ -895,6 +1521,7 @@ function SubmitRequestForm({
   requestTypes,
   isManager,
   isAdmin,
+  onOpenBulkUpload,
 }: {
   type: string;
   setType: (v: string) => void;
@@ -904,6 +1531,8 @@ function SubmitRequestForm({
   setTitle: (v: string) => void;
   description: string;
   setDescription: (v: string) => void;
+  totalPayoutRequested: string;
+  setTotalPayoutRequested: (v: string) => void;
   isSubmitting: boolean;
   submitted: boolean;
   handleSubmit: (e: React.FormEvent) => void;
@@ -914,13 +1543,22 @@ function SubmitRequestForm({
   requestTypes: RequestType[];
   isManager: boolean;
   isAdmin: boolean;
+  onOpenBulkUpload: () => void;
 }) {
   const canSubmitNewHire = isManager || isAdmin;
   const isNewHireFlow = type === "hr" && canSubmitNewHire && hrSubType === "new-hire";
 
   return (
     <div className="glass-card rounded-2xl p-6">
-      <h2 className="text-lg font-semibold text-foreground mb-6">Submit a Request</h2>
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-lg font-semibold text-foreground">Submit a Request</h2>
+        {type === "commission" && (
+          <Button variant="outline" size="sm" className="gap-2" onClick={onOpenBulkUpload}>
+            <Package className="w-4 h-4" />
+            Bulk Upload
+          </Button>
+        )}
+      </div>
 
       {submitted ? (
         <div className="flex flex-col items-center justify-center py-8">
@@ -1072,6 +1710,33 @@ function SubmitRequestForm({
                     />
                   </div>
 
+                  {/* Total Payout Requested - Required for Commission */}
+                  {type === "commission" && (
+                    <div className="space-y-2">
+                      <Label htmlFor="total-payout" className="flex items-center gap-1">
+                        Total Commission Payout Requested *
+                        <span className="text-xs text-muted-foreground">(required)</span>
+                      </Label>
+                      <div className="relative">
+                        <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <Input
+                          id="total-payout"
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          placeholder="0.00"
+                          value={totalPayoutRequested}
+                          onChange={(e) => setTotalPayoutRequested(e.target.value)}
+                          className="pl-9"
+                          required
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Enter the total dollar amount you are requesting for all submitted commission documents.
+                      </p>
+                    </div>
+                  )}
+
                   <div className="space-y-2">
                     <Label htmlFor="description">
                       {type === "commission" ? "Commission Details" : "Description (optional)"}
@@ -1080,7 +1745,7 @@ function SubmitRequestForm({
                       id="description"
                       placeholder={
                         type === "commission"
-                          ? "Enter commission amount, job details, and any relevant notes for your manager..."
+                          ? "Enter job details and any relevant notes for your manager..."
                           : "Provide additional details..."
                       }
                       value={description}
@@ -1138,7 +1803,11 @@ function SubmitRequestForm({
                     </p>
                   </div>
 
-                  <Button type="submit" variant="neon" disabled={!type || !title.trim() || isSubmitting}>
+                  <Button 
+                    type="submit" 
+                    variant="neon" 
+                    disabled={!type || !title.trim() || (type === "commission" && !totalPayoutRequested) || isSubmitting}
+                  >
                     {isSubmitting ? (
                       <>
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -1162,7 +1831,7 @@ function SubmitRequestForm({
 
 
 // My Requests List Component
-function MyRequestsList({ requests }: { requests: Request[] }) {
+function MyRequestsList({ requests, isSubmitter = false }: { requests: Request[]; isSubmitter?: boolean }) {
   if (!requests || requests.length === 0) return null;
 
   return (
@@ -1183,15 +1852,36 @@ function MyRequestsList({ requests }: { requests: Request[] }) {
                 )}
                 <div>
                   <p className="font-medium text-foreground">{request.title}</p>
+                  {request.type === 'commission' && request.total_payout_requested && (
+                    <p className="text-sm text-primary font-medium mt-0.5">
+                      Requested: ${request.total_payout_requested.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                    </p>
+                  )}
                   <p className="text-sm text-muted-foreground mt-1">
                     {request.description || "No description provided"}
                   </p>
                 </div>
               </div>
-              <Badge variant="outline" className={statusColors[request.status]}>
-                {statusLabels[request.status] || request.status.replace("_", " ")}
-              </Badge>
+              <div className="flex flex-col items-end gap-1">
+                <Badge variant="outline" className={statusColors[request.status]}>
+                  {statusLabels[request.status] || request.status.replace("_", " ")}
+                </Badge>
+                {isSubmitter && request.type === 'commission' && request.approved_amount && request.approval_stage !== 'pending_manager' && (
+                  <Badge variant="secondary" className="text-green-600">
+                    Approved: ${request.approved_amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                  </Badge>
+                )}
+              </div>
             </div>
+            
+            {/* Rejection reason for submitter */}
+            {isSubmitter && request.rejection_reason && (
+              <div className="mt-3 p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                <p className="text-xs font-medium text-red-700 dark:text-red-400">Revision Requested:</p>
+                <p className="text-xs text-red-600 dark:text-red-300">{request.rejection_reason}</p>
+              </div>
+            )}
+            
             <p className="text-xs text-muted-foreground mt-3">
               Submitted {formatDistanceToNow(new Date(request.created_at), { addSuffix: true })}
             </p>
@@ -1208,11 +1898,13 @@ function RequestsTable({
   onView,
   showSubmitter = false,
   showApprovalStage = false,
+  showAmounts = false,
 }: {
   requests: Request[];
   onView: (r: Request) => void;
   showSubmitter?: boolean;
   showApprovalStage?: boolean;
+  showAmounts?: boolean;
 }) {
   if (requests.length === 0) {
     return (
@@ -1225,7 +1917,7 @@ function RequestsTable({
   const approvalStageLabels: Record<string, string> = {
     pending: "Direct to Admin",
     pending_manager: "Awaiting Manager",
-    manager_approved: "Awaiting Admin",
+    manager_approved: "Payment Approved & Requested",
     approved: "Approved",
     rejected: "Rejected",
   };
@@ -1245,7 +1937,7 @@ function RequestsTable({
   };
 
   return (
-    <div className="glass-card rounded-xl overflow-hidden">
+    <div className="glass-card rounded-xl overflow-hidden overflow-x-auto">
       <table className="w-full">
         <thead>
           <tr className="border-b border-border/50">
@@ -1258,6 +1950,11 @@ function RequestsTable({
             {showSubmitter && (
               <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground hidden md:table-cell">
                 Submitted By
+              </th>
+            )}
+            {showAmounts && (
+              <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground hidden lg:table-cell">
+                Amount
               </th>
             )}
             <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground hidden lg:table-cell">
@@ -1298,6 +1995,24 @@ function RequestsTable({
               {showSubmitter && (
                 <td className="px-4 py-3 hidden md:table-cell text-muted-foreground">
                   {request.profiles?.full_name || request.profiles?.email || "Unknown"}
+                </td>
+              )}
+              {showAmounts && (
+                <td className="px-4 py-3 hidden lg:table-cell">
+                  {request.type === 'commission' && (
+                    <div className="text-sm">
+                      {request.total_payout_requested && (
+                        <p className="text-muted-foreground">
+                          Req: <span className="text-primary font-medium">${request.total_payout_requested.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                        </p>
+                      )}
+                      {request.approved_amount && (
+                        <p className="text-green-600 font-medium">
+                          Appr: ${request.approved_amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </td>
               )}
               <td className="px-4 py-3 hidden lg:table-cell text-muted-foreground text-sm">
