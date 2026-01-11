@@ -24,6 +24,7 @@ import {
   Menu,
   X,
   User,
+  Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -97,6 +98,12 @@ const navigation: NavItem[] = [
     href: "/company",
     icon: Building2,
     sectionKey: "company",
+  },
+  {
+    title: "Team Directory",
+    href: "/directory",
+    icon: Users,
+    sectionKey: "dashboard", // Allow anyone with dashboard access to see directory
   },
 ];
 
