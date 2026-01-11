@@ -1,13 +1,17 @@
 import { useMemo, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from "@/components/ui/chart";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line, ResponsiveContainer, AreaChart, Area } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { format, subMonths, startOfMonth, endOfMonth, eachMonthOfInterval, parseISO } from "date-fns";
-import { Loader2, TrendingUp, TrendingDown, DollarSign, Users, FileCheck, Clock } from "lucide-react";
+import { Loader2, TrendingUp, TrendingDown, DollarSign, Users, FileCheck, Clock, Download, FileSpreadsheet, FileText } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
+import jsPDF from "jspdf";
 
 interface CommissionData {
   id: string;
@@ -221,6 +225,175 @@ export function CommissionReportDashboard() {
     }).format(value);
   };
 
+  const formatCurrencyForExport = (value: number) => {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(value);
+  };
+
+  // Export to CSV
+  const exportToCSV = () => {
+    try {
+      const headers = ["Date", "Employee", "Title", "Requested", "Approved", "Status"];
+      const rows = filteredData.map(item => [
+        format(parseISO(item.created_at), "yyyy-MM-dd"),
+        item.submitter_name || "Unknown",
+        `"${item.title.replace(/"/g, '""')}"`,
+        item.total_payout_requested?.toFixed(2) || "0.00",
+        item.approved_amount?.toFixed(2) || "",
+        item.status === "approved" || item.approval_stage === "manager_approved" ? "Approved" : item.status === "rejected" ? "Rejected" : "Pending"
+      ]);
+
+      // Add summary row
+      rows.push([]);
+      rows.push(["SUMMARY"]);
+      rows.push(["Total Requested", "", "", stats.totalRequested.toFixed(2)]);
+      rows.push(["Total Approved", "", "", "", stats.totalApproved.toFixed(2)]);
+      rows.push(["Approval Rate", "", "", "", "", `${stats.approvalRate.toFixed(1)}%`]);
+
+      const csvContent = [headers.join(","), ...rows.map(row => row.join(","))].join("\n");
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `commission-report-${format(new Date(), "yyyy-MM-dd")}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      toast.success("CSV report downloaded successfully");
+    } catch (error) {
+      console.error("Error exporting CSV:", error);
+      toast.error("Failed to export CSV");
+    }
+  };
+
+  // Export to PDF
+  const exportToPDF = () => {
+    try {
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.getWidth();
+      let yPosition = 20;
+
+      // Title
+      doc.setFontSize(20);
+      doc.setFont("helvetica", "bold");
+      doc.text("Commission Report", pageWidth / 2, yPosition, { align: "center" });
+      yPosition += 10;
+
+      // Date range
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      const rangeLabels: Record<TimeRange, string> = {
+        "3months": "Last 3 Months",
+        "6months": "Last 6 Months",
+        "12months": "Last 12 Months",
+        "all": "All Time"
+      };
+      doc.text(`Report Period: ${rangeLabels[timeRange]}`, pageWidth / 2, yPosition, { align: "center" });
+      yPosition += 5;
+      doc.text(`Generated: ${format(new Date(), "MMMM d, yyyy")}`, pageWidth / 2, yPosition, { align: "center" });
+      yPosition += 15;
+
+      // Summary Section
+      doc.setFontSize(14);
+      doc.setFont("helvetica", "bold");
+      doc.text("Summary", 14, yPosition);
+      yPosition += 8;
+
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      const summaryData = [
+        ["Total Requested:", formatCurrencyForExport(stats.totalRequested)],
+        ["Total Approved:", formatCurrencyForExport(stats.totalApproved)],
+        ["Pending Requests:", stats.pendingCount.toString()],
+        ["Approved Requests:", stats.approvedCount.toString()],
+        ["Approval Rate:", `${stats.approvalRate.toFixed(1)}%`],
+      ];
+
+      summaryData.forEach(([label, value]) => {
+        doc.text(label, 14, yPosition);
+        doc.text(value, 70, yPosition);
+        yPosition += 6;
+      });
+      yPosition += 10;
+
+      // Monthly Breakdown Section
+      if (monthlyData.length > 0) {
+        doc.setFontSize(14);
+        doc.setFont("helvetica", "bold");
+        doc.text("Monthly Breakdown", 14, yPosition);
+        yPosition += 8;
+
+        doc.setFontSize(9);
+        doc.setFont("helvetica", "bold");
+        doc.text("Month", 14, yPosition);
+        doc.text("Requested", 60, yPosition);
+        doc.text("Approved", 100, yPosition);
+        doc.text("Count", 140, yPosition);
+        yPosition += 6;
+
+        doc.setFont("helvetica", "normal");
+        monthlyData.forEach((month) => {
+          if (yPosition > 270) {
+            doc.addPage();
+            yPosition = 20;
+          }
+          doc.text(month.month, 14, yPosition);
+          doc.text(formatCurrencyForExport(month.requested), 60, yPosition);
+          doc.text(formatCurrencyForExport(month.approved), 100, yPosition);
+          doc.text(month.count.toString(), 140, yPosition);
+          yPosition += 5;
+        });
+        yPosition += 10;
+      }
+
+      // Employee Breakdown Section
+      if (employeeData.length > 0) {
+        if (yPosition > 220) {
+          doc.addPage();
+          yPosition = 20;
+        }
+
+        doc.setFontSize(14);
+        doc.setFont("helvetica", "bold");
+        doc.text("Employee Breakdown", 14, yPosition);
+        yPosition += 8;
+
+        doc.setFontSize(9);
+        doc.setFont("helvetica", "bold");
+        doc.text("Employee", 14, yPosition);
+        doc.text("Requested", 70, yPosition);
+        doc.text("Approved", 110, yPosition);
+        doc.text("Count", 150, yPosition);
+        yPosition += 6;
+
+        doc.setFont("helvetica", "normal");
+        employeeData.forEach((emp) => {
+          if (yPosition > 270) {
+            doc.addPage();
+            yPosition = 20;
+          }
+          const name = emp.name.length > 25 ? emp.name.substring(0, 22) + "..." : emp.name;
+          doc.text(name, 14, yPosition);
+          doc.text(formatCurrencyForExport(emp.requested), 70, yPosition);
+          doc.text(formatCurrencyForExport(emp.approved), 110, yPosition);
+          doc.text(emp.count.toString(), 150, yPosition);
+          yPosition += 5;
+        });
+      }
+
+      doc.save(`commission-report-${format(new Date(), "yyyy-MM-dd")}.pdf`);
+      toast.success("PDF report downloaded successfully");
+    } catch (error) {
+      console.error("Error exporting PDF:", error);
+      toast.error("Failed to export PDF");
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -231,39 +404,60 @@ export function CommissionReportDashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Filters */}
-      <div className="flex flex-wrap gap-4">
-        <div className="space-y-1">
-          <label className="text-sm text-muted-foreground">Time Range</label>
-          <Select value={timeRange} onValueChange={(v) => setTimeRange(v as TimeRange)}>
-            <SelectTrigger className="w-40">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="3months">Last 3 Months</SelectItem>
-              <SelectItem value="6months">Last 6 Months</SelectItem>
-              <SelectItem value="12months">Last 12 Months</SelectItem>
-              <SelectItem value="all">All Time</SelectItem>
-            </SelectContent>
-          </Select>
+      {/* Filters and Export */}
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div className="flex flex-wrap gap-4">
+          <div className="space-y-1">
+            <label className="text-sm text-muted-foreground">Time Range</label>
+            <Select value={timeRange} onValueChange={(v) => setTimeRange(v as TimeRange)}>
+              <SelectTrigger className="w-40">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="3months">Last 3 Months</SelectItem>
+                <SelectItem value="6months">Last 6 Months</SelectItem>
+                <SelectItem value="12months">Last 12 Months</SelectItem>
+                <SelectItem value="all">All Time</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-sm text-muted-foreground">Employee</label>
+            <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
+              <SelectTrigger className="w-48">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Employees</SelectItem>
+                {employees.map(emp => (
+                  <SelectItem key={emp.id} value={emp.id}>
+                    {emp.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
-        <div className="space-y-1">
-          <label className="text-sm text-muted-foreground">Employee</label>
-          <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
-            <SelectTrigger className="w-48">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Employees</SelectItem>
-              {employees.map(emp => (
-                <SelectItem key={emp.id} value={emp.id}>
-                  {emp.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" className="gap-2">
+              <Download className="w-4 h-4" />
+              Export Report
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={exportToCSV} className="gap-2 cursor-pointer">
+              <FileSpreadsheet className="w-4 h-4" />
+              Download as CSV
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={exportToPDF} className="gap-2 cursor-pointer">
+              <FileText className="w-4 h-4" />
+              Download as PDF
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* Summary Cards */}
