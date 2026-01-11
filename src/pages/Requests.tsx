@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
+import { CommissionReportDashboard } from "@/components/reports/CommissionReportDashboard";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -40,6 +41,7 @@ import {
   UserPlus,
   CalendarDays,
   Package,
+  BarChart3,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -857,6 +859,10 @@ export default function Requests() {
                 <DollarSign className="w-4 h-4" />
                 Commissions
               </TabsTrigger>
+              <TabsTrigger value="reports" className="gap-2">
+                <BarChart3 className="w-4 h-4" />
+                Reports
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="submit" className="space-y-6">
@@ -937,6 +943,16 @@ export default function Requests() {
                 showApprovalStage
                 showAmounts
               />
+            </TabsContent>
+
+            <TabsContent value="reports" className="space-y-4">
+              <h2 className="text-lg font-semibold text-foreground">
+                Commission Reports & Analytics
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                View commission trends, employee performance, and approval statistics.
+              </p>
+              <CommissionReportDashboard />
             </TabsContent>
           </Tabs>
         ) : (
