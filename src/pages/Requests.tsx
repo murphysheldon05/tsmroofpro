@@ -18,6 +18,13 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import {
   Send,
@@ -137,6 +144,7 @@ export default function Requests() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [totalPayoutRequested, setTotalPayoutRequested] = useState("");
+  const [selectedManagerId, setSelectedManagerId] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<Request | null>(null);
@@ -145,6 +153,32 @@ export default function Requests() {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const bulkFileInputRef = useRef<HTMLInputElement>(null);
+
+  // Fetch all managers for commission form selection
+  const { data: managers = [] } = useQuery({
+    queryKey: ["managers-list"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("user_roles")
+        .select("user_id")
+        .eq("role", "manager");
+      
+      if (error) throw error;
+      
+      const managerIds = data.map(r => r.user_id);
+      
+      if (managerIds.length === 0) return [];
+      
+      const { data: profiles, error: profilesError } = await supabase
+        .from("profiles")
+        .select("id, full_name, email")
+        .in("id", managerIds)
+        .order("full_name");
+      
+      if (profilesError) throw profilesError;
+      return profiles || [];
+    },
+  });
   
   // Rejection dialog state
   const [showRejectionDialog, setShowRejectionDialog] = useState(false);
@@ -258,10 +292,16 @@ export default function Requests() {
     e.preventDefault();
     if (!user || !type || !title.trim()) return;
 
-    // Validate total payout for commission requests
-    if (type === "commission" && !totalPayoutRequested) {
-      toast.error("Total commission payout amount is required");
-      return;
+    // Validate total payout and manager for commission requests
+    if (type === "commission") {
+      if (!totalPayoutRequested) {
+        toast.error("Total commission payout amount is required");
+        return;
+      }
+      if (!selectedManagerId) {
+        toast.error("Please select your Sales Manager");
+        return;
+      }
     }
 
     setIsSubmitting(true);
@@ -281,32 +321,23 @@ export default function Requests() {
         filePath = fileName;
       }
 
-      // Check if this is a commission request and user has a manager assigned
+      // Set up manager approval for commission requests
       let approvalStage = "pending";
       let assignedManagerId: string | null = null;
       let managerProfile: { full_name: string | null; email: string | null } | null = null;
 
-      if (type === "commission") {
-        // Check if the user has a manager assigned
-        const { data: assignment } = await supabase
-          .from("team_assignments")
-          .select("manager_id")
-          .eq("employee_id", user.id)
-          .maybeSingle();
-
-        if (assignment?.manager_id) {
-          approvalStage = "pending_manager";
-          assignedManagerId = assignment.manager_id;
-          
-          // Get manager's profile for email notification
-          const { data: manager } = await supabase
-            .from("profiles")
-            .select("full_name, email")
-            .eq("id", assignment.manager_id)
-            .single();
-          
-          managerProfile = manager;
-        }
+      if (type === "commission" && selectedManagerId) {
+        approvalStage = "pending_manager";
+        assignedManagerId = selectedManagerId;
+        
+        // Get manager's profile for email notification
+        const { data: manager } = await supabase
+          .from("profiles")
+          .select("full_name, email")
+          .eq("id", selectedManagerId)
+          .single();
+        
+        managerProfile = manager;
       }
 
       const payoutAmount = type === "commission" ? parseFloat(totalPayoutRequested) : null;
@@ -372,6 +403,7 @@ export default function Requests() {
       setTitle("");
       setDescription("");
       setTotalPayoutRequested("");
+      setSelectedManagerId("");
       clearSelectedFile();
       refetch();
 
@@ -868,7 +900,7 @@ export default function Requests() {
             <TabsContent value="submit" className="space-y-6">
               <SubmitRequestForm
                 type={type}
-                setType={(v) => { setType(v); setHrSubType(null); }}
+                setType={(v) => { setType(v); setHrSubType(null); setSelectedManagerId(""); }}
                 hrSubType={hrSubType}
                 setHrSubType={setHrSubType}
                 title={title}
@@ -877,6 +909,9 @@ export default function Requests() {
                 setDescription={setDescription}
                 totalPayoutRequested={totalPayoutRequested}
                 setTotalPayoutRequested={setTotalPayoutRequested}
+                selectedManagerId={selectedManagerId}
+                setSelectedManagerId={setSelectedManagerId}
+                managers={managers}
                 isSubmitting={isSubmitting}
                 submitted={submitted}
                 handleSubmit={handleSubmit}
@@ -959,7 +994,7 @@ export default function Requests() {
           <div className="space-y-6">
           <SubmitRequestForm
               type={type}
-              setType={(v) => { setType(v); setHrSubType(null); }}
+              setType={(v) => { setType(v); setHrSubType(null); setSelectedManagerId(""); }}
               hrSubType={hrSubType}
               setHrSubType={setHrSubType}
               title={title}
@@ -968,6 +1003,9 @@ export default function Requests() {
               setDescription={setDescription}
               totalPayoutRequested={totalPayoutRequested}
               setTotalPayoutRequested={setTotalPayoutRequested}
+              selectedManagerId={selectedManagerId}
+              setSelectedManagerId={setSelectedManagerId}
+              managers={managers}
               isSubmitting={isSubmitting}
               submitted={submitted}
               handleSubmit={handleSubmit}
@@ -1527,6 +1565,9 @@ function SubmitRequestForm({
   setDescription,
   totalPayoutRequested,
   setTotalPayoutRequested,
+  selectedManagerId,
+  setSelectedManagerId,
+  managers,
   isSubmitting,
   submitted,
   handleSubmit,
@@ -1549,6 +1590,9 @@ function SubmitRequestForm({
   setDescription: (v: string) => void;
   totalPayoutRequested: string;
   setTotalPayoutRequested: (v: string) => void;
+  selectedManagerId: string;
+  setSelectedManagerId: (v: string) => void;
+  managers: { id: string; full_name: string | null; email: string | null }[];
   isSubmitting: boolean;
   submitted: boolean;
   handleSubmit: (e: React.FormEvent) => void;
@@ -1749,6 +1793,31 @@ function SubmitRequestForm({
                       </div>
                       <p className="text-xs text-muted-foreground">
                         Enter the total dollar amount you are requesting for all submitted commission documents.
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Sales Manager Selection - Required for Commission */}
+                  {type === "commission" && (
+                    <div className="space-y-2">
+                      <Label htmlFor="sales-manager" className="flex items-center gap-1">
+                        Sales Manager *
+                        <span className="text-xs text-muted-foreground">(required)</span>
+                      </Label>
+                      <Select value={selectedManagerId} onValueChange={setSelectedManagerId}>
+                        <SelectTrigger id="sales-manager">
+                          <SelectValue placeholder="Select your Sales Manager" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {managers.map((manager) => (
+                            <SelectItem key={manager.id} value={manager.id}>
+                              {manager.full_name || manager.email || "Unknown Manager"}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">
+                        Your commission form will be sent to this manager for review and approval.
                       </p>
                     </div>
                   )}
