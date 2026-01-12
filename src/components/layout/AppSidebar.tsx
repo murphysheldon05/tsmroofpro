@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Logo } from "@/components/Logo";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   LayoutDashboard,
   FileText,
@@ -33,6 +34,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { useCurrentUserPermissions, isSectionVisible } from "@/hooks/useUserPermissions";
+import { supabase } from "@/integrations/supabase/client";
 
 interface NavChild {
   title: string;
@@ -114,6 +116,56 @@ export function AppSidebar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [openSections, setOpenSections] = useState<string[]>(["SOP Library", "Training"]);
   const { data: userPermissions } = useCurrentUserPermissions();
+  const [profile, setProfile] = useState<{ avatar_url: string | null; full_name: string | null } | null>(null);
+
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const fetchProfile = async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("avatar_url, full_name")
+        .eq("id", user.id)
+        .single();
+      
+      if (data) setProfile(data);
+    };
+
+    fetchProfile();
+
+    // Subscribe to profile changes
+    const channel = supabase
+      .channel(`profile-avatar-${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'profiles',
+          filter: `id=eq.${user.id}`,
+        },
+        (payload) => {
+          setProfile({
+            avatar_url: payload.new.avatar_url,
+            full_name: payload.new.full_name,
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id]);
+
+  const getInitials = (name: string) => {
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
+  };
 
   const getRoleBadgeVariant = () => {
     if (role === 'admin') return 'destructive';
@@ -232,7 +284,7 @@ export function AppSidebar() {
       </nav>
 
       <div className="p-3 border-t border-sidebar-border space-y-2">
-        {/* User info with role badge */}
+        {/* User info with avatar and role badge */}
         <button
           onClick={() => handleNavClick("/profile")}
           className={cn(
@@ -243,10 +295,22 @@ export function AppSidebar() {
           )}
         >
           <div className="flex items-center gap-2 min-w-0">
-            <User className="w-4 h-4 flex-shrink-0" />
-            <span className="text-xs text-muted-foreground truncate">
-              {user?.email}
-            </span>
+            <Avatar className="w-8 h-8 flex-shrink-0 border border-border">
+              <AvatarImage src={profile?.avatar_url || undefined} alt={profile?.full_name || "Profile"} />
+              <AvatarFallback className="text-xs bg-muted">
+                {profile?.full_name ? getInitials(profile.full_name) : <User className="w-4 h-4" />}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex flex-col items-start min-w-0">
+              {profile?.full_name && (
+                <span className="text-sm font-medium truncate max-w-[120px]">
+                  {profile.full_name}
+                </span>
+              )}
+              <span className="text-xs text-muted-foreground truncate max-w-[120px]">
+                {user?.email}
+              </span>
+            </div>
           </div>
           <Badge variant={getRoleBadgeVariant()} className="ml-2 shrink-0">
             {getRoleLabel()}
