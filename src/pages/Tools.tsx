@@ -1,5 +1,5 @@
 import { AppLayout } from "@/components/layout/AppLayout";
-import { ExternalLink, Wrench, Loader2, Smartphone } from "lucide-react";
+import { ExternalLink, Wrench, Loader2, Smartphone, GraduationCap } from "lucide-react";
 import { useTools } from "@/hooks/useTools";
 import { Button } from "@/components/ui/button";
 
@@ -57,9 +57,26 @@ export default function Tools() {
                 </h3>
                 <p className="text-sm text-muted-foreground mt-2 mb-4">{tool.description}</p>
                 
-                {/* App Store Links */}
-                {(tool.ios_app_url || tool.android_app_url) && (
+                {/* Action Links */}
+                {(tool.ios_app_url || tool.android_app_url || tool.training_url) && (
                   <div className="flex flex-wrap gap-2 pt-3 border-t border-border/50">
+                    {tool.training_url && (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        asChild
+                        className="w-full"
+                      >
+                        <a
+                          href={tool.training_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          <GraduationCap className="w-3 h-3 mr-1" />
+                          Training Resources
+                        </a>
+                      </Button>
+                    )}
                     {tool.ios_app_url && (
                       <Button
                         variant="outline"

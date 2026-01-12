@@ -13,6 +13,7 @@ export interface Tool {
   is_active: boolean;
   ios_app_url: string | null;
   android_app_url: string | null;
+  training_url: string | null;
   created_at: string;
   updated_at: string;
 }
