@@ -733,6 +733,7 @@ export type Database = {
           is_active: boolean | null
           name: string
           sort_order: number | null
+          training_url: string | null
           updated_at: string
           url: string
         }
@@ -747,6 +748,7 @@ export type Database = {
           is_active?: boolean | null
           name: string
           sort_order?: number | null
+          training_url?: string | null
           updated_at?: string
           url: string
         }
@@ -761,6 +763,7 @@ export type Database = {
           is_active?: boolean | null
           name?: string
           sort_order?: number | null
+          training_url?: string | null
           updated_at?: string
           url?: string
         }
