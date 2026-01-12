@@ -80,6 +80,9 @@ export function useUpdateTool() {
       icon?: string | null;
       sort_order?: number;
       is_active?: boolean;
+      ios_app_url?: string | null;
+      android_app_url?: string | null;
+      training_url?: string | null;
     }) => {
       const { data, error } = await supabase
         .from("tools")
@@ -97,6 +100,28 @@ export function useUpdateTool() {
     },
     onError: (error) => {
       toast.error("Failed to update tool: " + error.message);
+    },
+  });
+}
+
+export function useDeleteTool() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("tools")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tools"] });
+      toast.success("Tool deleted successfully");
+    },
+    onError: (error) => {
+      toast.error("Failed to delete tool: " + error.message);
     },
   });
 }
