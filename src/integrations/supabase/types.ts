@@ -443,6 +443,39 @@ export type Database = {
         }
         Relationships: []
       }
+      commission_tiers: {
+        Row: {
+          allowed_op_percentages: number[]
+          allowed_profit_splits: number[]
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          allowed_op_percentages?: number[]
+          allowed_profit_splits?: number[]
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          allowed_op_percentages?: number[]
+          allowed_profit_splits?: number[]
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       compliance_requests: {
         Row: {
           created_at: string
@@ -1318,6 +1351,38 @@ export type Database = {
           url?: string
         }
         Relationships: []
+      }
+      user_commission_tiers: {
+        Row: {
+          assigned_at: string
+          assigned_by: string | null
+          id: string
+          tier_id: string
+          user_id: string
+        }
+        Insert: {
+          assigned_at?: string
+          assigned_by?: string | null
+          id?: string
+          tier_id: string
+          user_id: string
+        }
+        Update: {
+          assigned_at?: string
+          assigned_by?: string | null
+          id?: string
+          tier_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_commission_tiers_tier_id_fkey"
+            columns: ["tier_id"]
+            isOneToOne: false
+            referencedRelation: "commission_tiers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_files: {
         Row: {

@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Lock, Save, Send, ArrowLeft } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Lock, Save, Send, ArrowLeft, AlertTriangle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { 
   calculateAllFields, 
@@ -19,6 +20,7 @@ import {
   useUpdateCommissionDocument,
   type CommissionDocument 
 } from "@/hooks/useCommissionDocuments";
+import { useUserCommissionTier } from "@/hooks/useCommissionTiers";
 import { toast } from "sonner";
 
 interface CommissionDocumentFormProps {
@@ -36,13 +38,34 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
   const { user, role } = useAuth();
   const createMutation = useCreateCommissionDocument();
   const updateMutation = useUpdateCommissionDocument();
+  
+  // Fetch user's commission tier
+  const { data: userTier, isLoading: tierLoading } = useUserCommissionTier(user?.id);
+  
+  // Determine allowed options based on tier (admins/managers bypass tier restrictions)
+  const isPrivileged = role === 'admin' || role === 'manager';
+  const hasTier = !!userTier?.tier;
+  
+  const allowedOpPercentages = useMemo(() => {
+    if (isPrivileged || !userTier?.tier) {
+      return [0.10, 0.125, 0.15]; // Default options for privileged or unassigned
+    }
+    return userTier.tier.allowed_op_percentages;
+  }, [userTier, isPrivileged]);
+  
+  const allowedProfitSplits = useMemo(() => {
+    if (isPrivileged || !userTier?.tier) {
+      return [0.35, 0.40, 0.45, 0.50, 0.55, 0.60]; // Default options
+    }
+    return userTier.tier.allowed_profit_splits;
+  }, [userTier, isPrivileged]);
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState(() => ({
     job_name_id: document?.job_name_id ?? "",
     job_date: document?.job_date ?? "",
     sales_rep: document?.sales_rep ?? "",
     gross_contract_total: document?.gross_contract_total ?? 0,
-    op_percent: document?.op_percent ?? 0.10,
+    op_percent: document?.op_percent ?? (allowedOpPercentages[0] || 0.10),
     material_cost: document?.material_cost ?? 0,
     labor_cost: document?.labor_cost ?? 0,
     neg_exp_1: document?.neg_exp_1 ?? 0,
@@ -53,10 +76,10 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
     pos_exp_2: document?.pos_exp_2 ?? 0,
     pos_exp_3: document?.pos_exp_3 ?? 0,
     pos_exp_4: document?.pos_exp_4 ?? 0,
-    commission_rate: document?.commission_rate ?? 0.40,
+    commission_rate: document?.commission_rate ?? (allowedProfitSplits[0] || 0.40),
     advance_total: document?.advance_total ?? 0,
     notes: document?.notes ?? "",
-  });
+  }));
 
   // Live calculations
   const calculated = useMemo(() => {
@@ -125,8 +148,11 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
     navigate('/commission-documents');
   };
 
-  const isLoading = createMutation.isPending || updateMutation.isPending;
+  const isLoading = createMutation.isPending || updateMutation.isPending || tierLoading;
   const canEdit = !readOnly && (!document || document.status === 'draft');
+  
+  // Block submission for non-privileged users without a tier assignment
+  const canSubmit = isPrivileged || hasTier;
 
   // Helper to format percent for display in input (show as whole number like 15 for 0.15)
   const formatPercentForInput = (value: number) => (value * 100).toFixed(2);
@@ -138,7 +164,7 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to List
         </Button>
-        {canEdit && (
+        {canEdit && canSubmit && (
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => handleSave(false)} disabled={isLoading} className="transition-all hover:scale-105 active:scale-95">
               <Save className="h-4 w-4 mr-2" />
@@ -151,6 +177,28 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
           </div>
         )}
       </div>
+
+      {/* Tier assignment warning */}
+      {!canSubmit && !tierLoading && (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Commission Tier Required</AlertTitle>
+          <AlertDescription>
+            You have not been assigned a commission tier yet. Please contact your manager to get your commission tier configured before submitting commissions.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Display current tier info */}
+      {hasTier && (
+        <Alert>
+          <AlertTitle>Your Commission Tier: {userTier?.tier?.name}</AlertTitle>
+          <AlertDescription>
+            Available O&P options: {allowedOpPercentages.map(p => `${(p * 100)}%`).join(', ')} | 
+            Available Profit Splits: {allowedProfitSplits.map(p => `${(p * 100)}%`).join(', ')}
+          </AlertDescription>
+        </Alert>
+      )}
 
       <Card className="font-friendly overflow-hidden">
         <CardHeader className="bg-muted/50">
@@ -215,18 +263,22 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
               <Select
                 value={formData.op_percent.toString()}
                 onValueChange={(value) => setFormData(prev => ({ ...prev, op_percent: parseFloat(value) }))}
-                disabled={!canEdit}
+                disabled={!canEdit || !canSubmit}
               >
                 <SelectTrigger className={`${inputBaseClasses} font-financial`}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="bg-background border shadow-lg z-50">
-                  <SelectItem value="0.10">10%</SelectItem>
-                  <SelectItem value="0.125">12.5%</SelectItem>
-                  <SelectItem value="0.15">15%</SelectItem>
+                  {allowedOpPercentages.map((percent) => (
+                    <SelectItem key={percent} value={percent.toString()}>
+                      {(percent * 100)}%
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
-              <span className="text-sm text-muted-foreground">Select O&P %, options: 10%, 12.5%, 15%</span>
+              <span className="text-sm text-muted-foreground">
+                Select O&P % {hasTier && `(${userTier?.tier?.name})`}
+              </span>
             </div>
 
             {/* Contract Total (Net) - Calculated */}
@@ -421,21 +473,22 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
               <Select
                 value={formData.commission_rate.toString()}
                 onValueChange={(value) => setFormData(prev => ({ ...prev, commission_rate: parseFloat(value) }))}
-                disabled={!canEdit}
+                disabled={!canEdit || !canSubmit}
               >
                 <SelectTrigger className={`${inputBaseClasses} font-financial`}>
                   <SelectValue placeholder="Select %" />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="0.35">35%</SelectItem>
-                  <SelectItem value="0.40">40%</SelectItem>
-                  <SelectItem value="0.45">45%</SelectItem>
-                  <SelectItem value="0.50">50%</SelectItem>
-                  <SelectItem value="0.55">55%</SelectItem>
-                  <SelectItem value="0.60">60%</SelectItem>
+                <SelectContent className="bg-background border shadow-lg z-50">
+                  {allowedProfitSplits.map((percent) => (
+                    <SelectItem key={percent} value={percent.toString()}>
+                      {(percent * 100)}%
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
-              <span className="text-sm text-muted-foreground">Select profit split %, options: 35%, 40%, 45%, 50%, 55%, 60%</span>
+              <span className="text-sm text-muted-foreground">
+                Select profit split % {hasTier && `(${userTier?.tier?.name})`}
+              </span>
             </div>
 
             {/* Rep Commission - Calculated */}
