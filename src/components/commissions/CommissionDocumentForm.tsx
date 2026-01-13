@@ -457,18 +457,18 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
               <span className="text-sm text-muted-foreground"></span>
             </div>
 
-            {/* Company Profit - Calculated */}
+            {/* Net Profit After Commission - Calculated */}
             <div className="grid grid-cols-[200px_150px_1fr] gap-2 items-center py-2 border-b bg-muted/30">
               <Label className="font-semibold flex items-center gap-1">
-                Company Profit
+                Net Profit After Commission
                 <Lock className="h-3 w-3 text-muted-foreground" />
               </Label>
               <Input
-                value={formatCurrency(calculated.company_profit)}
+                value={formatCurrency(calculated.net_profit - calculated.rep_commission)}
                 disabled
                 className="font-mono bg-muted"
               />
-              <span className="text-sm text-muted-foreground">Total Company profit, not rep facing</span>
+              <span className="text-sm text-muted-foreground">Remaining profit after rep commission</span>
             </div>
 
             {/* Notes */}
