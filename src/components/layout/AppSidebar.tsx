@@ -27,6 +27,7 @@ import {
   User,
   Users,
   Truck,
+  DollarSign,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -104,6 +105,12 @@ const navigation: NavItem[] = [
     href: "/requests",
     icon: Send,
     sectionKey: "requests",
+  },
+  {
+    title: "Commissions",
+    href: "/commissions",
+    icon: DollarSign,
+    sectionKey: "requests", // Use requests permission for commission access
   },
   {
     title: "Company",

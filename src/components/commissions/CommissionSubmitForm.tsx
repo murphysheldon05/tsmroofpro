@@ -27,8 +27,8 @@ const formSchema = z.object({
   acculynx_job_id: z.string().optional(),
   job_type: z.enum(["insurance", "retail", "hoa"]),
   roof_type: z.enum(["shingle", "tile", "flat", "foam", "other"]),
-  contract_date: z.date(),
-  install_completion_date: z.date().optional(),
+  contract_date: z.string().min(1, "Contract date is required"),
+  install_completion_date: z.string().optional(),
   
   // Sales Rep Info
   sales_rep_name: z.string().min(1, "Sales rep name is required"),
@@ -118,8 +118,8 @@ export function CommissionSubmitForm({ variant = "employee" }: CommissionSubmitF
         acculynx_job_id: data.acculynx_job_id || null,
         job_type: data.job_type,
         roof_type: data.roof_type,
-        contract_date: data.contract_date.toISOString().split("T")[0],
-        install_completion_date: data.install_completion_date?.toISOString().split("T")[0] || null,
+        contract_date: data.contract_date,
+        install_completion_date: data.install_completion_date || null,
         sales_rep_name: isSubcontractor ? null : data.sales_rep_name,
         rep_role: isSubcontractor ? null : data.rep_role,
         commission_tier: isSubcontractor ? null : data.commission_tier,
@@ -249,8 +249,8 @@ export function CommissionSubmitForm({ variant = "employee" }: CommissionSubmitF
                 <FormItem>
                   <FormLabel>Contract Date *</FormLabel>
                   <DatePickerField
-                    value={field.value instanceof Date ? field.value : field.value ? new Date(field.value) : undefined}
-                    onChange={(date) => field.onChange(date)}
+                    value={field.value}
+                    onChange={field.onChange}
                     placeholder="Select contract date"
                   />
                   <FormMessage />
@@ -265,8 +265,8 @@ export function CommissionSubmitForm({ variant = "employee" }: CommissionSubmitF
                 <FormItem>
                   <FormLabel>Install Completion Date</FormLabel>
                   <DatePickerField
-                    value={field.value instanceof Date ? field.value : field.value ? new Date(field.value) : undefined}
-                    onChange={(date) => field.onChange(date)}
+                    value={field.value}
+                    onChange={field.onChange}
                     placeholder="Select completion date"
                   />
                   <FormMessage />
