@@ -473,11 +473,18 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
                 Net Profit After Commission
                 <Lock className="h-3 w-3 text-muted-foreground" />
               </Label>
-              <Input
-                value={formatCurrency(calculated.net_profit - calculated.rep_commission)}
-                disabled
-                className={calculatedInputClasses}
-              />
+              <div className="flex items-center gap-2">
+                <Input
+                  value={formatCurrency(calculated.net_profit - calculated.rep_commission)}
+                  disabled
+                  className={`${calculatedInputClasses} flex-1`}
+                />
+                <span className="font-financial text-sm text-muted-foreground whitespace-nowrap">
+                  {formData.gross_contract_total > 0 
+                    ? `${(((calculated.net_profit - calculated.rep_commission) / formData.gross_contract_total) * 100).toFixed(1)}% Net Margin`
+                    : '0.0% Net Margin'}
+                </span>
+              </div>
               <span className="text-sm text-muted-foreground">Remaining profit after rep commission</span>
             </div>
 
