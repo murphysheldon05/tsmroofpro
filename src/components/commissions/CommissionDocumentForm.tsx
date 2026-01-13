@@ -146,9 +146,9 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
         )}
       </div>
 
-      <Card>
+      <Card className="font-friendly">
         <CardHeader className="bg-muted/50">
-          <CardTitle className="text-xl text-center">TSM Roofing LLC Official Commission Document</CardTitle>
+          <CardTitle className="text-xl text-center font-friendly font-semibold">TSM Roofing LLC Official Commission Document</CardTitle>
         </CardHeader>
         <CardContent className="p-6">
           {/* Spreadsheet-like layout */}
@@ -224,14 +224,14 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
 
             {/* Contract Total (Net) - Calculated */}
             <div className="grid grid-cols-[200px_150px_1fr] gap-2 items-center py-2 border-b bg-muted/30">
-              <Label className="font-semibold flex items-center gap-1">
+              <Label className="font-medium flex items-center gap-1">
                 Contract Total (Net)
                 <Lock className="h-3 w-3 text-muted-foreground" />
               </Label>
               <Input
                 value={formatCurrency(calculated.contract_total_net)}
                 disabled
-                className="font-mono bg-muted"
+                className="font-friendly text-base tracking-wide bg-muted"
               />
               <span className="text-sm text-muted-foreground">Commissions and expenses calculated off of Net contract total.</span>
             </div>
@@ -396,14 +396,14 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
 
             {/* Net profit - Calculated */}
             <div className="grid grid-cols-[200px_150px_1fr] gap-2 items-center py-2 border-b bg-muted/30">
-              <Label className="font-semibold flex items-center gap-1">
+              <Label className="font-medium flex items-center gap-1">
                 Net profit
                 <Lock className="h-3 w-3 text-muted-foreground" />
               </Label>
               <Input
                 value={formatCurrency(calculated.net_profit)}
                 disabled
-                className="font-mono bg-muted"
+                className="font-friendly text-base tracking-wide bg-muted"
               />
               <span className="text-sm text-muted-foreground">This is the Commissionable profit on the job, calculated off the net contract after O&P is removed.</span>
             </div>
@@ -428,17 +428,17 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
             </div>
 
             {/* Rep Commission - Calculated */}
-            <div className="grid grid-cols-[200px_150px_1fr] gap-2 items-center py-2 border-b bg-green-50 dark:bg-green-900/20">
-              <Label className="font-semibold flex items-center gap-1">
+            <div className="grid grid-cols-[200px_150px_1fr] gap-2 items-center py-3 border-b bg-emerald-50 dark:bg-emerald-900/20 rounded-lg">
+              <Label className="font-semibold flex items-center gap-1 text-emerald-700 dark:text-emerald-400">
                 Rep Commission
-                <Lock className="h-3 w-3 text-muted-foreground" />
+                <Lock className="h-3 w-3" />
               </Label>
               <Input
                 value={formatCurrency(calculated.rep_commission)}
                 disabled
-                className="font-mono bg-green-100 dark:bg-green-900/30 font-bold"
+                className="font-friendly text-lg tracking-wide bg-emerald-100 dark:bg-emerald-900/30 font-semibold text-emerald-700 dark:text-emerald-300 border-emerald-200"
               />
-              <span className="text-sm text-muted-foreground">This is the total dollars paid to rep</span>
+              <span className="text-sm text-emerald-600 dark:text-emerald-400">This is the total dollars paid to rep</span>
             </div>
 
             {/* Advance Total */}
@@ -459,29 +459,29 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
 
             {/* Net Profit After Commission - Calculated */}
             <div className="grid grid-cols-[200px_150px_1fr] gap-2 items-center py-2 border-b bg-muted/30">
-              <Label className="font-semibold flex items-center gap-1">
+              <Label className="font-medium flex items-center gap-1">
                 Net Profit After Commission
                 <Lock className="h-3 w-3 text-muted-foreground" />
               </Label>
               <Input
                 value={formatCurrency(calculated.net_profit - calculated.rep_commission)}
                 disabled
-                className="font-mono bg-muted"
+                className="font-friendly text-base tracking-wide bg-muted"
               />
               <span className="text-sm text-muted-foreground">Remaining profit after rep commission</span>
             </div>
 
             {/* Company Profit - Admin Only */}
             {role === 'admin' && (
-              <div className="grid grid-cols-[200px_150px_1fr] gap-2 items-center py-2 border-b bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800">
-                <Label className="font-semibold flex items-center gap-1 text-amber-700 dark:text-amber-400">
+              <div className="grid grid-cols-[200px_150px_1fr] gap-2 items-center py-2 border-b bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800 rounded-lg">
+                <Label className="font-medium flex items-center gap-1 text-amber-700 dark:text-amber-400">
                   Company Profit
                   <Lock className="h-3 w-3" />
                 </Label>
                 <Input
                   value={formatCurrency(calculated.company_profit)}
                   disabled
-                  className="font-mono bg-amber-100 dark:bg-amber-900/50 border-amber-300 dark:border-amber-700"
+                  className="font-friendly text-base tracking-wide bg-amber-100 dark:bg-amber-900/50 border-amber-300 dark:border-amber-700"
                 />
                 <span className="text-sm text-amber-600 dark:text-amber-500">Admin only - Total company profit</span>
               </div>

@@ -120,15 +120,19 @@ export function calculateAllFields(data: CommissionDocumentData): CalculatedFiel
 }
 
 /**
- * Format currency for display (2 decimal places)
+ * Format currency for display - modern, clean format
  */
 export function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
+  const absValue = Math.abs(value);
+  const formatted = new Intl.NumberFormat('en-US', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  }).format(value);
+  }).format(absValue);
+  
+  if (value < 0) {
+    return `−$${formatted}`;
+  }
+  return `$${formatted}`;
 }
 
 /**
