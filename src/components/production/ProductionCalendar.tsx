@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DatePickerField } from "@/components/ui/date-picker-field";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   useProductionCalendarEvents,
@@ -739,24 +740,19 @@ export function ProductionCalendar() {
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="prod-start_date">Start Date *</Label>
-                <Input
-                  id="prod-start_date"
-                  type="date"
-                  value={newProductionEvent.start_date}
-                  onChange={(e) => setNewProductionEvent({ ...newProductionEvent, start_date: e.target.value })}
-                />
-              </div>
-              <div>
-                <Label htmlFor="prod-end_date">End Date</Label>
-                <Input
-                  id="prod-end_date"
-                  type="date"
-                  value={newProductionEvent.end_date}
-                  onChange={(e) => setNewProductionEvent({ ...newProductionEvent, end_date: e.target.value })}
-                />
-              </div>
+              <DatePickerField
+                label="Start Date"
+                required
+                value={newProductionEvent.start_date}
+                onChange={(v) => setNewProductionEvent({ ...newProductionEvent, start_date: v })}
+                id="prod-start_date"
+              />
+              <DatePickerField
+                label="End Date"
+                value={newProductionEvent.end_date}
+                onChange={(v) => setNewProductionEvent({ ...newProductionEvent, end_date: v })}
+                id="prod-end_date"
+              />
             </div>
           </div>
           <DialogFooter>
@@ -835,24 +831,19 @@ export function ProductionCalendar() {
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="edit-prod-start_date">Start Date *</Label>
-                  <Input
-                    id="edit-prod-start_date"
-                    type="date"
-                    value={editingProductionEvent.start_date}
-                    onChange={(e) => setEditingProductionEvent({ ...editingProductionEvent, start_date: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="edit-prod-end_date">End Date</Label>
-                  <Input
-                    id="edit-prod-end_date"
-                    type="date"
-                    value={editingProductionEvent.end_date || ""}
-                    onChange={(e) => setEditingProductionEvent({ ...editingProductionEvent, end_date: e.target.value || null })}
-                  />
-                </div>
+                <DatePickerField
+                  label="Start Date"
+                  required
+                  value={editingProductionEvent.start_date}
+                  onChange={(v) => setEditingProductionEvent({ ...editingProductionEvent, start_date: v })}
+                  id="edit-prod-start_date"
+                />
+                <DatePickerField
+                  label="End Date"
+                  value={editingProductionEvent.end_date || ""}
+                  onChange={(v) => setEditingProductionEvent({ ...editingProductionEvent, end_date: v || null })}
+                  id="edit-prod-end_date"
+                />
               </div>
             </div>
           )}
@@ -915,24 +906,19 @@ export function ProductionCalendar() {
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="del-start_date">Delivery Date *</Label>
-                <Input
-                  id="del-start_date"
-                  type="date"
-                  value={newDeliveryEvent.start_date}
-                  onChange={(e) => setNewDeliveryEvent({ ...newDeliveryEvent, start_date: e.target.value })}
-                />
-              </div>
-              <div>
-                <Label htmlFor="del-end_date">End Date</Label>
-                <Input
-                  id="del-end_date"
-                  type="date"
-                  value={newDeliveryEvent.end_date}
-                  onChange={(e) => setNewDeliveryEvent({ ...newDeliveryEvent, end_date: e.target.value })}
-                />
-              </div>
+              <DatePickerField
+                label="Delivery Date"
+                required
+                value={newDeliveryEvent.start_date}
+                onChange={(v) => setNewDeliveryEvent({ ...newDeliveryEvent, start_date: v })}
+                id="del-start_date"
+              />
+              <DatePickerField
+                label="End Date"
+                value={newDeliveryEvent.end_date}
+                onChange={(v) => setNewDeliveryEvent({ ...newDeliveryEvent, end_date: v })}
+                id="del-end_date"
+              />
             </div>
           </div>
           <DialogFooter>
@@ -993,24 +979,19 @@ export function ProductionCalendar() {
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="edit-del-start_date">Delivery Date *</Label>
-                  <Input
-                    id="edit-del-start_date"
-                    type="date"
-                    value={editingDeliveryEvent.start_date}
-                    onChange={(e) => setEditingDeliveryEvent({ ...editingDeliveryEvent, start_date: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="edit-del-end_date">End Date</Label>
-                  <Input
-                    id="edit-del-end_date"
-                    type="date"
-                    value={editingDeliveryEvent.end_date || ""}
-                    onChange={(e) => setEditingDeliveryEvent({ ...editingDeliveryEvent, end_date: e.target.value || null })}
-                  />
-                </div>
+                <DatePickerField
+                  label="Delivery Date"
+                  required
+                  value={editingDeliveryEvent.start_date}
+                  onChange={(v) => setEditingDeliveryEvent({ ...editingDeliveryEvent, start_date: v })}
+                  id="edit-del-start_date"
+                />
+                <DatePickerField
+                  label="End Date"
+                  value={editingDeliveryEvent.end_date || ""}
+                  onChange={(v) => setEditingDeliveryEvent({ ...editingDeliveryEvent, end_date: v || null })}
+                  id="edit-del-end_date"
+                />
               </div>
             </div>
           )}

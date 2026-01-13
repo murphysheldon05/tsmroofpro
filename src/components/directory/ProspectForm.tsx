@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useCreateProspect, useUpdateProspect, Prospect } from "@/hooks/useProspects";
 import { PROSPECT_TYPES, PROSPECT_SOURCES, PROSPECT_STAGES, ASSIGNED_OWNERS } from "@/lib/directoryConstants";
+import { DatePickerField } from "@/components/ui/date-picker-field";
 import { toast } from "sonner";
 
 interface ProspectFormProps {
@@ -39,6 +40,8 @@ export function ProspectForm({ open, onOpenChange, prospect }: ProspectFormProps
       assigned_owner: prospect?.assigned_owner || "",
     },
   });
+
+  const nextFollowupDate = watch("next_followup_date");
 
   const onSubmit = async (data: any) => {
     try {
@@ -128,10 +131,12 @@ export function ProspectForm({ open, onOpenChange, prospect }: ProspectFormProps
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="next_followup_date">Next Follow-Up Date</Label>
-              <Input id="next_followup_date" type="date" {...register("next_followup_date")} />
-            </div>
+            <DatePickerField
+              label="Next Follow-Up Date"
+              value={nextFollowupDate}
+              onChange={(v) => setValue("next_followup_date", v)}
+              id="next_followup_date"
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="notes">Notes</Label>

@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useCreateSubcontractor, useUpdateSubcontractor, Subcontractor } from "@/hooks/useSubcontractors";
 import { TRADE_TYPES, SERVICE_AREAS, ENTITY_STATUSES, DOC_STATUSES } from "@/lib/directoryConstants";
+import { DatePickerField } from "@/components/ui/date-picker-field";
 import { toast } from "sonner";
 
 interface SubcontractorFormProps {
@@ -41,6 +42,8 @@ export function SubcontractorForm({ open, onOpenChange, subcontractor }: Subcont
       ic_agreement_status: (subcontractor?.ic_agreement_status || "missing") as DocStatus,
     },
   });
+
+  const coiExpirationDate = watch("coi_expiration_date");
 
   const onSubmit = async (data: any) => {
     try {
@@ -119,10 +122,12 @@ export function SubcontractorForm({ open, onOpenChange, subcontractor }: Subcont
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="coi_expiration_date">COI Expiration Date</Label>
-              <Input id="coi_expiration_date" type="date" {...register("coi_expiration_date")} />
-            </div>
+            <DatePickerField
+              label="COI Expiration Date"
+              value={coiExpirationDate}
+              onChange={(v) => setValue("coi_expiration_date", v)}
+              id="coi_expiration_date"
+            />
             <div className="space-y-2">
               <Label>W-9 Status</Label>
               <Select defaultValue={watch("w9_status")} onValueChange={(v: DocStatus) => setValue("w9_status", v)}>
