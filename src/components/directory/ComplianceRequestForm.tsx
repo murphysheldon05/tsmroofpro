@@ -3,7 +3,6 @@ import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -13,6 +12,7 @@ import { useVendors, useUpdateVendor } from "@/hooks/useVendors";
 import { useProspects } from "@/hooks/useProspects";
 import { useCreateComplianceRequest } from "@/hooks/useComplianceRequests";
 import { COMPLIANCE_DOCS } from "@/lib/directoryConstants";
+import { DatePickerField } from "@/components/ui/date-picker-field";
 import { toast } from "sonner";
 import { Copy, Send } from "lucide-react";
 
@@ -26,6 +26,7 @@ export function ComplianceRequestForm({ open, onOpenChange }: ComplianceRequestF
   const [recipientId, setRecipientId] = useState<string>("");
   const [selectedDocs, setSelectedDocs] = useState<string[]>([]);
   const [generatedMessage, setGeneratedMessage] = useState<string>("");
+  const [dueDate, setDueDate] = useState<string>("");
 
   const { data: subcontractors = [] } = useSubcontractors();
   const { data: vendors = [] } = useVendors();
@@ -36,7 +37,6 @@ export function ComplianceRequestForm({ open, onOpenChange }: ComplianceRequestF
 
   const { register, handleSubmit, reset, watch } = useForm({
     defaultValues: {
-      due_date: "",
       notes: "",
     },
   });
@@ -60,7 +60,6 @@ export function ComplianceRequestForm({ open, onOpenChange }: ComplianceRequestF
 
   const generateEmailMessage = () => {
     const recipient = getSelectedRecipient();
-    const dueDate = watch("due_date");
     const notes = watch("notes");
     
     const docsList = selectedDocs.map((d) => 
@@ -112,7 +111,7 @@ Compliance Team`;
         recipient_id: recipientId,
         recipient_name: recipient.name,
         documents_requested: selectedDocs,
-        due_date: data.due_date || null,
+        due_date: dueDate || null,
         notes: data.notes || null,
         requested_by: null, // Will be set by RLS
       });
@@ -122,7 +121,7 @@ Compliance Team`;
         id: recipientId,
         last_requested_date: new Date().toISOString().split("T")[0],
         requested_docs: selectedDocs,
-        docs_due_date: data.due_date || null,
+        docs_due_date: dueDate || null,
       };
 
       // Set requested doc statuses to missing
@@ -149,6 +148,7 @@ Compliance Team`;
     setRecipientId("");
     setSelectedDocs([]);
     setGeneratedMessage("");
+    setDueDate("");
     onOpenChange(false);
   };
 
@@ -208,10 +208,12 @@ Compliance Team`;
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="due_date">Due Date</Label>
-              <Input id="due_date" type="date" {...register("due_date")} />
-            </div>
+            <DatePickerField
+              label="Due Date"
+              value={dueDate}
+              onChange={setDueDate}
+              id="due_date"
+            />
           </div>
 
           <div className="space-y-2">
