@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Lock, Save, Send, ArrowLeft } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { 
@@ -415,21 +416,25 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
 
             {/* Commission Rate */}
             <div className="grid grid-cols-[200px_150px_1fr] gap-2 items-center py-2 border-b transition-colors hover:bg-muted/20">
-              <Label className="font-medium">Comission Rate</Label>
-              <div className="relative group">
-                <Input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  max="100"
-                  value={formatPercentForInput(formData.commission_rate)}
-                  onChange={(e) => handlePercentChange('commission_rate', e.target.value)}
-                  disabled={!canEdit}
-                  className={`${numberInputClasses} pr-8`}
-                />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors group-hover:text-primary">%</span>
-              </div>
-              <span className="text-sm text-muted-foreground">This is the percentage of profit split allocated to the rep</span>
+              <Label className="font-medium">Profit Split %</Label>
+              <Select
+                value={formData.commission_rate.toString()}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, commission_rate: parseFloat(value) }))}
+                disabled={!canEdit}
+              >
+                <SelectTrigger className={`${inputBaseClasses} font-financial`}>
+                  <SelectValue placeholder="Select %" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="0.35">35%</SelectItem>
+                  <SelectItem value="0.40">40%</SelectItem>
+                  <SelectItem value="0.45">45%</SelectItem>
+                  <SelectItem value="0.50">50%</SelectItem>
+                  <SelectItem value="0.55">55%</SelectItem>
+                  <SelectItem value="0.60">60%</SelectItem>
+                </SelectContent>
+              </Select>
+              <span className="text-sm text-muted-foreground">Select profit split %, options: 35%, 40%, 45%, 50%, 55%, 60%</span>
             </div>
 
             {/* Rep Commission - Calculated */}
