@@ -1,0 +1,356 @@
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
+
+export interface CommissionSubmission {
+  id: string;
+  submitted_by: string;
+  submission_type: "employee" | "subcontractor";
+  status: "pending_review" | "revision_required" | "approved_for_payment" | "paid" | "on_hold";
+  
+  // Job Information
+  job_name: string;
+  job_address: string;
+  acculynx_job_id: string | null;
+  job_type: "insurance" | "retail" | "hoa";
+  roof_type: "shingle" | "tile" | "flat" | "foam" | "other";
+  contract_date: string;
+  install_completion_date: string | null;
+  
+  // Sales Rep Info
+  sales_rep_id: string | null;
+  sales_rep_name: string | null;
+  rep_role: "setter" | "closer" | "hybrid" | null;
+  commission_tier: "15_40_60" | "15_45_55" | "15_50_50" | "custom" | null;
+  custom_commission_percentage: number | null;
+  
+  // Subcontractor Info
+  subcontractor_name: string | null;
+  is_flat_fee: boolean;
+  flat_fee_amount: number | null;
+  
+  // Worksheet Data
+  contract_amount: number;
+  supplements_approved: number;
+  total_job_revenue: number;
+  commission_percentage: number;
+  gross_commission: number;
+  advances_paid: number;
+  net_commission_owed: number;
+  
+  // Workflow
+  reviewer_notes: string | null;
+  rejection_reason: string | null;
+  approved_at: string | null;
+  approved_by: string | null;
+  paid_at: string | null;
+  paid_by: string | null;
+  payout_batch_id: string | null;
+  
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CommissionAttachment {
+  id: string;
+  commission_id: string;
+  document_type: "contract" | "supplement" | "invoice" | "other";
+  file_name: string;
+  file_path: string;
+  file_size: number | null;
+  file_type: string | null;
+  uploaded_by: string | null;
+  created_at: string;
+}
+
+export interface CommissionStatusLog {
+  id: string;
+  commission_id: string;
+  previous_status: string | null;
+  new_status: string;
+  changed_by: string;
+  notes: string | null;
+  created_at: string;
+}
+
+export interface SalesRep {
+  id: string;
+  user_id: string | null;
+  full_name: string;
+  email: string | null;
+  is_active: boolean;
+}
+
+export interface CommissionReviewer {
+  id: string;
+  user_email: string;
+  user_name: string;
+  can_approve: boolean;
+  can_payout: boolean;
+  is_active: boolean;
+}
+
+// Commission tier percentages
+export const COMMISSION_TIERS: Record<string, number> = {
+  "15_40_60": 15,
+  "15_45_55": 15,
+  "15_50_50": 15,
+};
+
+export function useCommissionSubmissions() {
+  const { user } = useAuth();
+  
+  return useQuery({
+    queryKey: ["commission-submissions"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("commission_submissions")
+        .select("*")
+        .order("created_at", { ascending: false });
+      
+      if (error) throw error;
+      return data as CommissionSubmission[];
+    },
+    enabled: !!user,
+  });
+}
+
+export function useCommissionSubmission(id: string) {
+  const { user } = useAuth();
+  
+  return useQuery({
+    queryKey: ["commission-submission", id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("commission_submissions")
+        .select("*")
+        .eq("id", id)
+        .single();
+      
+      if (error) throw error;
+      return data as CommissionSubmission;
+    },
+    enabled: !!user && !!id,
+  });
+}
+
+export function useCreateCommission() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+  
+  return useMutation({
+    mutationFn: async (data: Partial<CommissionSubmission>) => {
+      if (!user) throw new Error("Not authenticated");
+      
+      const insertData = {
+        ...data,
+        submitted_by: user.id,
+      };
+      
+      const { data: result, error } = await supabase
+        .from("commission_submissions")
+        .insert(insertData as any)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      // Log the initial status
+      await supabase.from("commission_status_log").insert({
+        commission_id: result.id,
+        previous_status: null,
+        new_status: "pending_review",
+        changed_by: user.id,
+        notes: "Commission submitted",
+      });
+      
+      return result as CommissionSubmission;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["commission-submissions"] });
+      toast.success("Commission submitted successfully");
+    },
+    onError: (error: Error) => {
+      toast.error("Failed to submit commission: " + error.message);
+    },
+  });
+}
+
+export function useUpdateCommissionStatus() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+  
+  return useMutation({
+    mutationFn: async ({ 
+      id, 
+      status, 
+      notes,
+      rejection_reason 
+    }: { 
+      id: string; 
+      status: CommissionSubmission["status"]; 
+      notes?: string;
+      rejection_reason?: string;
+    }) => {
+      if (!user) throw new Error("Not authenticated");
+      
+      // Get current status
+      const { data: current } = await supabase
+        .from("commission_submissions")
+        .select("status")
+        .eq("id", id)
+        .single();
+      
+      const updateData: Partial<CommissionSubmission> = { status };
+      
+      if (status === "approved_for_payment") {
+        updateData.approved_at = new Date().toISOString();
+        updateData.approved_by = user.id;
+      } else if (status === "paid") {
+        updateData.paid_at = new Date().toISOString();
+        updateData.paid_by = user.id;
+      }
+      
+      if (rejection_reason) {
+        updateData.rejection_reason = rejection_reason;
+      }
+      
+      if (notes) {
+        updateData.reviewer_notes = notes;
+      }
+      
+      const { error } = await supabase
+        .from("commission_submissions")
+        .update(updateData)
+        .eq("id", id);
+      
+      if (error) throw error;
+      
+      // Log the status change
+      await supabase.from("commission_status_log").insert({
+        commission_id: id,
+        previous_status: current?.status,
+        new_status: status,
+        changed_by: user.id,
+        notes: notes || rejection_reason || `Status changed to ${status}`,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["commission-submissions"] });
+      toast.success("Commission status updated");
+    },
+    onError: (error: Error) => {
+      toast.error("Failed to update status: " + error.message);
+    },
+  });
+}
+
+export function useCommissionAttachments(commissionId: string) {
+  return useQuery({
+    queryKey: ["commission-attachments", commissionId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("commission_attachments")
+        .select("*")
+        .eq("commission_id", commissionId)
+        .order("created_at", { ascending: false });
+      
+      if (error) throw error;
+      return data as CommissionAttachment[];
+    },
+    enabled: !!commissionId,
+  });
+}
+
+export function useCommissionStatusLog(commissionId: string) {
+  return useQuery({
+    queryKey: ["commission-status-log", commissionId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("commission_status_log")
+        .select("*")
+        .eq("commission_id", commissionId)
+        .order("created_at", { ascending: false });
+      
+      if (error) throw error;
+      return data as CommissionStatusLog[];
+    },
+    enabled: !!commissionId,
+  });
+}
+
+export function useSalesReps() {
+  return useQuery({
+    queryKey: ["sales-reps"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("sales_reps")
+        .select("*")
+        .eq("is_active", true)
+        .order("full_name");
+      
+      if (error) throw error;
+      return data as SalesRep[];
+    },
+  });
+}
+
+export function useCommissionReviewers() {
+  return useQuery({
+    queryKey: ["commission-reviewers"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("commission_reviewers")
+        .select("*")
+        .eq("is_active", true);
+      
+      if (error) throw error;
+      return data as CommissionReviewer[];
+    },
+  });
+}
+
+export function useIsCommissionReviewer() {
+  const { user } = useAuth();
+  
+  return useQuery({
+    queryKey: ["is-commission-reviewer", user?.id],
+    queryFn: async () => {
+      if (!user?.email) return false;
+      
+      const { data, error } = await supabase
+        .from("commission_reviewers")
+        .select("id")
+        .eq("user_email", user.email)
+        .eq("is_active", true)
+        .maybeSingle();
+      
+      if (error) throw error;
+      return !!data;
+    },
+    enabled: !!user,
+  });
+}
+
+export function useCanProcessPayouts() {
+  const { user } = useAuth();
+  
+  return useQuery({
+    queryKey: ["can-process-payouts", user?.id],
+    queryFn: async () => {
+      if (!user?.email) return false;
+      
+      const { data, error } = await supabase
+        .from("commission_reviewers")
+        .select("can_payout")
+        .eq("user_email", user.email)
+        .eq("is_active", true)
+        .maybeSingle();
+      
+      if (error) throw error;
+      return data?.can_payout ?? false;
+    },
+    enabled: !!user,
+  });
+}

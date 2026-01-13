@@ -91,6 +91,235 @@ export type Database = {
           },
         ]
       }
+      commission_attachments: {
+        Row: {
+          commission_id: string
+          created_at: string
+          document_type: string
+          file_name: string
+          file_path: string
+          file_size: number | null
+          file_type: string | null
+          id: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          commission_id: string
+          created_at?: string
+          document_type: string
+          file_name: string
+          file_path: string
+          file_size?: number | null
+          file_type?: string | null
+          id?: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          commission_id?: string
+          created_at?: string
+          document_type?: string
+          file_name?: string
+          file_path?: string
+          file_size?: number | null
+          file_type?: string | null
+          id?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commission_attachments_commission_id_fkey"
+            columns: ["commission_id"]
+            isOneToOne: false
+            referencedRelation: "commission_submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commission_reviewers: {
+        Row: {
+          can_approve: boolean | null
+          can_payout: boolean | null
+          created_at: string
+          id: string
+          is_active: boolean | null
+          updated_at: string
+          user_email: string
+          user_name: string
+        }
+        Insert: {
+          can_approve?: boolean | null
+          can_payout?: boolean | null
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          updated_at?: string
+          user_email: string
+          user_name: string
+        }
+        Update: {
+          can_approve?: boolean | null
+          can_payout?: boolean | null
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          updated_at?: string
+          user_email?: string
+          user_name?: string
+        }
+        Relationships: []
+      }
+      commission_status_log: {
+        Row: {
+          changed_by: string
+          commission_id: string
+          created_at: string
+          id: string
+          new_status: string
+          notes: string | null
+          previous_status: string | null
+        }
+        Insert: {
+          changed_by: string
+          commission_id: string
+          created_at?: string
+          id?: string
+          new_status: string
+          notes?: string | null
+          previous_status?: string | null
+        }
+        Update: {
+          changed_by?: string
+          commission_id?: string
+          created_at?: string
+          id?: string
+          new_status?: string
+          notes?: string | null
+          previous_status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commission_status_log_commission_id_fkey"
+            columns: ["commission_id"]
+            isOneToOne: false
+            referencedRelation: "commission_submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commission_submissions: {
+        Row: {
+          acculynx_job_id: string | null
+          advances_paid: number
+          approved_at: string | null
+          approved_by: string | null
+          commission_percentage: number
+          commission_tier: string | null
+          contract_amount: number
+          contract_date: string
+          created_at: string
+          custom_commission_percentage: number | null
+          flat_fee_amount: number | null
+          gross_commission: number | null
+          id: string
+          install_completion_date: string | null
+          is_flat_fee: boolean | null
+          job_address: string
+          job_name: string
+          job_type: string
+          net_commission_owed: number | null
+          paid_at: string | null
+          paid_by: string | null
+          payout_batch_id: string | null
+          rejection_reason: string | null
+          rep_role: string | null
+          reviewer_notes: string | null
+          roof_type: string
+          sales_rep_id: string | null
+          sales_rep_name: string | null
+          status: string
+          subcontractor_name: string | null
+          submission_type: string
+          submitted_by: string
+          supplements_approved: number
+          total_job_revenue: number | null
+          updated_at: string
+        }
+        Insert: {
+          acculynx_job_id?: string | null
+          advances_paid?: number
+          approved_at?: string | null
+          approved_by?: string | null
+          commission_percentage?: number
+          commission_tier?: string | null
+          contract_amount?: number
+          contract_date: string
+          created_at?: string
+          custom_commission_percentage?: number | null
+          flat_fee_amount?: number | null
+          gross_commission?: number | null
+          id?: string
+          install_completion_date?: string | null
+          is_flat_fee?: boolean | null
+          job_address: string
+          job_name: string
+          job_type: string
+          net_commission_owed?: number | null
+          paid_at?: string | null
+          paid_by?: string | null
+          payout_batch_id?: string | null
+          rejection_reason?: string | null
+          rep_role?: string | null
+          reviewer_notes?: string | null
+          roof_type: string
+          sales_rep_id?: string | null
+          sales_rep_name?: string | null
+          status?: string
+          subcontractor_name?: string | null
+          submission_type?: string
+          submitted_by: string
+          supplements_approved?: number
+          total_job_revenue?: number | null
+          updated_at?: string
+        }
+        Update: {
+          acculynx_job_id?: string | null
+          advances_paid?: number
+          approved_at?: string | null
+          approved_by?: string | null
+          commission_percentage?: number
+          commission_tier?: string | null
+          contract_amount?: number
+          contract_date?: string
+          created_at?: string
+          custom_commission_percentage?: number | null
+          flat_fee_amount?: number | null
+          gross_commission?: number | null
+          id?: string
+          install_completion_date?: string | null
+          is_flat_fee?: boolean | null
+          job_address?: string
+          job_name?: string
+          job_type?: string
+          net_commission_owed?: number | null
+          paid_at?: string | null
+          paid_by?: string | null
+          payout_batch_id?: string | null
+          rejection_reason?: string | null
+          rep_role?: string | null
+          reviewer_notes?: string | null
+          roof_type?: string
+          sales_rep_id?: string | null
+          sales_rep_name?: string | null
+          status?: string
+          subcontractor_name?: string | null
+          submission_type?: string
+          submitted_by?: string
+          supplements_approved?: number
+          total_job_revenue?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       compliance_requests: {
         Row: {
           created_at: string
@@ -793,6 +1022,36 @@ export type Database = {
           },
         ]
       }
+      sales_reps: {
+        Row: {
+          created_at: string
+          email: string | null
+          full_name: string
+          id: string
+          is_active: boolean | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          full_name: string
+          id?: string
+          is_active?: boolean | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          full_name?: string
+          id?: string
+          is_active?: boolean | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       subcontractors: {
         Row: {
           coi_expiration_date: string | null
@@ -1268,6 +1527,7 @@ export type Database = {
         Args: { file_path: string }
         Returns: boolean
       }
+      can_process_payouts: { Args: { _user_id: string }; Returns: boolean }
       can_view_profile: {
         Args: { _target_id: string; _viewer_id: string }
         Returns: boolean
@@ -1283,6 +1543,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_commission_reviewer: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "manager" | "employee"
