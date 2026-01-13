@@ -7,7 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Lock, Save, Send, ArrowLeft, AlertTriangle } from "lucide-react";
+import { Lock, Save, Send, ArrowLeft, AlertTriangle, Award, Percent, DollarSign } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { 
   calculateAllFields, 
@@ -191,13 +192,73 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
 
       {/* Display current tier info */}
       {hasTier && (
-        <Alert>
-          <AlertTitle>Your Commission Tier: {userTier?.tier?.name}</AlertTitle>
-          <AlertDescription>
-            Available O&P options: {allowedOpPercentages.map(p => `${(p * 100)}%`).join(', ')} | 
-            Available Profit Splits: {allowedProfitSplits.map(p => `${(p * 100)}%`).join(', ')}
-          </AlertDescription>
-        </Alert>
+        <Card className="border-primary/20 bg-primary/5">
+          <CardContent className="p-4">
+            <div className="flex items-start gap-4">
+              <div className="flex items-center justify-center h-12 w-12 rounded-full bg-primary/10 shrink-0">
+                <Award className="h-6 w-6 text-primary" />
+              </div>
+              <div className="flex-1 space-y-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-muted-foreground">Your Commission Tier</span>
+                  <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20 font-semibold">
+                    {userTier?.tier?.name}
+                  </Badge>
+                </div>
+                {userTier?.tier?.description && (
+                  <p className="text-sm text-muted-foreground">{userTier.tier.description}</p>
+                )}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                  <div className="flex items-start gap-2">
+                    <Percent className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">O&P Options</p>
+                      <div className="flex flex-wrap gap-1.5 mt-1">
+                        {allowedOpPercentages.map((p) => (
+                          <Badge key={p} variant="outline" className="text-xs font-financial">
+                            {(p * 100).toFixed(1)}%
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <DollarSign className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Profit Split Options</p>
+                      <div className="flex flex-wrap gap-1.5 mt-1">
+                        {allowedProfitSplits.map((p) => (
+                          <Badge key={p} variant="outline" className="text-xs font-financial">
+                            {(p * 100).toFixed(0)}%
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+      
+      {/* Show privileged user info */}
+      {isPrivileged && !hasTier && (
+        <Card className="border-amber-500/20 bg-amber-50/50 dark:bg-amber-950/10">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <Award className="h-5 w-5 text-amber-600" />
+              <div>
+                <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
+                  {role === 'admin' ? 'Admin' : 'Manager'} Access
+                </p>
+                <p className="text-xs text-amber-600 dark:text-amber-400">
+                  You have access to all commission options regardless of tier assignment.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       <Card className="font-friendly overflow-hidden">
