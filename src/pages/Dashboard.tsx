@@ -5,6 +5,7 @@ import { QuickLinks } from "@/components/dashboard/QuickLinks";
 import { AnnouncementCard } from "@/components/dashboard/AnnouncementCard";
 import { ResourceCard } from "@/components/dashboard/ResourceCard";
 import { PendingApprovalsWidget } from "@/components/dashboard/PendingApprovalsWidget";
+import { OverdueWarrantiesWidget } from "@/components/dashboard/OverdueWarrantiesWidget";
 import { useAnnouncements } from "@/hooks/useAnnouncements";
 import { useRecentResources, usePopularResources } from "@/hooks/useResources";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -67,6 +68,9 @@ export default function Dashboard() {
 
         {/* Pending Approvals - Only visible to managers/admins */}
         <PendingApprovalsWidget />
+
+        {/* Overdue Warranties Alert - Only visible to managers/admins */}
+        <OverdueWarrantiesWidget />
 
         {/* Resources Grid */}
         <div className="grid lg:grid-cols-2 gap-8">
