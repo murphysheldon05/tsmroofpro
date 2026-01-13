@@ -8,14 +8,21 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Users, UserMinus, Loader2 } from "lucide-react";
+import { Users, UserMinus, Loader2, Award } from "lucide-react";
 import {
   useTeamAssignments,
   useAssignEmployee,
   useRemoveAssignment,
 } from "@/hooks/useTeamAssignments";
+import {
+  useCommissionTiers,
+  useUserCommissionTier,
+  useAssignUserTier,
+  useRemoveUserTier,
+} from "@/hooks/useCommissionTiers";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface User {
   id: string;
@@ -24,7 +31,59 @@ interface User {
   role: "admin" | "manager" | "employee";
 }
 
+function TeamMemberTierSelect({ 
+  employeeId, 
+  employeeName,
+  currentUserId 
+}: { 
+  employeeId: string; 
+  employeeName: string;
+  currentUserId: string;
+}) {
+  const { data: tiers } = useCommissionTiers();
+  const { data: userTier, isLoading } = useUserCommissionTier(employeeId);
+  const assignTier = useAssignUserTier();
+  const removeTier = useRemoveUserTier();
+
+  const handleTierChange = async (tierId: string) => {
+    if (tierId === "none") {
+      await removeTier.mutateAsync(employeeId);
+    } else {
+      await assignTier.mutateAsync({
+        userId: employeeId,
+        tierId,
+        assignedBy: currentUserId,
+      });
+    }
+  };
+
+  if (isLoading) {
+    return <Loader2 className="w-3 h-3 animate-spin" />;
+  }
+
+  return (
+    <Select 
+      value={userTier?.tier_id || "none"} 
+      onValueChange={handleTierChange}
+      disabled={assignTier.isPending || removeTier.isPending}
+    >
+      <SelectTrigger className="w-[140px] h-7 text-xs">
+        <SelectValue placeholder="Assign tier..." />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="none">No Tier</SelectItem>
+        {tiers?.map((tier) => (
+          <SelectItem key={tier.id} value={tier.id}>
+            {tier.name}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
+
 export function TeamAssignmentManager() {
+  const { user } = useAuth();
   const { data: assignments, isLoading: isLoadingAssignments } = useTeamAssignments();
   const assignEmployee = useAssignEmployee();
   const removeAssignment = useRemoveAssignment();
@@ -170,6 +229,10 @@ export function TeamAssignmentManager() {
       ) : (
         <div className="space-y-4">
           <h3 className="font-medium text-foreground">Team Structure</h3>
+          <p className="text-sm text-muted-foreground flex items-center gap-1">
+            <Award className="w-3 h-3" />
+            Assign commission tiers to control which O&P and Profit Split options each team member can select.
+          </p>
           
           {managers.map((manager) => {
             const teamMembers = assignmentsByManager.get(manager.id) || [];
@@ -190,29 +253,43 @@ export function TeamAssignmentManager() {
                   <p className="text-sm text-muted-foreground pl-4">No team members assigned</p>
                 ) : (
                   <div className="space-y-2 pl-4 border-l-2 border-border/50">
-                    {teamMembers.map((assignment) => (
-                      <div
-                        key={assignment.id}
-                        className="flex items-center justify-between py-2 px-3 bg-secondary/30 rounded-lg"
-                      >
-                        <span className="text-sm text-foreground">
-                          {assignment.employee_profile?.full_name || assignment.employee_profile?.email || "Unknown"}
-                        </span>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 text-muted-foreground hover:text-destructive"
-                          onClick={() => handleRemove(assignment.employee_id)}
-                          disabled={removeAssignment.isPending}
+                    {teamMembers.map((assignment) => {
+                      const employeeName = assignment.employee_profile?.full_name || 
+                        assignment.employee_profile?.email || "Unknown";
+                      
+                      return (
+                        <div
+                          key={assignment.id}
+                          className="flex items-center justify-between py-2 px-3 bg-secondary/30 rounded-lg gap-2"
                         >
-                          {removeAssignment.isPending ? (
-                            <Loader2 className="w-3 h-3 animate-spin" />
-                          ) : (
-                            <UserMinus className="w-3 h-3" />
-                          )}
-                        </Button>
-                      </div>
-                    ))}
+                          <span className="text-sm text-foreground flex-1">
+                            {employeeName}
+                          </span>
+                          
+                          <div className="flex items-center gap-2">
+                            <TeamMemberTierSelect 
+                              employeeId={assignment.employee_id}
+                              employeeName={employeeName}
+                              currentUserId={user?.id || ""}
+                            />
+                            
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 text-muted-foreground hover:text-destructive"
+                              onClick={() => handleRemove(assignment.employee_id)}
+                              disabled={removeAssignment.isPending}
+                            >
+                              {removeAssignment.isPending ? (
+                                <Loader2 className="w-3 h-3 animate-spin" />
+                              ) : (
+                                <UserMinus className="w-3 h-3" />
+                              )}
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>
