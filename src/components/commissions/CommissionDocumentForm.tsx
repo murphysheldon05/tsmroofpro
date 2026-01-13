@@ -5,15 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Lock, Save, Send, ArrowLeft } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { 
   calculateAllFields, 
   formatCurrency, 
   validateCommissionDocument,
-  PROFIT_SPLIT_OPTIONS,
-  OP_PERCENT_OPTIONS,
   type CommissionDocumentData 
 } from "@/lib/commissionDocumentCalculations";
 import { 
@@ -33,13 +30,6 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
   const { user } = useAuth();
   const createMutation = useCreateCommissionDocument();
   const updateMutation = useUpdateCommissionDocument();
-
-  // Determine initial profit split based on commission_rate
-  const getInitialProfitSplit = () => {
-    if (!document) return "";
-    const match = PROFIT_SPLIT_OPTIONS.find(opt => opt.rep === document.commission_rate);
-    return match ? match.label : "";
-  };
 
   const [formData, setFormData] = useState({
     job_name_id: document?.job_name_id ?? "",
@@ -61,8 +51,6 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
     advance_total: document?.advance_total ?? 0,
     notes: document?.notes ?? "",
   });
-
-  const [profitSplit, setProfitSplit] = useState(getInitialProfitSplit());
 
   // Live calculations
   const calculated = useMemo(() => {
@@ -90,21 +78,11 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
     setFormData(prev => ({ ...prev, [field]: numValue }));
   };
 
-  const handleProfitSplitChange = (value: string) => {
-    setProfitSplit(value);
-    const split = PROFIT_SPLIT_OPTIONS.find(opt => opt.label === value);
-    if (split) {
-      setFormData(prev => ({
-        ...prev,
-        op_percent: split.op,
-        commission_rate: split.rep,
-      }));
-    }
-  };
-
-  const handleOpPercentChange = (value: string) => {
-    const numValue = parseFloat(value);
-    setFormData(prev => ({ ...prev, op_percent: numValue }));
+  const handlePercentChange = (field: keyof typeof formData, value: string) => {
+    // Allow entering as percentage (e.g., "15" becomes 0.15)
+    const numValue = parseFloat(value) || 0;
+    const decimalValue = numValue > 1 ? numValue / 100 : numValue;
+    setFormData(prev => ({ ...prev, [field]: Math.min(1, Math.max(0, decimalValue)) }));
   };
 
   const handleSave = async (submit: boolean = false) => {
@@ -144,10 +122,8 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
   const isLoading = createMutation.isPending || updateMutation.isPending;
   const canEdit = !readOnly && (!document || document.status === 'draft');
 
-  // Calculate company profit percentage for display
-  const companyProfitPercent = profitSplit 
-    ? PROFIT_SPLIT_OPTIONS.find(opt => opt.label === profitSplit)?.company ?? 0 
-    : 1 - formData.commission_rate;
+  // Helper to format percent for display in input (show as whole number like 15 for 0.15)
+  const formatPercentForInput = (value: number) => (value * 100).toFixed(2);
 
   return (
     <div className="space-y-6">
@@ -175,365 +151,364 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
           <CardTitle className="text-xl text-center">TSM Roofing LLC Official Commission Document</CardTitle>
         </CardHeader>
         <CardContent className="p-6">
-          {/* Header Fields */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 pb-6 border-b">
-            <div>
-              <Label htmlFor="job_name_id" className="font-semibold">Job Name & ID *</Label>
+          {/* Spreadsheet-like layout */}
+          <div className="space-y-1">
+            {/* Header Fields */}
+            <div className="grid grid-cols-[200px_1fr_1fr] gap-2 items-center py-2 border-b">
+              <Label className="font-semibold">Job Name & ID</Label>
               <Input
-                id="job_name_id"
                 value={formData.job_name_id}
                 onChange={(e) => setFormData(prev => ({ ...prev, job_name_id: e.target.value }))}
                 disabled={!canEdit}
-                className="mt-1"
+                className="col-span-2"
               />
             </div>
-            <div>
-              <Label htmlFor="job_date" className="font-semibold">Job Date *</Label>
+            
+            <div className="grid grid-cols-[200px_1fr_1fr] gap-2 items-center py-2 border-b">
+              <Label className="font-semibold">Job Date</Label>
               <Input
-                id="job_date"
                 type="date"
                 value={formData.job_date}
                 onChange={(e) => setFormData(prev => ({ ...prev, job_date: e.target.value }))}
                 disabled={!canEdit}
-                className="mt-1"
+                className="col-span-2"
               />
             </div>
-            <div>
-              <Label htmlFor="sales_rep" className="font-semibold">Sales Rep *</Label>
+            
+            <div className="grid grid-cols-[200px_1fr_1fr] gap-2 items-center py-2 border-b">
+              <Label className="font-semibold">Sales Rep</Label>
               <Input
-                id="sales_rep"
                 value={formData.sales_rep}
                 onChange={(e) => setFormData(prev => ({ ...prev, sales_rep: e.target.value }))}
                 disabled={!canEdit}
-                className="mt-1"
+                className="col-span-2"
               />
             </div>
-          </div>
 
-          {/* Profit Split Selector */}
-          <div className="space-y-4 mb-6 pb-6 border-b bg-primary/5 p-4 rounded-lg">
-            <h3 className="font-semibold text-lg">Profit Split *</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <Label htmlFor="profit_split" className="font-semibold">Select Profit Split</Label>
-                <Select value={profitSplit} onValueChange={handleProfitSplitChange} disabled={!canEdit}>
-                  <SelectTrigger className="mt-1 bg-background">
-                    <SelectValue placeholder="Select profit split..." />
-                  </SelectTrigger>
-                  <SelectContent className="bg-background z-50">
-                    {PROFIT_SPLIT_OPTIONS.map(opt => (
-                      <SelectItem key={opt.label} value={opt.label}>{opt.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground mt-1">Format: O&P% / Rep% / Company%</p>
-              </div>
-              <div>
-                <Label className="font-semibold flex items-center gap-1">
-                  Rep Profit %
-                  <Lock className="h-3 w-3 text-muted-foreground" />
-                </Label>
-                <Input
-                  value={`${(formData.commission_rate * 100).toFixed(0)}%`}
-                  disabled
-                  className="mt-1 bg-muted font-mono"
-                />
-              </div>
-              <div>
-                <Label className="font-semibold flex items-center gap-1">
-                  Company Profit %
-                  <Lock className="h-3 w-3 text-muted-foreground" />
-                </Label>
-                <Input
-                  value={`${(companyProfitPercent * 100).toFixed(0)}%`}
-                  disabled
-                  className="mt-1 bg-muted font-mono"
-                />
-              </div>
-            </div>
-          </div>
+            {/* Spacer row */}
+            <div className="py-2" />
 
-          {/* Contract + Expense Inputs */}
-          <div className="space-y-4 mb-6 pb-6 border-b">
-            <h3 className="font-semibold text-lg">Contract Details</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div>
-                <Label htmlFor="gross_contract_total" className="font-semibold">Contract Total (Gross) *</Label>
-                <Input
-                  id="gross_contract_total"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={formData.gross_contract_total}
-                  onChange={(e) => handleNumberChange('gross_contract_total', e.target.value)}
-                  disabled={!canEdit}
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <Label htmlFor="op_percent" className="font-semibold">O&P % *</Label>
-                <Select 
-                  value={formData.op_percent.toString()} 
-                  onValueChange={handleOpPercentChange} 
-                  disabled={!canEdit}
-                >
-                  <SelectTrigger className="mt-1 bg-background">
-                    <SelectValue placeholder="Select O&P %" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-background z-50">
-                    {OP_PERCENT_OPTIONS.map(opt => (
-                      <SelectItem key={opt.value} value={opt.value.toString()}>{opt.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground mt-1">Select O&P %, options: 10%, 12.5%, 15%</p>
-              </div>
-              <div>
-                <Label className="font-semibold flex items-center gap-1">
-                  O&P $ Amount
-                  <Lock className="h-3 w-3 text-muted-foreground" />
-                </Label>
-                <Input
-                  value={formatCurrency(calculated.op_dollar_amount)}
-                  disabled
-                  className="mt-1 bg-muted font-mono"
-                />
-              </div>
-              <div>
-                <Label className="font-semibold flex items-center gap-1">
-                  Contract Total (Net)
-                  <Lock className="h-3 w-3 text-muted-foreground" />
-                </Label>
-                <Input
-                  value={formatCurrency(calculated.contract_total_net)}
-                  disabled
-                  className="mt-1 bg-muted font-mono"
-                />
-                <p className="text-xs text-muted-foreground mt-1">Commissions and expenses calculated off of Net contract total.</p>
-              </div>
+            {/* Contract Total (Gross) */}
+            <div className="grid grid-cols-[200px_150px_1fr] gap-2 items-center py-2 border-b">
+              <Label className="font-semibold">Contract Total (Gross)</Label>
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                value={formData.gross_contract_total}
+                onChange={(e) => handleNumberChange('gross_contract_total', e.target.value)}
+                disabled={!canEdit}
+                className="font-mono"
+              />
+              <span className="text-sm text-muted-foreground"></span>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="material_cost" className="font-semibold">Material *</Label>
+            {/* O&P */}
+            <div className="grid grid-cols-[200px_150px_1fr] gap-2 items-center py-2 border-b">
+              <Label className="font-semibold">O&P</Label>
+              <div className="relative">
                 <Input
-                  id="material_cost"
                   type="number"
                   step="0.01"
                   min="0"
-                  value={formData.material_cost}
-                  onChange={(e) => handleNumberChange('material_cost', e.target.value)}
+                  max="100"
+                  value={formatPercentForInput(formData.op_percent)}
+                  onChange={(e) => handlePercentChange('op_percent', e.target.value)}
                   disabled={!canEdit}
-                  className="mt-1"
+                  className="font-mono pr-8"
                 />
-                <p className="text-xs text-muted-foreground mt-1">Initial Material order</p>
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">%</span>
               </div>
-              <div>
-                <Label htmlFor="labor_cost" className="font-semibold">Labor *</Label>
+              <span className="text-sm text-muted-foreground">Please enter % as decimal, 10%, 12.%, 15%</span>
+            </div>
+
+            {/* Contract Total (Net) - Calculated */}
+            <div className="grid grid-cols-[200px_150px_1fr] gap-2 items-center py-2 border-b bg-muted/30">
+              <Label className="font-semibold flex items-center gap-1">
+                Contract Total (Net)
+                <Lock className="h-3 w-3 text-muted-foreground" />
+              </Label>
+              <Input
+                value={formatCurrency(calculated.contract_total_net)}
+                disabled
+                className="font-mono bg-muted"
+              />
+              <span className="text-sm text-muted-foreground">Commissions and expenses calculated off of Net contract total.</span>
+            </div>
+
+            {/* Material */}
+            <div className="grid grid-cols-[200px_150px_1fr] gap-2 items-center py-2 border-b">
+              <Label className="font-semibold">Material</Label>
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                value={formData.material_cost}
+                onChange={(e) => handleNumberChange('material_cost', e.target.value)}
+                disabled={!canEdit}
+                className="font-mono"
+              />
+              <span className="text-sm text-muted-foreground">Initial Material order</span>
+            </div>
+
+            {/* Labor */}
+            <div className="grid grid-cols-[200px_150px_1fr] gap-2 items-center py-2 border-b">
+              <Label className="font-semibold">Labor</Label>
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                value={formData.labor_cost}
+                onChange={(e) => handleNumberChange('labor_cost', e.target.value)}
+                disabled={!canEdit}
+                className="font-mono"
+              />
+              <span className="text-sm text-muted-foreground">Initial Labor Order</span>
+            </div>
+
+            {/* Additional expenses (-) #1 */}
+            <div className="grid grid-cols-[200px_150px_1fr] gap-2 items-center py-2 border-b">
+              <Label className="text-destructive">Additional expenses (-)</Label>
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                value={formData.neg_exp_1 || ''}
+                onChange={(e) => handleNumberChange('neg_exp_1', e.target.value)}
+                disabled={!canEdit}
+                className="font-mono"
+                placeholder="$-"
+              />
+              <span className="text-sm text-muted-foreground">Will calls, lumber, Home Debot, Misc. expenses</span>
+            </div>
+
+            {/* Additional expenses (-) #2 */}
+            <div className="grid grid-cols-[200px_150px_1fr] gap-2 items-center py-2 border-b">
+              <Label className="text-destructive">Additional expenses (-)</Label>
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                value={formData.neg_exp_2 || ''}
+                onChange={(e) => handleNumberChange('neg_exp_2', e.target.value)}
+                disabled={!canEdit}
+                className="font-mono"
+                placeholder="$-"
+              />
+              <span className="text-sm text-muted-foreground">Will calls, lumber, Home Debot, Misc. expenses</span>
+            </div>
+
+            {/* Additional expenses (-) #3 */}
+            <div className="grid grid-cols-[200px_150px_1fr] gap-2 items-center py-2 border-b">
+              <Label className="text-destructive">Additional expenses (-)</Label>
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                value={formData.neg_exp_3 || ''}
+                onChange={(e) => handleNumberChange('neg_exp_3', e.target.value)}
+                disabled={!canEdit}
+                className="font-mono"
+                placeholder=""
+              />
+              <span className="text-sm text-muted-foreground">Will calls, lumber, Home Debot, Misc. expenses</span>
+            </div>
+
+            {/* Additional expenses (-) #4 - Supplement fees */}
+            <div className="grid grid-cols-[200px_150px_1fr] gap-2 items-center py-2 border-b">
+              <Label className="text-destructive">Additional expenses (-)</Label>
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                value={formData.supplement_fees_expense || ''}
+                onChange={(e) => handleNumberChange('supplement_fees_expense', e.target.value)}
+                disabled={!canEdit}
+                className="font-mono"
+                placeholder=""
+              />
+              <span className="text-sm text-muted-foreground">Supplement fees</span>
+            </div>
+
+            {/* Additional expenses (+) #1 */}
+            <div className="grid grid-cols-[200px_150px_1fr] gap-2 items-center py-2 border-b">
+              <Label className="text-green-600">Additional expenses (+)</Label>
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                value={formData.pos_exp_1 || ''}
+                onChange={(e) => handleNumberChange('pos_exp_1', e.target.value)}
+                disabled={!canEdit}
+                className="font-mono"
+                placeholder=""
+              />
+              <span className="text-sm text-muted-foreground">Returns added back if rep returns materials</span>
+            </div>
+
+            {/* Additional expenses (+) #2 */}
+            <div className="grid grid-cols-[200px_150px_1fr] gap-2 items-center py-2 border-b">
+              <Label className="text-green-600">Additional expenses (+)</Label>
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                value={formData.pos_exp_2 || ''}
+                onChange={(e) => handleNumberChange('pos_exp_2', e.target.value)}
+                disabled={!canEdit}
+                className="font-mono"
+                placeholder=""
+              />
+              <span className="text-sm text-muted-foreground"></span>
+            </div>
+
+            {/* Additional expenses (+) #3 */}
+            <div className="grid grid-cols-[200px_150px_1fr] gap-2 items-center py-2 border-b">
+              <Label className="text-green-600">Additional expenses (+)</Label>
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                value={formData.pos_exp_3 || ''}
+                onChange={(e) => handleNumberChange('pos_exp_3', e.target.value)}
+                disabled={!canEdit}
+                className="font-mono"
+                placeholder=""
+              />
+              <span className="text-sm text-muted-foreground"></span>
+            </div>
+
+            {/* Additional expenses (+) #4 */}
+            <div className="grid grid-cols-[200px_150px_1fr] gap-2 items-center py-2 border-b">
+              <Label className="text-green-600">Additional expenses (+)</Label>
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                value={formData.pos_exp_4 || ''}
+                onChange={(e) => handleNumberChange('pos_exp_4', e.target.value)}
+                disabled={!canEdit}
+                className="font-mono"
+                placeholder=""
+              />
+              <span className="text-sm text-muted-foreground"></span>
+            </div>
+
+            {/* Net profit - Calculated */}
+            <div className="grid grid-cols-[200px_150px_1fr] gap-2 items-center py-2 border-b bg-muted/30">
+              <Label className="font-semibold flex items-center gap-1">
+                Net profit
+                <Lock className="h-3 w-3 text-muted-foreground" />
+              </Label>
+              <Input
+                value={formatCurrency(calculated.net_profit)}
+                disabled
+                className="font-mono bg-muted"
+              />
+              <span className="text-sm text-muted-foreground">This is the Commissionable profit on the job, calculated off the net contract after O&P is removed.</span>
+            </div>
+
+            {/* Commission Rate */}
+            <div className="grid grid-cols-[200px_150px_1fr] gap-2 items-center py-2 border-b">
+              <Label className="font-semibold">Comission Rate</Label>
+              <div className="relative">
                 <Input
-                  id="labor_cost"
                   type="number"
                   step="0.01"
                   min="0"
-                  value={formData.labor_cost}
-                  onChange={(e) => handleNumberChange('labor_cost', e.target.value)}
+                  max="100"
+                  value={formatPercentForInput(formData.commission_rate)}
+                  onChange={(e) => handlePercentChange('commission_rate', e.target.value)}
                   disabled={!canEdit}
-                  className="mt-1"
+                  className="font-mono pr-8"
                 />
-                <p className="text-xs text-muted-foreground mt-1">Initial Labor Order</p>
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">%</span>
+              </div>
+              <span className="text-sm text-muted-foreground">This is the percentage of profit split allocated to the rep</span>
+            </div>
+
+            {/* Rep Commission - Calculated */}
+            <div className="grid grid-cols-[200px_150px_1fr] gap-2 items-center py-2 border-b bg-green-50 dark:bg-green-900/20">
+              <Label className="font-semibold flex items-center gap-1">
+                Rep Commission
+                <Lock className="h-3 w-3 text-muted-foreground" />
+              </Label>
+              <Input
+                value={formatCurrency(calculated.rep_commission)}
+                disabled
+                className="font-mono bg-green-100 dark:bg-green-900/30 font-bold"
+              />
+              <span className="text-sm text-muted-foreground">This is the total dollars paid to rep</span>
+            </div>
+
+            {/* Advance Total */}
+            <div className="grid grid-cols-[200px_150px_1fr] gap-2 items-center py-2 border-b">
+              <Label className="font-semibold">Advance Total</Label>
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                value={formData.advance_total || ''}
+                onChange={(e) => handleNumberChange('advance_total', e.target.value)}
+                disabled={!canEdit}
+                className="font-mono"
+                placeholder="$-"
+              />
+              <span className="text-sm text-muted-foreground"></span>
+            </div>
+
+            {/* Company Profit - Calculated */}
+            <div className="grid grid-cols-[200px_150px_1fr] gap-2 items-center py-2 border-b bg-muted/30">
+              <Label className="font-semibold flex items-center gap-1">
+                Company Profit
+                <Lock className="h-3 w-3 text-muted-foreground" />
+              </Label>
+              <Input
+                value={formatCurrency(calculated.company_profit)}
+                disabled
+                className="font-mono bg-muted"
+              />
+              <span className="text-sm text-muted-foreground">Total Company profit, not rep facing</span>
+            </div>
+
+            {/* Notes */}
+            <div className="grid grid-cols-[200px_1fr] gap-2 items-start py-2 border-b">
+              <Label className="font-semibold pt-2">Notes</Label>
+              <Textarea
+                value={formData.notes}
+                onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+                disabled={!canEdit}
+                placeholder=""
+                rows={3}
+              />
+            </div>
+
+            {/* Spacer row */}
+            <div className="py-2" />
+
+            {/* Management Approval */}
+            <div className="grid grid-cols-[200px_1fr] gap-2 items-center py-2 bg-muted/50 rounded">
+              <Label className="font-semibold">Management Approval</Label>
+              <div className="text-sm">
+                {document?.status === 'approved' && document.approved_at && (
+                  <span className="text-green-600">
+                    Approved on {new Date(document.approved_at).toLocaleDateString()}
+                    {document.approval_comment && `: ${document.approval_comment}`}
+                  </span>
+                )}
+                {document?.status === 'rejected' && (
+                  <span className="text-destructive">
+                    Rejected {document.approval_comment && `: ${document.approval_comment}`}
+                  </span>
+                )}
+                {(!document || document.status === 'draft') && (
+                  <span className="text-muted-foreground">Pending submission</span>
+                )}
+                {document?.status === 'submitted' && (
+                  <span className="text-amber-600">Awaiting approval</span>
+                )}
               </div>
             </div>
-          </div>
-
-          {/* Additional Expenses (Negative) */}
-          <div className="space-y-4 mb-6 pb-6 border-b">
-            <h3 className="font-semibold text-lg text-destructive">Additional Expenses (Negative)</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="neg_exp_1">Additional expenses (-) #1</Label>
-                <Input
-                  id="neg_exp_1"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={formData.neg_exp_1}
-                  onChange={(e) => handleNumberChange('neg_exp_1', e.target.value)}
-                  disabled={!canEdit}
-                  className="mt-1"
-                />
-                <p className="text-xs text-muted-foreground mt-1">Will calls, lumber, Home Debot, Misc. expenses</p>
-              </div>
-              <div>
-                <Label htmlFor="neg_exp_2">Additional expenses (-) #2</Label>
-                <Input
-                  id="neg_exp_2"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={formData.neg_exp_2}
-                  onChange={(e) => handleNumberChange('neg_exp_2', e.target.value)}
-                  disabled={!canEdit}
-                  className="mt-1"
-                />
-                <p className="text-xs text-muted-foreground mt-1">Will calls, lumber, Home Debot, Misc. expenses</p>
-              </div>
-              <div>
-                <Label htmlFor="neg_exp_3">Additional expenses (-) #3</Label>
-                <Input
-                  id="neg_exp_3"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={formData.neg_exp_3}
-                  onChange={(e) => handleNumberChange('neg_exp_3', e.target.value)}
-                  disabled={!canEdit}
-                  className="mt-1"
-                />
-                <p className="text-xs text-muted-foreground mt-1">Will calls, lumber, Home Debot, Misc. expenses</p>
-              </div>
-              <div>
-                <Label htmlFor="supplement_fees_expense">Additional expenses (-) #4</Label>
-                <Input
-                  id="supplement_fees_expense"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={formData.supplement_fees_expense}
-                  onChange={(e) => handleNumberChange('supplement_fees_expense', e.target.value)}
-                  disabled={!canEdit}
-                  className="mt-1"
-                />
-                <p className="text-xs text-muted-foreground mt-1">Supplement fees</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Additional Expenses (Positive) */}
-          <div className="space-y-4 mb-6 pb-6 border-b">
-            <h3 className="font-semibold text-lg text-green-600">Additional Expenses (Positive)</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="pos_exp_1">Additional expenses (+) #1</Label>
-                <Input
-                  id="pos_exp_1"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={formData.pos_exp_1}
-                  onChange={(e) => handleNumberChange('pos_exp_1', e.target.value)}
-                  disabled={!canEdit}
-                  className="mt-1"
-                />
-                <p className="text-xs text-muted-foreground mt-1">Returns added back if rep returns materials</p>
-              </div>
-              <div>
-                <Label htmlFor="pos_exp_2">Additional expenses (+) #2</Label>
-                <Input
-                  id="pos_exp_2"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={formData.pos_exp_2}
-                  onChange={(e) => handleNumberChange('pos_exp_2', e.target.value)}
-                  disabled={!canEdit}
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <Label htmlFor="pos_exp_3">Additional expenses (+) #3</Label>
-                <Input
-                  id="pos_exp_3"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={formData.pos_exp_3}
-                  onChange={(e) => handleNumberChange('pos_exp_3', e.target.value)}
-                  disabled={!canEdit}
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <Label htmlFor="pos_exp_4">Additional expenses (+) #4</Label>
-                <Input
-                  id="pos_exp_4"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={formData.pos_exp_4}
-                  onChange={(e) => handleNumberChange('pos_exp_4', e.target.value)}
-                  disabled={!canEdit}
-                  className="mt-1"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Commission Summary */}
-          <div className="space-y-4 mb-6 pb-6 border-b bg-primary/5 p-4 rounded-lg">
-            <h3 className="font-semibold text-lg">Commission Summary</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <div>
-                <Label className="font-semibold flex items-center gap-1">
-                  Net Profit
-                  <Lock className="h-3 w-3 text-muted-foreground" />
-                </Label>
-                <Input
-                  value={formatCurrency(calculated.net_profit)}
-                  disabled
-                  className="mt-1 bg-muted font-mono text-lg"
-                />
-                <p className="text-xs text-muted-foreground mt-1">This is the Commissionable profit on the job, calculated off the net contract after O&P is removed.</p>
-              </div>
-              <div>
-                <Label className="font-semibold flex items-center gap-1">
-                  Rep Commission
-                  <Lock className="h-3 w-3 text-muted-foreground" />
-                </Label>
-                <Input
-                  value={formatCurrency(calculated.rep_commission)}
-                  disabled
-                  className="mt-1 bg-green-100 dark:bg-green-900/30 font-mono text-lg font-bold"
-                />
-                <p className="text-xs text-muted-foreground mt-1">This is the total dollars paid to rep</p>
-              </div>
-              <div>
-                <Label htmlFor="advance_total" className="font-semibold">Advance Total</Label>
-                <Input
-                  id="advance_total"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={formData.advance_total}
-                  onChange={(e) => handleNumberChange('advance_total', e.target.value)}
-                  disabled={!canEdit}
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <Label className="font-semibold flex items-center gap-1">
-                  Company Profit
-                  <Lock className="h-3 w-3 text-muted-foreground" />
-                </Label>
-                <Input
-                  value={formatCurrency(calculated.company_profit)}
-                  disabled
-                  className="mt-1 bg-muted font-mono text-lg"
-                />
-                <p className="text-xs text-muted-foreground mt-1">Total Company profit, not rep facing</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Notes */}
-          <div className="space-y-4">
-            <h3 className="font-semibold text-lg">Notes</h3>
-            <Textarea
-              value={formData.notes}
-              onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-              disabled={!canEdit}
-              placeholder="Additional notes..."
-              rows={4}
-            />
           </div>
         </CardContent>
       </Card>
