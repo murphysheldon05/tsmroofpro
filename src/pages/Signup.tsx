@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/select";
 import { Logo } from "@/components/Logo";
 import { toast } from "sonner";
-import { Eye, EyeOff, ArrowLeft } from "lucide-react";
+import { Eye, EyeOff, ArrowLeft, CheckCircle2, Clock, Mail } from "lucide-react";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -49,6 +49,7 @@ export default function Signup() {
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [signupComplete, setSignupComplete] = useState(false);
 
   const { signUp, user, loading } = useAuth();
   const navigate = useNavigate();
@@ -115,10 +116,11 @@ export default function Signup() {
             .eq("id", newUser.id);
         }
 
-        toast.success(
-          "Account created! Your account is pending admin approval. You'll be notified once approved."
-        );
-        navigate("/auth");
+        // Sign out so they can't access anything until approved
+        await supabase.auth.signOut();
+        
+        // Show success state
+        setSignupComplete(true);
       }
     } catch (error) {
       toast.error("An unexpected error occurred");
@@ -126,6 +128,62 @@ export default function Signup() {
       setIsSubmitting(false);
     }
   };
+
+  // Success state after signup
+  if (signupComplete) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col">
+        <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top_right,_hsl(var(--primary)/0.08)_0%,_transparent_50%)]" />
+        
+        <main className="relative z-10 flex-1 flex items-center justify-center px-4">
+          <div className="w-full max-w-md text-center">
+            <div className="glass-card rounded-2xl p-8">
+              <div className="w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center mx-auto mb-6">
+                <CheckCircle2 className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
+              </div>
+              
+              <h1 className="text-2xl font-bold text-foreground mb-2">
+                Account Created Successfully!
+              </h1>
+              <p className="text-muted-foreground mb-8">
+                Your account is pending admin approval.
+              </p>
+              
+              <div className="space-y-4 text-left mb-8">
+                <div className="flex items-start gap-3 p-4 rounded-lg bg-secondary/50">
+                  <Clock className="w-5 h-5 text-amber-500 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="font-medium text-sm">Pending Review</p>
+                    <p className="text-xs text-muted-foreground">
+                      An administrator will review your request shortly. This typically takes 1-2 business days.
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start gap-3 p-4 rounded-lg bg-secondary/50">
+                  <Mail className="w-5 h-5 text-primary mt-0.5 shrink-0" />
+                  <div>
+                    <p className="font-medium text-sm">Email Notification</p>
+                    <p className="text-xs text-muted-foreground">
+                      Once approved, you'll receive an email at <span className="font-medium text-foreground">{email}</span> with a link to sign in.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => navigate("/auth")}
+              >
+                Go to Sign In
+              </Button>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
