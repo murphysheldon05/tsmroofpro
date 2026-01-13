@@ -89,6 +89,7 @@ const navigation: NavItem[] = [
     icon: Hammer,
     sectionKey: "company",
     children: [
+      { title: "Production Calendar", href: "/production-calendar", icon: Hammer, sectionKey: "company" },
       { title: "Warranty Tracker", href: "/warranties", icon: Shield, sectionKey: "company" },
     ],
   },
