@@ -28,6 +28,7 @@ import {
   Users,
   Truck,
   DollarSign,
+  Calendar,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -90,8 +91,16 @@ const navigation: NavItem[] = [
     icon: Hammer,
     sectionKey: "company",
     children: [
-      { title: "Production Calendar", href: "/production-calendar", icon: Hammer, sectionKey: "company" },
       { title: "Warranty Tracker", href: "/warranties", icon: Shield, sectionKey: "company" },
+    ],
+  },
+  {
+    title: "Production Calendar",
+    icon: Calendar,
+    sectionKey: "company",
+    children: [
+      { title: "Build Schedule", href: "/build-schedule", icon: Hammer, sectionKey: "company" },
+      { title: "Delivery Schedule", href: "/delivery-schedule", icon: Truck, sectionKey: "company" },
     ],
   },
   {
@@ -137,7 +146,7 @@ export function AppSidebar() {
   const navigate = useNavigate();
   const { signOut, isAdmin, isManager, role, user } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [openSections, setOpenSections] = useState<string[]>(["SOP Library", "Training", "Production"]);
+  const [openSections, setOpenSections] = useState<string[]>(["SOP Library", "Training", "Production", "Production Calendar"]);
   const { data: userPermissions } = useCurrentUserPermissions();
   const [profile, setProfile] = useState<{ avatar_url: string | null; full_name: string | null } | null>(null);
 
