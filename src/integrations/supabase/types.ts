@@ -91,6 +91,42 @@ export type Database = {
           },
         ]
       }
+      compliance_requests: {
+        Row: {
+          created_at: string
+          documents_requested: string[]
+          due_date: string | null
+          id: string
+          notes: string | null
+          recipient_id: string
+          recipient_name: string
+          recipient_type: string
+          requested_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          documents_requested: string[]
+          due_date?: string | null
+          id?: string
+          notes?: string | null
+          recipient_id: string
+          recipient_name: string
+          recipient_type: string
+          requested_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          documents_requested?: string[]
+          due_date?: string | null
+          id?: string
+          notes?: string | null
+          recipient_id?: string
+          recipient_name?: string
+          recipient_type?: string
+          requested_by?: string | null
+        }
+        Relationships: []
+      }
       crews: {
         Row: {
           color: string
@@ -539,6 +575,60 @@ export type Database = {
           },
         ]
       }
+      prospects: {
+        Row: {
+          assigned_owner: string | null
+          company_name: string
+          contact_name: string
+          created_at: string
+          created_by: string | null
+          email: string
+          id: string
+          next_followup_date: string | null
+          notes: string | null
+          phone: string
+          prospect_type: Database["public"]["Enums"]["prospect_type"]
+          source: Database["public"]["Enums"]["prospect_source"]
+          stage: Database["public"]["Enums"]["prospect_stage"]
+          trade_vendor_type: string | null
+          updated_at: string
+        }
+        Insert: {
+          assigned_owner?: string | null
+          company_name: string
+          contact_name: string
+          created_at?: string
+          created_by?: string | null
+          email: string
+          id?: string
+          next_followup_date?: string | null
+          notes?: string | null
+          phone: string
+          prospect_type: Database["public"]["Enums"]["prospect_type"]
+          source?: Database["public"]["Enums"]["prospect_source"]
+          stage?: Database["public"]["Enums"]["prospect_stage"]
+          trade_vendor_type?: string | null
+          updated_at?: string
+        }
+        Update: {
+          assigned_owner?: string | null
+          company_name?: string
+          contact_name?: string
+          created_at?: string
+          created_by?: string | null
+          email?: string
+          id?: string
+          next_followup_date?: string | null
+          notes?: string | null
+          phone?: string
+          prospect_type?: Database["public"]["Enums"]["prospect_type"]
+          source?: Database["public"]["Enums"]["prospect_source"]
+          stage?: Database["public"]["Enums"]["prospect_stage"]
+          trade_vendor_type?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       request_types: {
         Row: {
           created_at: string
@@ -697,6 +787,78 @@ export type Database = {
           },
         ]
       }
+      subcontractors: {
+        Row: {
+          coi_expiration_date: string | null
+          coi_status: Database["public"]["Enums"]["doc_status"]
+          company_name: string
+          created_at: string
+          created_by: string | null
+          docs_due_date: string | null
+          email: string
+          ic_agreement_status: Database["public"]["Enums"]["doc_status"]
+          id: string
+          internal_rating: number | null
+          last_received_date: string | null
+          last_requested_date: string | null
+          notes: string | null
+          phone: string
+          primary_contact_name: string
+          requested_docs: string[] | null
+          service_areas: Database["public"]["Enums"]["service_area"][]
+          status: Database["public"]["Enums"]["entity_status"]
+          trade_type: Database["public"]["Enums"]["trade_type"]
+          updated_at: string
+          w9_status: Database["public"]["Enums"]["doc_status"]
+        }
+        Insert: {
+          coi_expiration_date?: string | null
+          coi_status?: Database["public"]["Enums"]["doc_status"]
+          company_name: string
+          created_at?: string
+          created_by?: string | null
+          docs_due_date?: string | null
+          email: string
+          ic_agreement_status?: Database["public"]["Enums"]["doc_status"]
+          id?: string
+          internal_rating?: number | null
+          last_received_date?: string | null
+          last_requested_date?: string | null
+          notes?: string | null
+          phone: string
+          primary_contact_name: string
+          requested_docs?: string[] | null
+          service_areas?: Database["public"]["Enums"]["service_area"][]
+          status?: Database["public"]["Enums"]["entity_status"]
+          trade_type?: Database["public"]["Enums"]["trade_type"]
+          updated_at?: string
+          w9_status?: Database["public"]["Enums"]["doc_status"]
+        }
+        Update: {
+          coi_expiration_date?: string | null
+          coi_status?: Database["public"]["Enums"]["doc_status"]
+          company_name?: string
+          created_at?: string
+          created_by?: string | null
+          docs_due_date?: string | null
+          email?: string
+          ic_agreement_status?: Database["public"]["Enums"]["doc_status"]
+          id?: string
+          internal_rating?: number | null
+          last_received_date?: string | null
+          last_requested_date?: string | null
+          notes?: string | null
+          phone?: string
+          primary_contact_name?: string
+          requested_docs?: string[] | null
+          service_areas?: Database["public"]["Enums"]["service_area"][]
+          status?: Database["public"]["Enums"]["entity_status"]
+          trade_type?: Database["public"]["Enums"]["trade_type"]
+          updated_at?: string
+          w9_status?: Database["public"]["Enums"]["doc_status"]
+        }
+        Relationships: []
+      }
       team_assignments: {
         Row: {
           created_at: string
@@ -841,6 +1003,87 @@ export type Database = {
         }
         Relationships: []
       }
+      vendors: {
+        Row: {
+          account_number: string | null
+          coi_expiration_date: string | null
+          coi_status: Database["public"]["Enums"]["doc_status"] | null
+          created_at: string
+          created_by: string | null
+          docs_due_date: string | null
+          email: string
+          ic_agreement_status: Database["public"]["Enums"]["doc_status"] | null
+          id: string
+          last_received_date: string | null
+          last_requested_date: string | null
+          notes: string | null
+          phone: string
+          preferred_contact_method:
+            | Database["public"]["Enums"]["contact_method"]
+            | null
+          primary_contact_name: string
+          requested_docs: string[] | null
+          service_areas: Database["public"]["Enums"]["service_area"][]
+          status: Database["public"]["Enums"]["entity_status"]
+          updated_at: string
+          vendor_name: string
+          vendor_type: Database["public"]["Enums"]["vendor_type"]
+          w9_status: Database["public"]["Enums"]["doc_status"] | null
+        }
+        Insert: {
+          account_number?: string | null
+          coi_expiration_date?: string | null
+          coi_status?: Database["public"]["Enums"]["doc_status"] | null
+          created_at?: string
+          created_by?: string | null
+          docs_due_date?: string | null
+          email: string
+          ic_agreement_status?: Database["public"]["Enums"]["doc_status"] | null
+          id?: string
+          last_received_date?: string | null
+          last_requested_date?: string | null
+          notes?: string | null
+          phone: string
+          preferred_contact_method?:
+            | Database["public"]["Enums"]["contact_method"]
+            | null
+          primary_contact_name: string
+          requested_docs?: string[] | null
+          service_areas?: Database["public"]["Enums"]["service_area"][]
+          status?: Database["public"]["Enums"]["entity_status"]
+          updated_at?: string
+          vendor_name: string
+          vendor_type?: Database["public"]["Enums"]["vendor_type"]
+          w9_status?: Database["public"]["Enums"]["doc_status"] | null
+        }
+        Update: {
+          account_number?: string | null
+          coi_expiration_date?: string | null
+          coi_status?: Database["public"]["Enums"]["doc_status"] | null
+          created_at?: string
+          created_by?: string | null
+          docs_due_date?: string | null
+          email?: string
+          ic_agreement_status?: Database["public"]["Enums"]["doc_status"] | null
+          id?: string
+          last_received_date?: string | null
+          last_requested_date?: string | null
+          notes?: string | null
+          phone?: string
+          preferred_contact_method?:
+            | Database["public"]["Enums"]["contact_method"]
+            | null
+          primary_contact_name?: string
+          requested_docs?: string[] | null
+          service_areas?: Database["public"]["Enums"]["service_area"][]
+          status?: Database["public"]["Enums"]["entity_status"]
+          updated_at?: string
+          vendor_name?: string
+          vendor_type?: Database["public"]["Enums"]["vendor_type"]
+          w9_status?: Database["public"]["Enums"]["doc_status"] | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -868,6 +1111,43 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "manager" | "employee"
+      contact_method: "call" | "text" | "email"
+      doc_status: "received" | "missing"
+      entity_status: "active" | "on_hold" | "do_not_use"
+      prospect_source: "inbound_call" | "referral" | "jobsite_meet" | "other"
+      prospect_stage:
+        | "new"
+        | "contacted"
+        | "waiting_docs"
+        | "trial_job"
+        | "approved"
+        | "not_a_fit"
+      prospect_type: "subcontractor" | "vendor"
+      service_area:
+        | "phoenix_metro"
+        | "west_valley"
+        | "east_valley"
+        | "north_valley"
+        | "prescott"
+        | "other"
+      trade_type:
+        | "roofing"
+        | "tile"
+        | "shingle"
+        | "foam"
+        | "coatings"
+        | "metal"
+        | "gutters"
+        | "drywall"
+        | "paint"
+        | "other"
+      vendor_type:
+        | "supplier"
+        | "dump"
+        | "equipment_rental"
+        | "safety"
+        | "marketing"
+        | "other"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -996,6 +1276,47 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "manager", "employee"],
+      contact_method: ["call", "text", "email"],
+      doc_status: ["received", "missing"],
+      entity_status: ["active", "on_hold", "do_not_use"],
+      prospect_source: ["inbound_call", "referral", "jobsite_meet", "other"],
+      prospect_stage: [
+        "new",
+        "contacted",
+        "waiting_docs",
+        "trial_job",
+        "approved",
+        "not_a_fit",
+      ],
+      prospect_type: ["subcontractor", "vendor"],
+      service_area: [
+        "phoenix_metro",
+        "west_valley",
+        "east_valley",
+        "north_valley",
+        "prescott",
+        "other",
+      ],
+      trade_type: [
+        "roofing",
+        "tile",
+        "shingle",
+        "foam",
+        "coatings",
+        "metal",
+        "gutters",
+        "drywall",
+        "paint",
+        "other",
+      ],
+      vendor_type: [
+        "supplier",
+        "dump",
+        "equipment_rental",
+        "safety",
+        "marketing",
+        "other",
+      ],
     },
   },
 } as const
