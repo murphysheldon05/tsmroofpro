@@ -68,7 +68,7 @@ export default function CommissionDocumentDetail() {
             Close Print View
           </Button>
         </div>
-        <CommissionDocumentPrintView document={document} />
+        <CommissionDocumentPrintView document={document} isAdmin={role === 'admin'} />
       </div>
     );
   }

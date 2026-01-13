@@ -4,9 +4,10 @@ import { format } from "date-fns";
 
 interface CommissionDocumentPrintViewProps {
   document: CommissionDocument;
+  isAdmin?: boolean;
 }
 
-export function CommissionDocumentPrintView({ document }: CommissionDocumentPrintViewProps) {
+export function CommissionDocumentPrintView({ document, isAdmin = false }: CommissionDocumentPrintViewProps) {
   return (
     <div className="print:block p-8 bg-white text-black min-h-screen">
       <style>
@@ -135,14 +136,16 @@ export function CommissionDocumentPrintView({ document }: CommissionDocumentPrin
               <td className="py-2 font-bold text-lg">Rep Commission</td>
               <td className="py-2 text-right font-mono text-lg font-bold">{formatCurrency(document.rep_commission)}</td>
             </tr>
-            <tr className="border-b">
+            <tr className={isAdmin ? "border-b" : ""}>
               <td className="py-2 font-semibold">Advance Total</td>
               <td className="py-2 text-right font-mono">{formatCurrency(document.advance_total)}</td>
             </tr>
-            <tr>
-              <td className="py-2 font-semibold">Company Profit</td>
-              <td className="py-2 text-right font-mono">{formatCurrency(document.company_profit)}</td>
-            </tr>
+            {isAdmin && (
+              <tr className="bg-amber-50">
+                <td className="py-2 font-semibold text-amber-700">Company Profit (Admin)</td>
+                <td className="py-2 text-right font-mono text-amber-700">{formatCurrency(document.company_profit)}</td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
