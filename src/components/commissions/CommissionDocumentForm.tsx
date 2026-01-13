@@ -25,6 +25,11 @@ interface CommissionDocumentFormProps {
   readOnly?: boolean;
 }
 
+// Shared input classes for interactive feel
+const inputBaseClasses = "transition-all duration-200 ease-out hover:border-primary/50 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:shadow-md";
+const numberInputClasses = `font-financial text-base tracking-wide tabular-nums ${inputBaseClasses}`;
+const calculatedInputClasses = "font-financial text-base tracking-wide tabular-nums bg-muted transition-all duration-300";
+
 export function CommissionDocumentForm({ document, readOnly = false }: CommissionDocumentFormProps) {
   const navigate = useNavigate();
   const { user, role } = useAuth();
@@ -128,17 +133,17 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <Button variant="ghost" onClick={() => navigate('/commission-documents')}>
+        <Button variant="ghost" onClick={() => navigate('/commission-documents')} className="transition-transform hover:scale-105 active:scale-95">
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to List
         </Button>
         {canEdit && (
           <div className="flex gap-2">
-            <Button variant="outline" onClick={() => handleSave(false)} disabled={isLoading}>
+            <Button variant="outline" onClick={() => handleSave(false)} disabled={isLoading} className="transition-all hover:scale-105 active:scale-95">
               <Save className="h-4 w-4 mr-2" />
               Save Draft
             </Button>
-            <Button onClick={() => handleSave(true)} disabled={isLoading}>
+            <Button onClick={() => handleSave(true)} disabled={isLoading} className="transition-all hover:scale-105 active:scale-95">
               <Send className="h-4 w-4 mr-2" />
               Submit
             </Button>
@@ -146,7 +151,7 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
         )}
       </div>
 
-      <Card className="font-friendly">
+      <Card className="font-friendly overflow-hidden">
         <CardHeader className="bg-muted/50">
           <CardTitle className="text-xl text-center font-friendly font-semibold">TSM Roofing LLC Official Commission Document</CardTitle>
         </CardHeader>
@@ -154,34 +159,34 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
           {/* Spreadsheet-like layout */}
           <div className="space-y-1">
             {/* Header Fields */}
-            <div className="grid grid-cols-[200px_1fr_1fr] gap-2 items-center py-2 border-b">
-              <Label className="font-semibold">Job Name & ID</Label>
+            <div className="grid grid-cols-[200px_1fr_1fr] gap-2 items-center py-2 border-b transition-colors hover:bg-muted/20">
+              <Label className="font-medium">Job Name & ID</Label>
               <Input
                 value={formData.job_name_id}
                 onChange={(e) => setFormData(prev => ({ ...prev, job_name_id: e.target.value }))}
                 disabled={!canEdit}
-                className="col-span-2"
+                className={`col-span-2 ${inputBaseClasses}`}
               />
             </div>
             
-            <div className="grid grid-cols-[200px_1fr_1fr] gap-2 items-center py-2 border-b">
-              <Label className="font-semibold">Job Date</Label>
+            <div className="grid grid-cols-[200px_1fr_1fr] gap-2 items-center py-2 border-b transition-colors hover:bg-muted/20">
+              <Label className="font-medium">Job Date</Label>
               <Input
                 type="date"
                 value={formData.job_date}
                 onChange={(e) => setFormData(prev => ({ ...prev, job_date: e.target.value }))}
                 disabled={!canEdit}
-                className="col-span-2"
+                className={`col-span-2 ${inputBaseClasses}`}
               />
             </div>
             
-            <div className="grid grid-cols-[200px_1fr_1fr] gap-2 items-center py-2 border-b">
-              <Label className="font-semibold">Sales Rep</Label>
+            <div className="grid grid-cols-[200px_1fr_1fr] gap-2 items-center py-2 border-b transition-colors hover:bg-muted/20">
+              <Label className="font-medium">Sales Rep</Label>
               <Input
                 value={formData.sales_rep}
                 onChange={(e) => setFormData(prev => ({ ...prev, sales_rep: e.target.value }))}
                 disabled={!canEdit}
-                className="col-span-2"
+                className={`col-span-2 ${inputBaseClasses}`}
               />
             </div>
 
@@ -189,8 +194,8 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
             <div className="py-2" />
 
             {/* Contract Total (Gross) */}
-            <div className="grid grid-cols-[200px_150px_1fr] gap-2 items-center py-2 border-b">
-              <Label className="font-semibold">Contract Total (Gross)</Label>
+            <div className="grid grid-cols-[200px_150px_1fr] gap-2 items-center py-2 border-b transition-colors hover:bg-muted/20">
+              <Label className="font-medium">Contract Total (Gross)</Label>
               <Input
                 type="number"
                 step="0.01"
@@ -198,15 +203,15 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
                 value={formData.gross_contract_total}
                 onChange={(e) => handleNumberChange('gross_contract_total', e.target.value)}
                 disabled={!canEdit}
-                className="font-mono"
+                className={numberInputClasses}
               />
               <span className="text-sm text-muted-foreground"></span>
             </div>
 
             {/* O&P */}
-            <div className="grid grid-cols-[200px_150px_1fr] gap-2 items-center py-2 border-b">
-              <Label className="font-semibold">O&P</Label>
-              <div className="relative">
+            <div className="grid grid-cols-[200px_150px_1fr] gap-2 items-center py-2 border-b transition-colors hover:bg-muted/20">
+              <Label className="font-medium">O&P</Label>
+              <div className="relative group">
                 <Input
                   type="number"
                   step="0.01"
@@ -215,15 +220,15 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
                   value={formatPercentForInput(formData.op_percent)}
                   onChange={(e) => handlePercentChange('op_percent', e.target.value)}
                   disabled={!canEdit}
-                  className="font-mono pr-8"
+                  className={`${numberInputClasses} pr-8`}
                 />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">%</span>
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors group-hover:text-primary">%</span>
               </div>
               <span className="text-sm text-muted-foreground">Please enter % as decimal, 10%, 12.%, 15%</span>
             </div>
 
             {/* Contract Total (Net) - Calculated */}
-            <div className="grid grid-cols-[200px_150px_1fr] gap-2 items-center py-2 border-b bg-muted/30">
+            <div className="grid grid-cols-[200px_150px_1fr] gap-2 items-center py-2 border-b bg-muted/30 rounded-md">
               <Label className="font-medium flex items-center gap-1">
                 Contract Total (Net)
                 <Lock className="h-3 w-3 text-muted-foreground" />
@@ -231,14 +236,14 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
               <Input
                 value={formatCurrency(calculated.contract_total_net)}
                 disabled
-                className="font-friendly text-base tracking-wide bg-muted"
+                className={calculatedInputClasses}
               />
               <span className="text-sm text-muted-foreground">Commissions and expenses calculated off of Net contract total.</span>
             </div>
 
             {/* Material */}
-            <div className="grid grid-cols-[200px_150px_1fr] gap-2 items-center py-2 border-b">
-              <Label className="font-semibold">Material</Label>
+            <div className="grid grid-cols-[200px_150px_1fr] gap-2 items-center py-2 border-b transition-colors hover:bg-muted/20">
+              <Label className="font-medium">Material</Label>
               <Input
                 type="number"
                 step="0.01"
@@ -246,14 +251,14 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
                 value={formData.material_cost}
                 onChange={(e) => handleNumberChange('material_cost', e.target.value)}
                 disabled={!canEdit}
-                className="font-mono"
+                className={numberInputClasses}
               />
               <span className="text-sm text-muted-foreground">Initial Material order</span>
             </div>
 
             {/* Labor */}
-            <div className="grid grid-cols-[200px_150px_1fr] gap-2 items-center py-2 border-b">
-              <Label className="font-semibold">Labor</Label>
+            <div className="grid grid-cols-[200px_150px_1fr] gap-2 items-center py-2 border-b transition-colors hover:bg-muted/20">
+              <Label className="font-medium">Labor</Label>
               <Input
                 type="number"
                 step="0.01"
@@ -261,14 +266,14 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
                 value={formData.labor_cost}
                 onChange={(e) => handleNumberChange('labor_cost', e.target.value)}
                 disabled={!canEdit}
-                className="font-mono"
+                className={numberInputClasses}
               />
               <span className="text-sm text-muted-foreground">Initial Labor Order</span>
             </div>
 
             {/* Additional expenses (-) #1 */}
-            <div className="grid grid-cols-[200px_150px_1fr] gap-2 items-center py-2 border-b">
-              <Label className="text-destructive">Additional expenses (-)</Label>
+            <div className="grid grid-cols-[200px_150px_1fr] gap-2 items-center py-2 border-b transition-colors hover:bg-destructive/5">
+              <Label className="text-destructive font-medium">Additional expenses (-)</Label>
               <Input
                 type="number"
                 step="0.01"
@@ -276,15 +281,15 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
                 value={formData.neg_exp_1 || ''}
                 onChange={(e) => handleNumberChange('neg_exp_1', e.target.value)}
                 disabled={!canEdit}
-                className="font-mono"
+                className={numberInputClasses}
                 placeholder="$-"
               />
               <span className="text-sm text-muted-foreground">Will calls, lumber, Home Debot, Misc. expenses</span>
             </div>
 
             {/* Additional expenses (-) #2 */}
-            <div className="grid grid-cols-[200px_150px_1fr] gap-2 items-center py-2 border-b">
-              <Label className="text-destructive">Additional expenses (-)</Label>
+            <div className="grid grid-cols-[200px_150px_1fr] gap-2 items-center py-2 border-b transition-colors hover:bg-destructive/5">
+              <Label className="text-destructive font-medium">Additional expenses (-)</Label>
               <Input
                 type="number"
                 step="0.01"
@@ -292,15 +297,15 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
                 value={formData.neg_exp_2 || ''}
                 onChange={(e) => handleNumberChange('neg_exp_2', e.target.value)}
                 disabled={!canEdit}
-                className="font-mono"
+                className={numberInputClasses}
                 placeholder="$-"
               />
               <span className="text-sm text-muted-foreground">Will calls, lumber, Home Debot, Misc. expenses</span>
             </div>
 
             {/* Additional expenses (-) #3 */}
-            <div className="grid grid-cols-[200px_150px_1fr] gap-2 items-center py-2 border-b">
-              <Label className="text-destructive">Additional expenses (-)</Label>
+            <div className="grid grid-cols-[200px_150px_1fr] gap-2 items-center py-2 border-b transition-colors hover:bg-destructive/5">
+              <Label className="text-destructive font-medium">Additional expenses (-)</Label>
               <Input
                 type="number"
                 step="0.01"
@@ -308,15 +313,15 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
                 value={formData.neg_exp_3 || ''}
                 onChange={(e) => handleNumberChange('neg_exp_3', e.target.value)}
                 disabled={!canEdit}
-                className="font-mono"
+                className={numberInputClasses}
                 placeholder=""
               />
               <span className="text-sm text-muted-foreground">Will calls, lumber, Home Debot, Misc. expenses</span>
             </div>
 
             {/* Additional expenses (-) #4 - Supplement fees */}
-            <div className="grid grid-cols-[200px_150px_1fr] gap-2 items-center py-2 border-b">
-              <Label className="text-destructive">Additional expenses (-)</Label>
+            <div className="grid grid-cols-[200px_150px_1fr] gap-2 items-center py-2 border-b transition-colors hover:bg-destructive/5">
+              <Label className="text-destructive font-medium">Additional expenses (-)</Label>
               <Input
                 type="number"
                 step="0.01"
@@ -324,15 +329,15 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
                 value={formData.supplement_fees_expense || ''}
                 onChange={(e) => handleNumberChange('supplement_fees_expense', e.target.value)}
                 disabled={!canEdit}
-                className="font-mono"
+                className={numberInputClasses}
                 placeholder=""
               />
               <span className="text-sm text-muted-foreground">Supplement fees</span>
             </div>
 
             {/* Additional expenses (+) #1 */}
-            <div className="grid grid-cols-[200px_150px_1fr] gap-2 items-center py-2 border-b">
-              <Label className="text-green-600">Additional expenses (+)</Label>
+            <div className="grid grid-cols-[200px_150px_1fr] gap-2 items-center py-2 border-b transition-colors hover:bg-emerald-50/50 dark:hover:bg-emerald-950/20">
+              <Label className="text-emerald-600 font-medium">Additional expenses (+)</Label>
               <Input
                 type="number"
                 step="0.01"
@@ -340,15 +345,15 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
                 value={formData.pos_exp_1 || ''}
                 onChange={(e) => handleNumberChange('pos_exp_1', e.target.value)}
                 disabled={!canEdit}
-                className="font-mono"
+                className={numberInputClasses}
                 placeholder=""
               />
               <span className="text-sm text-muted-foreground">Returns added back if rep returns materials</span>
             </div>
 
             {/* Additional expenses (+) #2 */}
-            <div className="grid grid-cols-[200px_150px_1fr] gap-2 items-center py-2 border-b">
-              <Label className="text-green-600">Additional expenses (+)</Label>
+            <div className="grid grid-cols-[200px_150px_1fr] gap-2 items-center py-2 border-b transition-colors hover:bg-emerald-50/50 dark:hover:bg-emerald-950/20">
+              <Label className="text-emerald-600 font-medium">Additional expenses (+)</Label>
               <Input
                 type="number"
                 step="0.01"
@@ -356,15 +361,15 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
                 value={formData.pos_exp_2 || ''}
                 onChange={(e) => handleNumberChange('pos_exp_2', e.target.value)}
                 disabled={!canEdit}
-                className="font-mono"
+                className={numberInputClasses}
                 placeholder=""
               />
               <span className="text-sm text-muted-foreground"></span>
             </div>
 
             {/* Additional expenses (+) #3 */}
-            <div className="grid grid-cols-[200px_150px_1fr] gap-2 items-center py-2 border-b">
-              <Label className="text-green-600">Additional expenses (+)</Label>
+            <div className="grid grid-cols-[200px_150px_1fr] gap-2 items-center py-2 border-b transition-colors hover:bg-emerald-50/50 dark:hover:bg-emerald-950/20">
+              <Label className="text-emerald-600 font-medium">Additional expenses (+)</Label>
               <Input
                 type="number"
                 step="0.01"
@@ -372,15 +377,15 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
                 value={formData.pos_exp_3 || ''}
                 onChange={(e) => handleNumberChange('pos_exp_3', e.target.value)}
                 disabled={!canEdit}
-                className="font-mono"
+                className={numberInputClasses}
                 placeholder=""
               />
               <span className="text-sm text-muted-foreground"></span>
             </div>
 
             {/* Additional expenses (+) #4 */}
-            <div className="grid grid-cols-[200px_150px_1fr] gap-2 items-center py-2 border-b">
-              <Label className="text-green-600">Additional expenses (+)</Label>
+            <div className="grid grid-cols-[200px_150px_1fr] gap-2 items-center py-2 border-b transition-colors hover:bg-emerald-50/50 dark:hover:bg-emerald-950/20">
+              <Label className="text-emerald-600 font-medium">Additional expenses (+)</Label>
               <Input
                 type="number"
                 step="0.01"
@@ -388,14 +393,14 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
                 value={formData.pos_exp_4 || ''}
                 onChange={(e) => handleNumberChange('pos_exp_4', e.target.value)}
                 disabled={!canEdit}
-                className="font-mono"
+                className={numberInputClasses}
                 placeholder=""
               />
               <span className="text-sm text-muted-foreground"></span>
             </div>
 
             {/* Net profit - Calculated */}
-            <div className="grid grid-cols-[200px_150px_1fr] gap-2 items-center py-2 border-b bg-muted/30">
+            <div className="grid grid-cols-[200px_150px_1fr] gap-2 items-center py-2 border-b bg-muted/30 rounded-md">
               <Label className="font-medium flex items-center gap-1">
                 Net profit
                 <Lock className="h-3 w-3 text-muted-foreground" />
@@ -403,15 +408,15 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
               <Input
                 value={formatCurrency(calculated.net_profit)}
                 disabled
-                className="font-friendly text-base tracking-wide bg-muted"
+                className={calculatedInputClasses}
               />
               <span className="text-sm text-muted-foreground">This is the Commissionable profit on the job, calculated off the net contract after O&P is removed.</span>
             </div>
 
             {/* Commission Rate */}
-            <div className="grid grid-cols-[200px_150px_1fr] gap-2 items-center py-2 border-b">
-              <Label className="font-semibold">Comission Rate</Label>
-              <div className="relative">
+            <div className="grid grid-cols-[200px_150px_1fr] gap-2 items-center py-2 border-b transition-colors hover:bg-muted/20">
+              <Label className="font-medium">Comission Rate</Label>
+              <div className="relative group">
                 <Input
                   type="number"
                   step="0.01"
@@ -420,15 +425,15 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
                   value={formatPercentForInput(formData.commission_rate)}
                   onChange={(e) => handlePercentChange('commission_rate', e.target.value)}
                   disabled={!canEdit}
-                  className="font-mono pr-8"
+                  className={`${numberInputClasses} pr-8`}
                 />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">%</span>
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors group-hover:text-primary">%</span>
               </div>
               <span className="text-sm text-muted-foreground">This is the percentage of profit split allocated to the rep</span>
             </div>
 
             {/* Rep Commission - Calculated */}
-            <div className="grid grid-cols-[200px_150px_1fr] gap-2 items-center py-3 border-b bg-emerald-50 dark:bg-emerald-900/20 rounded-lg">
+            <div className="grid grid-cols-[200px_150px_1fr] gap-2 items-center py-3 border-b bg-emerald-50 dark:bg-emerald-900/20 rounded-lg transition-all hover:shadow-md hover:bg-emerald-100/80 dark:hover:bg-emerald-900/30">
               <Label className="font-semibold flex items-center gap-1 text-emerald-700 dark:text-emerald-400">
                 Rep Commission
                 <Lock className="h-3 w-3" />
@@ -436,14 +441,14 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
               <Input
                 value={formatCurrency(calculated.rep_commission)}
                 disabled
-                className="font-friendly text-lg tracking-wide bg-emerald-100 dark:bg-emerald-900/30 font-semibold text-emerald-700 dark:text-emerald-300 border-emerald-200"
+                className="font-financial text-lg tracking-wide tabular-nums bg-emerald-100 dark:bg-emerald-900/30 font-semibold text-emerald-700 dark:text-emerald-300 border-emerald-200 transition-all"
               />
               <span className="text-sm text-emerald-600 dark:text-emerald-400">This is the total dollars paid to rep</span>
             </div>
 
             {/* Advance Total */}
-            <div className="grid grid-cols-[200px_150px_1fr] gap-2 items-center py-2 border-b">
-              <Label className="font-semibold">Advance Total</Label>
+            <div className="grid grid-cols-[200px_150px_1fr] gap-2 items-center py-2 border-b transition-colors hover:bg-muted/20">
+              <Label className="font-medium">Advance Total</Label>
               <Input
                 type="number"
                 step="0.01"
@@ -451,14 +456,14 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
                 value={formData.advance_total || ''}
                 onChange={(e) => handleNumberChange('advance_total', e.target.value)}
                 disabled={!canEdit}
-                className="font-mono"
+                className={numberInputClasses}
                 placeholder="$-"
               />
               <span className="text-sm text-muted-foreground"></span>
             </div>
 
             {/* Net Profit After Commission - Calculated */}
-            <div className="grid grid-cols-[200px_150px_1fr] gap-2 items-center py-2 border-b bg-muted/30">
+            <div className="grid grid-cols-[200px_150px_1fr] gap-2 items-center py-2 border-b bg-muted/30 rounded-md">
               <Label className="font-medium flex items-center gap-1">
                 Net Profit After Commission
                 <Lock className="h-3 w-3 text-muted-foreground" />
@@ -466,14 +471,14 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
               <Input
                 value={formatCurrency(calculated.net_profit - calculated.rep_commission)}
                 disabled
-                className="font-friendly text-base tracking-wide bg-muted"
+                className={calculatedInputClasses}
               />
               <span className="text-sm text-muted-foreground">Remaining profit after rep commission</span>
             </div>
 
             {/* Company Profit - Admin Only */}
             {role === 'admin' && (
-              <div className="grid grid-cols-[200px_150px_1fr] gap-2 items-center py-2 border-b bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800 rounded-lg">
+              <div className="grid grid-cols-[200px_150px_1fr] gap-2 items-center py-2 border-b bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800 rounded-lg transition-all hover:shadow-md">
                 <Label className="font-medium flex items-center gap-1 text-amber-700 dark:text-amber-400">
                   Company Profit
                   <Lock className="h-3 w-3" />
@@ -481,21 +486,22 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
                 <Input
                   value={formatCurrency(calculated.company_profit)}
                   disabled
-                  className="font-friendly text-base tracking-wide bg-amber-100 dark:bg-amber-900/50 border-amber-300 dark:border-amber-700"
+                  className="font-financial text-base tracking-wide tabular-nums bg-amber-100 dark:bg-amber-900/50 border-amber-300 dark:border-amber-700 transition-all"
                 />
                 <span className="text-sm text-amber-600 dark:text-amber-500">Admin only - Total company profit</span>
               </div>
             )}
 
             {/* Notes */}
-            <div className="grid grid-cols-[200px_1fr] gap-2 items-start py-2 border-b">
-              <Label className="font-semibold pt-2">Notes</Label>
+            <div className="grid grid-cols-[200px_1fr] gap-2 items-start py-2 border-b transition-colors hover:bg-muted/20">
+              <Label className="font-medium pt-2">Notes</Label>
               <Textarea
                 value={formData.notes}
                 onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
                 disabled={!canEdit}
                 placeholder=""
                 rows={3}
+                className={`${inputBaseClasses} resize-none`}
               />
             </div>
 
@@ -503,8 +509,8 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
             <div className="py-2" />
 
             {/* Management Approval */}
-            <div className="grid grid-cols-[200px_1fr] gap-2 items-center py-2 bg-muted/50 rounded">
-              <Label className="font-semibold">Management Approval</Label>
+            <div className="grid grid-cols-[200px_1fr] gap-2 items-center py-2 bg-muted/50 rounded transition-colors">
+              <Label className="font-medium">Management Approval</Label>
               <div className="text-sm">
                 {document?.status === 'approved' && document.approved_at && (
                   <span className="text-green-600">
