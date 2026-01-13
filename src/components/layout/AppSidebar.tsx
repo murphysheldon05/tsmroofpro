@@ -85,6 +85,14 @@ const navigation: NavItem[] = [
     ],
   },
   {
+    title: "Production",
+    icon: Hammer,
+    sectionKey: "company",
+    children: [
+      { title: "Warranty Tracker", href: "/warranties", icon: Shield, sectionKey: "company" },
+    ],
+  },
+  {
     title: "Tools & Systems",
     href: "/tools",
     icon: Wrench,
@@ -121,7 +129,7 @@ export function AppSidebar() {
   const navigate = useNavigate();
   const { signOut, isAdmin, isManager, role, user } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [openSections, setOpenSections] = useState<string[]>(["SOP Library", "Training"]);
+  const [openSections, setOpenSections] = useState<string[]>(["SOP Library", "Training", "Production"]);
   const { data: userPermissions } = useCurrentUserPermissions();
   const [profile, setProfile] = useState<{ avatar_url: string | null; full_name: string | null } | null>(null);
 
