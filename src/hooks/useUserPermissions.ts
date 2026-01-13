@@ -16,9 +16,17 @@ export const SIDEBAR_SECTIONS = [
   { key: "training/new-hire", label: "New Hire", parent: "training" },
   { key: "training/role-training", label: "Role Training", parent: "training" },
   { key: "training/video-library", label: "Video Library", parent: "training" },
+  { key: "production", label: "Production", parent: null },
+  { key: "production/warranties", label: "Warranty Tracker", parent: "production" },
+  { key: "production-calendar", label: "Production Calendar", parent: null },
+  { key: "production-calendar/build", label: "Build Schedule", parent: "production-calendar" },
+  { key: "production-calendar/delivery", label: "Delivery Schedule", parent: "production-calendar" },
   { key: "tools", label: "Tools & Systems", parent: null },
   { key: "requests", label: "Forms & Requests", parent: null },
+  { key: "commissions", label: "Commissions", parent: null },
   { key: "company", label: "Company", parent: null },
+  { key: "directory", label: "Team Directory", parent: null },
+  { key: "vendors", label: "Subs & Vendors", parent: null },
 ] as const;
 
 export type SectionKey = (typeof SIDEBAR_SECTIONS)[number]["key"];

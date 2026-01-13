@@ -158,6 +158,24 @@ export function useCreateWarranty() {
         .single();
 
       if (error) throw error;
+
+      // Send notification for new warranty
+      try {
+        await supabase.functions.invoke("send-warranty-notification", {
+          body: {
+            notification_type: "submitted",
+            warranty_id: data.id,
+            customer_name: data.customer_name,
+            job_address: data.job_address,
+            issue_description: data.issue_description,
+            priority_level: data.priority_level,
+            status: data.status,
+          },
+        });
+      } catch (notifyError) {
+        console.error("Failed to send warranty notification:", notifyError);
+      }
+
       return data;
     },
     onSuccess: () => {
@@ -174,7 +192,7 @@ export function useUpdateWarranty() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, ...updates }: Partial<WarrantyRequest> & { id: string }) => {
+    mutationFn: async ({ id, previousStatus, ...updates }: Partial<WarrantyRequest> & { id: string; previousStatus?: string }) => {
       const { data, error } = await supabase
         .from("warranty_requests")
         .update(updates)
@@ -183,6 +201,32 @@ export function useUpdateWarranty() {
         .single();
 
       if (error) throw error;
+
+      // Send notification for status changes
+      if (updates.status && previousStatus && updates.status !== previousStatus) {
+        try {
+          let notificationType: "status_change" | "assigned" | "completed" = "status_change";
+          if (updates.status === "assigned") notificationType = "assigned";
+          if (updates.status === "completed") notificationType = "completed";
+
+          await supabase.functions.invoke("send-warranty-notification", {
+            body: {
+              notification_type: notificationType,
+              warranty_id: data.id,
+              customer_name: data.customer_name,
+              job_address: data.job_address,
+              issue_description: data.issue_description,
+              priority_level: data.priority_level,
+              status: data.status,
+              previous_status: previousStatus,
+              assigned_to: data.assigned_production_member,
+            },
+          });
+        } catch (notifyError) {
+          console.error("Failed to send warranty status notification:", notifyError);
+        }
+      }
+
       return data;
     },
     onSuccess: () => {
