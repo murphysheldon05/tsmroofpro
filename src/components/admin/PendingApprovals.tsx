@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -10,6 +11,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Check, X, Loader2, UserPlus, Clock, Building2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -45,6 +55,8 @@ export function PendingApprovals() {
   const [approvingId, setApprovingId] = useState<string | null>(null);
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [selectedRoles, setSelectedRoles] = useState<Record<string, string>>({});
+  const [approvalDialog, setApprovalDialog] = useState<{ open: boolean; user: PendingUser | null }>({ open: false, user: null });
+  const [customMessage, setCustomMessage] = useState("");
 
   const { data: pendingUsers, isLoading } = useQuery({
     queryKey: ["pending-approvals"],
@@ -69,7 +81,15 @@ export function PendingApprovals() {
     return "employee";
   };
 
-  const handleApprove = async (pendingUser: PendingUser) => {
+  const openApprovalDialog = (pendingUser: PendingUser) => {
+    setApprovalDialog({ open: true, user: pendingUser });
+    setCustomMessage("");
+  };
+
+  const handleApprove = async () => {
+    const pendingUser = approvalDialog.user;
+    if (!pendingUser) return;
+    
     const assignedRole = selectedRoles[pendingUser.id] || getDefaultRole(pendingUser.requested_role);
     
     setApprovingId(pendingUser.id);
@@ -101,6 +121,7 @@ export function PendingApprovals() {
             body: {
               user_email: pendingUser.email,
               user_name: pendingUser.full_name || "",
+              custom_message: customMessage.trim() || undefined,
             },
           });
         } catch (emailError) {
@@ -109,6 +130,7 @@ export function PendingApprovals() {
       }
 
       toast.success(`User approved as ${assignedRole}!`);
+      setApprovalDialog({ open: false, user: null });
       queryClient.invalidateQueries({ queryKey: ["pending-approvals"] });
       queryClient.invalidateQueries({ queryKey: ["admin-users"] });
     } catch (error: any) {
@@ -254,8 +276,8 @@ export function PendingApprovals() {
                       size="sm"
                       variant="outline"
                       className="gap-1 text-emerald-600 border-emerald-300 hover:bg-emerald-50"
-                      onClick={() => handleApprove(pendingUser)}
-                      disabled={approvingId === pendingUser.id || rejectingId === pendingUser.id}
+                      onClick={() => openApprovalDialog(pendingUser)}
+                      disabled={approvingId !== null || rejectingId === pendingUser.id}
                     >
                       {approvingId === pendingUser.id ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
@@ -285,6 +307,75 @@ export function PendingApprovals() {
           </tbody>
         </table>
       </div>
+
+      {/* Approval Dialog */}
+      <Dialog open={approvalDialog.open} onOpenChange={(open) => setApprovalDialog({ open, user: open ? approvalDialog.user : null })}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Approve User</DialogTitle>
+            <DialogDescription>
+              Approve {approvalDialog.user?.full_name || approvalDialog.user?.email} for access to TSM Hub.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Assigned Role</Label>
+              <Select
+                value={approvalDialog.user ? (selectedRoles[approvalDialog.user.id] || getDefaultRole(approvalDialog.user.requested_role)) : "employee"}
+                onValueChange={(value) => {
+                  if (approvalDialog.user) {
+                    setSelectedRoles(prev => ({ ...prev, [approvalDialog.user!.id]: value }));
+                  }
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {ASSIGNABLE_ROLES.map((role) => (
+                    <SelectItem key={role.value} value={role.value}>
+                      {role.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="customMessage">Welcome Message (Optional)</Label>
+              <Textarea
+                id="customMessage"
+                placeholder="Add a personal message to include in the approval email..."
+                value={customMessage}
+                onChange={(e) => setCustomMessage(e.target.value)}
+                rows={3}
+              />
+              <p className="text-xs text-muted-foreground">
+                This message will be included in the approval notification email.
+              </p>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setApprovalDialog({ open: false, user: null })}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleApprove}
+              disabled={approvingId !== null}
+              className="gap-1"
+            >
+              {approvingId ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Check className="w-4 h-4" />
+              )}
+              Approve User
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

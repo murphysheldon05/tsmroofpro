@@ -12,6 +12,7 @@ const corsHeaders = {
 interface ApprovalNotificationRequest {
   user_email: string;
   user_name: string;
+  custom_message?: string;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -21,9 +22,9 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { user_email, user_name }: ApprovalNotificationRequest = await req.json();
+    const { user_email, user_name, custom_message }: ApprovalNotificationRequest = await req.json();
 
-    console.log("Sending approval notification to:", user_email);
+    console.log("Sending approval notification to:", user_email, "with custom message:", custom_message ? "yes" : "no");
 
     const appUrl = Deno.env.get("APP_BASE_URL") || "https://hub.tsmroofs.com";
     const loginUrl = `${appUrl}/auth`;
@@ -52,6 +53,13 @@ const handler = async (req: Request): Promise<Response> => {
             <p style="font-size: 16px; margin-bottom: 20px;">
               Great news! Your TSM Hub account has been approved by an administrator. You now have full access to the platform.
             </p>
+            
+            ${custom_message ? `
+            <div style="background: #f0f9ff; border-left: 4px solid #3b82f6; padding: 16px; margin: 20px 0; border-radius: 0 8px 8px 0;">
+              <p style="font-size: 14px; font-weight: 600; color: #1e40af; margin: 0 0 8px 0;">Message from the Admin:</p>
+              <p style="font-size: 14px; color: #374151; margin: 0; white-space: pre-wrap;">${custom_message}</p>
+            </div>
+            ` : ''}
             
             <div style="text-align: center; margin: 30px 0;">
               <a href="${loginUrl}" style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; display: inline-block;">
