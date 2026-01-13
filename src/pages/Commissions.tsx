@@ -22,6 +22,7 @@ import {
   BarChart3
 } from "lucide-react";
 import { useCommissionSubmissions, useIsCommissionReviewer } from "@/hooks/useCommissions";
+import { CommissionTracker } from "@/components/commissions/CommissionTracker";
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
 
@@ -299,19 +300,7 @@ export default function Commissions() {
 
           {isReviewer && (
             <TabsContent value="tracker">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Commission Tracker</CardTitle>
-                  <CardDescription>
-                    Master view of all commission submissions for review and approval
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground text-center py-8">
-                    Commission Tracker dashboard will be available in Phase 2
-                  </p>
-                </CardContent>
-              </Card>
+              <CommissionTracker submissions={submissions || []} />
             </TabsContent>
           )}
         </Tabs>
