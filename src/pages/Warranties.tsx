@@ -6,9 +6,10 @@ import { WarrantyDashboard } from "@/components/warranty/WarrantyDashboard";
 import { WarrantyList } from "@/components/warranty/WarrantyList";
 import { WarrantyForm } from "@/components/warranty/WarrantyForm";
 import { WarrantyDetail } from "@/components/warranty/WarrantyDetail";
+import { WarrantyAgingReport } from "@/components/warranty/WarrantyAgingReport";
 import { WarrantyRequest } from "@/hooks/useWarranties";
 import { useAuth } from "@/contexts/AuthContext";
-import { Plus, LayoutDashboard, List } from "lucide-react";
+import { Plus, LayoutDashboard, List, BarChart3 } from "lucide-react";
 
 export default function Warranties() {
   const { role } = useAuth();
@@ -76,6 +77,10 @@ export default function Warranties() {
               <List className="h-4 w-4" />
               All Warranties
             </TabsTrigger>
+            <TabsTrigger value="aging" className="flex items-center gap-2">
+              <BarChart3 className="h-4 w-4" />
+              Aging Report
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="dashboard" className="mt-6">
@@ -84,6 +89,10 @@ export default function Warranties() {
 
           <TabsContent value="list" className="mt-6">
             <WarrantyList onEdit={handleEdit} onView={handleView} />
+          </TabsContent>
+
+          <TabsContent value="aging" className="mt-6">
+            <WarrantyAgingReport />
           </TabsContent>
         </Tabs>
       </div>
