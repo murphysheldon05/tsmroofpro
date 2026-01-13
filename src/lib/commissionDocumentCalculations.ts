@@ -21,32 +21,10 @@ export interface CommissionDocumentData {
 }
 
 export interface CalculatedFields {
-  op_dollar_amount: number;
   contract_total_net: number;
   net_profit: number;
   rep_commission: number;
   company_profit: number;
-}
-
-// Profit split options: [O&P%, Rep%, Company%]
-export const PROFIT_SPLIT_OPTIONS = [
-  { label: '15/40/60', op: 0.15, rep: 0.40, company: 0.60 },
-  { label: '15/45/55', op: 0.15, rep: 0.45, company: 0.55 },
-  { label: '15/50/50', op: 0.15, rep: 0.50, company: 0.50 },
-] as const;
-
-export const OP_PERCENT_OPTIONS = [
-  { label: '10.00%', value: 0.10 },
-  { label: '12.50%', value: 0.125 },
-  { label: '15.00%', value: 0.15 },
-] as const;
-
-/**
- * Calculate O&P Dollar Amount
- * Formula: gross_contract_total * op_percent
- */
-export function calculateOpDollarAmount(grossContractTotal: number, opPercent: number): number {
-  return grossContractTotal * opPercent;
 }
 
 /**
@@ -109,9 +87,6 @@ export function calculateCompanyProfit(netProfit: number, repCommission: number,
  * Calculate all computed fields from input data
  */
 export function calculateAllFields(data: CommissionDocumentData): CalculatedFields {
-  // O&P Dollar Amount
-  const op_dollar_amount = calculateOpDollarAmount(data.gross_contract_total, data.op_percent);
-
   // Contract Total (Net)
   const contract_total_net = calculateContractTotalNet(data.gross_contract_total, data.op_percent);
 
@@ -137,7 +112,6 @@ export function calculateAllFields(data: CommissionDocumentData): CalculatedFiel
   const company_profit = calculateCompanyProfit(net_profit, rep_commission, data.gross_contract_total, data.op_percent);
 
   return {
-    op_dollar_amount,
     contract_total_net,
     net_profit,
     rep_commission,
