@@ -17,14 +17,18 @@ import {
   DollarSign,
   FileText,
   History,
-  Loader2
+  Loader2,
+  UserCheck,
+  Calculator,
+  Send
 } from "lucide-react";
 import { CommissionWorksheet } from "@/components/commissions/CommissionWorksheet";
 import { 
   useCommissionSubmission, 
   useCommissionStatusLog,
   useUpdateCommissionStatus,
-  useIsCommissionReviewer
+  useIsCommissionReviewer,
+  useCanProcessPayouts
 } from "@/hooks/useCommissions";
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
@@ -49,17 +53,27 @@ const STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secon
   on_hold: { label: "On Hold", variant: "secondary", icon: <XCircle className="h-4 w-4" />, color: "text-gray-600" },
 };
 
+const APPROVAL_STAGE_CONFIG: Record<string, { label: string; icon: React.ReactNode; color: string }> = {
+  pending_manager: { label: "Awaiting Manager Approval", icon: <UserCheck className="h-4 w-4" />, color: "text-amber-600" },
+  manager_approved: { label: "Manager Approved - Awaiting Accounting", icon: <Calculator className="h-4 w-4" />, color: "text-blue-600" },
+  accounting_approved: { label: "Fully Approved", icon: <CheckCircle className="h-4 w-4" />, color: "text-green-600" },
+};
+
 export default function CommissionDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, role } = useAuth();
   const { data: submission, isLoading } = useCommissionSubmission(id!);
   const { data: statusLog } = useCommissionStatusLog(id!);
   const { data: isReviewer } = useIsCommissionReviewer();
+  const { data: canPayout } = useCanProcessPayouts();
   const updateStatus = useUpdateCommissionStatus();
   
   const [rejectionReason, setRejectionReason] = useState("");
   const [reviewerNotes, setReviewerNotes] = useState("");
+
+  const isAdmin = role === "admin";
+  const isManager = role === "manager" || isAdmin;
 
   if (isLoading) {
     return (
@@ -86,9 +100,21 @@ export default function CommissionDetail() {
   }
 
   const statusConfig = STATUS_CONFIG[submission.status];
-  const canApprove = isReviewer && submission.status === "pending_review";
-  const canReject = isReviewer && submission.status === "pending_review";
-  const canMarkPaid = isReviewer && submission.status === "approved_for_payment";
+  const approvalStageConfig = submission.approval_stage ? APPROVAL_STAGE_CONFIG[submission.approval_stage] : null;
+  
+  // Determine available actions based on approval stage
+  const isPendingManager = submission.status === "pending_review" && submission.approval_stage === "pending_manager";
+  const isPendingAccounting = submission.status === "pending_review" && submission.approval_stage === "manager_approved";
+  const isApprovedForPayment = submission.status === "approved_for_payment";
+  
+  // Manager can approve if pending_manager stage
+  const canManagerApprove = isReviewer && isPendingManager;
+  // Accounting can approve if manager_approved stage (or user has payout permission)
+  const canAccountingApprove = isReviewer && isPendingAccounting;
+  // Can reject at any pending stage
+  const canReject = isReviewer && (isPendingManager || isPendingAccounting);
+  // Can mark paid only if approved and has payout permission
+  const canMarkPaid = canPayout && isApprovedForPayment;
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("en-US", {
@@ -97,12 +123,24 @@ export default function CommissionDetail() {
     }).format(value);
   };
 
-  const handleApprove = async () => {
+  const handleManagerApprove = async () => {
+    await updateStatus.mutateAsync({
+      id: submission.id,
+      status: "pending_review",
+      approval_stage: "manager_approved",
+      notes: reviewerNotes || "Manager approved - forwarded to accounting",
+    });
+    setReviewerNotes("");
+  };
+
+  const handleAccountingApprove = async () => {
     await updateStatus.mutateAsync({
       id: submission.id,
       status: "approved_for_payment",
-      notes: reviewerNotes || "Approved for payment",
+      approval_stage: "accounting_approved",
+      notes: reviewerNotes || "Accounting approved - ready for payout",
     });
+    setReviewerNotes("");
   };
 
   const handleReject = async () => {
@@ -122,6 +160,15 @@ export default function CommissionDetail() {
     });
   };
 
+  const handlePutOnHold = async () => {
+    await updateStatus.mutateAsync({
+      id: submission.id,
+      status: "on_hold",
+      notes: reviewerNotes || "Put on hold",
+    });
+    setReviewerNotes("");
+  };
+
   return (
     <AppLayout>
       <div className="max-w-4xl mx-auto space-y-6">
@@ -132,7 +179,7 @@ export default function CommissionDetail() {
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 flex-wrap">
                 <h1 className="text-2xl font-bold">{submission.job_name}</h1>
                 <Badge variant={statusConfig?.variant} className="gap-1">
                   {statusConfig?.icon}
@@ -144,34 +191,91 @@ export default function CommissionDetail() {
           </div>
         </div>
 
+        {/* Approval Stage Indicator */}
+        {submission.status === "pending_review" && approvalStageConfig && (
+          <Card className="border-amber-200 bg-amber-50/50">
+            <CardContent className="py-4">
+              <div className="flex items-center gap-3">
+                <div className={`p-2 rounded-full bg-background ${approvalStageConfig.color}`}>
+                  {approvalStageConfig.icon}
+                </div>
+                <div>
+                  <p className="font-medium">{approvalStageConfig.label}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {submission.approval_stage === "pending_manager" 
+                      ? "This commission needs manager approval before going to accounting."
+                      : "Manager has approved. Waiting for accounting to review and approve."
+                    }
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Reviewer Actions */}
         {isReviewer && (
           <Card className="border-primary/20">
             <CardHeader className="pb-3">
-              <CardTitle className="text-lg">Reviewer Actions</CardTitle>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <UserCheck className="h-5 w-5" />
+                Reviewer Actions
+              </CardTitle>
+              <CardDescription>
+                {isPendingManager && "This commission is awaiting manager approval."}
+                {isPendingAccounting && "Manager approved. Please review and approve for accounting."}
+                {isApprovedForPayment && "This commission is approved and ready for payout."}
+                {submission.status === "paid" && "This commission has been paid."}
+                {submission.status === "revision_required" && "This commission requires revision from the submitter."}
+                {submission.status === "on_hold" && "This commission is currently on hold."}
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label>Reviewer Notes</Label>
-                <Textarea
-                  placeholder="Add notes about this submission..."
-                  value={reviewerNotes}
-                  onChange={(e) => setReviewerNotes(e.target.value)}
-                />
-              </div>
+              {(canManagerApprove || canAccountingApprove) && (
+                <div className="space-y-2">
+                  <Label>Reviewer Notes (Optional)</Label>
+                  <Textarea
+                    placeholder="Add notes about this submission..."
+                    value={reviewerNotes}
+                    onChange={(e) => setReviewerNotes(e.target.value)}
+                  />
+                </div>
+              )}
               
-              <div className="flex gap-2">
-                {canApprove && (
+              <div className="flex flex-wrap gap-2">
+                {/* Manager Approve Button */}
+                {canManagerApprove && (
                   <Button 
-                    onClick={handleApprove}
+                    onClick={handleManagerApprove}
                     disabled={updateStatus.isPending}
-                    className="gap-2"
+                    className="gap-2 bg-blue-600 hover:bg-blue-700"
                   >
-                    <CheckCircle className="h-4 w-4" />
+                    {updateStatus.isPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Send className="h-4 w-4" />
+                    )}
+                    Approve & Send to Accounting
+                  </Button>
+                )}
+                
+                {/* Accounting Approve Button */}
+                {canAccountingApprove && (
+                  <Button 
+                    onClick={handleAccountingApprove}
+                    disabled={updateStatus.isPending}
+                    className="gap-2 bg-green-600 hover:bg-green-700"
+                  >
+                    {updateStatus.isPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <CheckCircle className="h-4 w-4" />
+                    )}
                     Approve for Payment
                   </Button>
                 )}
                 
+                {/* Request Revision Button */}
                 {canReject && (
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
@@ -199,7 +303,8 @@ export default function CommissionDetail() {
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
                         <AlertDialogAction 
                           onClick={handleReject}
-                          disabled={!rejectionReason.trim()}
+                          disabled={!rejectionReason.trim() || updateStatus.isPending}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                         >
                           Submit
                         </AlertDialogAction>
@@ -208,23 +313,64 @@ export default function CommissionDetail() {
                   </AlertDialog>
                 )}
                 
-                {canMarkPaid && (
+                {/* Put On Hold Button */}
+                {(canManagerApprove || canAccountingApprove) && (
                   <Button 
-                    onClick={handleMarkPaid}
+                    onClick={handlePutOnHold}
                     disabled={updateStatus.isPending}
                     variant="outline"
                     className="gap-2"
                   >
-                    <DollarSign className="h-4 w-4" />
-                    Mark as Paid
+                    <Clock className="h-4 w-4" />
+                    Put On Hold
                   </Button>
+                )}
+                
+                {/* Mark as Paid Button */}
+                {canMarkPaid && (
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button className="gap-2 bg-green-600 hover:bg-green-700">
+                        <DollarSign className="h-4 w-4" />
+                        Mark as Paid
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Mark Commission as Paid</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This will mark the commission of {formatCurrency(submission.net_commission_owed)} as paid. 
+                          The submitter will be notified.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction 
+                          onClick={handleMarkPaid}
+                          disabled={updateStatus.isPending}
+                          className="bg-green-600 hover:bg-green-700"
+                        >
+                          Confirm Payment
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 )}
               </div>
 
+              {/* Show rejection reason if exists */}
               {submission.rejection_reason && (
                 <div className="p-3 bg-destructive/10 rounded-lg border border-destructive/20">
                   <p className="text-sm font-medium text-destructive">Revision Required:</p>
                   <p className="text-sm text-destructive/80">{submission.rejection_reason}</p>
+                </div>
+              )}
+
+              {/* Show reviewer notes if exists */}
+              {submission.reviewer_notes && (
+                <div className="p-3 bg-muted rounded-lg">
+                  <p className="text-sm font-medium">Reviewer Notes:</p>
+                  <p className="text-sm text-muted-foreground">{submission.reviewer_notes}</p>
                 </div>
               )}
             </CardContent>
