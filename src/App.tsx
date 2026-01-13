@@ -21,6 +21,9 @@ import Profile from "./pages/Profile";
 import UserDirectory from "./pages/UserDirectory";
 import Directory from "./pages/Directory";
 import Warranties from "./pages/Warranties";
+import Commissions from "./pages/Commissions";
+import CommissionNew from "./pages/CommissionNew";
+import CommissionDetail from "./pages/CommissionDetail";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -132,6 +135,30 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <Warranties />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/commissions"
+              element={
+                <ProtectedRoute>
+                  <Commissions />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/commissions/new"
+              element={
+                <ProtectedRoute>
+                  <CommissionNew />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/commissions/:id"
+              element={
+                <ProtectedRoute>
+                  <CommissionDetail />
                 </ProtectedRoute>
               }
             />
