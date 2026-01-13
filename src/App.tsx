@@ -24,6 +24,9 @@ import Warranties from "./pages/Warranties";
 import Commissions from "./pages/Commissions";
 import CommissionNew from "./pages/CommissionNew";
 import CommissionDetail from "./pages/CommissionDetail";
+import CommissionDocuments from "./pages/CommissionDocuments";
+import CommissionDocumentNew from "./pages/CommissionDocumentNew";
+import CommissionDocumentDetail from "./pages/CommissionDocumentDetail";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -159,6 +162,30 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <CommissionDetail />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/commission-documents"
+              element={
+                <ProtectedRoute>
+                  <CommissionDocuments />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/commission-documents/new"
+              element={
+                <ProtectedRoute>
+                  <CommissionDocumentNew />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/commission-documents/:id"
+              element={
+                <ProtectedRoute>
+                  <CommissionDocumentDetail />
                 </ProtectedRoute>
               }
             />

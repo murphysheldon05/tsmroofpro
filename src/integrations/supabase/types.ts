@@ -135,6 +135,120 @@ export type Database = {
           },
         ]
       }
+      commission_documents: {
+        Row: {
+          advance_total: number
+          approval_comment: string | null
+          approved_at: string | null
+          approved_by: string | null
+          commission_rate: number
+          company_profit: number
+          contract_total_net: number
+          created_at: string
+          created_by: string
+          dollars_increased: number | null
+          final_claim_amount: number | null
+          gross_contract_total: number
+          id: string
+          job_date: string
+          job_name_id: string
+          labor_cost: number
+          material_cost: number
+          neg_exp_1: number
+          neg_exp_2: number
+          neg_exp_3: number
+          net_profit: number
+          notes: string | null
+          op_percent: number
+          pos_exp_1: number
+          pos_exp_2: number
+          pos_exp_3: number
+          pos_exp_4: number
+          rep_commission: number
+          sales_rep: string
+          sales_rep_id: string | null
+          starting_claim_amount: number | null
+          status: string
+          supplement_fee: number | null
+          supplement_fees_expense: number
+          updated_at: string
+        }
+        Insert: {
+          advance_total?: number
+          approval_comment?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          commission_rate?: number
+          company_profit?: number
+          contract_total_net?: number
+          created_at?: string
+          created_by: string
+          dollars_increased?: number | null
+          final_claim_amount?: number | null
+          gross_contract_total?: number
+          id?: string
+          job_date: string
+          job_name_id: string
+          labor_cost?: number
+          material_cost?: number
+          neg_exp_1?: number
+          neg_exp_2?: number
+          neg_exp_3?: number
+          net_profit?: number
+          notes?: string | null
+          op_percent?: number
+          pos_exp_1?: number
+          pos_exp_2?: number
+          pos_exp_3?: number
+          pos_exp_4?: number
+          rep_commission?: number
+          sales_rep: string
+          sales_rep_id?: string | null
+          starting_claim_amount?: number | null
+          status?: string
+          supplement_fee?: number | null
+          supplement_fees_expense?: number
+          updated_at?: string
+        }
+        Update: {
+          advance_total?: number
+          approval_comment?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          commission_rate?: number
+          company_profit?: number
+          contract_total_net?: number
+          created_at?: string
+          created_by?: string
+          dollars_increased?: number | null
+          final_claim_amount?: number | null
+          gross_contract_total?: number
+          id?: string
+          job_date?: string
+          job_name_id?: string
+          labor_cost?: number
+          material_cost?: number
+          neg_exp_1?: number
+          neg_exp_2?: number
+          neg_exp_3?: number
+          net_profit?: number
+          notes?: string | null
+          op_percent?: number
+          pos_exp_1?: number
+          pos_exp_2?: number
+          pos_exp_3?: number
+          pos_exp_4?: number
+          rep_commission?: number
+          sales_rep?: string
+          sales_rep_id?: string | null
+          starting_claim_amount?: number | null
+          status?: string
+          supplement_fee?: number | null
+          supplement_fees_expense?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       commission_reviewers: {
         Row: {
           can_approve: boolean | null
