@@ -27,6 +27,8 @@ import CommissionDetail from "./pages/CommissionDetail";
 import CommissionDocuments from "./pages/CommissionDocuments";
 import CommissionDocumentNew from "./pages/CommissionDocumentNew";
 import CommissionDocumentDetail from "./pages/CommissionDocumentDetail";
+import BuildSchedule from "./pages/BuildSchedule";
+import DeliverySchedule from "./pages/DeliverySchedule";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -138,6 +140,22 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <Warranties />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/build-schedule"
+              element={
+                <ProtectedRoute>
+                  <BuildSchedule />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/delivery-schedule"
+              element={
+                <ProtectedRoute>
+                  <DeliverySchedule />
                 </ProtectedRoute>
               }
             />
