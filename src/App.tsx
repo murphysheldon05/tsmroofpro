@@ -20,6 +20,7 @@ import Admin from "./pages/Admin";
 import Profile from "./pages/Profile";
 import UserDirectory from "./pages/UserDirectory";
 import Directory from "./pages/Directory";
+import Warranties from "./pages/Warranties";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -123,6 +124,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <Directory />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/warranties"
+              element={
+                <ProtectedRoute>
+                  <Warranties />
                 </ProtectedRoute>
               }
             />

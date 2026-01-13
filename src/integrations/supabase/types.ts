@@ -1090,6 +1090,175 @@ export type Database = {
         }
         Relationships: []
       }
+      warranty_documents: {
+        Row: {
+          created_at: string
+          document_type: string
+          file_name: string
+          file_path: string
+          file_size: number | null
+          file_type: string | null
+          id: string
+          uploaded_by: string | null
+          warranty_id: string
+        }
+        Insert: {
+          created_at?: string
+          document_type: string
+          file_name: string
+          file_path: string
+          file_size?: number | null
+          file_type?: string | null
+          id?: string
+          uploaded_by?: string | null
+          warranty_id: string
+        }
+        Update: {
+          created_at?: string
+          document_type?: string
+          file_name?: string
+          file_path?: string
+          file_size?: number | null
+          file_type?: string | null
+          id?: string
+          uploaded_by?: string | null
+          warranty_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "warranty_documents_warranty_id_fkey"
+            columns: ["warranty_id"]
+            isOneToOne: false
+            referencedRelation: "warranty_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      warranty_notes: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          note: string
+          warranty_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          note: string
+          warranty_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          note?: string
+          warranty_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "warranty_notes_warranty_id_fkey"
+            columns: ["warranty_id"]
+            isOneToOne: false
+            referencedRelation: "warranty_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      warranty_requests: {
+        Row: {
+          assigned_production_member: string | null
+          closeout_photos_uploaded: boolean | null
+          created_at: string
+          created_by: string | null
+          customer_name: string
+          date_assigned: string | null
+          date_completed: string | null
+          date_submitted: string
+          id: string
+          is_manufacturer_claim_filed: boolean | null
+          issue_description: string
+          job_address: string
+          labor_cost: number | null
+          last_status_change_at: string
+          manufacturer: string | null
+          material_cost: number | null
+          original_install_date: string
+          original_job_number: string
+          priority_level: string
+          resolution_summary: string | null
+          roof_type: string
+          secondary_support: string | null
+          source_of_request: string
+          status: string
+          updated_at: string
+          warranty_coverage_description: string
+          warranty_expiration_date: string
+          warranty_type: string
+        }
+        Insert: {
+          assigned_production_member?: string | null
+          closeout_photos_uploaded?: boolean | null
+          created_at?: string
+          created_by?: string | null
+          customer_name: string
+          date_assigned?: string | null
+          date_completed?: string | null
+          date_submitted?: string
+          id?: string
+          is_manufacturer_claim_filed?: boolean | null
+          issue_description: string
+          job_address: string
+          labor_cost?: number | null
+          last_status_change_at?: string
+          manufacturer?: string | null
+          material_cost?: number | null
+          original_install_date: string
+          original_job_number: string
+          priority_level?: string
+          resolution_summary?: string | null
+          roof_type: string
+          secondary_support?: string | null
+          source_of_request: string
+          status?: string
+          updated_at?: string
+          warranty_coverage_description: string
+          warranty_expiration_date: string
+          warranty_type: string
+        }
+        Update: {
+          assigned_production_member?: string | null
+          closeout_photos_uploaded?: boolean | null
+          created_at?: string
+          created_by?: string | null
+          customer_name?: string
+          date_assigned?: string | null
+          date_completed?: string | null
+          date_submitted?: string
+          id?: string
+          is_manufacturer_claim_filed?: boolean | null
+          issue_description?: string
+          job_address?: string
+          labor_cost?: number | null
+          last_status_change_at?: string
+          manufacturer?: string | null
+          material_cost?: number | null
+          original_install_date?: string
+          original_job_number?: string
+          priority_level?: string
+          resolution_summary?: string | null
+          roof_type?: string
+          secondary_support?: string | null
+          source_of_request?: string
+          status?: string
+          updated_at?: string
+          warranty_coverage_description?: string
+          warranty_expiration_date?: string
+          warranty_type?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
