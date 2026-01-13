@@ -42,7 +42,7 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
     job_date: document?.job_date ?? "",
     sales_rep: document?.sales_rep ?? "",
     gross_contract_total: document?.gross_contract_total ?? 0,
-    op_percent: document?.op_percent ?? 0.15,
+    op_percent: document?.op_percent ?? 0.10,
     material_cost: document?.material_cost ?? 0,
     labor_cost: document?.labor_cost ?? 0,
     neg_exp_1: document?.neg_exp_1 ?? 0,
@@ -211,21 +211,22 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
 
             {/* O&P */}
             <div className="grid grid-cols-[200px_150px_1fr] gap-2 items-center py-2 border-b transition-colors hover:bg-muted/20">
-              <Label className="font-medium">O&P</Label>
-              <div className="relative group">
-                <Input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  max="100"
-                  value={formatPercentForInput(formData.op_percent)}
-                  onChange={(e) => handlePercentChange('op_percent', e.target.value)}
-                  disabled={!canEdit}
-                  className={`${numberInputClasses} pr-8`}
-                />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors group-hover:text-primary">%</span>
-              </div>
-              <span className="text-sm text-muted-foreground">Please enter % as decimal, 10%, 12.%, 15%</span>
+              <Label className="font-medium">O&P %</Label>
+              <Select
+                value={formData.op_percent.toString()}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, op_percent: parseFloat(value) }))}
+                disabled={!canEdit}
+              >
+                <SelectTrigger className={`${inputBaseClasses} font-financial`}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-background border shadow-lg z-50">
+                  <SelectItem value="0.10">10%</SelectItem>
+                  <SelectItem value="0.125">12.5%</SelectItem>
+                  <SelectItem value="0.15">15%</SelectItem>
+                </SelectContent>
+              </Select>
+              <span className="text-sm text-muted-foreground">Select O&P %, options: 10%, 12.5%, 15%</span>
             </div>
 
             {/* Contract Total (Net) - Calculated */}
