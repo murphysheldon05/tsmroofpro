@@ -26,6 +26,7 @@ const handler = async (req: Request): Promise<Response> => {
     console.log("Sending approval notification to:", user_email);
 
     const appUrl = Deno.env.get("APP_BASE_URL") || "https://hub.tsmroofs.com";
+    const loginUrl = `${appUrl}/auth`;
 
     const emailResponse = await resend.emails.send({
       from: "TSM Hub <notifications@hub.tsmroofs.com>",
@@ -53,10 +54,14 @@ const handler = async (req: Request): Promise<Response> => {
             </p>
             
             <div style="text-align: center; margin: 30px 0;">
-              <a href="${appUrl}" style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; display: inline-block;">
+              <a href="${loginUrl}" style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; display: inline-block;">
                 Log In to TSM Hub
               </a>
             </div>
+            
+            <p style="font-size: 14px; color: #6b7280; text-align: center;">
+              Or copy this link: <a href="${loginUrl}" style="color: #3b82f6;">${loginUrl}</a>
+            </p>
             
             <p style="font-size: 14px; color: #6b7280; margin-top: 30px;">
               If you have any questions, please reach out to your manager or administrator.
