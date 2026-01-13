@@ -20,9 +20,11 @@ import {
   Loader2,
   UserCheck,
   Calculator,
-  Send
+  Send,
+  Edit
 } from "lucide-react";
 import { CommissionWorksheet } from "@/components/commissions/CommissionWorksheet";
+import { CommissionEditForm } from "@/components/commissions/CommissionEditForm";
 import { 
   useCommissionSubmission, 
   useCommissionStatusLog,
@@ -63,7 +65,7 @@ export default function CommissionDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user, role } = useAuth();
-  const { data: submission, isLoading } = useCommissionSubmission(id!);
+  const { data: submission, isLoading, refetch } = useCommissionSubmission(id!);
   const { data: statusLog } = useCommissionStatusLog(id!);
   const { data: isReviewer } = useIsCommissionReviewer();
   const { data: canPayout } = useCanProcessPayouts();
@@ -71,9 +73,14 @@ export default function CommissionDetail() {
   
   const [rejectionReason, setRejectionReason] = useState("");
   const [reviewerNotes, setReviewerNotes] = useState("");
+  const [isEditing, setIsEditing] = useState(false);
 
   const isAdmin = role === "admin";
   const isManager = role === "manager" || isAdmin;
+  
+  // Check if the current user is the submitter and can edit
+  const isSubmitter = submission && user && submission.submitted_by === user.id;
+  const canEdit = isSubmitter && submission?.status === "revision_required";
 
   if (isLoading) {
     return (
@@ -169,6 +176,37 @@ export default function CommissionDetail() {
     setReviewerNotes("");
   };
 
+  // Handle successful edit
+  const handleEditSuccess = () => {
+    setIsEditing(false);
+    refetch();
+  };
+
+  // If editing, show the edit form
+  if (isEditing && submission) {
+    return (
+      <AppLayout>
+        <div className="max-w-4xl mx-auto space-y-6">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={() => setIsEditing(false)}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div>
+              <h1 className="text-2xl font-bold">Edit Commission</h1>
+              <p className="text-muted-foreground">{submission.job_name}</p>
+            </div>
+          </div>
+          
+          <CommissionEditForm
+            submission={submission}
+            onSuccess={handleEditSuccess}
+            onCancel={() => setIsEditing(false)}
+          />
+        </div>
+      </AppLayout>
+    );
+  }
+
   return (
     <AppLayout>
       <div className="max-w-4xl mx-auto space-y-6">
@@ -189,7 +227,42 @@ export default function CommissionDetail() {
               <p className="text-muted-foreground">{submission.job_address}</p>
             </div>
           </div>
+          
+          {/* Edit Button for Submitters */}
+          {canEdit && (
+            <Button onClick={() => setIsEditing(true)} className="gap-2">
+              <Edit className="h-4 w-4" />
+              Edit & Resubmit
+            </Button>
+          )}
         </div>
+
+        {/* Revision Required Alert for Submitters */}
+        {canEdit && submission.rejection_reason && (
+          <Card className="border-destructive bg-destructive/5">
+            <CardContent className="py-4">
+              <div className="flex items-start gap-3">
+                <div className="p-2 rounded-full bg-destructive/10 text-destructive">
+                  <AlertCircle className="h-5 w-5" />
+                </div>
+                <div className="flex-1">
+                  <p className="font-medium text-destructive">Revision Required</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {submission.rejection_reason}
+                  </p>
+                  <Button 
+                    onClick={() => setIsEditing(true)} 
+                    size="sm" 
+                    className="mt-3 gap-2"
+                  >
+                    <Edit className="h-4 w-4" />
+                    Edit & Resubmit
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Approval Stage Indicator */}
         {submission.status === "pending_review" && approvalStageConfig && (
