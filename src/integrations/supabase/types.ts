@@ -210,6 +210,7 @@ export type Database = {
         Row: {
           acculynx_job_id: string | null
           advances_paid: number
+          approval_stage: string | null
           approved_at: string | null
           approved_by: string | null
           commission_percentage: number
@@ -226,6 +227,8 @@ export type Database = {
           job_address: string
           job_name: string
           job_type: string
+          manager_approved_at: string | null
+          manager_approved_by: string | null
           net_commission_owed: number | null
           paid_at: string | null
           paid_by: string | null
@@ -247,6 +250,7 @@ export type Database = {
         Insert: {
           acculynx_job_id?: string | null
           advances_paid?: number
+          approval_stage?: string | null
           approved_at?: string | null
           approved_by?: string | null
           commission_percentage?: number
@@ -263,6 +267,8 @@ export type Database = {
           job_address: string
           job_name: string
           job_type: string
+          manager_approved_at?: string | null
+          manager_approved_by?: string | null
           net_commission_owed?: number | null
           paid_at?: string | null
           paid_by?: string | null
@@ -284,6 +290,7 @@ export type Database = {
         Update: {
           acculynx_job_id?: string | null
           advances_paid?: number
+          approval_stage?: string | null
           approved_at?: string | null
           approved_by?: string | null
           commission_percentage?: number
@@ -300,6 +307,8 @@ export type Database = {
           job_address?: string
           job_name?: string
           job_type?: string
+          manager_approved_at?: string | null
+          manager_approved_by?: string | null
           net_commission_owed?: number | null
           paid_at?: string | null
           paid_by?: string | null

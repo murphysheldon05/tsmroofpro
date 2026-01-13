@@ -1,438 +1,367 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.89.0?target=deno";
+import { Resend } from "https://esm.sh/resend@2.0.0";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
-const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
+const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
 };
 
 interface CommissionNotification {
-  notification_type: "manager_review" | "accounting_review" | "approved" | "rejected";
-  request_id: string;
-  title: string;
-  submitter_name: string;
-  submitter_email: string;
-  manager_name?: string;
-  manager_email?: string;
-  manager_notes?: string;
-  has_attachment: boolean;
-  total_payout_requested?: number;
-  approved_amount?: number;
-  rejection_reason?: string;
+  notification_type: "submitted" | "manager_approved" | "accounting_approved" | "paid" | "revision_required" | "status_change";
+  commission_id: string;
+  job_name: string;
+  job_address: string;
+  sales_rep_name: string | null;
+  subcontractor_name: string | null;
+  submission_type: "employee" | "subcontractor";
+  contract_amount: number;
+  net_commission_owed: number;
+  submitter_email?: string;
+  submitter_name?: string;
+  status?: string;
+  previous_status?: string;
+  notes?: string;
+  changed_by_name?: string;
 }
 
-async function sendEmail(to: string[], subject: string, html: string) {
-  console.log("Sending email to:", to);
-  
-  const response = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${RESEND_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      from: "TSM Roofing <notifications@hub.tsmroofs.com>",
-      to,
-      subject,
-      html,
-    }),
-  });
-
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`Failed to send email: ${error}`);
-  }
-
-  return await response.json();
-}
-
-serve(async (req: Request): Promise<Response> => {
+const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      console.error("Missing authorization header");
-      return new Response(
-        JSON.stringify({ error: "Missing authorization header" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    const supabaseAdmin = createClient(
+    const supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    const supabaseUser = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
-      { global: { headers: { Authorization: authHeader } } }
-    );
-
-    const { data: { user }, error: authError } = await supabaseUser.auth.getUser();
-    if (authError || !user) {
-      console.error("Authentication failed:", authError?.message || "No user found");
-      return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    console.log("Authenticated user:", user.id);
-
     const payload: CommissionNotification = await req.json();
     console.log("Commission notification payload:", payload);
 
-    const { notification_type, request_id, title, submitter_name, submitter_email, manager_name, manager_email, manager_notes, has_attachment, total_payout_requested, approved_amount, rejection_reason } = payload;
-    const attachmentNote = has_attachment ? "📎 This commission includes an attached document." : "";
     const appUrl = Deno.env.get("APP_BASE_URL") || "https://hub.tsmroofs.com";
-    const payoutDisplay = total_payout_requested ? `$${total_payout_requested.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : null;
-    const approvedDisplay = approved_amount ? `$${approved_amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : null;
+    const commissionUrl = `${appUrl}/commissions/${payload.commission_id}`;
 
-    const emailsSent: string[] = [];
+    const formatCurrency = (value: number) => {
+      return new Intl.NumberFormat("en-US", {
+        style: "currency",
+        currency: "USD",
+      }).format(value);
+    };
 
-    // Handle different notification types
-    if (notification_type === "manager_review") {
-      // Employee submitted → Notify their manager
-      if (!manager_email) {
-        console.error("No manager email provided for manager_review notification");
-        return new Response(
-          JSON.stringify({ error: "Manager email is required for manager_review notification" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
+    const repName = payload.submission_type === "subcontractor" 
+      ? `Subcontractor: ${payload.subcontractor_name}` 
+      : payload.sales_rep_name;
 
-      const managerHtml = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <style>
-            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 30px; border-radius: 8px 8px 0 0; }
-            .content { background: #f8fafc; padding: 30px; border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 8px 8px; }
-            .badge { display: inline-block; background: #f59e0b; color: white; padding: 4px 12px; border-radius: 9999px; font-size: 12px; font-weight: 600; }
-            .details { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #e2e8f0; }
-            .detail-row { padding: 8px 0; border-bottom: 1px solid #f1f5f9; }
-            .detail-row:last-child { border-bottom: none; }
-            .label { color: #64748b; font-size: 14px; }
-            .value { font-weight: 500; margin-top: 4px; }
-            .attachment-note { background: #fef3c7; border: 1px solid #f59e0b; padding: 12px; border-radius: 6px; margin-top: 16px; }
-            .button { display: inline-block; background: #f59e0b; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; margin-top: 20px; }
-            .footer { text-align: center; margin-top: 20px; color: #64748b; font-size: 12px; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <h1 style="margin: 0; font-size: 24px;">⚠️ Commission Pending Your Review</h1>
-              <p style="margin: 10px 0 0 0; opacity: 0.9;">A team member has submitted a commission form for your approval.</p>
-            </div>
-            <div class="content">
-              <span class="badge">Commission Form</span>
-              ${payoutDisplay ? `<span style="display: inline-block; background: #059669; color: white; padding: 4px 12px; border-radius: 9999px; font-size: 14px; font-weight: 700; margin-left: 8px;">💰 ${payoutDisplay} Requested</span>` : ''}
-              
-              <div class="details">
-                <div class="detail-row">
-                  <div class="label">Subject:</div>
-                  <div class="value">${title}</div>
-                </div>
-                <div class="detail-row">
-                  <div class="label">Submitted By:</div>
-                  <div class="value">${submitter_name}</div>
-                </div>
-                <div class="detail-row">
-                  <div class="label">Email:</div>
-                  <div class="value">${submitter_email}</div>
-                </div>
-                ${payoutDisplay ? `<div class="detail-row" style="background: #f0fdf4; padding: 12px; border-radius: 6px; margin-top: 8px;">
-                  <div class="label">Total Commission Payout Requested:</div>
-                  <div class="value" style="font-size: 18px; color: #059669;">${payoutDisplay}</div>
-                </div>` : ''}
-              </div>
-              
-              ${attachmentNote ? `<div class="attachment-note">${attachmentNote}</div>` : ''}
-              
-              <p style="margin-top: 20px;">Please log in to review and approve or reject this commission form. Once approved, it will be forwarded to accounting for final processing.</p>
-              
-              <a href="${appUrl}/requests" class="button">Review Commission</a>
-            </div>
-            <div class="footer">
-              <p>TSM Roofing Employee Portal</p>
-            </div>
-          </div>
-        </body>
-        </html>
-      `;
+    // Get commission reviewers for notifications
+    const { data: reviewers } = await supabaseClient
+      .from("commission_reviewers")
+      .select("user_email, user_name, can_approve, can_payout")
+      .eq("is_active", true);
 
-      await sendEmail([manager_email], `⚠️ Commission Pending Review: ${title}`, managerHtml);
-      emailsSent.push(manager_email);
+    const reviewerEmails = reviewers?.map(r => r.user_email) || [];
+    const payoutReviewerEmails = reviewers?.filter(r => r.can_payout).map(r => r.user_email) || [];
 
-      // Also send confirmation to submitter
-      const submitterHtml = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <style>
-            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: linear-gradient(135deg, #059669 0%, #10b981 100%); color: white; padding: 30px; border-radius: 8px 8px 0 0; }
-            .content { background: #f8fafc; padding: 30px; border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 8px 8px; }
-            .checkmark { font-size: 48px; margin-bottom: 16px; }
-            .footer { text-align: center; margin-top: 20px; color: #64748b; font-size: 12px; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <div class="checkmark">✓</div>
-              <h1 style="margin: 0; font-size: 24px;">Commission Submitted!</h1>
-            </div>
-            <div class="content">
-              <p>Hi ${submitter_name},</p>
-              <p>Your commission form titled "<strong>${title}</strong>" has been successfully submitted and is now pending review by your manager${manager_name ? ` (${manager_name})` : ''}.</p>
-              <p>Once your manager approves it, the commission will be forwarded to accounting for processing.</p>
-              <p style="margin-top: 24px;">Thank you,<br>TSM Roofing Team</p>
-            </div>
-            <div class="footer">
-              <p>TSM Roofing Employee Portal</p>
-            </div>
-          </div>
-        </body>
-        </html>
-      `;
+    let subject = "";
+    let heading = "";
+    let introText = "";
+    let buttonText = "View Commission";
+    let recipientEmails: string[] = [];
+    let additionalContent = "";
+    let headerColor = "linear-gradient(135deg, #1e40af 0%, #3b82f6 100%)";
 
-      await sendEmail([submitter_email], `Commission Submitted: ${title}`, submitterHtml);
-      emailsSent.push(submitter_email);
-
-    } else if (notification_type === "accounting_review") {
-      // Manager approved → Notify accounting department
-      const { data: accountingRecipients, error: recipientsError } = await supabaseAdmin
-        .from("notification_settings")
-        .select("recipient_email, recipient_name")
-        .eq("notification_type", "commission_accounting")
-        .eq("is_active", true);
-
-      if (recipientsError) {
-        console.error("Failed to fetch accounting recipients:", recipientsError);
-      }
-
-      const accountingEmails = accountingRecipients?.map(r => r.recipient_email) || [];
-      
-      if (accountingEmails.length === 0) {
-        console.warn("No accounting recipients configured for commission_accounting notification type");
-      } else {
-        const accountingHtml = `
-          <!DOCTYPE html>
-          <html>
-          <head>
-            <style>
-              body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; }
-              .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-              .header { background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); color: white; padding: 30px; border-radius: 8px 8px 0 0; }
-              .content { background: #f8fafc; padding: 30px; border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 8px 8px; }
-              .badge { display: inline-block; background: #3b82f6; color: white; padding: 4px 12px; border-radius: 9999px; font-size: 12px; font-weight: 600; }
-              .approved-badge { display: inline-block; background: #10b981; color: white; padding: 4px 12px; border-radius: 9999px; font-size: 12px; font-weight: 600; margin-left: 8px; }
-              .details { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #e2e8f0; }
-              .detail-row { padding: 8px 0; border-bottom: 1px solid #f1f5f9; }
-              .detail-row:last-child { border-bottom: none; }
-              .label { color: #64748b; font-size: 14px; }
-              .value { font-weight: 500; margin-top: 4px; }
-              .manager-notes { background: #f0fdf4; border: 1px solid #10b981; padding: 12px; border-radius: 6px; margin-top: 16px; }
-              .attachment-note { background: #fef3c7; border: 1px solid #f59e0b; padding: 12px; border-radius: 6px; margin-top: 16px; }
-              .button { display: inline-block; background: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; margin-top: 20px; }
-              .footer { text-align: center; margin-top: 20px; color: #64748b; font-size: 12px; }
-            </style>
-          </head>
-          <body>
-            <div class="container">
-              <div class="header">
-                <h1 style="margin: 0; font-size: 24px;">💰 Commission Ready for Processing</h1>
-                <p style="margin: 10px 0 0 0; opacity: 0.9;">A commission form has been manager-approved and is ready for accounting review.</p>
-              </div>
-              <div class="content">
-                <span class="badge">Commission Form</span>
-                <span class="approved-badge">✓ Manager Approved</span>
-                
-                <div class="details">
-                  <div class="detail-row">
-                    <div class="label">Subject:</div>
-                    <div class="value">${title}</div>
-                  </div>
-                  <div class="detail-row">
-                    <div class="label">Submitted By:</div>
-                    <div class="value">${submitter_name} (${submitter_email})</div>
-                  </div>
-                  <div class="detail-row">
-                    <div class="label">Approved By:</div>
-                    <div class="value">${manager_name || 'Manager'}</div>
-                  </div>
-                </div>
-                
-                ${manager_notes ? `<div class="manager-notes"><strong>Manager Notes:</strong><br>${manager_notes}</div>` : ''}
-                ${attachmentNote ? `<div class="attachment-note">${attachmentNote}</div>` : ''}
-                
-                <p style="margin-top: 20px;">Please log in to review and process this commission.</p>
-                
-                <a href="${appUrl}/requests" class="button">Process Commission</a>
-              </div>
-              <div class="footer">
-                <p>TSM Roofing Employee Portal</p>
-              </div>
-            </div>
-          </body>
-          </html>
+    switch (payload.notification_type) {
+      case "submitted":
+        subject = `📋 New Commission Submitted: ${payload.job_name}`;
+        heading = "New Commission Submitted";
+        introText = `A new commission has been submitted and is awaiting manager review.`;
+        recipientEmails = reviewerEmails;
+        headerColor = "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)";
+        additionalContent = `
+          <tr>
+            <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">
+              <strong>Job Name:</strong>
+            </td>
+            <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">
+              ${payload.job_name}
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">
+              <strong>Job Address:</strong>
+            </td>
+            <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">
+              ${payload.job_address}
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">
+              <strong>Rep/Subcontractor:</strong>
+            </td>
+            <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">
+              ${repName}
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">
+              <strong>Contract Amount:</strong>
+            </td>
+            <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">
+              ${formatCurrency(payload.contract_amount)}
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 10px 0;">
+              <strong>Net Commission:</strong>
+            </td>
+            <td style="padding: 10px 0; color: #16a34a; font-weight: bold;">
+              ${formatCurrency(payload.net_commission_owed)}
+            </td>
+          </tr>
         `;
+        break;
 
-        await sendEmail(accountingEmails, `💰 Commission Approved for Processing: ${title}`, accountingHtml);
-        emailsSent.push(...accountingEmails);
-      }
+      case "manager_approved":
+        subject = `✅ Commission Manager Approved: ${payload.job_name}`;
+        heading = "Manager Approved - Pending Accounting";
+        introText = `The commission for ${payload.job_name} has been approved by the manager and is now awaiting accounting review.`;
+        headerColor = "linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)";
+        // Notify accounting reviewers and submitter
+        recipientEmails = [...payoutReviewerEmails];
+        if (payload.submitter_email) {
+          recipientEmails.push(payload.submitter_email);
+        }
+        additionalContent = `
+          <tr>
+            <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">
+              <strong>Job:</strong>
+            </td>
+            <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">
+              ${payload.job_name}
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">
+              <strong>Rep:</strong>
+            </td>
+            <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">
+              ${repName}
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 10px 0;">
+              <strong>Commission Amount:</strong>
+            </td>
+            <td style="padding: 10px 0; color: #3b82f6; font-weight: bold;">
+              ${formatCurrency(payload.net_commission_owed)}
+            </td>
+          </tr>
+          <tr>
+            <td colspan="2" style="padding: 15px; background: #dbeafe; border-radius: 8px; margin-top: 10px;">
+              <strong>Status:</strong> Waiting for accounting review and final approval.
+            </td>
+          </tr>
+        `;
+        break;
 
-      // Also notify the submitter that manager approved
-      const submitterApprovedHtml = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <style>
-            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: linear-gradient(135deg, #059669 0%, #10b981 100%); color: white; padding: 30px; border-radius: 8px 8px 0 0; }
-            .content { background: #f8fafc; padding: 30px; border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 8px 8px; }
-            .checkmark { font-size: 48px; margin-bottom: 16px; }
-            .manager-notes { background: #f0fdf4; border: 1px solid #10b981; padding: 12px; border-radius: 6px; margin-top: 16px; }
-            .footer { text-align: center; margin-top: 20px; color: #64748b; font-size: 12px; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <div class="checkmark">✓</div>
-              <h1 style="margin: 0; font-size: 24px;">Manager Approved!</h1>
-            </div>
-            <div class="content">
-              <p>Hi ${submitter_name},</p>
-              <p>Great news! Your commission form titled "<strong>${title}</strong>" has been approved by your manager${manager_name ? ` (${manager_name})` : ''} and has been forwarded to accounting for processing.</p>
-              ${manager_notes ? `<div class="manager-notes"><strong>Manager Notes:</strong><br>${manager_notes}</div>` : ''}
-              <p style="margin-top: 24px;">Thank you,<br>TSM Roofing Team</p>
-            </div>
-            <div class="footer">
-              <p>TSM Roofing Employee Portal</p>
-            </div>
-          </div>
-        </body>
-        </html>
-      `;
+      case "accounting_approved":
+        subject = `💰 Commission Approved for Payment: ${payload.job_name}`;
+        heading = "Commission Approved for Payment!";
+        introText = `Great news! The commission for ${payload.job_name} has been fully approved and is ready for payout.`;
+        headerColor = "linear-gradient(135deg, #059669 0%, #10b981 100%)";
+        recipientEmails = payload.submitter_email ? [payload.submitter_email] : [];
+        // Also notify payout reviewers
+        recipientEmails.push(...payoutReviewerEmails);
+        additionalContent = `
+          <tr>
+            <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">
+              <strong>Job:</strong>
+            </td>
+            <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">
+              ${payload.job_name}
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 10px 0;">
+              <strong>Commission Amount:</strong>
+            </td>
+            <td style="padding: 10px 0; color: #16a34a; font-weight: bold; font-size: 20px;">
+              ${formatCurrency(payload.net_commission_owed)}
+            </td>
+          </tr>
+          <tr>
+            <td colspan="2" style="padding: 15px; background: #dcfce7; border-radius: 8px; margin-top: 10px;">
+              ✅ <strong>Fully Approved</strong> - This commission is now ready for payout processing.
+            </td>
+          </tr>
+        `;
+        break;
 
-      await sendEmail([submitter_email], `✓ Commission Manager Approved: ${title}`, submitterApprovedHtml);
-      emailsSent.push(submitter_email);
+      case "paid":
+        subject = `🎉 Commission Paid: ${payload.job_name}`;
+        heading = "Commission Paid! 🎉";
+        introText = `Your commission for ${payload.job_name} has been processed and paid.`;
+        headerColor = "linear-gradient(135deg, #059669 0%, #10b981 100%)";
+        recipientEmails = payload.submitter_email ? [payload.submitter_email] : [];
+        additionalContent = `
+          <tr>
+            <td style="padding: 10px 0;">
+              <strong>Amount Paid:</strong>
+            </td>
+            <td style="padding: 10px 0; color: #16a34a; font-weight: bold; font-size: 24px;">
+              ${formatCurrency(payload.net_commission_owed)}
+            </td>
+          </tr>
+          <tr>
+            <td colspan="2" style="padding: 20px; background: #dcfce7; border-radius: 8px; margin-top: 10px; text-align: center;">
+              🎉 <strong>Payment Complete!</strong>
+            </td>
+          </tr>
+        `;
+        break;
 
-    } else if (notification_type === "approved") {
-      // Final approval by accounting/admin
-      const approvedHtml = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <style>
-            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: linear-gradient(135deg, #059669 0%, #10b981 100%); color: white; padding: 30px; border-radius: 8px 8px 0 0; }
-            .content { background: #f8fafc; padding: 30px; border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 8px 8px; }
-            .checkmark { font-size: 48px; margin-bottom: 16px; }
-            .footer { text-align: center; margin-top: 20px; color: #64748b; font-size: 12px; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <div class="checkmark">✓✓</div>
-              <h1 style="margin: 0; font-size: 24px;">Commission Approved!</h1>
-            </div>
-            <div class="content">
-              <p>Hi ${submitter_name},</p>
-              <p>Congratulations! Your commission form titled "<strong>${title}</strong>" has been fully approved and is being processed by accounting.</p>
-              ${approvedDisplay ? `<div style="background: #f0fdf4; border: 2px solid #10b981; padding: 16px; border-radius: 8px; margin: 16px 0; text-align: center;">
-                <p style="margin: 0; color: #059669; font-size: 14px;">Approved Amount</p>
-                <p style="margin: 4px 0 0 0; color: #059669; font-size: 24px; font-weight: 700;">${approvedDisplay}</p>
-              </div>` : ''}
-              <p style="margin-top: 24px;">Thank you,<br>TSM Roofing Team</p>
-            </div>
-            <div class="footer">
-              <p>TSM Roofing Employee Portal</p>
-            </div>
-          </div>
-        </body>
-        </html>
-      `;
+      case "revision_required":
+        subject = `⚠️ Commission Needs Revision: ${payload.job_name}`;
+        heading = "Commission Revision Required";
+        introText = `The commission submission for ${payload.job_name} requires revisions before it can be approved.`;
+        headerColor = "linear-gradient(135deg, #dc2626 0%, #ef4444 100%)";
+        recipientEmails = payload.submitter_email ? [payload.submitter_email] : [];
+        additionalContent = `
+          <tr>
+            <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">
+              <strong>Job:</strong>
+            </td>
+            <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">
+              ${payload.job_name}
+            </td>
+          </tr>
+        `;
+        if (payload.notes) {
+          additionalContent += `
+            <tr>
+              <td colspan="2" style="padding: 15px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; margin-top: 10px;">
+                <strong>Revision Reason:</strong><br>
+                <span style="color: #dc2626;">${payload.notes}</span>
+              </td>
+            </tr>
+          `;
+        }
+        buttonText = "View & Revise";
+        break;
 
-      await sendEmail([submitter_email], `✓ Commission Fully Approved: ${title}`, approvedHtml);
-      emailsSent.push(submitter_email);
+      case "status_change":
+        subject = `📋 Commission Status Updated: ${payload.job_name}`;
+        heading = "Commission Status Changed";
+        introText = `The status for commission "${payload.job_name}" has been updated.`;
+        headerColor = "linear-gradient(135deg, #6b7280 0%, #4b5563 100%)";
+        recipientEmails = payload.submitter_email ? [payload.submitter_email] : [];
+        additionalContent = `
+          <tr>
+            <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">
+              <strong>Previous Status:</strong>
+            </td>
+            <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">
+              ${payload.previous_status?.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase()) || "N/A"}
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 10px 0;">
+              <strong>New Status:</strong>
+            </td>
+            <td style="padding: 10px 0; font-weight: bold; color: #1e40af;">
+              ${payload.status?.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase())}
+            </td>
+          </tr>
+          ${payload.notes ? `
+            <tr>
+              <td colspan="2" style="padding: 15px; background: #f3f4f6; border-radius: 8px; margin-top: 10px;">
+                <strong>Notes:</strong><br>
+                ${payload.notes}
+              </td>
+            </tr>
+          ` : ""}
+        `;
+        break;
 
-    } else if (notification_type === "rejected") {
-      // Rejection at any stage
-      const rejectedHtml = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <style>
-            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%); color: white; padding: 30px; border-radius: 8px 8px 0 0; }
-            .content { background: #f8fafc; padding: 30px; border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 8px 8px; }
-            .icon { font-size: 48px; margin-bottom: 16px; }
-            .notes { background: #fef2f2; border: 1px solid #dc2626; padding: 12px; border-radius: 6px; margin-top: 16px; }
-            .footer { text-align: center; margin-top: 20px; color: #64748b; font-size: 12px; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <div class="icon">✗</div>
-              <h1 style="margin: 0; font-size: 24px;">Commission Rejected</h1>
-            </div>
-            <div class="content">
-              <p>Hi ${submitter_name},</p>
-              <p>Your commission form titled "<strong>${title}</strong>" requires revisions before it can be approved.</p>
-              ${rejection_reason || manager_notes ? `<div class="notes"><strong>Revisions Requested:</strong><br>${rejection_reason || manager_notes}</div>` : ''}
-              <p style="margin-top: 20px;"><strong>Next Steps:</strong> Please review the feedback above, make the necessary corrections, and submit a new commission request.</p>
-              <p style="margin-top: 24px;">Thank you,<br>TSM Roofing Team</p>
-            </div>
-            <div class="footer">
-              <p>TSM Roofing Employee Portal</p>
-            </div>
-          </div>
-        </body>
-        </html>
-      `;
-
-      await sendEmail([submitter_email], `Commission Rejected: ${title}`, rejectedHtml);
-      emailsSent.push(submitter_email);
+      default:
+        throw new Error(`Unknown notification type: ${payload.notification_type}`);
     }
 
-    console.log("Commission notifications sent to:", emailsSent);
+    // Filter out empty emails and deduplicate
+    recipientEmails = [...new Set(recipientEmails.filter(email => email && email.trim()))];
+
+    if (recipientEmails.length === 0) {
+      console.log("No recipients for notification, skipping email send");
+      return new Response(
+        JSON.stringify({ success: true, message: "No recipients, email skipped" }),
+        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    const emailHtml = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      </head>
+      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background: ${headerColor}; padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
+          <h1 style="color: white; margin: 0; font-size: 24px;">${heading}</h1>
+        </div>
+        
+        <div style="background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px;">
+          <p style="font-size: 16px; margin-bottom: 20px;">
+            ${introText}
+          </p>
+          
+          <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+            ${additionalContent}
+          </table>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${commissionUrl}" style="background: ${headerColor}; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; display: inline-block;">
+              ${buttonText}
+            </a>
+          </div>
+          
+          <p style="font-size: 14px; color: #6b7280; margin-top: 30px;">
+            If you have questions, please contact your supervisor or the accounting team.
+          </p>
+        </div>
+        
+        <div style="text-align: center; padding: 20px; color: #9ca3af; font-size: 12px;">
+          <p>© ${new Date().getFullYear()} TSM Roofing. All rights reserved.</p>
+        </div>
+      </body>
+      </html>
+    `;
+
+    console.log("Sending commission notification to:", recipientEmails);
+
+    const emailResponse = await resend.emails.send({
+      from: "TSM Hub <notifications@hub.tsmroofs.com>",
+      to: recipientEmails,
+      subject,
+      html: emailHtml,
+    });
+
+    console.log("Commission notification sent successfully:", emailResponse);
 
     return new Response(
-      JSON.stringify({ 
-        success: true, 
-        emails_sent: emailsSent,
-      }), 
-      {
-        status: 200,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      }
+      JSON.stringify({ success: true, data: emailResponse }),
+      { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
   } catch (error: any) {
-    console.error("Error in send-commission-notification function:", error);
+    console.error("Error sending commission notification:", error);
     return new Response(
       JSON.stringify({ error: error.message }),
-      {
-        status: 500,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      }
+      { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
   }
-});
+};
+
+serve(handler);

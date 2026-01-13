@@ -8,6 +8,7 @@ export interface CommissionSubmission {
   submitted_by: string;
   submission_type: "employee" | "subcontractor";
   status: "pending_review" | "revision_required" | "approved_for_payment" | "paid" | "on_hold";
+  approval_stage: "pending_manager" | "manager_approved" | "accounting_approved" | null;
   
   // Job Information
   job_name: string;
@@ -42,6 +43,8 @@ export interface CommissionSubmission {
   // Workflow
   reviewer_notes: string | null;
   rejection_reason: string | null;
+  manager_approved_at: string | null;
+  manager_approved_by: string | null;
   approved_at: string | null;
   approved_by: string | null;
   paid_at: string | null;
@@ -185,35 +188,54 @@ export function useUpdateCommissionStatus() {
     mutationFn: async ({ 
       id, 
       status, 
+      approval_stage,
       notes,
       rejection_reason 
     }: { 
       id: string; 
       status: CommissionSubmission["status"]; 
+      approval_stage?: CommissionSubmission["approval_stage"];
       notes?: string;
       rejection_reason?: string;
     }) => {
       if (!user) throw new Error("Not authenticated");
       
-      // Get current status
+      // Get current submission for status log
       const { data: current } = await supabase
         .from("commission_submissions")
-        .select("status")
+        .select("status, approval_stage, submitted_by, job_name, job_address, sales_rep_name, subcontractor_name, submission_type, contract_amount, net_commission_owed")
         .eq("id", id)
         .single();
       
-      const updateData: Partial<CommissionSubmission> = { status };
+      const updateData: Record<string, any> = { status };
       
-      if (status === "approved_for_payment") {
+      // Set approval_stage if provided
+      if (approval_stage) {
+        updateData.approval_stage = approval_stage;
+      }
+      
+      // Handle manager approval
+      if (approval_stage === "manager_approved") {
+        updateData.manager_approved_at = new Date().toISOString();
+        updateData.manager_approved_by = user.id;
+      }
+      
+      // Handle final (accounting) approval
+      if (status === "approved_for_payment" && approval_stage === "accounting_approved") {
         updateData.approved_at = new Date().toISOString();
         updateData.approved_by = user.id;
-      } else if (status === "paid") {
+      }
+      
+      // Handle paid status
+      if (status === "paid") {
         updateData.paid_at = new Date().toISOString();
         updateData.paid_by = user.id;
       }
       
       if (rejection_reason) {
         updateData.rejection_reason = rejection_reason;
+        // Reset approval stage when requesting revision
+        updateData.approval_stage = "pending_manager";
       }
       
       if (notes) {
@@ -228,17 +250,74 @@ export function useUpdateCommissionStatus() {
       if (error) throw error;
       
       // Log the status change
+      const logNotes = approval_stage === "manager_approved" 
+        ? "Manager approved - sent to accounting"
+        : approval_stage === "accounting_approved"
+        ? "Accounting approved - ready for payment"
+        : notes || rejection_reason || `Status changed to ${status}`;
+      
       await supabase.from("commission_status_log").insert({
         commission_id: id,
         previous_status: current?.status,
         new_status: status,
         changed_by: user.id,
-        notes: notes || rejection_reason || `Status changed to ${status}`,
+        notes: logNotes,
       });
+
+      // Send notification
+      try {
+        const notificationType = 
+          approval_stage === "manager_approved" ? "manager_approved" :
+          approval_stage === "accounting_approved" ? "accounting_approved" :
+          status === "paid" ? "paid" :
+          status === "revision_required" ? "revision_required" : 
+          "status_change";
+
+        // Get submitter info
+        const { data: submitterProfile } = await supabase
+          .from("profiles")
+          .select("email, full_name")
+          .eq("id", current?.submitted_by)
+          .single();
+
+        await supabase.functions.invoke("send-commission-notification", {
+          body: {
+            notification_type: notificationType,
+            commission_id: id,
+            job_name: current?.job_name,
+            job_address: current?.job_address,
+            sales_rep_name: current?.sales_rep_name,
+            subcontractor_name: current?.subcontractor_name,
+            submission_type: current?.submission_type,
+            contract_amount: current?.contract_amount,
+            net_commission_owed: current?.net_commission_owed,
+            submitter_email: submitterProfile?.email,
+            submitter_name: submitterProfile?.full_name,
+            status,
+            previous_status: current?.status,
+            notes: notes || rejection_reason,
+          },
+        });
+      } catch (notifyError) {
+        console.error("Failed to send notification:", notifyError);
+        // Don't fail the mutation if notification fails
+      }
+      
+      return { current, updateData };
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["commission-submissions"] });
-      toast.success("Commission status updated");
+      queryClient.invalidateQueries({ queryKey: ["commission-submission", variables.id] });
+      queryClient.invalidateQueries({ queryKey: ["commission-status-log", variables.id] });
+      
+      const message = 
+        variables.approval_stage === "manager_approved" ? "Approved by manager - sent to accounting" :
+        variables.approval_stage === "accounting_approved" ? "Approved by accounting - ready for payment" :
+        variables.status === "paid" ? "Marked as paid" :
+        variables.status === "revision_required" ? "Revision requested" :
+        "Commission status updated";
+      
+      toast.success(message);
     },
     onError: (error: Error) => {
       toast.error("Failed to update status: " + error.message);
