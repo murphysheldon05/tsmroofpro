@@ -433,3 +433,87 @@ export function useCanProcessPayouts() {
     enabled: !!user,
   });
 }
+
+export function useUpdateCommission() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+  
+  return useMutation({
+    mutationFn: async ({ 
+      id, 
+      data 
+    }: { 
+      id: string; 
+      data: Partial<CommissionSubmission>;
+    }) => {
+      if (!user) throw new Error("Not authenticated");
+      
+      // Get current submission to verify ownership and status
+      const { data: current, error: fetchError } = await supabase
+        .from("commission_submissions")
+        .select("*")
+        .eq("id", id)
+        .single();
+      
+      if (fetchError) throw fetchError;
+      if (current.submitted_by !== user.id) throw new Error("You can only edit your own submissions");
+      if (current.status !== "revision_required") throw new Error("You can only edit submissions that require revision");
+      
+      // Update the submission and set status back to pending_review
+      const updateData = {
+        ...data,
+        status: "pending_review",
+        approval_stage: "pending_manager",
+        rejection_reason: null, // Clear rejection reason on resubmit
+      };
+      
+      const { data: result, error } = await supabase
+        .from("commission_submissions")
+        .update(updateData)
+        .eq("id", id)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      // Log the resubmission
+      await supabase.from("commission_status_log").insert({
+        commission_id: id,
+        previous_status: "revision_required",
+        new_status: "pending_review",
+        changed_by: user.id,
+        notes: "Commission revised and resubmitted",
+      });
+      
+      // Send notification
+      try {
+        await supabase.functions.invoke("send-commission-notification", {
+          body: {
+            notification_type: "submitted",
+            commission_id: id,
+            job_name: result.job_name,
+            job_address: result.job_address,
+            sales_rep_name: result.sales_rep_name,
+            subcontractor_name: result.subcontractor_name,
+            submission_type: result.submission_type,
+            contract_amount: result.contract_amount,
+            net_commission_owed: result.net_commission_owed,
+          },
+        });
+      } catch (notifyError) {
+        console.error("Failed to send notification:", notifyError);
+      }
+      
+      return result as CommissionSubmission;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["commission-submissions"] });
+      queryClient.invalidateQueries({ queryKey: ["commission-submission", variables.id] });
+      queryClient.invalidateQueries({ queryKey: ["commission-status-log", variables.id] });
+      toast.success("Commission revised and resubmitted successfully");
+    },
+    onError: (error: Error) => {
+      toast.error("Failed to update commission: " + error.message);
+    },
+  });
+}
