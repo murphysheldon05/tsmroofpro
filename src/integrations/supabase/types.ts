@@ -518,6 +518,7 @@ export type Database = {
           approved_at: string | null
           approved_by: string | null
           avatar_url: string | null
+          company_name: string | null
           created_at: string
           data_consent_given: boolean | null
           data_consent_given_at: string | null
@@ -529,12 +530,14 @@ export type Database = {
           last_login_at: string | null
           must_reset_password: boolean | null
           phone_number: string | null
+          requested_role: string | null
           updated_at: string
         }
         Insert: {
           approved_at?: string | null
           approved_by?: string | null
           avatar_url?: string | null
+          company_name?: string | null
           created_at?: string
           data_consent_given?: boolean | null
           data_consent_given_at?: string | null
@@ -546,12 +549,14 @@ export type Database = {
           last_login_at?: string | null
           must_reset_password?: boolean | null
           phone_number?: string | null
+          requested_role?: string | null
           updated_at?: string
         }
         Update: {
           approved_at?: string | null
           approved_by?: string | null
           avatar_url?: string | null
+          company_name?: string | null
           created_at?: string
           data_consent_given?: boolean | null
           data_consent_given_at?: string | null
@@ -563,6 +568,7 @@ export type Database = {
           last_login_at?: string | null
           must_reset_password?: boolean | null
           phone_number?: string | null
+          requested_role?: string | null
           updated_at?: string
         }
         Relationships: [

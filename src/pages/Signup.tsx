@@ -5,15 +5,35 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Logo } from "@/components/Logo";
 import { toast } from "sonner";
 import { Eye, EyeOff, ArrowLeft } from "lucide-react";
 import { z } from "zod";
+import { supabase } from "@/integrations/supabase/client";
+
+const ROLE_OPTIONS = [
+  { value: "admin", label: "Admin" },
+  { value: "office_admin", label: "Office Admin" },
+  { value: "va", label: "VA (Virtual Assistant)" },
+  { value: "sales", label: "Sales" },
+  { value: "production", label: "Production" },
+  { value: "subcontractor", label: "Subcontractor" },
+  { value: "vendor", label: "Vendor" },
+] as const;
 
 const signupSchema = z.object({
   fullName: z.string().min(2, "Name must be at least 2 characters"),
   email: z.string().email("Please enter a valid email address"),
   password: z.string().min(8, "Password must be at least 8 characters"),
+  requestedRole: z.string().min(1, "Please select a role"),
+  companyName: z.string().optional(),
   dataConsent: z.literal(true, {
     errorMap: () => ({ message: "You must agree to data sharing to continue" }),
   }),
@@ -23,6 +43,8 @@ export default function Signup() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [requestedRole, setRequestedRole] = useState("");
+  const [companyName, setCompanyName] = useState("");
   const [dataConsent, setDataConsent] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -30,6 +52,8 @@ export default function Signup() {
 
   const { signUp, user, loading } = useAuth();
   const navigate = useNavigate();
+
+  const showCompanyField = requestedRole === "subcontractor" || requestedRole === "vendor";
 
   useEffect(() => {
     if (!loading && user) {
@@ -39,7 +63,14 @@ export default function Signup() {
 
   const validateForm = () => {
     try {
-      signupSchema.parse({ fullName, email, password, dataConsent });
+      signupSchema.parse({ 
+        fullName, 
+        email, 
+        password, 
+        requestedRole,
+        companyName: showCompanyField ? companyName : undefined,
+        dataConsent 
+      });
       setErrors({});
       return true;
     } catch (error) {
@@ -72,6 +103,18 @@ export default function Signup() {
           toast.error(error.message);
         }
       } else {
+        // Update profile with requested role and company name
+        const { data: { user: newUser } } = await supabase.auth.getUser();
+        if (newUser) {
+          await supabase
+            .from("profiles")
+            .update({
+              requested_role: requestedRole,
+              company_name: showCompanyField ? companyName : null,
+            })
+            .eq("id", newUser.id);
+        }
+
         toast.success(
           "Account created! Your account is pending admin approval. You'll be notified once approved."
         );
@@ -177,6 +220,44 @@ export default function Signup() {
                   <p className="text-sm text-destructive">{errors.password}</p>
                 )}
               </div>
+
+              {/* Role Request */}
+              <div className="space-y-2">
+                <Label htmlFor="requestedRole">Role Request</Label>
+                <Select value={requestedRole} onValueChange={setRequestedRole}>
+                  <SelectTrigger className={errors.requestedRole ? "border-destructive" : ""}>
+                    <SelectValue placeholder="Select your role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ROLE_OPTIONS.map((role) => (
+                      <SelectItem key={role.value} value={role.value}>
+                        {role.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.requestedRole && (
+                  <p className="text-sm text-destructive">{errors.requestedRole}</p>
+                )}
+              </div>
+
+              {/* Company Name - shown for subcontractors/vendors */}
+              {showCompanyField && (
+                <div className="space-y-2">
+                  <Label htmlFor="companyName">Company Name</Label>
+                  <Input
+                    id="companyName"
+                    type="text"
+                    placeholder="Your company name"
+                    value={companyName}
+                    onChange={(e) => setCompanyName(e.target.value)}
+                    className={errors.companyName ? "border-destructive" : ""}
+                  />
+                  {errors.companyName && (
+                    <p className="text-sm text-destructive">{errors.companyName}</p>
+                  )}
+                </div>
+              )}
 
               {/* Data Consent Checkbox */}
               <div className="space-y-2">
