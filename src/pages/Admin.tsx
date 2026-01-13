@@ -46,9 +46,12 @@ import {
   Bell,
   FlaskConical,
   Building2,
+  Percent,
 } from "lucide-react";
 import { UserPermissionsEditor } from "@/components/admin/UserPermissionsEditor";
 import { TeamAssignmentManager } from "@/components/admin/TeamAssignmentManager";
+import { CommissionTierManager } from "@/components/admin/CommissionTierManager";
+import { UserTierAssignment } from "@/components/admin/UserTierAssignment";
 import { EmailTemplateEditor } from "@/components/admin/EmailTemplateEditor";
 import { PendingApprovals } from "@/components/admin/PendingApprovals";
 import { DepartmentManager } from "@/components/admin/DepartmentManager";
@@ -718,6 +721,10 @@ export default function Admin() {
             <TabsTrigger value="workflow-tester" className="gap-2">
               <FlaskConical className="w-4 h-4" />
               Workflow Test
+            </TabsTrigger>
+            <TabsTrigger value="commission-tiers" className="gap-2">
+              <Percent className="w-4 h-4" />
+              Commission Tiers
             </TabsTrigger>
           </TabsList>
 
@@ -3285,6 +3292,20 @@ export default function Admin() {
               Test the commission approval email workflow without switching accounts. Send test notifications at each stage to verify emails are delivered correctly.
             </p>
             <CommissionWorkflowTester />
+          </TabsContent>
+
+          {/* Commission Tiers Tab */}
+          <TabsContent value="commission-tiers" className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h2 className="text-lg font-semibold text-foreground">Commission Tier Management</h2>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Create and manage commission tiers that define which O&P and Profit Split percentages are available to sales reps. Assign tiers to users to control their commission options.
+            </p>
+            <div className="grid gap-6 lg:grid-cols-2">
+              <CommissionTierManager />
+              <UserTierAssignment />
+            </div>
           </TabsContent>
         </Tabs>
       </div>
