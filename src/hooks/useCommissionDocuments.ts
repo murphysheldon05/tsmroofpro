@@ -113,8 +113,6 @@ export function useCreateCommissionDocument() {
         pos_exp_4: data.pos_exp_4,
         commission_rate: data.commission_rate,
         advance_total: data.advance_total,
-        starting_claim_amount: data.starting_claim_amount ?? undefined,
-        final_claim_amount: data.final_claim_amount ?? undefined,
       };
 
       const calculated = calculateAllFields(inputData);
@@ -128,8 +126,6 @@ export function useCreateCommissionDocument() {
           net_profit: calculated.net_profit,
           rep_commission: calculated.rep_commission,
           company_profit: calculated.company_profit,
-          dollars_increased: calculated.dollars_increased,
-          supplement_fee: calculated.supplement_fee,
         })
         .select()
         .single();
@@ -169,8 +165,6 @@ export function useUpdateCommissionDocument() {
         pos_exp_4: data.pos_exp_4 ?? 0,
         commission_rate: data.commission_rate ?? 0,
         advance_total: data.advance_total ?? 0,
-        starting_claim_amount: data.starting_claim_amount ?? undefined,
-        final_claim_amount: data.final_claim_amount ?? undefined,
       };
 
       const calculated = calculateAllFields(inputData);
@@ -183,8 +177,6 @@ export function useUpdateCommissionDocument() {
           net_profit: calculated.net_profit,
           rep_commission: calculated.rep_commission,
           company_profit: calculated.company_profit,
-          dollars_increased: calculated.dollars_increased,
-          supplement_fee: calculated.supplement_fee,
         })
         .eq('id', id)
         .select()

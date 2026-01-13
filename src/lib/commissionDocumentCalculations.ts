@@ -18,18 +18,35 @@ export interface CommissionDocumentData {
   pos_exp_4: number;
   commission_rate: number;
   advance_total: number;
-  // Optional claim calculator fields
-  starting_claim_amount?: number;
-  final_claim_amount?: number;
 }
 
 export interface CalculatedFields {
+  op_dollar_amount: number;
   contract_total_net: number;
   net_profit: number;
   rep_commission: number;
   company_profit: number;
-  dollars_increased: number;
-  supplement_fee: number;
+}
+
+// Profit split options: [O&P%, Rep%, Company%]
+export const PROFIT_SPLIT_OPTIONS = [
+  { label: '15/40/60', op: 0.15, rep: 0.40, company: 0.60 },
+  { label: '15/45/55', op: 0.15, rep: 0.45, company: 0.55 },
+  { label: '15/50/50', op: 0.15, rep: 0.50, company: 0.50 },
+] as const;
+
+export const OP_PERCENT_OPTIONS = [
+  { label: '10.00%', value: 0.10 },
+  { label: '12.50%', value: 0.125 },
+  { label: '15.00%', value: 0.15 },
+] as const;
+
+/**
+ * Calculate O&P Dollar Amount
+ * Formula: gross_contract_total * op_percent
+ */
+export function calculateOpDollarAmount(grossContractTotal: number, opPercent: number): number {
+  return grossContractTotal * opPercent;
 }
 
 /**
@@ -38,17 +55,6 @@ export interface CalculatedFields {
  */
 export function calculateContractTotalNet(grossContractTotal: number, opPercent: number): number {
   return grossContractTotal - (grossContractTotal * opPercent);
-}
-
-/**
- * Calculate Claim Supplement values (if applicable)
- * dollars_increased = final_claim_amount - starting_claim_amount
- * supplement_fee = dollars_increased * 0.05
- */
-export function calculateClaimSupplement(startingClaimAmount: number, finalClaimAmount: number): { dollarsIncreased: number; supplementFee: number } {
-  const dollarsIncreased = Math.max(0, finalClaimAmount - startingClaimAmount);
-  const supplementFee = dollarsIncreased * 0.05;
-  return { dollarsIncreased, supplementFee };
 }
 
 /**
@@ -103,15 +109,8 @@ export function calculateCompanyProfit(netProfit: number, repCommission: number,
  * Calculate all computed fields from input data
  */
 export function calculateAllFields(data: CommissionDocumentData): CalculatedFields {
-  // Calculate claim supplement if provided
-  let dollarsIncreased = 0;
-  let supplementFee = 0;
-  
-  if (data.starting_claim_amount !== undefined && data.final_claim_amount !== undefined) {
-    const claimResult = calculateClaimSupplement(data.starting_claim_amount, data.final_claim_amount);
-    dollarsIncreased = claimResult.dollarsIncreased;
-    supplementFee = claimResult.supplementFee;
-  }
+  // O&P Dollar Amount
+  const op_dollar_amount = calculateOpDollarAmount(data.gross_contract_total, data.op_percent);
 
   // Contract Total (Net)
   const contract_total_net = calculateContractTotalNet(data.gross_contract_total, data.op_percent);
@@ -138,12 +137,11 @@ export function calculateAllFields(data: CommissionDocumentData): CalculatedFiel
   const company_profit = calculateCompanyProfit(net_profit, rep_commission, data.gross_contract_total, data.op_percent);
 
   return {
+    op_dollar_amount,
     contract_total_net,
     net_profit,
     rep_commission,
     company_profit,
-    dollars_increased: dollarsIncreased,
-    supplement_fee: supplementFee,
   };
 }
 
@@ -173,18 +171,6 @@ export function parseCurrencyInput(value: string): number {
   const cleaned = value.replace(/[^0-9.-]/g, '');
   const parsed = parseFloat(cleaned);
   return isNaN(parsed) ? 0 : Math.max(0, parsed);
-}
-
-/**
- * Parse percent input string to decimal
- */
-export function parsePercentInput(value: string): number {
-  const cleaned = value.replace(/[^0-9.]/g, '');
-  const parsed = parseFloat(cleaned);
-  if (isNaN(parsed)) return 0;
-  // If user enters value > 1, assume they meant percentage (e.g., 10 = 0.10)
-  if (parsed > 1) return parsed / 100;
-  return Math.min(1, Math.max(0, parsed));
 }
 
 /**
