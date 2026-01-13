@@ -27,7 +27,7 @@ interface CommissionDocumentFormProps {
 
 export function CommissionDocumentForm({ document, readOnly = false }: CommissionDocumentFormProps) {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, role } = useAuth();
   const createMutation = useCreateCommissionDocument();
   const updateMutation = useUpdateCommissionDocument();
 
@@ -470,6 +470,22 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
               />
               <span className="text-sm text-muted-foreground">Remaining profit after rep commission</span>
             </div>
+
+            {/* Company Profit - Admin Only */}
+            {role === 'admin' && (
+              <div className="grid grid-cols-[200px_150px_1fr] gap-2 items-center py-2 border-b bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800">
+                <Label className="font-semibold flex items-center gap-1 text-amber-700 dark:text-amber-400">
+                  Company Profit
+                  <Lock className="h-3 w-3" />
+                </Label>
+                <Input
+                  value={formatCurrency(calculated.company_profit)}
+                  disabled
+                  className="font-mono bg-amber-100 dark:bg-amber-900/50 border-amber-300 dark:border-amber-700"
+                />
+                <span className="text-sm text-amber-600 dark:text-amber-500">Admin only - Total company profit</span>
+              </div>
+            )}
 
             {/* Notes */}
             <div className="grid grid-cols-[200px_1fr] gap-2 items-start py-2 border-b">
