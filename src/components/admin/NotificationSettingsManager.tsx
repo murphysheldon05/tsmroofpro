@@ -47,6 +47,21 @@ const NOTIFICATION_TYPE_LABELS: Record<string, { label: string; description: str
     description: "HR receives notifications when managers submit new hire requests for account setup",
     icon: "user-plus",
   },
+  warranty_submission: {
+    label: "Warranty Submissions",
+    description: "Notified when new warranty requests are submitted",
+    icon: "bell",
+  },
+  warranty_status_change: {
+    label: "Warranty Status Changes",
+    description: "Notified when warranty request status is updated",
+    icon: "bell",
+  },
+  commission_submission: {
+    label: "Commission Submissions",
+    description: "Notified when new commission submissions are created",
+    icon: "bell",
+  },
 };
 
 export function NotificationSettingsManager() {

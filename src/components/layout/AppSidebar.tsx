@@ -89,18 +89,18 @@ const navigation: NavItem[] = [
   {
     title: "Production",
     icon: Hammer,
-    sectionKey: "company",
+    sectionKey: "production",
     children: [
-      { title: "Warranty Tracker", href: "/warranties", icon: Shield, sectionKey: "company" },
+      { title: "Warranty Tracker", href: "/warranties", icon: Shield, sectionKey: "production/warranties" },
     ],
   },
   {
     title: "Production Calendar",
     icon: Calendar,
-    sectionKey: "company",
+    sectionKey: "production-calendar",
     children: [
-      { title: "Build Schedule", href: "/build-schedule", icon: Hammer, sectionKey: "company" },
-      { title: "Delivery Schedule", href: "/delivery-schedule", icon: Truck, sectionKey: "company" },
+      { title: "Build Schedule", href: "/build-schedule", icon: Hammer, sectionKey: "production-calendar/build" },
+      { title: "Delivery Schedule", href: "/delivery-schedule", icon: Truck, sectionKey: "production-calendar/delivery" },
     ],
   },
   {
@@ -119,7 +119,7 @@ const navigation: NavItem[] = [
     title: "Commissions",
     href: "/commissions",
     icon: DollarSign,
-    sectionKey: "requests", // Use requests permission for commission access
+    sectionKey: "commissions",
   },
   {
     title: "Company",
@@ -131,13 +131,13 @@ const navigation: NavItem[] = [
     title: "Team Directory",
     href: "/directory",
     icon: Users,
-    sectionKey: "dashboard", // Allow anyone with dashboard access to see directory
+    sectionKey: "directory",
   },
   {
     title: "Subs & Vendors",
     href: "/vendors",
     icon: Truck,
-    sectionKey: "company", // Restrict to users with company access
+    sectionKey: "vendors",
   },
 ];
 
