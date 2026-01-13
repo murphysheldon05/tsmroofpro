@@ -26,6 +26,7 @@ import {
   X,
   User,
   Users,
+  Truck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -106,6 +107,12 @@ const navigation: NavItem[] = [
     href: "/directory",
     icon: Users,
     sectionKey: "dashboard", // Allow anyone with dashboard access to see directory
+  },
+  {
+    title: "Subs & Vendors",
+    href: "/vendors",
+    icon: Truck,
+    sectionKey: "company", // Restrict to users with company access
   },
 ];
 

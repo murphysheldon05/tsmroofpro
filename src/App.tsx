@@ -19,6 +19,7 @@ import Company from "./pages/Company";
 import Admin from "./pages/Admin";
 import Profile from "./pages/Profile";
 import UserDirectory from "./pages/UserDirectory";
+import Directory from "./pages/Directory";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -114,6 +115,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <UserDirectory />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/vendors"
+              element={
+                <ProtectedRoute>
+                  <Directory />
                 </ProtectedRoute>
               }
             />
