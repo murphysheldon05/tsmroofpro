@@ -3,68 +3,112 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
-import { Check, X, Loader2, UserPlus, Clock } from "lucide-react";
+import { Check, X, Loader2, UserPlus, Clock, Building2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface PendingUser {
   id: string;
   email: string | null;
   full_name: string | null;
+  requested_role: string | null;
+  company_name: string | null;
   created_at: string;
 }
+
+const ROLE_LABELS: Record<string, string> = {
+  admin: "Admin",
+  office_admin: "Office Admin",
+  va: "VA",
+  sales: "Sales",
+  production: "Production",
+  subcontractor: "Subcontractor",
+  vendor: "Vendor",
+};
+
+const ASSIGNABLE_ROLES = [
+  { value: "admin", label: "Admin" },
+  { value: "manager", label: "Manager" },
+  { value: "employee", label: "Employee" },
+] as const;
 
 export function PendingApprovals() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const [approvingId, setApprovingId] = useState<string | null>(null);
   const [rejectingId, setRejectingId] = useState<string | null>(null);
+  const [selectedRoles, setSelectedRoles] = useState<Record<string, string>>({});
 
   const { data: pendingUsers, isLoading } = useQuery({
     queryKey: ["pending-approvals"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, email, full_name, created_at")
+        .select("id, email, full_name, requested_role, company_name, created_at")
         .eq("is_approved", false)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
       return data as PendingUser[];
     },
-    refetchInterval: 30000, // Refresh every 30 seconds
+    refetchInterval: 30000,
   });
 
-  const handleApprove = async (userId: string, userEmail: string | null, userName: string | null) => {
-    setApprovingId(userId);
+  const getDefaultRole = (requestedRole: string | null): string => {
+    if (!requestedRole) return "employee";
+    // Map requested roles to system roles
+    if (requestedRole === "admin") return "admin";
+    if (["office_admin", "va"].includes(requestedRole)) return "manager";
+    return "employee";
+  };
+
+  const handleApprove = async (pendingUser: PendingUser) => {
+    const assignedRole = selectedRoles[pendingUser.id] || getDefaultRole(pendingUser.requested_role);
+    
+    setApprovingId(pendingUser.id);
     try {
-      const { error } = await supabase
+      // Update profile to approved
+      const { error: profileError } = await supabase
         .from("profiles")
         .update({
           is_approved: true,
           approved_at: new Date().toISOString(),
           approved_by: user?.id,
         })
-        .eq("id", userId);
+        .eq("id", pendingUser.id);
 
-      if (error) throw error;
+      if (profileError) throw profileError;
+
+      // Update user role
+      const { error: roleError } = await supabase
+        .from("user_roles")
+        .update({ role: assignedRole as "admin" | "manager" | "employee" })
+        .eq("user_id", pendingUser.id);
+
+      if (roleError) throw roleError;
 
       // Send approval notification email
-      if (userEmail) {
+      if (pendingUser.email) {
         try {
           await supabase.functions.invoke("send-approval-notification", {
             body: {
-              user_email: userEmail,
-              user_name: userName || "",
+              user_email: pendingUser.email,
+              user_name: pendingUser.full_name || "",
             },
           });
         } catch (emailError) {
           console.error("Failed to send approval email:", emailError);
-          // Don't fail the approval if email fails
         }
       }
 
-      toast.success("User approved successfully!");
+      toast.success(`User approved as ${assignedRole}!`);
       queryClient.invalidateQueries({ queryKey: ["pending-approvals"] });
       queryClient.invalidateQueries({ queryKey: ["admin-users"] });
     } catch (error: any) {
@@ -81,7 +125,6 @@ export function PendingApprovals() {
 
     setRejectingId(userId);
     try {
-      // Delete user via edge function
       const { error } = await supabase.functions.invoke("admin-delete-user", {
         body: { user_id: userId },
       });
@@ -131,11 +174,17 @@ export function PendingApprovals() {
               <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
                 User
               </th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground hidden md:table-cell">
+              <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground hidden lg:table-cell">
                 Email
+              </th>
+              <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground hidden md:table-cell">
+                Requested Role
               </th>
               <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground hidden sm:table-cell">
                 Signed Up
+              </th>
+              <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
+                Assign Role
               </th>
               <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">
                 Actions
@@ -149,12 +198,29 @@ export function PendingApprovals() {
                 className={index < pendingUsers.length - 1 ? "border-b border-border/30" : ""}
               >
                 <td className="px-4 py-3">
-                  <p className="font-medium text-foreground">
-                    {pendingUser.full_name || "—"}
-                  </p>
+                  <div>
+                    <p className="font-medium text-foreground">
+                      {pendingUser.full_name || "—"}
+                    </p>
+                    {pendingUser.company_name && (
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
+                        <Building2 className="w-3 h-3" />
+                        {pendingUser.company_name}
+                      </div>
+                    )}
+                  </div>
                 </td>
-                <td className="px-4 py-3 hidden md:table-cell text-muted-foreground">
+                <td className="px-4 py-3 hidden lg:table-cell text-muted-foreground text-sm">
                   {pendingUser.email}
+                </td>
+                <td className="px-4 py-3 hidden md:table-cell">
+                  {pendingUser.requested_role ? (
+                    <Badge variant="secondary" className="text-xs">
+                      {ROLE_LABELS[pendingUser.requested_role] || pendingUser.requested_role}
+                    </Badge>
+                  ) : (
+                    <span className="text-muted-foreground text-sm">—</span>
+                  )}
                 </td>
                 <td className="px-4 py-3 hidden sm:table-cell text-muted-foreground text-sm">
                   {new Date(pendingUser.created_at).toLocaleDateString('en-US', {
@@ -163,13 +229,32 @@ export function PendingApprovals() {
                     year: 'numeric',
                   })}
                 </td>
+                <td className="px-4 py-3">
+                  <Select
+                    value={selectedRoles[pendingUser.id] || getDefaultRole(pendingUser.requested_role)}
+                    onValueChange={(value) => 
+                      setSelectedRoles(prev => ({ ...prev, [pendingUser.id]: value }))
+                    }
+                  >
+                    <SelectTrigger className="w-[130px] h-8">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ASSIGNABLE_ROLES.map((role) => (
+                        <SelectItem key={role.value} value={role.value}>
+                          {role.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </td>
                 <td className="px-4 py-3 text-right">
                   <div className="flex items-center justify-end gap-2">
                     <Button
                       size="sm"
                       variant="outline"
                       className="gap-1 text-emerald-600 border-emerald-300 hover:bg-emerald-50"
-                      onClick={() => handleApprove(pendingUser.id, pendingUser.email, pendingUser.full_name)}
+                      onClick={() => handleApprove(pendingUser)}
                       disabled={approvingId === pendingUser.id || rejectingId === pendingUser.id}
                     >
                       {approvingId === pendingUser.id ? (
