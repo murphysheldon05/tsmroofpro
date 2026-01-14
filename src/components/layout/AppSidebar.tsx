@@ -246,8 +246,10 @@ export function AppSidebar() {
 
   const NavContent = () => (
     <>
-      <div className="p-4 border-b border-sidebar-border">
-        <Logo size="sm" />
+      <div className="p-4 border-b border-primary/20">
+        <div className="flex items-center gap-2">
+          <Logo size="sm" />
+        </div>
       </div>
 
       <nav className="flex-1 overflow-y-auto p-3 space-y-1">
@@ -261,37 +263,37 @@ export function AppSidebar() {
                 <CollapsibleTrigger asChild>
                   <button
                     className={cn(
-                      "w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+                      "w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 relative",
                       isParentActive(item.children)
-                        ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                        : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+                        ? "nav-item-active"
+                        : "text-sidebar-foreground hover:bg-primary/5 hover:text-primary/80"
                     )}
                   >
                     <span className="flex items-center gap-3">
-                      <item.icon className="w-4 h-4" />
+                      <item.icon className={cn("w-4 h-4", isParentActive(item.children) && "nav-icon-glow")} />
                       {item.title}
                     </span>
                     <ChevronDown
                       className={cn(
-                        "w-4 h-4 transition-transform",
+                        "w-4 h-4 transition-transform duration-200",
                         openSections.includes(item.title) && "rotate-180"
                       )}
                     />
                   </button>
                 </CollapsibleTrigger>
-                <CollapsibleContent className="mt-1 ml-4 space-y-1">
+                <CollapsibleContent className="mt-1 ml-4 space-y-1 border-l border-primary/10 pl-2">
                   {item.children.map((child) => (
                     <button
                       key={child.href}
                       onClick={() => handleNavClick(child.href)}
                       className={cn(
-                        "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors",
+                        "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-200 relative",
                         isActive(child.href)
-                          ? "bg-primary/10 text-primary font-medium"
-                          : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+                          ? "nav-item-active font-medium"
+                          : "text-sidebar-foreground/70 hover:bg-primary/5 hover:text-primary/80"
                       )}
                     >
-                      {child.icon && <child.icon className="w-4 h-4" />}
+                      {child.icon && <child.icon className={cn("w-4 h-4", isActive(child.href) && "nav-icon-glow")} />}
                       {child.title}
                     </button>
                   ))}
@@ -301,13 +303,13 @@ export function AppSidebar() {
               <button
                 onClick={() => handleNavClick(item.href!)}
                 className={cn(
-                  "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+                  "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 relative",
                   isActive(item.href!)
-                    ? "bg-primary/10 text-primary"
-                    : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+                    ? "nav-item-active"
+                    : "text-sidebar-foreground hover:bg-primary/5 hover:text-primary/80"
                 )}
               >
-                <item.icon className="w-4 h-4" />
+                <item.icon className={cn("w-4 h-4", isActive(item.href!) && "nav-icon-glow")} />
                 {item.title}
               </button>
             )}
@@ -315,27 +317,27 @@ export function AppSidebar() {
         ))}
       </nav>
 
-      <div className="p-3 border-t border-sidebar-border space-y-2">
+      <div className="p-3 border-t border-primary/20 space-y-2">
         {/* User info with avatar and role badge */}
         <button
           onClick={() => handleNavClick("/profile")}
           className={cn(
-            "w-full flex items-center justify-between px-3 py-2 rounded-lg transition-colors",
+            "w-full flex items-center justify-between px-3 py-2.5 rounded-lg transition-all duration-200",
             isActive("/profile")
-              ? "bg-primary/10"
-              : "bg-sidebar-accent/30 hover:bg-sidebar-accent/50"
+              ? "nav-item-active"
+              : "bg-surface-2/50 hover:bg-primary/5"
           )}
         >
           <div className="flex items-center gap-2 min-w-0">
-            <Avatar className="w-8 h-8 flex-shrink-0 border border-border">
+            <Avatar className="w-8 h-8 flex-shrink-0 border border-primary/30 ring-1 ring-primary/20">
               <AvatarImage src={profile?.avatar_url || undefined} alt={profile?.full_name || "Profile"} />
-              <AvatarFallback className="text-xs bg-muted">
+              <AvatarFallback className="text-xs bg-primary/10 text-primary">
                 {profile?.full_name ? getInitials(profile.full_name) : <User className="w-4 h-4" />}
               </AvatarFallback>
             </Avatar>
             <div className="flex flex-col items-start min-w-0">
               {profile?.full_name && (
-                <span className="text-sm font-medium truncate max-w-[120px]">
+                <span className="text-sm font-medium truncate max-w-[120px] text-foreground/90">
                   {profile.full_name}
                 </span>
               )}
@@ -344,7 +346,14 @@ export function AppSidebar() {
               </span>
             </div>
           </div>
-          <Badge variant={getRoleBadgeVariant()} className="ml-2 shrink-0">
+          <Badge 
+            variant={getRoleBadgeVariant()} 
+            className={cn(
+              "ml-2 shrink-0",
+              role === 'admin' && "bg-primary/20 text-primary border-primary/30",
+              role === 'manager' && "bg-primary/15 text-primary/90 border-primary/25"
+            )}
+          >
             {getRoleLabel()}
           </Badge>
         </button>
@@ -353,19 +362,19 @@ export function AppSidebar() {
           <button
             onClick={() => handleNavClick("/admin")}
             className={cn(
-              "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+              "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 relative",
               isActive("/admin")
-                ? "bg-primary/10 text-primary"
-                : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+                ? "nav-item-active"
+                : "text-sidebar-foreground hover:bg-primary/5 hover:text-primary/80"
             )}
           >
-            <Settings className="w-4 h-4" />
+            <Settings className={cn("w-4 h-4", isActive("/admin") && "nav-icon-glow")} />
             Admin Panel
           </button>
         )}
         <button
           onClick={() => signOut()}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-sidebar-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-sidebar-foreground hover:bg-destructive/10 hover:text-destructive transition-all duration-200"
         >
           <LogOut className="w-4 h-4" />
           Sign Out
@@ -397,7 +406,7 @@ export function AppSidebar() {
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed top-0 left-0 h-full w-64 bg-sidebar border-r border-sidebar-border flex flex-col z-50 transition-transform duration-300 lg:translate-x-0",
+          "fixed top-0 left-0 h-full w-64 sidebar-neon flex flex-col z-50 transition-transform duration-300 lg:translate-x-0",
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
