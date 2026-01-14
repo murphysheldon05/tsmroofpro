@@ -161,13 +161,8 @@ serve(async (req: Request): Promise<Response> => {
     // Send invite email
     let emailSent = false;
     try {
-      // Always use the published URL for TSM Hub - never use preview URLs
-      const publishedUrl = "https://tsm-roofing-hub.lovable.app";
-      const rawBaseUrl = (Deno.env.get("APP_BASE_URL") ?? publishedUrl).trim();
-      const appBaseUrl = (rawBaseUrl.startsWith("http://") || rawBaseUrl.startsWith("https://"))
-        ? rawBaseUrl.replace(/\/$/, "")
-        : `https://${rawBaseUrl.replace(/\/$/, "")}`;
-      const loginUrl = `${appBaseUrl}/auth`;
+      // HARD LOCK: Always use tsmrest.com for all auth emails - never use any other domain
+      const loginUrl = "https://tsmrest.com/auth";
       const roleLabel = role.charAt(0).toUpperCase() + role.slice(1);
 
       const emailResponse = await resend.emails.send({

@@ -98,9 +98,8 @@ const handler = async (req: Request): Promise<Response> => {
       `;
     }).join("");
 
-    // Always use the published URL for TSM Hub - never use preview URLs
-    const publishedUrl = "https://tsm-roofing-hub.lovable.app";
-    const appBaseUrl = (Deno.env.get("APP_BASE_URL") || publishedUrl).replace(/\/$/, "");
+    // HARD LOCK: Always use tsmrest.com for all portal links - never use any other domain
+    const appBaseUrl = "https://tsmrest.com";
 
     const emailPayload: Record<string, unknown> = {
       from: "TSM Roofing <notifications@hub.tsmroofs.com>",
