@@ -56,13 +56,13 @@ export function QuickLinks() {
         <button
           key={link.title}
           onClick={() => navigate(link.href)}
-          className="flex flex-col items-center gap-2 p-4 rounded-xl bg-card/50 border border-border/50 hover:border-primary/30 hover:bg-card transition-all group"
+          className="flex flex-col items-center gap-2 p-4 rounded-xl bg-card/60 border border-primary/10 hover:border-primary/40 hover:bg-card/80 hover:shadow-[0_0_25px_hsl(var(--primary)/0.15)] transition-all duration-300 group"
         >
-          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-            <link.icon className="w-5 h-5 text-primary" />
+          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 group-hover:shadow-[0_0_15px_hsl(var(--primary)/0.3)] transition-all duration-300">
+            <link.icon className="w-5 h-5 text-primary group-hover:drop-shadow-[0_0_8px_hsl(var(--primary)/0.5)]" />
           </div>
           <div className="text-center">
-            <p className="text-sm font-medium text-foreground">{link.title}</p>
+            <p className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">{link.title}</p>
             <p className="text-xs text-muted-foreground">{link.description}</p>
           </div>
         </button>
