@@ -10,23 +10,23 @@ interface AnnouncementCardProps {
 const priorityConfig = {
   low: {
     icon: Info,
-    className: "border-muted",
+    className: "border-muted hover:border-muted-foreground/30",
     iconClassName: "text-muted-foreground",
   },
   normal: {
     icon: Megaphone,
-    className: "border-primary/30",
-    iconClassName: "text-primary",
+    className: "border-primary/30 hover:border-primary/50 hover:shadow-[0_0_20px_hsl(var(--primary)/0.1)]",
+    iconClassName: "text-primary drop-shadow-[0_0_6px_hsl(var(--primary)/0.4)]",
   },
   high: {
     icon: AlertTriangle,
-    className: "border-yellow-500/50 bg-yellow-500/5",
-    iconClassName: "text-yellow-500",
+    className: "border-yellow-500/50 bg-yellow-500/5 hover:border-yellow-500/70 hover:shadow-[0_0_20px_hsl(45,100%,50%,0.15)]",
+    iconClassName: "text-yellow-500 drop-shadow-[0_0_6px_hsl(45,100%,50%,0.5)]",
   },
   urgent: {
     icon: AlertCircle,
-    className: "border-destructive/50 bg-destructive/5",
-    iconClassName: "text-destructive",
+    className: "border-destructive/50 bg-destructive/5 hover:border-destructive/70 hover:shadow-[0_0_20px_hsl(var(--destructive)/0.15)]",
+    iconClassName: "text-destructive drop-shadow-[0_0_6px_hsl(var(--destructive)/0.5)]",
   },
 };
 
@@ -37,7 +37,7 @@ export function AnnouncementCard({ announcement }: AnnouncementCardProps) {
   return (
     <div
       className={cn(
-        "p-4 rounded-xl border bg-card/50 transition-all hover:bg-card/80",
+        "p-4 rounded-xl border bg-card/60 transition-all duration-300",
         config.className
       )}
     >

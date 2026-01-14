@@ -41,11 +41,11 @@ export function OverdueWarrantiesWidget() {
 
   return (
     <section>
-      <Card className="border-destructive/50 bg-destructive/5">
+      <Card className="border-destructive/40 bg-destructive/5 shadow-[0_0_25px_hsl(var(--destructive)/0.1)] hover:shadow-[0_0_35px_hsl(var(--destructive)/0.15)] transition-all duration-300">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <AlertTriangle className="w-5 h-5 text-destructive" />
+              <AlertTriangle className="w-5 h-5 text-destructive drop-shadow-[0_0_8px_hsl(var(--destructive)/0.5)]" />
               <CardTitle className="text-lg text-destructive">
                 Overdue Warranties ({overdueWarranties.length})
               </CardTitle>
@@ -54,7 +54,7 @@ export function OverdueWarrantiesWidget() {
               variant="ghost" 
               size="sm" 
               onClick={() => navigate("/warranties")}
-              className="text-destructive hover:text-destructive"
+              className="text-destructive hover:text-destructive hover:bg-destructive/10"
             >
               View All
               <ArrowRight className="w-4 h-4 ml-1" />
@@ -69,7 +69,7 @@ export function OverdueWarrantiesWidget() {
             <div 
               key={warranty.id}
               onClick={() => navigate("/warranties")}
-              className="flex items-center justify-between p-3 rounded-lg bg-background border border-border hover:border-destructive/50 cursor-pointer transition-colors"
+              className="flex items-center justify-between p-3 rounded-lg bg-background/80 border border-destructive/20 hover:border-destructive/40 hover:shadow-[0_0_15px_hsl(var(--destructive)/0.1)] cursor-pointer transition-all duration-200"
             >
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">

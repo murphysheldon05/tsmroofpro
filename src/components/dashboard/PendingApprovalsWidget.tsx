@@ -65,15 +65,15 @@ export function PendingApprovalsWidget() {
   const pendingCount = pendingRequests?.length || 0;
 
   return (
-    <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
+    <Card variant="neon">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <ClipboardCheck className="h-5 w-5 text-primary" />
+            <ClipboardCheck className="h-5 w-5 text-primary drop-shadow-[0_0_6px_hsl(var(--primary)/0.5)]" />
             <CardTitle className="text-lg font-semibold">Pending Approvals</CardTitle>
           </div>
           {pendingCount > 0 && (
-            <Badge variant="secondary" className="bg-primary/10 text-primary">
+            <Badge variant="secondary" className="bg-primary/15 text-primary border border-primary/30 shadow-[0_0_10px_hsl(var(--primary)/0.2)]">
               {pendingCount} pending
             </Badge>
           )}
@@ -92,7 +92,7 @@ export function PendingApprovalsWidget() {
               {pendingRequests.map((request) => (
                 <div
                   key={request.id}
-                  className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
+                  className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border border-primary/10 hover:bg-muted/50 hover:border-primary/30 transition-all duration-200"
                 >
                   <div className="min-w-0 flex-1">
                     <p className="font-medium text-sm truncate">{request.title}</p>
@@ -107,7 +107,7 @@ export function PendingApprovalsWidget() {
                 </div>
               ))}
             </div>
-            <Button variant="ghost" size="sm" className="w-full" asChild>
+            <Button variant="neon" size="sm" className="w-full" asChild>
               <Link to="/requests" className="flex items-center gap-2">
                 View all requests
                 <ArrowRight className="h-4 w-4" />
