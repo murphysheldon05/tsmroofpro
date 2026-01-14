@@ -12,6 +12,21 @@ interface WeatherData {
   isDay: boolean;
 }
 
+export interface ForecastDay {
+  date: string;
+  dayName: string;
+  weatherCode: number;
+  tempMax: number;
+  tempMin: number;
+  precipitationProbability: number;
+  windSpeedMax: number;
+}
+
+export interface WeatherWithForecast {
+  current: WeatherData;
+  forecast: ForecastDay[];
+}
+
 export interface UserWeatherLocation {
   lat: number;
   lon: number;
@@ -140,12 +155,12 @@ export function useWeather() {
 
   return useQuery({
     queryKey: ["weather", location?.lat, location?.lon],
-    queryFn: async (): Promise<WeatherData> => {
+    queryFn: async (): Promise<WeatherWithForecast> => {
       const lat = location?.lat || DEFAULT_LOCATION.lat;
       const lon = location?.lon || DEFAULT_LOCATION.lon;
 
       const response = await fetch(
-        `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m,is_day&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch&timezone=auto`
+        `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m,is_day&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,wind_speed_10m_max&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch&timezone=auto&forecast_days=6`
       );
 
       if (!response.ok) {
@@ -154,15 +169,38 @@ export function useWeather() {
 
       const data = await response.json();
       const current = data.current;
+      const daily = data.daily;
+
+      // Parse forecast days (skip today, get next 5 days)
+      const forecast: ForecastDay[] = [];
+      const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+      
+      for (let i = 1; i <= 5; i++) {
+        if (daily.time[i]) {
+          const date = new Date(daily.time[i]);
+          forecast.push({
+            date: daily.time[i],
+            dayName: dayNames[date.getDay()],
+            weatherCode: daily.weather_code[i],
+            tempMax: Math.round(daily.temperature_2m_max[i]),
+            tempMin: Math.round(daily.temperature_2m_min[i]),
+            precipitationProbability: daily.precipitation_probability_max[i] || 0,
+            windSpeedMax: Math.round(daily.wind_speed_10m_max[i]),
+          });
+        }
+      }
 
       return {
-        temperature: Math.round(current.temperature_2m),
-        apparentTemperature: Math.round(current.apparent_temperature),
-        weatherCode: current.weather_code,
-        windSpeed: Math.round(current.wind_speed_10m),
-        humidity: current.relative_humidity_2m,
-        precipitation: current.precipitation,
-        isDay: current.is_day === 1,
+        current: {
+          temperature: Math.round(current.temperature_2m),
+          apparentTemperature: Math.round(current.apparent_temperature),
+          weatherCode: current.weather_code,
+          windSpeed: Math.round(current.wind_speed_10m),
+          humidity: current.relative_humidity_2m,
+          precipitation: current.precipitation,
+          isDay: current.is_day === 1,
+        },
+        forecast,
       };
     },
     enabled: !!location,
