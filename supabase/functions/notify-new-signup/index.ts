@@ -81,7 +81,9 @@ serve(async (req: Request): Promise<Response> => {
       });
     }
 
-    const rawBaseUrl = (Deno.env.get("APP_BASE_URL") ?? "https://hub.tsmroofs.com").trim();
+    // Always use the published URL for TSM Hub - never use preview URLs
+    const publishedUrl = "https://tsm-roofing-hub.lovable.app";
+    const rawBaseUrl = (Deno.env.get("APP_BASE_URL") ?? publishedUrl).trim();
     const appBaseUrl = (rawBaseUrl.startsWith("http://") || rawBaseUrl.startsWith("https://"))
       ? rawBaseUrl.replace(/\/$/, "")
       : `https://${rawBaseUrl.replace(/\/$/, "")}`;

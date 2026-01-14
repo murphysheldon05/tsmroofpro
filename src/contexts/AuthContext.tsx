@@ -107,7 +107,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signUp = async (email: string, password: string, fullName: string) => {
-    const redirectUrl = `${window.location.origin}/`;
+    // Use published URL for email redirects, fallback to current origin
+    const publishedUrl = import.meta.env.VITE_PUBLISHED_URL || 'https://tsm-roofing-hub.lovable.app';
+    const redirectUrl = `${publishedUrl}/auth`;
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
