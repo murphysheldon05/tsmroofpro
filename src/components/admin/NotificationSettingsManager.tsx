@@ -29,7 +29,7 @@ import {
 const NOTIFICATION_TYPE_LABELS: Record<string, { label: string; description: string; icon: string }> = {
   request_submission: {
     label: "General Requests",
-    description: "Notified when employees submit general requests (commission forms, SOP updates, etc.)",
+    description: "Notified when employees submit general requests (SOP updates, etc.)",
     icon: "bell",
   },
   hr_request: {
@@ -49,17 +49,22 @@ const NOTIFICATION_TYPE_LABELS: Record<string, { label: string; description: str
   },
   warranty_submission: {
     label: "Warranty Submissions",
-    description: "Notified when new warranty requests are submitted",
+    description: "Production team notified when new warranty requests are submitted",
     icon: "bell",
   },
   warranty_status_change: {
     label: "Warranty Status Changes",
-    description: "Notified when warranty request status is updated",
+    description: "Production/Admin notified when warranty status changes (assigned, completed, etc.)",
     icon: "bell",
   },
   commission_submission: {
     label: "Commission Submissions",
-    description: "Notified when new commission submissions are created",
+    description: "Reviewers notified when new commission submissions are created",
+    icon: "bell",
+  },
+  commission_accounting: {
+    label: "Commission Accounting",
+    description: "Accounting team notified when commissions are approved for payment processing",
     icon: "bell",
   },
 };
