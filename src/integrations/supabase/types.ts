@@ -915,6 +915,7 @@ export type Database = {
           last_login_at: string | null
           must_reset_password: boolean | null
           phone_number: string | null
+          requested_department: string | null
           requested_role: string | null
           updated_at: string
         }
@@ -934,6 +935,7 @@ export type Database = {
           last_login_at?: string | null
           must_reset_password?: boolean | null
           phone_number?: string | null
+          requested_department?: string | null
           requested_role?: string | null
           updated_at?: string
         }
@@ -953,6 +955,7 @@ export type Database = {
           last_login_at?: string | null
           must_reset_password?: boolean | null
           phone_number?: string | null
+          requested_department?: string | null
           requested_role?: string | null
           updated_at?: string
         }

@@ -28,11 +28,20 @@ const ROLE_OPTIONS = [
   { value: "vendor", label: "Vendor" },
 ] as const;
 
+const DEPARTMENT_OPTIONS = [
+  { value: "production", label: "Production" },
+  { value: "sales", label: "Sales" },
+  { value: "office", label: "Office" },
+  { value: "accounting", label: "Accounting" },
+  { value: "other", label: "Other" },
+] as const;
+
 const signupSchema = z.object({
   fullName: z.string().min(2, "Name must be at least 2 characters"),
   email: z.string().email("Please enter a valid email address"),
   password: z.string().min(8, "Password must be at least 8 characters"),
   requestedRole: z.string().min(1, "Please select a role"),
+  requestedDepartment: z.string().min(1, "Please select a department"),
   companyName: z.string().optional(),
   dataConsent: z.literal(true, {
     errorMap: () => ({ message: "You must agree to data sharing to continue" }),
@@ -44,6 +53,7 @@ export default function Signup() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [requestedRole, setRequestedRole] = useState("");
+  const [requestedDepartment, setRequestedDepartment] = useState("");
   const [companyName, setCompanyName] = useState("");
   const [dataConsent, setDataConsent] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -69,6 +79,7 @@ export default function Signup() {
         email, 
         password, 
         requestedRole,
+        requestedDepartment,
         companyName: showCompanyField ? companyName : undefined,
         dataConsent 
       });
@@ -104,16 +115,28 @@ export default function Signup() {
           toast.error(error.message);
         }
       } else {
-        // Update profile with requested role and company name
+        // Update profile with requested role, department, and company name
         const { data: { user: newUser } } = await supabase.auth.getUser();
         if (newUser) {
           await supabase
             .from("profiles")
             .update({
               requested_role: requestedRole,
+              requested_department: requestedDepartment,
               company_name: showCompanyField ? companyName : null,
             })
             .eq("id", newUser.id);
+
+          // Send admin notification with full details (fire and forget)
+          supabase.functions.invoke("notify-new-signup", {
+            body: {
+              user_id: newUser.id,
+              email: email,
+              full_name: fullName,
+              requested_role: requestedRole,
+              requested_department: requestedDepartment,
+            },
+          }).catch(console.error);
         }
 
         // Sign out so they can't access anything until approved
@@ -276,6 +299,26 @@ export default function Signup() {
                 </div>
                 {errors.password && (
                   <p className="text-sm text-destructive">{errors.password}</p>
+                )}
+              </div>
+
+              {/* Department Request */}
+              <div className="space-y-2">
+                <Label htmlFor="requestedDepartment">Department</Label>
+                <Select value={requestedDepartment} onValueChange={setRequestedDepartment}>
+                  <SelectTrigger className={errors.requestedDepartment ? "border-destructive" : ""}>
+                    <SelectValue placeholder="Select your department" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {DEPARTMENT_OPTIONS.map((dept) => (
+                      <SelectItem key={dept.value} value={dept.value}>
+                        {dept.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.requestedDepartment && (
+                  <p className="text-sm text-destructive">{errors.requestedDepartment}</p>
                 )}
               </div>
 

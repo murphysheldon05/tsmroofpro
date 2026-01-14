@@ -29,6 +29,7 @@ interface PendingUser {
   email: string | null;
   full_name: string | null;
   requested_role: string | null;
+  requested_department: string | null;
   company_name: string | null;
   created_at: string;
 }
@@ -43,6 +44,14 @@ const ROLE_LABELS: Record<string, string> = {
   vendor: "Vendor",
 };
 
+const DEPARTMENT_LABELS: Record<string, string> = {
+  production: "Production",
+  sales: "Sales",
+  office: "Office",
+  accounting: "Accounting",
+  other: "Other",
+};
+
 const ASSIGNABLE_ROLES = [
   { value: "admin", label: "Admin" },
   { value: "manager", label: "Manager" },
@@ -55,6 +64,7 @@ export function PendingApprovals() {
   const [approvingId, setApprovingId] = useState<string | null>(null);
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [selectedRoles, setSelectedRoles] = useState<Record<string, string>>({});
+  const [selectedDepartments, setSelectedDepartments] = useState<Record<string, string>>({});
   const [approvalDialog, setApprovalDialog] = useState<{ open: boolean; user: PendingUser | null }>({ open: false, user: null });
   const [customMessage, setCustomMessage] = useState("");
 
@@ -63,7 +73,7 @@ export function PendingApprovals() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, email, full_name, requested_role, company_name, created_at")
+        .select("id, email, full_name, requested_role, requested_department, company_name, created_at")
         .eq("is_approved", false)
         .order("created_at", { ascending: false });
 
@@ -71,6 +81,19 @@ export function PendingApprovals() {
       return data as PendingUser[];
     },
     refetchInterval: 30000,
+  });
+
+  const { data: departments } = useQuery({
+    queryKey: ["departments"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("departments")
+        .select("id, name")
+        .eq("is_active", true)
+        .order("sort_order");
+      if (error) throw error;
+      return data;
+    },
   });
 
   const getDefaultRole = (requestedRole: string | null): string => {
@@ -84,6 +107,13 @@ export function PendingApprovals() {
   const openApprovalDialog = (pendingUser: PendingUser) => {
     setApprovalDialog({ open: true, user: pendingUser });
     setCustomMessage("");
+    // Pre-select the requested department if available
+    if (pendingUser.requested_department && !selectedDepartments[pendingUser.id]) {
+      const matchingDept = departments?.find(d => d.name.toLowerCase() === pendingUser.requested_department?.toLowerCase());
+      if (matchingDept) {
+        setSelectedDepartments(prev => ({ ...prev, [pendingUser.id]: matchingDept.id }));
+      }
+    }
   };
 
   const handleApprove = async () => {
@@ -91,16 +121,18 @@ export function PendingApprovals() {
     if (!pendingUser) return;
     
     const assignedRole = selectedRoles[pendingUser.id] || getDefaultRole(pendingUser.requested_role);
+    const assignedDepartmentId = selectedDepartments[pendingUser.id] || null;
     
     setApprovingId(pendingUser.id);
     try {
-      // Update profile to approved
+      // Update profile to approved with department
       const { error: profileError } = await supabase
         .from("profiles")
         .update({
           is_approved: true,
           approved_at: new Date().toISOString(),
           approved_by: user?.id,
+          department_id: assignedDepartmentId,
         })
         .eq("id", pendingUser.id);
 
@@ -114,6 +146,9 @@ export function PendingApprovals() {
 
       if (roleError) throw roleError;
 
+      // Get department name for notification
+      const assignedDeptName = departments?.find(d => d.id === assignedDepartmentId)?.name || null;
+
       // Send approval notification email
       if (pendingUser.email) {
         try {
@@ -122,6 +157,8 @@ export function PendingApprovals() {
               user_email: pendingUser.email,
               user_name: pendingUser.full_name || "",
               custom_message: customMessage.trim() || undefined,
+              assigned_role: assignedRole,
+              assigned_department: assignedDeptName,
             },
           });
         } catch (emailError) {
@@ -129,7 +166,7 @@ export function PendingApprovals() {
         }
       }
 
-      toast.success(`User approved as ${assignedRole}!`);
+      toast.success(`User approved as ${assignedRole}${assignedDeptName ? ` in ${assignedDeptName}` : ''}!`);
       setApprovalDialog({ open: false, user: null });
       queryClient.invalidateQueries({ queryKey: ["pending-approvals"] });
       queryClient.invalidateQueries({ queryKey: ["admin-users"] });
@@ -202,11 +239,11 @@ export function PendingApprovals() {
               <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground hidden md:table-cell">
                 Requested Role
               </th>
+              <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground hidden lg:table-cell">
+                Requested Dept
+              </th>
               <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground hidden sm:table-cell">
                 Signed Up
-              </th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
-                Assign Role
               </th>
               <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">
                 Actions
@@ -244,31 +281,21 @@ export function PendingApprovals() {
                     <span className="text-muted-foreground text-sm">—</span>
                   )}
                 </td>
+                <td className="px-4 py-3 hidden lg:table-cell">
+                  {pendingUser.requested_department ? (
+                    <Badge variant="outline" className="text-xs">
+                      {DEPARTMENT_LABELS[pendingUser.requested_department] || pendingUser.requested_department}
+                    </Badge>
+                  ) : (
+                    <span className="text-muted-foreground text-sm">—</span>
+                  )}
+                </td>
                 <td className="px-4 py-3 hidden sm:table-cell text-muted-foreground text-sm">
                   {new Date(pendingUser.created_at).toLocaleDateString('en-US', {
                     month: 'short',
                     day: 'numeric',
                     year: 'numeric',
                   })}
-                </td>
-                <td className="px-4 py-3">
-                  <Select
-                    value={selectedRoles[pendingUser.id] || getDefaultRole(pendingUser.requested_role)}
-                    onValueChange={(value) => 
-                      setSelectedRoles(prev => ({ ...prev, [pendingUser.id]: value }))
-                    }
-                  >
-                    <SelectTrigger className="w-[130px] h-8">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {ASSIGNABLE_ROLES.map((role) => (
-                        <SelectItem key={role.value} value={role.value}>
-                          {role.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
                 </td>
                 <td className="px-4 py-3 text-right">
                   <div className="flex items-center justify-end gap-2">
@@ -340,6 +367,39 @@ export function PendingApprovals() {
                   ))}
                 </SelectContent>
               </Select>
+              {approvalDialog.user?.requested_role && (
+                <p className="text-xs text-muted-foreground">
+                  Requested: {ROLE_LABELS[approvalDialog.user.requested_role] || approvalDialog.user.requested_role}
+                </p>
+              )}
+            </div>
+            
+            <div className="space-y-2">
+              <Label>Assigned Department</Label>
+              <Select
+                value={approvalDialog.user ? (selectedDepartments[approvalDialog.user.id] || "") : ""}
+                onValueChange={(value) => {
+                  if (approvalDialog.user) {
+                    setSelectedDepartments(prev => ({ ...prev, [approvalDialog.user!.id]: value }));
+                  }
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select department" />
+                </SelectTrigger>
+                <SelectContent>
+                  {departments?.map((dept) => (
+                    <SelectItem key={dept.id} value={dept.id}>
+                      {dept.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {approvalDialog.user?.requested_department && (
+                <p className="text-xs text-muted-foreground">
+                  Requested: {DEPARTMENT_LABELS[approvalDialog.user.requested_department] || approvalDialog.user.requested_department}
+                </p>
+              )}
             </div>
             
             <div className="space-y-2">
