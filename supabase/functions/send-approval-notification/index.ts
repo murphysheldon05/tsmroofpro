@@ -34,10 +34,8 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("Sending approval notification to:", user_email, "role:", assigned_role, "dept:", assigned_department);
 
-    // Always use the published URL for TSM Hub - never use preview URLs
-    const publishedUrl = "https://tsm-roofing-hub.lovable.app";
-    const appUrl = Deno.env.get("APP_BASE_URL") || publishedUrl;
-    const loginUrl = `${appUrl.replace(/\/$/, "")}/auth`;
+    // HARD LOCK: Always use tsmrest.com for all auth emails - never use any other domain
+    const loginUrl = "https://tsmrest.com/auth";
 
     const roleDisplay = assigned_role ? ROLE_LABELS[assigned_role] || assigned_role : null;
 

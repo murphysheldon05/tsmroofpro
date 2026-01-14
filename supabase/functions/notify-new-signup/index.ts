@@ -81,13 +81,8 @@ serve(async (req: Request): Promise<Response> => {
       });
     }
 
-    // Always use the published URL for TSM Hub - never use preview URLs
-    const publishedUrl = "https://tsm-roofing-hub.lovable.app";
-    const rawBaseUrl = (Deno.env.get("APP_BASE_URL") ?? publishedUrl).trim();
-    const appBaseUrl = (rawBaseUrl.startsWith("http://") || rawBaseUrl.startsWith("https://"))
-      ? rawBaseUrl.replace(/\/$/, "")
-      : `https://${rawBaseUrl.replace(/\/$/, "")}`;
-    const adminUrl = `${appBaseUrl}/admin`;
+    // HARD LOCK: Always use tsmrest.com for all portal links - never use any other domain
+    const adminUrl = "https://tsmrest.com/admin";
 
     const emailHtml = `
       <!DOCTYPE html>
