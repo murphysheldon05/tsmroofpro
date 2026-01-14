@@ -25,6 +25,8 @@ export const SIDEBAR_SECTIONS = [
   { key: "tools", label: "Tools & Systems", parent: null },
   { key: "requests", label: "Forms & Requests", parent: null },
   { key: "commissions", label: "Commissions", parent: null },
+  { key: "commissions/submissions", label: "Submissions", parent: "commissions" },
+  { key: "commissions/documents", label: "Documents", parent: "commissions" },
   { key: "company", label: "Company", parent: null },
   { key: "directory", label: "Team Directory", parent: null },
   { key: "vendors", label: "Subs & Vendors", parent: null },
