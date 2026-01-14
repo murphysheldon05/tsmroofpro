@@ -13,7 +13,15 @@ interface ApprovalNotificationRequest {
   user_email: string;
   user_name: string;
   custom_message?: string;
+  assigned_role?: string;
+  assigned_department?: string;
 }
+
+const ROLE_LABELS: Record<string, string> = {
+  admin: "Administrator",
+  manager: "Manager",
+  employee: "Team Member",
+};
 
 const handler = async (req: Request): Promise<Response> => {
   // Handle CORS preflight requests
@@ -22,12 +30,14 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { user_email, user_name, custom_message }: ApprovalNotificationRequest = await req.json();
+    const { user_email, user_name, custom_message, assigned_role, assigned_department }: ApprovalNotificationRequest = await req.json();
 
-    console.log("Sending approval notification to:", user_email, "with custom message:", custom_message ? "yes" : "no");
+    console.log("Sending approval notification to:", user_email, "role:", assigned_role, "dept:", assigned_department);
 
     const appUrl = Deno.env.get("APP_BASE_URL") || "https://hub.tsmroofs.com";
     const loginUrl = `${appUrl}/auth`;
+
+    const roleDisplay = assigned_role ? ROLE_LABELS[assigned_role] || assigned_role : null;
 
     const emailResponse = await resend.emails.send({
       from: "TSM Hub <notifications@hub.tsmroofs.com>",
@@ -53,6 +63,26 @@ const handler = async (req: Request): Promise<Response> => {
             <p style="font-size: 16px; margin-bottom: 20px;">
               Great news! Your TSM Hub account has been approved by an administrator. You now have full access to the platform.
             </p>
+            
+            ${(roleDisplay || assigned_department) ? `
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin: 20px 0;">
+              <p style="font-size: 14px; font-weight: 600; color: #1e40af; margin: 0 0 8px 0;">Your Account Details:</p>
+              <table style="width: 100%; border-collapse: collapse;">
+                ${roleDisplay ? `
+                <tr>
+                  <td style="padding: 4px 0; color: #64748b; font-size: 14px;">Role:</td>
+                  <td style="padding: 4px 0; font-weight: 600; font-size: 14px;">${roleDisplay}</td>
+                </tr>
+                ` : ''}
+                ${assigned_department ? `
+                <tr>
+                  <td style="padding: 4px 0; color: #64748b; font-size: 14px;">Department:</td>
+                  <td style="padding: 4px 0; font-weight: 600; font-size: 14px;">${assigned_department}</td>
+                </tr>
+                ` : ''}
+              </table>
+            </div>
+            ` : ''}
             
             ${custom_message ? `
             <div style="background: #f0f9ff; border-left: 4px solid #3b82f6; padding: 16px; margin: 20px 0; border-radius: 0 8px 8px 0;">

@@ -117,9 +117,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       },
     });
 
-    // Update profile with data consent and notify admins
+    // Update profile with data consent
     if (!error && data.user) {
-      // Update profile with data consent
       await supabase
         .from("profiles")
         .update({
@@ -127,15 +126,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           data_consent_given_at: new Date().toISOString(),
         })
         .eq("id", data.user.id);
-
-      // Notify admins about new signup (fire and forget)
-      supabase.functions.invoke("notify-new-signup", {
-        body: {
-          user_id: data.user.id,
-          email: email,
-          full_name: fullName,
-        },
-      }).catch(console.error);
+      
+      // Note: Admin notification is sent from Signup.tsx with full details
     }
 
     return { error };

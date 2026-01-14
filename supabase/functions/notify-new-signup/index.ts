@@ -11,6 +11,8 @@ interface NewSignupPayload {
   user_id: string;
   email: string;
   full_name: string;
+  requested_role?: string;
+  requested_department?: string;
 }
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
@@ -22,7 +24,7 @@ serve(async (req: Request): Promise<Response> => {
 
   try {
     const payload: NewSignupPayload = await req.json();
-    const { user_id, email, full_name } = payload;
+    const { user_id, email, full_name, requested_role, requested_department } = payload;
 
     if (!user_id || !email) {
       return new Response(JSON.stringify({ error: "Missing user_id or email" }), {
@@ -112,6 +114,18 @@ serve(async (req: Request): Promise<Response> => {
                 <td style="padding: 8px 0; color: #64748b; font-size: 14px;">Email:</td>
                 <td style="padding: 8px 0; font-weight: 600; font-size: 14px;">${email}</td>
               </tr>
+              ${requested_role ? `
+              <tr>
+                <td style="padding: 8px 0; color: #64748b; font-size: 14px;">Requested Role:</td>
+                <td style="padding: 8px 0; font-weight: 600; font-size: 14px;">${requested_role}</td>
+              </tr>
+              ` : ''}
+              ${requested_department ? `
+              <tr>
+                <td style="padding: 8px 0; color: #64748b; font-size: 14px;">Requested Dept:</td>
+                <td style="padding: 8px 0; font-weight: 600; font-size: 14px;">${requested_department}</td>
+              </tr>
+              ` : ''}
             </table>
           </div>
           
