@@ -27,7 +27,8 @@ export default function Auth() {
   useEffect(() => {
     // Only redirect if user is logged in AND approved
     if (!loading && user && isApproved === true) {
-      navigate("/command-center");
+      // Redirect to command-center (primary hub landing page)
+      navigate("/command-center", { replace: true });
     }
   }, [user, loading, isApproved, navigate]);
 

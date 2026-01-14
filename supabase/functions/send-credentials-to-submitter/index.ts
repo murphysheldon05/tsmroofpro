@@ -98,7 +98,9 @@ const handler = async (req: Request): Promise<Response> => {
       `;
     }).join("");
 
-    const appBaseUrl = Deno.env.get("APP_BASE_URL") || "https://app.example.com";
+    // Always use the published URL for TSM Hub - never use preview URLs
+    const publishedUrl = "https://tsm-roofing-hub.lovable.app";
+    const appBaseUrl = (Deno.env.get("APP_BASE_URL") || publishedUrl).replace(/\/$/, "");
 
     const emailPayload: Record<string, unknown> = {
       from: "TSM Roofing <notifications@hub.tsmroofs.com>",

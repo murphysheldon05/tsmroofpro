@@ -68,7 +68,7 @@ export default function Signup() {
 
   useEffect(() => {
     if (!loading && user) {
-      navigate("/dashboard");
+      navigate("/command-center", { replace: true });
     }
   }, [user, loading, navigate]);
 
