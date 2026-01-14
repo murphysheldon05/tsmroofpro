@@ -1,8 +1,7 @@
-import { useState } from "react";
-import { useWeather, getWeatherInfo, useUserWeatherLocation, useUpdateWeatherLocation, PRESET_LOCATIONS } from "@/hooks/useWeather";
+import { useWeather, getWeatherInfo, useUserWeatherLocation, useUpdateWeatherLocation, PRESET_LOCATIONS, ForecastDay } from "@/hooks/useWeather";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Wind, Droplets, MapPin, AlertTriangle, Settings2, Check } from "lucide-react";
+import { Wind, Droplets, MapPin, AlertTriangle, Settings2, Check, CloudRain } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
@@ -12,11 +11,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 export function WeatherWidget() {
-  const { data: weather, isLoading: weatherLoading, error } = useWeather();
+  const { data: weatherData, isLoading: weatherLoading, error } = useWeather();
   const { data: userLocation, isLoading: locationLoading } = useUserWeatherLocation();
   const updateLocation = useUpdateWeatherLocation();
 
@@ -33,12 +31,17 @@ export function WeatherWidget() {
               <Skeleton className="h-4 w-32" />
             </div>
           </div>
+          <div className="grid grid-cols-5 gap-2 mt-4">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <Skeleton key={i} className="h-20 w-full rounded-lg" />
+            ))}
+          </div>
         </CardContent>
       </Card>
     );
   }
 
-  if (error || !weather) {
+  if (error || !weatherData) {
     return (
       <Card className="border border-border/50 bg-card/60">
         <CardContent className="p-4">
@@ -51,6 +54,8 @@ export function WeatherWidget() {
     );
   }
 
+  const weather = weatherData.current;
+  const forecast = weatherData.forecast;
   const weatherInfo = getWeatherInfo(weather.weatherCode);
   
   // Determine work conditions
@@ -91,7 +96,8 @@ export function WeatherWidget() {
 
   return (
     <Card className="border border-border/50 bg-gradient-to-br from-card/80 to-card/40 overflow-hidden">
-      <CardContent className="p-4">
+      <CardContent className="p-4 space-y-4">
+        {/* Current Weather */}
         <div className="flex items-center justify-between gap-4">
           {/* Left side - Main weather display */}
           <div className="flex items-center gap-4">
@@ -156,7 +162,58 @@ export function WeatherWidget() {
             </div>
           </div>
         </div>
+
+        {/* 5-Day Forecast */}
+        {forecast && forecast.length > 0 && (
+          <div className="pt-3 border-t border-border/30">
+            <p className="text-xs font-medium text-muted-foreground mb-3">5-Day Forecast</p>
+            <div className="grid grid-cols-5 gap-2">
+              {forecast.map((day) => (
+                <ForecastDayCard key={day.date} day={day} />
+              ))}
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
+  );
+}
+
+function ForecastDayCard({ day }: { day: ForecastDay }) {
+  const weatherInfo = getWeatherInfo(day.weatherCode);
+  const hasRainRisk = day.precipitationProbability > 30;
+  const hasHighWind = day.windSpeedMax > 20;
+  
+  // Determine if this is a concerning day for outdoor work
+  const isConcerning = hasRainRisk || hasHighWind || day.tempMax > 105 || day.tempMin < 35;
+
+  return (
+    <div
+      className={cn(
+        "flex flex-col items-center p-2 rounded-lg text-center transition-all",
+        isConcerning
+          ? "bg-amber-500/10 border border-amber-500/20"
+          : "bg-muted/30 border border-transparent"
+      )}
+    >
+      <span className="text-xs font-medium text-foreground">{day.dayName}</span>
+      <span className="text-xl my-1">{weatherInfo.icon}</span>
+      <div className="flex items-center gap-1 text-xs">
+        <span className="font-medium text-foreground">{day.tempMax}°</span>
+        <span className="text-muted-foreground">{day.tempMin}°</span>
+      </div>
+      {hasRainRisk && (
+        <span className="flex items-center gap-0.5 text-[10px] text-blue-500 mt-1">
+          <CloudRain className="w-2.5 h-2.5" />
+          {day.precipitationProbability}%
+        </span>
+      )}
+      {hasHighWind && !hasRainRisk && (
+        <span className="flex items-center gap-0.5 text-[10px] text-amber-500 mt-1">
+          <Wind className="w-2.5 h-2.5" />
+          {day.windSpeedMax}
+        </span>
+      )}
+    </div>
   );
 }
