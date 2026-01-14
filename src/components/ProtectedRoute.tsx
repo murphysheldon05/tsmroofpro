@@ -86,11 +86,11 @@ export function ProtectedRoute({
   }
 
   if (requireAdmin && !isAdmin) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/command-center" replace />;
   }
 
   if (requireManager && !isManager) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/command-center" replace />;
   }
 
   return <>{children}</>;

@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
+  LayoutGrid,
   LayoutDashboard,
   FileText,
   GraduationCap,
@@ -56,6 +57,12 @@ interface NavItem {
 }
 
 const navigation: NavItem[] = [
+  {
+    title: "Command Center",
+    href: "/command-center",
+    icon: LayoutGrid,
+    sectionKey: "command-center",
+  },
   {
     title: "Dashboard",
     href: "/dashboard",
