@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
@@ -6,8 +6,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Save, Mail, Users } from "lucide-react";
+import { Loader2, Save, Mail, Users, X } from "lucide-react";
 import { useNotificationRouting, useUpdateNotificationRouting, useRoleAssignments, useUpdateRoleAssignment } from "@/hooks/useNotificationRouting";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+
+interface UserProfile {
+  id: string;
+  email: string | null;
+  full_name: string | null;
+}
 
 const NOTIFICATION_TYPE_LABELS: Record<string, string> = {
   warranty_submission: "Warranty Submission",
@@ -23,13 +31,68 @@ export function NotificationRoutingManager() {
   const updateRouting = useUpdateNotificationRouting();
   const updateAssignment = useUpdateRoleAssignment();
 
+  // Fetch all users for the dropdown
+  const { data: users, isLoading: usersLoading } = useQuery({
+    queryKey: ["admin-profiles-for-routing"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, email, full_name")
+        .order("full_name");
+      if (error) throw error;
+      return data as UserProfile[];
+    },
+  });
+
   const [editingRouting, setEditingRouting] = useState<Record<string, any>>({});
   const [editingAssignment, setEditingAssignment] = useState<Record<string, any>>({});
+
+  // Create a map for quick user lookup
+  const userMap = useMemo(() => {
+    const map = new Map<string, UserProfile>();
+    users?.forEach((user) => {
+      if (user.id) map.set(user.id, user);
+    });
+    return map;
+  }, [users]);
 
   const handleRoutingChange = (id: string, field: string, value: any) => {
     setEditingRouting((prev) => ({
       ...prev,
       [id]: { ...prev[id], [field]: value },
+    }));
+  };
+
+  const handleAssignmentUserChange = (
+    assignmentId: string,
+    field: "assigned_user_id" | "backup_user_id",
+    userId: string | null
+  ) => {
+    const user = userId ? userMap.get(userId) : null;
+    const emailField = field === "assigned_user_id" ? "assigned_email" : "backup_email";
+    
+    setEditingAssignment((prev) => ({
+      ...prev,
+      [assignmentId]: {
+        ...prev[assignmentId],
+        [field]: userId,
+        [emailField]: user?.email || null,
+      },
+    }));
+  };
+
+  const clearAssignmentUser = (
+    assignmentId: string,
+    field: "assigned_user_id" | "backup_user_id"
+  ) => {
+    const emailField = field === "assigned_user_id" ? "assigned_email" : "backup_email";
+    setEditingAssignment((prev) => ({
+      ...prev,
+      [assignmentId]: {
+        ...prev[assignmentId],
+        [field]: null,
+        [emailField]: null,
+      },
     }));
   };
 
@@ -79,7 +142,14 @@ export function NotificationRoutingManager() {
   const hasRoutingChanges = (id: string) => !!editingRouting[id];
   const hasAssignmentChanges = (id: string) => !!editingAssignment[id];
 
-  if (routingsLoading || assignmentsLoading) {
+  // Helper to get user display name
+  const getUserDisplayName = (userId: string | null) => {
+    if (!userId) return null;
+    const user = userMap.get(userId);
+    return user?.full_name || user?.email || "Unknown User";
+  };
+
+  if (routingsLoading || assignmentsLoading || usersLoading) {
     return (
       <div className="flex items-center justify-center p-8">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -178,7 +248,7 @@ export function NotificationRoutingManager() {
             <CardTitle>Role Assignments</CardTitle>
           </div>
           <CardDescription>
-            Assign users to notification roles. The assigned email receives notifications; if empty, the backup is used; if both empty, the fallback email from routing is used.
+            Assign users to notification roles. Select a user from the dropdown to auto-fill their email. The assigned user receives notifications; if empty, the backup is used; if both empty, the fallback email from routing is used.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -186,57 +256,132 @@ export function NotificationRoutingManager() {
             <TableHeader>
               <TableRow>
                 <TableHead>Role</TableHead>
-                <TableHead>Assigned Email</TableHead>
-                <TableHead>Backup Email</TableHead>
+                <TableHead>Assigned User</TableHead>
+                <TableHead>Backup User</TableHead>
                 <TableHead>Active</TableHead>
                 <TableHead className="w-[100px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {assignments?.map((assignment) => (
-                <TableRow key={assignment.id}>
-                  <TableCell>
-                    <Badge>{assignment.role_name}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Input
-                      type="email"
-                      placeholder="primary@example.com"
-                      value={getAssignmentValue(assignment.id, "assigned_email", assignment.assigned_email || "")}
-                      onChange={(e) => handleAssignmentChange(assignment.id, "assigned_email", e.target.value || null)}
-                      className="w-[220px]"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Input
-                      type="email"
-                      placeholder="backup@example.com"
-                      value={getAssignmentValue(assignment.id, "backup_email", assignment.backup_email || "")}
-                      onChange={(e) => handleAssignmentChange(assignment.id, "backup_email", e.target.value || null)}
-                      className="w-[220px]"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Switch
-                      checked={getAssignmentValue(assignment.id, "active", assignment.active)}
-                      onCheckedChange={(checked) => handleAssignmentChange(assignment.id, "active", checked)}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Button
-                      size="sm"
-                      onClick={() => saveAssignment(assignment.id, assignment)}
-                      disabled={!hasAssignmentChanges(assignment.id) || updateAssignment.isPending}
-                    >
-                      {updateAssignment.isPending ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Save className="h-4 w-4" />
-                      )}
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
+              {assignments?.map((assignment) => {
+                const currentAssignedUserId = getAssignmentValue(assignment.id, "assigned_user_id", assignment.assigned_user_id);
+                const currentBackupUserId = getAssignmentValue(assignment.id, "backup_user_id", assignment.backup_user_id);
+                const currentAssignedEmail = getAssignmentValue(assignment.id, "assigned_email", assignment.assigned_email);
+                const currentBackupEmail = getAssignmentValue(assignment.id, "backup_email", assignment.backup_email);
+
+                return (
+                  <TableRow key={assignment.id}>
+                    <TableCell>
+                      <Badge>{assignment.role_name}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-1">
+                          <Select
+                            value={currentAssignedUserId || "none"}
+                            onValueChange={(value) => 
+                              handleAssignmentUserChange(
+                                assignment.id, 
+                                "assigned_user_id", 
+                                value === "none" ? null : value
+                              )
+                            }
+                          >
+                            <SelectTrigger className="w-[200px]">
+                              <SelectValue placeholder="Select user..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">
+                                <span className="text-muted-foreground">None</span>
+                              </SelectItem>
+                              {users?.filter(u => u.email).map((user) => (
+                                <SelectItem key={user.id} value={user.id}>
+                                  {user.full_name || user.email}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {currentAssignedUserId && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => clearAssignmentUser(assignment.id, "assigned_user_id")}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                        {currentAssignedEmail && (
+                          <span className="text-xs text-muted-foreground">{currentAssignedEmail}</span>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-1">
+                          <Select
+                            value={currentBackupUserId || "none"}
+                            onValueChange={(value) => 
+                              handleAssignmentUserChange(
+                                assignment.id, 
+                                "backup_user_id", 
+                                value === "none" ? null : value
+                              )
+                            }
+                          >
+                            <SelectTrigger className="w-[200px]">
+                              <SelectValue placeholder="Select backup..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">
+                                <span className="text-muted-foreground">None</span>
+                              </SelectItem>
+                              {users?.filter(u => u.email).map((user) => (
+                                <SelectItem key={user.id} value={user.id}>
+                                  {user.full_name || user.email}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {currentBackupUserId && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => clearAssignmentUser(assignment.id, "backup_user_id")}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                        {currentBackupEmail && (
+                          <span className="text-xs text-muted-foreground">{currentBackupEmail}</span>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Switch
+                        checked={getAssignmentValue(assignment.id, "active", assignment.active)}
+                        onCheckedChange={(checked) => handleAssignmentChange(assignment.id, "active", checked)}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        size="sm"
+                        onClick={() => saveAssignment(assignment.id, assignment)}
+                        disabled={!hasAssignmentChanges(assignment.id) || updateAssignment.isPending}
+                      >
+                        {updateAssignment.isPending ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Save className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </CardContent>
