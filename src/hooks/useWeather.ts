@@ -1,4 +1,6 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface WeatherData {
   temperature: number;
@@ -8,6 +10,12 @@ interface WeatherData {
   humidity: number;
   precipitation: number;
   isDay: boolean;
+}
+
+export interface UserWeatherLocation {
+  lat: number;
+  lon: number;
+  name: string;
 }
 
 // Weather codes from Open-Meteo WMO codes
@@ -46,16 +54,98 @@ export function getWeatherInfo(code: number) {
   return WEATHER_DESCRIPTIONS[code] || { label: "Unknown", icon: "🌡️" };
 }
 
-// Phoenix, AZ coordinates (TSM Roofing primary service area)
-const PHOENIX_LAT = 33.4484;
-const PHOENIX_LON = -112.0740;
+// Default location: Phoenix, AZ
+const DEFAULT_LOCATION: UserWeatherLocation = {
+  lat: 33.4484,
+  lon: -112.0740,
+  name: "Phoenix, AZ",
+};
+
+// Preset locations for Arizona service areas
+export const PRESET_LOCATIONS: UserWeatherLocation[] = [
+  { lat: 33.4484, lon: -112.0740, name: "Phoenix, AZ" },
+  { lat: 33.4152, lon: -111.8315, name: "Scottsdale, AZ" },
+  { lat: 33.3528, lon: -111.7890, name: "Mesa, AZ" },
+  { lat: 33.4373, lon: -112.3496, name: "Glendale, AZ" },
+  { lat: 33.3942, lon: -111.9281, name: "Tempe, AZ" },
+  { lat: 33.3061, lon: -111.8413, name: "Gilbert, AZ" },
+  { lat: 33.5387, lon: -112.1860, name: "Peoria, AZ" },
+  { lat: 33.6095, lon: -112.2276, name: "Surprise, AZ" },
+  { lat: 33.3083, lon: -112.0347, name: "Chandler, AZ" },
+  { lat: 33.4255, lon: -111.9400, name: "Old Town Scottsdale, AZ" },
+  { lat: 34.5400, lon: -112.4685, name: "Prescott, AZ" },
+  { lat: 32.2226, lon: -110.9747, name: "Tucson, AZ" },
+  { lat: 35.1983, lon: -111.6513, name: "Flagstaff, AZ" },
+];
+
+// Hook to get user's saved weather location
+export function useUserWeatherLocation() {
+  return useQuery({
+    queryKey: ["user-weather-location"],
+    queryFn: async (): Promise<UserWeatherLocation> => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return DEFAULT_LOCATION;
+
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("weather_location_lat, weather_location_lon, weather_location_name")
+        .eq("id", user.id)
+        .single();
+
+      if (error || !data) return DEFAULT_LOCATION;
+
+      return {
+        lat: data.weather_location_lat || DEFAULT_LOCATION.lat,
+        lon: data.weather_location_lon || DEFAULT_LOCATION.lon,
+        name: data.weather_location_name || DEFAULT_LOCATION.name,
+      };
+    },
+  });
+}
+
+// Hook to update user's weather location
+export function useUpdateWeatherLocation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (location: UserWeatherLocation) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          weather_location_lat: location.lat,
+          weather_location_lon: location.lon,
+          weather_location_name: location.name,
+        })
+        .eq("id", user.id);
+
+      if (error) throw error;
+      return location;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["user-weather-location"] });
+      queryClient.invalidateQueries({ queryKey: ["weather"] });
+      toast.success("Weather location updated");
+    },
+    onError: (error) => {
+      toast.error("Failed to update location: " + error.message);
+    },
+  });
+}
 
 export function useWeather() {
+  const { data: location } = useUserWeatherLocation();
+
   return useQuery({
-    queryKey: ["weather"],
+    queryKey: ["weather", location?.lat, location?.lon],
     queryFn: async (): Promise<WeatherData> => {
+      const lat = location?.lat || DEFAULT_LOCATION.lat;
+      const lon = location?.lon || DEFAULT_LOCATION.lon;
+
       const response = await fetch(
-        `https://api.open-meteo.com/v1/forecast?latitude=${PHOENIX_LAT}&longitude=${PHOENIX_LON}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m,is_day&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch&timezone=America%2FPhoenix`
+        `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m,is_day&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch&timezone=auto`
       );
 
       if (!response.ok) {
@@ -75,6 +165,7 @@ export function useWeather() {
         isDay: current.is_day === 1,
       };
     },
+    enabled: !!location,
     refetchInterval: 600000, // Refresh every 10 minutes
     staleTime: 300000, // Consider data stale after 5 minutes
   });

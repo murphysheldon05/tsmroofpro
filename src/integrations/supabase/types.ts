@@ -918,6 +918,9 @@ export type Database = {
           requested_department: string | null
           requested_role: string | null
           updated_at: string
+          weather_location_lat: number | null
+          weather_location_lon: number | null
+          weather_location_name: string | null
         }
         Insert: {
           approved_at?: string | null
@@ -938,6 +941,9 @@ export type Database = {
           requested_department?: string | null
           requested_role?: string | null
           updated_at?: string
+          weather_location_lat?: number | null
+          weather_location_lon?: number | null
+          weather_location_name?: string | null
         }
         Update: {
           approved_at?: string | null
@@ -958,6 +964,9 @@ export type Database = {
           requested_department?: string | null
           requested_role?: string | null
           updated_at?: string
+          weather_location_lat?: number | null
+          weather_location_lon?: number | null
+          weather_location_name?: string | null
         }
         Relationships: [
           {

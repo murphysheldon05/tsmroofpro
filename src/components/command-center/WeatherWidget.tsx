@@ -1,11 +1,26 @@
-import { useWeather, getWeatherInfo } from "@/hooks/useWeather";
+import { useState } from "react";
+import { useWeather, getWeatherInfo, useUserWeatherLocation, useUpdateWeatherLocation, PRESET_LOCATIONS } from "@/hooks/useWeather";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Wind, Droplets, Thermometer, CloudRain, AlertTriangle } from "lucide-react";
+import { Wind, Droplets, MapPin, AlertTriangle, Settings2, Check } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
+} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 export function WeatherWidget() {
-  const { data: weather, isLoading, error } = useWeather();
+  const { data: weather, isLoading: weatherLoading, error } = useWeather();
+  const { data: userLocation, isLoading: locationLoading } = useUserWeatherLocation();
+  const updateLocation = useUpdateWeatherLocation();
+
+  const isLoading = weatherLoading || locationLoading;
 
   if (isLoading) {
     return (
@@ -91,7 +106,36 @@ export function WeatherWidget() {
                 </span>
               </div>
               <p className="text-sm text-muted-foreground">{weatherInfo.label}</p>
-              <p className="text-xs text-muted-foreground/70">Phoenix, AZ</p>
+              
+              {/* Location with dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="flex items-center gap-1 text-xs text-muted-foreground/70 hover:text-primary transition-colors mt-0.5 group">
+                    <MapPin className="w-3 h-3" />
+                    <span>{userLocation?.name || "Phoenix, AZ"}</span>
+                    <Settings2 className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-56">
+                  <DropdownMenuLabel>Select Location</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {PRESET_LOCATIONS.map((location) => (
+                    <DropdownMenuItem
+                      key={location.name}
+                      onClick={() => updateLocation.mutate(location)}
+                      className={cn(
+                        "cursor-pointer",
+                        userLocation?.name === location.name && "bg-primary/10"
+                      )}
+                    >
+                      <span className="flex-1">{location.name}</span>
+                      {userLocation?.name === location.name && (
+                        <Check className="w-4 h-4 text-primary" />
+                      )}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
 
@@ -109,12 +153,6 @@ export function WeatherWidget() {
                 <Droplets className="w-3 h-3" />
                 {weather.humidity}%
               </span>
-              {weather.precipitation > 0 && (
-                <span className="flex items-center gap-1 text-blue-500">
-                  <CloudRain className="w-3 h-3" />
-                  {weather.precipitation}"
-                </span>
-              )}
             </div>
           </div>
         </div>
