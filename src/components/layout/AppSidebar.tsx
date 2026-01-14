@@ -124,9 +124,12 @@ const navigation: NavItem[] = [
   },
   {
     title: "Commissions",
-    href: "/commissions",
     icon: DollarSign,
     sectionKey: "commissions",
+    children: [
+      { title: "Submissions", href: "/commissions", icon: DollarSign, sectionKey: "commissions" },
+      { title: "Documents", href: "/commission-documents", icon: FileText, sectionKey: "commissions" },
+    ],
   },
   {
     title: "Company",
@@ -153,7 +156,7 @@ export function AppSidebar() {
   const navigate = useNavigate();
   const { signOut, isAdmin, isManager, role, user } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [openSections, setOpenSections] = useState<string[]>(["SOP Library", "Training", "Production", "Production Calendar"]);
+  const [openSections, setOpenSections] = useState<string[]>(["SOP Library", "Training", "Production", "Production Calendar", "Commissions"]);
   const { data: userPermissions } = useCurrentUserPermissions();
   const [profile, setProfile] = useState<{ avatar_url: string | null; full_name: string | null } | null>(null);
 
