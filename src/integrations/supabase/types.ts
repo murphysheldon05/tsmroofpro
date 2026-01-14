@@ -782,6 +782,36 @@ export type Database = {
         }
         Relationships: []
       }
+      notification_routing: {
+        Row: {
+          created_at: string
+          enabled: boolean
+          fallback_email: string
+          id: string
+          notification_type: string
+          primary_role: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          enabled?: boolean
+          fallback_email: string
+          id?: string
+          notification_type: string
+          primary_role: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          enabled?: boolean
+          fallback_email?: string
+          id?: string
+          notification_type?: string
+          primary_role?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       notification_settings: {
         Row: {
           created_at: string | null
@@ -1189,6 +1219,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      role_assignments: {
+        Row: {
+          active: boolean
+          assigned_email: string | null
+          assigned_user_id: string | null
+          backup_email: string | null
+          backup_user_id: string | null
+          created_at: string
+          id: string
+          role_name: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          assigned_email?: string | null
+          assigned_user_id?: string | null
+          backup_email?: string | null
+          backup_user_id?: string | null
+          created_at?: string
+          id?: string
+          role_name: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          assigned_email?: string | null
+          assigned_user_id?: string | null
+          backup_email?: string | null
+          backup_user_id?: string | null
+          created_at?: string
+          id?: string
+          role_name?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       sales_reps: {
         Row: {
