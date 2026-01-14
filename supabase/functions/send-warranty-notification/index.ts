@@ -18,6 +18,7 @@ interface WarrantyNotification {
   status: string;
   previous_status?: string;
   assigned_to?: string;
+  assigned_to_user_id?: string;
   submitter_email?: string;
   submitter_name?: string;
   notes?: string;
@@ -54,6 +55,71 @@ const PRIORITY_COLORS: Record<string, string> = {
   high: "#f97316",
   emergency: "#ef4444",
 };
+
+// Dynamic recipient resolution using notification_routing and role_assignments
+async function resolveRecipients(
+  supabaseAdmin: any,
+  notificationType: string,
+  assignedToUserId?: string
+): Promise<string[]> {
+  const recipients: string[] = [];
+
+  // If assigned to a specific user, get their email first
+  if (assignedToUserId) {
+    const { data: profile } = await supabaseAdmin
+      .from("profiles")
+      .select("email")
+      .eq("id", assignedToUserId)
+      .single();
+    
+    if (profile?.email) {
+      recipients.push(profile.email);
+      console.log("Added assigned user email:", profile.email);
+    }
+  }
+
+  // Get notification routing configuration
+  const { data: routing } = await supabaseAdmin
+    .from("notification_routing")
+    .select("*")
+    .eq("notification_type", notificationType)
+    .eq("enabled", true)
+    .single();
+
+  if (!routing) {
+    console.log("No routing configured for:", notificationType);
+    return recipients;
+  }
+
+  // Get role assignment for the primary role
+  const { data: roleAssignment } = await supabaseAdmin
+    .from("role_assignments")
+    .select("*")
+    .eq("role_name", routing.primary_role)
+    .eq("active", true)
+    .single();
+
+  if (roleAssignment) {
+    // Priority: assigned_email > backup_email > fallback_email
+    if (roleAssignment.assigned_email) {
+      recipients.push(roleAssignment.assigned_email);
+      console.log("Added assigned role email:", roleAssignment.assigned_email);
+    } else if (roleAssignment.backup_email) {
+      recipients.push(roleAssignment.backup_email);
+      console.log("Added backup role email:", roleAssignment.backup_email);
+    } else {
+      recipients.push(routing.fallback_email);
+      console.log("Added fallback email:", routing.fallback_email);
+    }
+  } else {
+    // No role assignment, use fallback
+    recipients.push(routing.fallback_email);
+    console.log("No role assignment, using fallback:", routing.fallback_email);
+  }
+
+  // Deduplicate
+  return [...new Set(recipients.filter(e => e && e.trim()))];
+}
 
 serve(async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
@@ -95,23 +161,20 @@ serve(async (req: Request): Promise<Response> => {
     const warrantyUrl = `${appUrl}/warranties?id=${payload.warranty_id}`;
     const priorityColor = PRIORITY_COLORS[payload.priority_level] || "#6b7280";
 
-    // Determine notification type for recipient lookup
-    let notificationType = "warranty_submission";
-    if (payload.notification_type === "status_change" || payload.notification_type === "assigned" || payload.notification_type === "completed") {
-      notificationType = "warranty_status_change";
-    }
+    // Determine notification type for routing lookup
+    const routingType = payload.notification_type === "submitted" 
+      ? "warranty_submission" 
+      : "warranty_submission"; // All warranty notifications route to Production
 
-    // Fetch notification recipients
-    const { data: recipients } = await supabaseAdmin
-      .from("notification_settings")
-      .select("recipient_email")
-      .eq("notification_type", notificationType)
-      .eq("is_active", true);
-
-    const recipientEmails = recipients?.map(r => r.recipient_email) || [];
+    // Resolve recipients dynamically
+    const recipientEmails = await resolveRecipients(
+      supabaseAdmin,
+      routingType,
+      payload.assigned_to_user_id
+    );
 
     if (recipientEmails.length === 0) {
-      console.log("No recipients configured for warranty notifications");
+      console.log("No recipients resolved for warranty notifications");
       return new Response(
         JSON.stringify({ success: true, message: "No recipients configured" }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }

@@ -28,6 +28,55 @@ interface CommissionNotification {
   changed_by_name?: string;
 }
 
+// Dynamic recipient resolution using notification_routing and role_assignments
+async function resolveRecipients(
+  supabaseClient: any,
+  notificationType: string
+): Promise<string[]> {
+  const recipients: string[] = [];
+
+  // Get notification routing configuration
+  const { data: routing } = await supabaseClient
+    .from("notification_routing")
+    .select("*")
+    .eq("notification_type", notificationType)
+    .eq("enabled", true)
+    .single();
+
+  if (!routing) {
+    console.log("No routing configured for:", notificationType);
+    return recipients;
+  }
+
+  // Get role assignment for the primary role
+  const { data: roleAssignment } = await supabaseClient
+    .from("role_assignments")
+    .select("*")
+    .eq("role_name", routing.primary_role)
+    .eq("active", true)
+    .single();
+
+  if (roleAssignment) {
+    // Priority: assigned_email > backup_email > fallback_email
+    if (roleAssignment.assigned_email) {
+      recipients.push(roleAssignment.assigned_email);
+      console.log("Added assigned role email:", roleAssignment.assigned_email);
+    } else if (roleAssignment.backup_email) {
+      recipients.push(roleAssignment.backup_email);
+      console.log("Added backup role email:", roleAssignment.backup_email);
+    } else {
+      recipients.push(routing.fallback_email);
+      console.log("Added fallback email:", routing.fallback_email);
+    }
+  } else {
+    // No role assignment, use fallback
+    recipients.push(routing.fallback_email);
+    console.log("No role assignment, using fallback:", routing.fallback_email);
+  }
+
+  return [...new Set(recipients.filter(e => e && e.trim()))];
+}
+
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -56,15 +105,6 @@ const handler = async (req: Request): Promise<Response> => {
       ? `Subcontractor: ${payload.subcontractor_name}` 
       : payload.sales_rep_name;
 
-    // Get commission reviewers for notifications
-    const { data: reviewers } = await supabaseClient
-      .from("commission_reviewers")
-      .select("user_email, user_name, can_approve, can_payout")
-      .eq("is_active", true);
-
-    const reviewerEmails = reviewers?.map(r => r.user_email) || [];
-    const payoutReviewerEmails = reviewers?.filter(r => r.can_payout).map(r => r.user_email) || [];
-
     let subject = "";
     let heading = "";
     let introText = "";
@@ -78,8 +118,9 @@ const handler = async (req: Request): Promise<Response> => {
         subject = `📋 New Commission Submitted: ${payload.job_name}`;
         heading = "New Commission Submitted";
         introText = `A new commission has been submitted and is awaiting manager review.`;
-        recipientEmails = reviewerEmails;
         headerColor = "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)";
+        // Use dynamic routing for commission submissions
+        recipientEmails = await resolveRecipients(supabaseClient, "commission_submission");
         additionalContent = `
           <tr>
             <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">
@@ -129,8 +170,8 @@ const handler = async (req: Request): Promise<Response> => {
         heading = "Manager Approved - Pending Accounting";
         introText = `The commission for ${payload.job_name} has been approved by the manager and is now awaiting accounting review.`;
         headerColor = "linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)";
-        // Notify accounting reviewers and submitter
-        recipientEmails = [...payoutReviewerEmails];
+        // Notify accounting via dynamic routing + submitter
+        recipientEmails = await resolveRecipients(supabaseClient, "commission_accounting");
         if (payload.submitter_email) {
           recipientEmails.push(payload.submitter_email);
         }
@@ -172,9 +213,10 @@ const handler = async (req: Request): Promise<Response> => {
         heading = "Commission Approved for Payment!";
         introText = `Great news! The commission for ${payload.job_name} has been fully approved and is ready for payout.`;
         headerColor = "linear-gradient(135deg, #059669 0%, #10b981 100%)";
+        // Notify submitter + accounting
         recipientEmails = payload.submitter_email ? [payload.submitter_email] : [];
-        // Also notify payout reviewers
-        recipientEmails.push(...payoutReviewerEmails);
+        const accountingRecipients = await resolveRecipients(supabaseClient, "commission_accounting");
+        recipientEmails.push(...accountingRecipients);
         additionalContent = `
           <tr>
             <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">

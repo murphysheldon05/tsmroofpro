@@ -47,6 +47,7 @@ import {
   FlaskConical,
   Building2,
   Percent,
+  Route,
 } from "lucide-react";
 import { UserPermissionsEditor } from "@/components/admin/UserPermissionsEditor";
 import { TeamAssignmentManager } from "@/components/admin/TeamAssignmentManager";
@@ -91,6 +92,7 @@ import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { getThumbnailUrl } from "@/components/training/VideoCard";
 import { NotificationSettingsManager } from "@/components/admin/NotificationSettingsManager";
 import { CommissionWorkflowTester } from "@/components/admin/CommissionWorkflowTester";
+import { NotificationRoutingManager } from "@/components/admin/NotificationRoutingManager";
 
 export default function Admin() {
   const queryClient = useQueryClient();
@@ -709,6 +711,10 @@ export default function Admin() {
             <TabsTrigger value="notifications" className="gap-2">
               <Bell className="w-4 h-4" />
               Notifications
+            </TabsTrigger>
+            <TabsTrigger value="routing" className="gap-2">
+              <Route className="w-4 h-4" />
+              Routing
             </TabsTrigger>
             <TabsTrigger value="departments" className="gap-2">
               <Building2 className="w-4 h-4" />
@@ -3264,6 +3270,19 @@ export default function Admin() {
           {/* Notifications Tab */}
           <TabsContent value="notifications" className="space-y-4">
             <NotificationSettingsManager />
+          </TabsContent>
+
+          {/* Notification Routing Tab */}
+          <TabsContent value="routing" className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h2 className="text-lg font-semibold text-foreground">
+                Notification Routing
+              </h2>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Configure role-based notification routing. Assign users to notification roles and set fallback emails for when no user is assigned.
+            </p>
+            <NotificationRoutingManager />
           </TabsContent>
 
           {/* Departments Tab */}
