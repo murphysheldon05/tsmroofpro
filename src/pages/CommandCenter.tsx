@@ -5,6 +5,7 @@ import { TodaysDeliveriesWidget } from "@/components/command-center/TodaysDelive
 import { ActionRequiredWidget } from "@/components/command-center/ActionRequiredWidget";
 import { QuickStatsWidget } from "@/components/command-center/QuickStatsWidget";
 import { CommandCenterQuickLinks } from "@/components/command-center/CommandCenterQuickLinks";
+import { WeatherWidget } from "@/components/command-center/WeatherWidget";
 import { Navigate } from "react-router-dom";
 import { LayoutGrid } from "lucide-react";
 
@@ -43,6 +44,11 @@ export default function CommandCenter() {
             </div>
           </div>
         </header>
+
+        {/* Weather - Outdoor Work Conditions */}
+        <section>
+          <WeatherWidget />
+        </section>
 
         {/* Quick Stats */}
         <section>
