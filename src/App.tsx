@@ -29,6 +29,7 @@ import CommissionDocumentNew from "./pages/CommissionDocumentNew";
 import CommissionDocumentDetail from "./pages/CommissionDocumentDetail";
 import BuildSchedule from "./pages/BuildSchedule";
 import DeliverySchedule from "./pages/DeliverySchedule";
+import CommandCenter from "./pages/CommandCenter";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -47,6 +48,14 @@ const App = () => (
             <Route path="/signup" element={<Signup />} />
 
             {/* Protected routes */}
+            <Route
+              path="/command-center"
+              element={
+                <ProtectedRoute>
+                  <CommandCenter />
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="/dashboard"
               element={

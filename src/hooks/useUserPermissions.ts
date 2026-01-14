@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 // All available sidebar sections - employees with no permissions get access to all by default
 export const SIDEBAR_SECTIONS = [
+  { key: "command-center", label: "Command Center", parent: null },
   { key: "dashboard", label: "Dashboard", parent: null },
   { key: "sops", label: "SOP Library", parent: null },
   { key: "sops/sales", label: "Sales", parent: "sops" },

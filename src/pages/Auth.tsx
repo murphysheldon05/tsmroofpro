@@ -27,7 +27,7 @@ export default function Auth() {
   useEffect(() => {
     // Only redirect if user is logged in AND approved
     if (!loading && user && isApproved === true) {
-      navigate("/dashboard");
+      navigate("/command-center");
     }
   }, [user, loading, isApproved, navigate]);
 
