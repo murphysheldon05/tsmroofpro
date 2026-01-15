@@ -157,7 +157,8 @@ serve(async (req: Request): Promise<Response> => {
     const payload: WarrantyNotification = await req.json();
     console.log("Warranty notification payload:", payload);
 
-    const appUrl = Deno.env.get("APP_BASE_URL") || "https://hub.tsmroofs.com";
+    // HARD LOCK: Always use tsm-roofing-hub.lovable.app for all portal links - never use any other domain
+    const appUrl = "https://tsm-roofing-hub.lovable.app";
     const warrantyUrl = `${appUrl}/warranties?id=${payload.warranty_id}`;
     const priorityColor = PRIORITY_COLORS[payload.priority_level] || "#6b7280";
 
