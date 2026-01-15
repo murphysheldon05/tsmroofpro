@@ -120,9 +120,9 @@ serve(async (req: Request): Promise<Response> => {
       footer_text: "If you have any questions, please contact your manager or the admin team.",
     };
 
-    // HARD LOCK: Always use tsmroofing.com for all auth emails - never use any other domain
+    // HARD LOCK: Always use tsm-roofing-hub.lovable.app for all auth emails - never use any other domain
     // NOTE: The app route is /auth (NOT /auth/login) - do not change this!
-    const signupUrl = "https://tsmroofing.com/auth";
+    const signupUrl = "https://tsm-roofing-hub.lovable.app/auth";
 
     const emailHtml = `
       <!DOCTYPE html>
