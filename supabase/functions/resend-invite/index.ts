@@ -162,7 +162,8 @@ serve(async (req: Request): Promise<Response> => {
     let emailSent = false;
     try {
       // HARD LOCK: Always use tsmrest.com for all auth emails - never use any other domain
-      const loginUrl = "https://tsmrest.com/auth/login";
+      // NOTE: The app route is /auth (NOT /auth/login) - do not change this!
+      const loginUrl = "https://tsmrest.com/auth";
       
       // Extract first name from full name
       const firstName = profile.full_name?.split(' ')[0] || 'there';

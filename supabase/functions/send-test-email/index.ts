@@ -120,11 +120,9 @@ serve(async (req: Request): Promise<Response> => {
       footer_text: "If you have any questions, please contact your manager or the admin team.",
     };
 
-    const rawBaseUrl = (Deno.env.get("APP_BASE_URL") ?? "https://hub.tsmroofs.com").trim();
-    const appBaseUrl = (rawBaseUrl.startsWith("http://") || rawBaseUrl.startsWith("https://"))
-      ? rawBaseUrl.replace(/\/$/, "")
-      : `https://${rawBaseUrl.replace(/\/$/, "")}`;
-    const signupUrl = `${appBaseUrl}/auth`;
+    // HARD LOCK: Always use tsmrest.com for all auth emails - never use any other domain
+    // NOTE: The app route is /auth (NOT /auth/login) - do not change this!
+    const signupUrl = "https://tsmrest.com/auth";
 
     const emailHtml = `
       <!DOCTYPE html>
