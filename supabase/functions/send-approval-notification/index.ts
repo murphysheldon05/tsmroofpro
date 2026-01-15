@@ -35,7 +35,7 @@ const handler = async (req: Request): Promise<Response> => {
     console.log("Sending approval notification to:", user_email, "role:", assigned_role, "dept:", assigned_department);
 
     // HARD LOCK: Always use tsmrest.com for all auth emails - never use any other domain
-    const loginUrl = "https://tsmrest.com/auth";
+    const loginUrl = "https://tsmrest.com/auth/login";
 
     const roleDisplay = assigned_role ? ROLE_LABELS[assigned_role] || assigned_role : null;
 
