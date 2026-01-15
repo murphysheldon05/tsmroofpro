@@ -81,8 +81,8 @@ serve(async (req: Request): Promise<Response> => {
       });
     }
 
-    // HARD LOCK: Always use tsmroofing.com for all portal links - never use any other domain
-    const adminUrl = "https://tsmroofing.com/admin";
+    // HARD LOCK: Always use tsm-roofing-hub.lovable.app for all portal links - never use any other domain
+    const adminUrl = "https://tsm-roofing-hub.lovable.app/admin";
 
     const emailHtml = `
       <!DOCTYPE html>

@@ -107,8 +107,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signUp = async (email: string, password: string, fullName: string) => {
-    // HARD LOCK: Always use tsmroofing.com for all auth redirects
-    const redirectUrl = 'https://tsmroofing.com/auth';
+    // HARD LOCK: Always use tsm-roofing-hub.lovable.app for all auth redirects
+    const redirectUrl = 'https://tsm-roofing-hub.lovable.app/auth';
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
