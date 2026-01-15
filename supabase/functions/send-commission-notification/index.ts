@@ -91,7 +91,8 @@ const handler = async (req: Request): Promise<Response> => {
     const payload: CommissionNotification = await req.json();
     console.log("Commission notification payload:", payload);
 
-    const appUrl = Deno.env.get("APP_BASE_URL") || "https://hub.tsmroofs.com";
+    // HARD LOCK: Always use tsm-roofing-hub.lovable.app for all portal links - never use any other domain
+    const appUrl = "https://tsm-roofing-hub.lovable.app";
     const commissionUrl = `${appUrl}/commissions/${payload.commission_id}`;
 
     const formatCurrency = (value: number) => {
