@@ -4,15 +4,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Save, Eye, EyeOff, Send } from "lucide-react";
-import { useEmailTemplate, useUpdateEmailTemplate, useSendTestEmail } from "@/hooks/useEmailTemplates";
+import { Loader2, Save, Eye, EyeOff } from "lucide-react";
+import { useEmailTemplate, useUpdateEmailTemplate } from "@/hooks/useEmailTemplates";
 
 export function EmailTemplateEditor() {
   const { data: template, isLoading } = useEmailTemplate("user_invite");
   const updateTemplate = useUpdateEmailTemplate();
-  const sendTestEmail = useSendTestEmail();
   const [showPreview, setShowPreview] = useState(false);
-  const [inviteEmail, setInviteEmail] = useState("");
 
   const [formData, setFormData] = useState({
     subject: "",
@@ -47,22 +45,6 @@ export function EmailTemplateEditor() {
     });
   };
 
-  const handleSendInvite = () => {
-    if (!inviteEmail.trim()) return;
-    
-    sendTestEmail.mutate(
-      {
-        recipientEmail: inviteEmail.trim(),
-        templateKey: "user_invite",
-      },
-      {
-        onSuccess: () => {
-          setInviteEmail("");
-        },
-      }
-    );
-  };
-
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-8">
@@ -73,49 +55,6 @@ export function EmailTemplateEditor() {
 
   return (
     <div className="space-y-6">
-      {/* Quick Invite Card */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Send Hub Invite</CardTitle>
-          <CardDescription>
-            Send an invitation email for someone to create their own account on the hub.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex gap-2">
-            <Input
-              type="email"
-              placeholder="Enter email address..."
-              value={inviteEmail}
-              onChange={(e) => setInviteEmail(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  handleSendInvite();
-                }
-              }}
-              className="flex-1"
-            />
-            <Button
-              onClick={handleSendInvite}
-              disabled={!inviteEmail.trim() || sendTestEmail.isPending}
-            >
-              {sendTestEmail.isPending ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Sending...
-                </>
-              ) : (
-                <>
-                  <Send className="h-4 w-4 mr-2" />
-                  Send Invite
-                </>
-              )}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Template Editor Card */}
       <Card>
         <CardHeader>
