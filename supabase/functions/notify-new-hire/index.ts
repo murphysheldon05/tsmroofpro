@@ -55,7 +55,8 @@ const handler = async (req: Request): Promise<Response> => {
       ? requiredAccess.map(a => `<li>${a}</li>`).join("")
       : "<li>No specific access requested</li>";
 
-    const appBaseUrl = Deno.env.get("APP_BASE_URL") || "https://app.example.com";
+    // HARD LOCK: Always use tsm-roofing-hub.lovable.app for all portal links - never use any other domain
+    const appBaseUrl = "https://tsm-roofing-hub.lovable.app";
 
     // Send email to all HR recipients
      for (const recipient of recipients) {
