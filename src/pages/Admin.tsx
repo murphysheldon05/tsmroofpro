@@ -154,6 +154,7 @@ export default function Admin() {
     email: "",
     password: "",
     role: "employee" as "admin" | "manager" | "employee",
+    department_id: "" as string,
   });
 
   const [editUserData, setEditUserData] = useState({
@@ -536,8 +537,43 @@ export default function Admin() {
   };
 
   const handleCreateUser = async () => {
-    toast.info("New users can now sign up directly and will await your approval.");
-    setIsAddingUser(false);
+    if (!newUser.full_name.trim() || !newUser.email.trim() || !newUser.password.trim()) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+
+    setIsCreatingUser(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("admin-create-user", {
+        body: {
+          email: newUser.email.trim(),
+          password: newUser.password,
+          full_name: newUser.full_name.trim(),
+          role: newUser.role,
+          department_id: newUser.department_id || null,
+          send_invite_email: true,
+        },
+      });
+
+      if (error) {
+        toast.error(error.message || "Failed to create user");
+        return;
+      }
+
+      if (data?.error) {
+        toast.error(data.error);
+        return;
+      }
+
+      toast.success("Employee account created and invite sent!");
+      setNewlyCreatedEmployeeId(data?.user_id);
+      setIsAddingUser(false);
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+    } catch (error: any) {
+      toast.error(error.message || "Failed to create user");
+    } finally {
+      setIsCreatingUser(false);
+    }
   };
 
   const handleDeleteUser = async (userId: string, userName: string) => {
@@ -1529,7 +1565,7 @@ export default function Admin() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label>Role</Label>
+                        <Label>Role *</Label>
                         <Select
                           value={newUser.role}
                           onValueChange={(v) =>
@@ -1543,6 +1579,24 @@ export default function Admin() {
                             <SelectItem value="employee">Employee</SelectItem>
                             <SelectItem value="manager">Manager</SelectItem>
                             <SelectItem value="admin">Admin</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Department</Label>
+                        <Select
+                          value={newUser.department_id}
+                          onValueChange={(v) => setNewUser({ ...newUser, department_id: v })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select department (optional)" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {departments?.map((dept) => (
+                              <SelectItem key={dept.id} value={dept.id}>
+                                {dept.name}
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                       </div>
@@ -1564,7 +1618,7 @@ export default function Admin() {
                 onOpenChange={(open) => {
                   if (!open) {
                     setNewlyCreatedEmployeeId(null);
-                    setNewUser({ full_name: "", email: "", password: "", role: "employee" });
+                    setNewUser({ full_name: "", email: "", password: "", role: "employee", department_id: "" });
                   }
                 }}
               >
@@ -1582,7 +1636,7 @@ export default function Admin() {
                         userRole="employee"
                         onClose={() => {
                           setNewlyCreatedEmployeeId(null);
-                          setNewUser({ full_name: "", email: "", password: "", role: "employee" });
+                          setNewUser({ full_name: "", email: "", password: "", role: "employee", department_id: "" });
                         }}
                       />
                     )}

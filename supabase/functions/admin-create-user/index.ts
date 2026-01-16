@@ -14,6 +14,7 @@ interface CreateUserPayload {
   password: string;
   full_name: string;
   role: AppRole;
+  department_id?: string | null;
   send_invite_email?: boolean;
 }
 
@@ -83,6 +84,7 @@ serve(async (req: Request): Promise<Response> => {
     const password = payload.password ?? "";
     const fullName = (payload.full_name ?? "").trim();
     const role: AppRole = (payload.role ?? "employee") as AppRole;
+    const departmentId = payload.department_id ?? null;
     const sendInviteEmail = payload.send_invite_email ?? true;
 
     if (!email || !password || !fullName) {
@@ -218,6 +220,7 @@ serve(async (req: Request): Promise<Response> => {
           is_approved: true,
           approved_at: new Date().toISOString(),
           approved_by: caller.id,
+          department_id: departmentId,
         },
         { onConflict: "id" }
       );
