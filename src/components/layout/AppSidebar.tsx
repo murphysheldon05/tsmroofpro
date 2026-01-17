@@ -30,6 +30,10 @@ import {
   Truck,
   DollarSign,
   Calendar,
+  AppWindow,
+  ClipboardList,
+  Headphones,
+  BookUser,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -148,6 +152,24 @@ const navigation: NavItem[] = [
     href: "/vendors",
     icon: Truck,
     sectionKey: "vendors",
+  },
+  {
+    title: "My Apps",
+    href: "/my-apps",
+    icon: AppWindow,
+    sectionKey: "my-apps",
+  },
+  {
+    title: "My Checklists",
+    href: "/my-checklists",
+    icon: ClipboardList,
+    sectionKey: "my-checklists",
+  },
+  {
+    title: "IT Requests",
+    href: "/it-requests",
+    icon: Headphones,
+    sectionKey: "it-requests",
   },
 ];
 
