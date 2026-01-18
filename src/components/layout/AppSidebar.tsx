@@ -70,18 +70,6 @@ const navigation: NavItem[] = [
     sectionKey: "dashboard",
   },
   {
-    title: "My Apps",
-    href: "/my-apps",
-    icon: Wrench,
-    sectionKey: "my-apps",
-  },
-  {
-    title: "My Checklists",
-    href: "/my-checklists",
-    icon: FileText,
-    sectionKey: "my-checklists",
-  },
-  {
     title: "SOP Library",
     icon: FileText,
     sectionKey: "sops",
@@ -381,44 +369,18 @@ export function AppSidebar() {
         </button>
 
         {isAdmin && (
-          <>
-            <button
-              onClick={() => handleNavClick("/app-governance")}
-              className={cn(
-                "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 relative",
-                isActive("/app-governance")
-                  ? "nav-item-active"
-                  : "text-sidebar-foreground hover:bg-primary/5 hover:text-primary/80"
-              )}
-            >
-              <Wrench className={cn("w-4 h-4", isActive("/app-governance") && "nav-icon-glow")} />
-              App Governance
-            </button>
-            <button
-              onClick={() => handleNavClick("/employee-access-ledger")}
-              className={cn(
-                "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 relative",
-                isActive("/employee-access-ledger")
-                  ? "nav-item-active"
-                  : "text-sidebar-foreground hover:bg-primary/5 hover:text-primary/80"
-              )}
-            >
-              <Users className={cn("w-4 h-4", isActive("/employee-access-ledger") && "nav-icon-glow")} />
-              Employee Ledger
-            </button>
-            <button
-              onClick={() => handleNavClick("/admin")}
-              className={cn(
-                "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 relative",
-                isActive("/admin")
-                  ? "nav-item-active"
-                  : "text-sidebar-foreground hover:bg-primary/5 hover:text-primary/80"
-              )}
-            >
-              <Settings className={cn("w-4 h-4", isActive("/admin") && "nav-icon-glow")} />
-              Admin Panel
-            </button>
-          </>
+          <button
+            onClick={() => handleNavClick("/admin")}
+            className={cn(
+              "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 relative",
+              isActive("/admin")
+                ? "nav-item-active"
+                : "text-sidebar-foreground hover:bg-primary/5 hover:text-primary/80"
+            )}
+          >
+            <Settings className={cn("w-4 h-4", isActive("/admin") && "nav-icon-glow")} />
+            Admin Panel
+          </button>
         )}
         <button
           onClick={() => signOut()}
