@@ -47,6 +47,109 @@ export type Database = {
         }
         Relationships: []
       }
+      app_assignments: {
+        Row: {
+          app_id: string
+          assignment_role: Database["public"]["Enums"]["assignment_role"]
+          created_at: string
+          effective_date: string
+          employee_id: string
+          end_date: string | null
+          id: string
+          is_primary: boolean
+          permission_level: Database["public"]["Enums"]["permission_level"]
+          scope_notes: string | null
+          updated_at: string
+        }
+        Insert: {
+          app_id: string
+          assignment_role: Database["public"]["Enums"]["assignment_role"]
+          created_at?: string
+          effective_date?: string
+          employee_id: string
+          end_date?: string | null
+          id?: string
+          is_primary?: boolean
+          permission_level?: Database["public"]["Enums"]["permission_level"]
+          scope_notes?: string | null
+          updated_at?: string
+        }
+        Update: {
+          app_id?: string
+          assignment_role?: Database["public"]["Enums"]["assignment_role"]
+          created_at?: string
+          effective_date?: string
+          employee_id?: string
+          end_date?: string | null
+          id?: string
+          is_primary?: boolean
+          permission_level?: Database["public"]["Enums"]["permission_level"]
+          scope_notes?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "app_assignments_app_id_fkey"
+            columns: ["app_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "app_assignments_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      applications: {
+        Row: {
+          access_method: Database["public"]["Enums"]["app_access_method"] | null
+          app_name: string
+          category: Database["public"]["Enums"]["app_category"]
+          created_at: string
+          description: string | null
+          id: string
+          notes: string | null
+          source_of_truth: string | null
+          status: string
+          updated_at: string
+          vendor_contact: string | null
+        }
+        Insert: {
+          access_method?:
+            | Database["public"]["Enums"]["app_access_method"]
+            | null
+          app_name: string
+          category?: Database["public"]["Enums"]["app_category"]
+          created_at?: string
+          description?: string | null
+          id?: string
+          notes?: string | null
+          source_of_truth?: string | null
+          status?: string
+          updated_at?: string
+          vendor_contact?: string | null
+        }
+        Update: {
+          access_method?:
+            | Database["public"]["Enums"]["app_access_method"]
+            | null
+          app_name?: string
+          category?: Database["public"]["Enums"]["app_category"]
+          created_at?: string
+          description?: string | null
+          id?: string
+          notes?: string | null
+          source_of_truth?: string | null
+          status?: string
+          updated_at?: string
+          vendor_contact?: string | null
+        }
+        Relationships: []
+      }
       categories: {
         Row: {
           created_at: string
@@ -87,6 +190,129 @@ export type Database = {
             columns: ["parent_id"]
             isOneToOne: false
             referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      checklist_items: {
+        Row: {
+          app_id: string | null
+          checklist_id: string
+          comments: string | null
+          created_at: string
+          description: string | null
+          due_date: string | null
+          evidence_link: string | null
+          id: string
+          owner_employee_id: string | null
+          status: Database["public"]["Enums"]["checklist_item_status"]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          app_id?: string | null
+          checklist_id: string
+          comments?: string | null
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          evidence_link?: string | null
+          id?: string
+          owner_employee_id?: string | null
+          status?: Database["public"]["Enums"]["checklist_item_status"]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          app_id?: string | null
+          checklist_id?: string
+          comments?: string | null
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          evidence_link?: string | null
+          id?: string
+          owner_employee_id?: string | null
+          status?: Database["public"]["Enums"]["checklist_item_status"]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "checklist_items_app_id_fkey"
+            columns: ["app_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "checklist_items_checklist_id_fkey"
+            columns: ["checklist_id"]
+            isOneToOne: false
+            referencedRelation: "user_checklists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "checklist_items_owner_employee_id_fkey"
+            columns: ["owner_employee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      checklist_templates: {
+        Row: {
+          app_id: string | null
+          applies_to_assignment_role:
+            | Database["public"]["Enums"]["assignment_role"]
+            | null
+          category: Database["public"]["Enums"]["checklist_category"]
+          created_at: string
+          default_due_days: number
+          id: string
+          is_active: boolean
+          steps: string | null
+          template_type: Database["public"]["Enums"]["checklist_type"]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          app_id?: string | null
+          applies_to_assignment_role?:
+            | Database["public"]["Enums"]["assignment_role"]
+            | null
+          category?: Database["public"]["Enums"]["checklist_category"]
+          created_at?: string
+          default_due_days?: number
+          id?: string
+          is_active?: boolean
+          steps?: string | null
+          template_type: Database["public"]["Enums"]["checklist_type"]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          app_id?: string | null
+          applies_to_assignment_role?:
+            | Database["public"]["Enums"]["assignment_role"]
+            | null
+          category?: Database["public"]["Enums"]["checklist_category"]
+          created_at?: string
+          default_due_days?: number
+          id?: string
+          is_active?: boolean
+          steps?: string | null
+          template_type?: Database["public"]["Enums"]["checklist_type"]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "checklist_templates_app_id_fkey"
+            columns: ["app_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
             referencedColumns: ["id"]
           },
         ]
@@ -690,6 +916,70 @@ export type Database = {
         }
         Relationships: []
       }
+      it_requests: {
+        Row: {
+          app_id: string | null
+          assigned_to_id: string | null
+          created_at: string
+          description: string
+          id: string
+          priority: Database["public"]["Enums"]["it_request_priority"]
+          request_type: Database["public"]["Enums"]["it_request_type"]
+          requester_id: string
+          resolved_at: string | null
+          status: Database["public"]["Enums"]["it_request_status"]
+          updated_at: string
+        }
+        Insert: {
+          app_id?: string | null
+          assigned_to_id?: string | null
+          created_at?: string
+          description: string
+          id?: string
+          priority?: Database["public"]["Enums"]["it_request_priority"]
+          request_type: Database["public"]["Enums"]["it_request_type"]
+          requester_id: string
+          resolved_at?: string | null
+          status?: Database["public"]["Enums"]["it_request_status"]
+          updated_at?: string
+        }
+        Update: {
+          app_id?: string | null
+          assigned_to_id?: string | null
+          created_at?: string
+          description?: string
+          id?: string
+          priority?: Database["public"]["Enums"]["it_request_priority"]
+          request_type?: Database["public"]["Enums"]["it_request_type"]
+          requester_id?: string
+          resolved_at?: string | null
+          status?: Database["public"]["Enums"]["it_request_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "it_requests_app_id_fkey"
+            columns: ["app_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "it_requests_assigned_to_id_fkey"
+            columns: ["assigned_to_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "it_requests_requester_id_fkey"
+            columns: ["requester_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       new_hire_access_credentials: {
         Row: {
           access_type: string
@@ -842,6 +1132,61 @@ export type Database = {
         }
         Relationships: []
       }
+      offboarding_audit_log: {
+        Row: {
+          apps_affected: number
+          checklist_id: string | null
+          created_at: string
+          employee_id: string
+          executed_by: string
+          id: string
+          it_request_ids: string[] | null
+          notes: string | null
+        }
+        Insert: {
+          apps_affected?: number
+          checklist_id?: string | null
+          created_at?: string
+          employee_id: string
+          executed_by: string
+          id?: string
+          it_request_ids?: string[] | null
+          notes?: string | null
+        }
+        Update: {
+          apps_affected?: number
+          checklist_id?: string | null
+          created_at?: string
+          employee_id?: string
+          executed_by?: string
+          id?: string
+          it_request_ids?: string[] | null
+          notes?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "offboarding_audit_log_checklist_id_fkey"
+            columns: ["checklist_id"]
+            isOneToOne: false
+            referencedRelation: "user_checklists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offboarding_audit_log_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offboarding_audit_log_executed_by_fkey"
+            columns: ["executed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       policies: {
         Row: {
           created_at: string
@@ -939,14 +1284,19 @@ export type Database = {
           data_consent_given_at: string | null
           department_id: string | null
           email: string | null
+          employee_status: string | null
+          end_date: string | null
           full_name: string | null
           id: string
           is_approved: boolean | null
           last_login_at: string | null
+          manager_id: string | null
           must_reset_password: boolean | null
           phone_number: string | null
           requested_department: string | null
           requested_role: string | null
+          role_title: string | null
+          start_date: string | null
           updated_at: string
           weather_location_lat: number | null
           weather_location_lon: number | null
@@ -962,14 +1312,19 @@ export type Database = {
           data_consent_given_at?: string | null
           department_id?: string | null
           email?: string | null
+          employee_status?: string | null
+          end_date?: string | null
           full_name?: string | null
           id: string
           is_approved?: boolean | null
           last_login_at?: string | null
+          manager_id?: string | null
           must_reset_password?: boolean | null
           phone_number?: string | null
           requested_department?: string | null
           requested_role?: string | null
+          role_title?: string | null
+          start_date?: string | null
           updated_at?: string
           weather_location_lat?: number | null
           weather_location_lon?: number | null
@@ -985,14 +1340,19 @@ export type Database = {
           data_consent_given_at?: string | null
           department_id?: string | null
           email?: string | null
+          employee_status?: string | null
+          end_date?: string | null
           full_name?: string | null
           id?: string
           is_approved?: boolean | null
           last_login_at?: string | null
+          manager_id?: string | null
           must_reset_password?: boolean | null
           phone_number?: string | null
           requested_department?: string | null
           requested_role?: string | null
+          role_title?: string | null
+          start_date?: string | null
           updated_at?: string
           weather_location_lat?: number | null
           weather_location_lon?: number | null
@@ -1004,6 +1364,13 @@ export type Database = {
             columns: ["department_id"]
             isOneToOne: false
             referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -1430,6 +1797,54 @@ export type Database = {
         }
         Relationships: []
       }
+      user_checklists: {
+        Row: {
+          checklist_type: Database["public"]["Enums"]["checklist_type"]
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          employee_id: string
+          id: string
+          notes: string | null
+          status: Database["public"]["Enums"]["checklist_status"]
+        }
+        Insert: {
+          checklist_type: Database["public"]["Enums"]["checklist_type"]
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          employee_id: string
+          id?: string
+          notes?: string | null
+          status?: Database["public"]["Enums"]["checklist_status"]
+        }
+        Update: {
+          checklist_type?: Database["public"]["Enums"]["checklist_type"]
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          employee_id?: string
+          id?: string
+          notes?: string | null
+          status?: Database["public"]["Enums"]["checklist_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_checklists_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_checklists_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_commission_tiers: {
         Row: {
           assigned_at: string
@@ -1812,10 +2227,55 @@ export type Database = {
       is_commission_reviewer: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
+      app_access_method:
+        | "sso_microsoft"
+        | "sso_google"
+        | "vendor_login"
+        | "api_key"
+        | "other"
+      app_category:
+        | "crm"
+        | "accounting"
+        | "communications"
+        | "suppliers"
+        | "financing"
+        | "training"
+        | "marketing"
+        | "storage"
+        | "social"
+        | "productivity"
+        | "other"
       app_role: "admin" | "manager" | "employee"
+      assignment_role:
+        | "business_owner"
+        | "system_admin"
+        | "onboarding_owner"
+        | "access_monitor"
+        | "it_triage_owner"
+        | "operator"
+        | "profile_owner"
+        | "external_vendor"
+      checklist_category: "access" | "training" | "security" | "compliance"
+      checklist_item_status: "open" | "blocked" | "done"
+      checklist_status: "not_started" | "in_progress" | "completed"
+      checklist_type: "onboarding" | "offboarding"
       contact_method: "call" | "text" | "email"
       doc_status: "received" | "missing"
+      employee_status: "active" | "pending" | "inactive"
       entity_status: "active" | "on_hold" | "do_not_use"
+      it_request_priority: "cant_work" | "workaround" | "nice_to_have"
+      it_request_status:
+        | "new"
+        | "in_progress"
+        | "waiting_on_vendor"
+        | "resolved"
+      it_request_type: "access" | "issue" | "change" | "training"
+      permission_level:
+        | "top_tier_admin"
+        | "admin"
+        | "standard_user"
+        | "limited_user"
+        | "none"
       prospect_source: "inbound_call" | "referral" | "jobsite_meet" | "other"
       prospect_stage:
         | "new"
@@ -1977,10 +2437,60 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      app_access_method: [
+        "sso_microsoft",
+        "sso_google",
+        "vendor_login",
+        "api_key",
+        "other",
+      ],
+      app_category: [
+        "crm",
+        "accounting",
+        "communications",
+        "suppliers",
+        "financing",
+        "training",
+        "marketing",
+        "storage",
+        "social",
+        "productivity",
+        "other",
+      ],
       app_role: ["admin", "manager", "employee"],
+      assignment_role: [
+        "business_owner",
+        "system_admin",
+        "onboarding_owner",
+        "access_monitor",
+        "it_triage_owner",
+        "operator",
+        "profile_owner",
+        "external_vendor",
+      ],
+      checklist_category: ["access", "training", "security", "compliance"],
+      checklist_item_status: ["open", "blocked", "done"],
+      checklist_status: ["not_started", "in_progress", "completed"],
+      checklist_type: ["onboarding", "offboarding"],
       contact_method: ["call", "text", "email"],
       doc_status: ["received", "missing"],
+      employee_status: ["active", "pending", "inactive"],
       entity_status: ["active", "on_hold", "do_not_use"],
+      it_request_priority: ["cant_work", "workaround", "nice_to_have"],
+      it_request_status: [
+        "new",
+        "in_progress",
+        "waiting_on_vendor",
+        "resolved",
+      ],
+      it_request_type: ["access", "issue", "change", "training"],
+      permission_level: [
+        "top_tier_admin",
+        "admin",
+        "standard_user",
+        "limited_user",
+        "none",
+      ],
       prospect_source: ["inbound_call", "referral", "jobsite_meet", "other"],
       prospect_stage: [
         "new",

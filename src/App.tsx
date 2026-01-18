@@ -30,6 +30,10 @@ import CommissionDocumentDetail from "./pages/CommissionDocumentDetail";
 import BuildSchedule from "./pages/BuildSchedule";
 import DeliverySchedule from "./pages/DeliverySchedule";
 import CommandCenter from "./pages/CommandCenter";
+import AppGovernance from "./pages/AppGovernance";
+import EmployeeAccessLedger from "./pages/EmployeeAccessLedger";
+import MyApps from "./pages/MyApps";
+import MyChecklists from "./pages/MyChecklists";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -213,6 +217,38 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <CommissionDocumentDetail />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/app-governance"
+              element={
+                <ProtectedRoute requireAdmin>
+                  <AppGovernance />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/employee-access-ledger"
+              element={
+                <ProtectedRoute requireAdmin>
+                  <EmployeeAccessLedger />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/my-apps"
+              element={
+                <ProtectedRoute>
+                  <MyApps />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/my-checklists"
+              element={
+                <ProtectedRoute>
+                  <MyChecklists />
                 </ProtectedRoute>
               }
             />
