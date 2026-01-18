@@ -8,6 +8,7 @@ import { QuickStatsWidget } from "@/components/command-center/QuickStatsWidget";
 import { CommandCenterQuickLinks } from "@/components/command-center/CommandCenterQuickLinks";
 import { WeatherWidget } from "@/components/command-center/WeatherWidget";
 import { CommandCenterSettings } from "@/components/command-center/CommandCenterSettings";
+import { WhoToContactChart } from "@/components/directory/WhoToContactChart";
 import { useCommandCenterPreferences } from "@/hooks/useCommandCenterPreferences";
 import { LayoutGrid } from "lucide-react";
 
@@ -67,6 +68,13 @@ export default function CommandCenter() {
         {widgets.quickStats && (
           <section>
             <QuickStatsWidget />
+          </section>
+        )}
+
+        {/* Who to Contact */}
+        {widgets.whoToContact && (
+          <section>
+            <WhoToContactChart />
           </section>
         )}
 

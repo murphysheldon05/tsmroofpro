@@ -8,12 +8,12 @@ interface ContactRole {
 }
 
 const contactRoles: ContactRole[] = [
-  { role: "Sales Questions", contactTitle: "Sales Manager", description: "Contracts, leads, pricing" },
-  { role: "Production Issues", contactTitle: "Production Manager", description: "Build schedule, crews, materials" },
-  { role: "Supplement Help", contactTitle: "Supplements Team Lead", description: "Claims, documentation" },
+  { role: "Sales", contactTitle: "Sales Manager", description: "Contracts, leads, pricing" },
+  { role: "Production", contactTitle: "Production Manager", description: "Build schedule, crews, materials" },
+  { role: "Supplements", contactTitle: "Supplement Department", description: "Claims, documentation" },
   { role: "IT / Systems", contactTitle: "Office Admin", description: "System access, tech issues" },
-  { role: "HR / Benefits", contactTitle: "HR Manager", description: "Time off, benefits, policies" },
-  { role: "Accounting / Payroll", contactTitle: "Accounting Manager", description: "Invoices, payments, commissions" },
+  { role: "Human Resources", contactTitle: "HR Manager", description: "Time off, policies" },
+  { role: "Accounting", contactTitle: "Accounting Manager", description: "Invoices, payments, commissions" },
 ];
 
 export function WhoToContactChart() {
