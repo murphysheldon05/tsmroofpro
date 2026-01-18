@@ -1,6 +1,7 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { CompanyInfoWidget } from "@/components/command-center/CompanyInfoWidget";
+import { CompanyIdentityWidget } from "@/components/command-center/CompanyIdentityWidget";
 import { TodaysBuildsWidget } from "@/components/command-center/TodaysBuildsWidget";
 import { TodaysDeliveriesWidget } from "@/components/command-center/TodaysDeliveriesWidget";
 import { ActionRequiredWidget } from "@/components/command-center/ActionRequiredWidget";
@@ -8,7 +9,6 @@ import { QuickStatsWidget } from "@/components/command-center/QuickStatsWidget";
 import { CommandCenterQuickLinks } from "@/components/command-center/CommandCenterQuickLinks";
 import { WeatherWidget } from "@/components/command-center/WeatherWidget";
 import { CommandCenterSettings } from "@/components/command-center/CommandCenterSettings";
-import { WhoToContactChart } from "@/components/directory/WhoToContactChart";
 import { useCommandCenterPreferences } from "@/hooks/useCommandCenterPreferences";
 import { LayoutGrid } from "lucide-react";
 
@@ -50,10 +50,17 @@ export default function CommandCenter() {
           </div>
         </header>
 
-        {/* Company Info - Always at top */}
+        {/* My Contact Info */}
         {widgets.companyInfo && (
           <section>
             <CompanyInfoWidget />
+          </section>
+        )}
+
+        {/* Company Identity - Mission & Values */}
+        {widgets.companyIdentity && (
+          <section>
+            <CompanyIdentityWidget />
           </section>
         )}
 
@@ -68,13 +75,6 @@ export default function CommandCenter() {
         {widgets.quickStats && (
           <section>
             <QuickStatsWidget />
-          </section>
-        )}
-
-        {/* Who to Contact */}
-        {widgets.whoToContact && (
-          <section>
-            <WhoToContactChart />
           </section>
         )}
 
@@ -102,7 +102,7 @@ export default function CommandCenter() {
           </section>
         )}
 
-        {/* Section 5: Quick Links */}
+        {/* Section 4: Quick Links */}
         {widgets.quickLinks && (
           <section>
             <h2 className="text-sm font-medium text-muted-foreground mb-3">Quick Links</h2>

@@ -18,15 +18,9 @@ const routeHierarchy: Record<string, BreadcrumbItem[]> = {
     { label: "Resource", href: "" },
   ],
   "/training": [{ label: "Training", href: "/training" }],
-  "/build-schedule": [{ label: "Production", href: "/build-schedule" }],
-  "/delivery-schedule": [
-    { label: "Production", href: "/build-schedule" },
-    { label: "Delivery Schedule", href: "/delivery-schedule" },
-  ],
-  "/warranties": [
-    { label: "Production", href: "/build-schedule" },
-    { label: "Warranties", href: "/warranties" },
-  ],
+  "/build-schedule": [{ label: "Build Schedule", href: "/build-schedule" }],
+  "/delivery-schedule": [{ label: "Delivery Schedule", href: "/delivery-schedule" }],
+  "/warranties": [{ label: "Warranty Tracker", href: "/warranties" }],
   "/tools": [{ label: "Tools & Systems", href: "/tools" }],
   "/requests": [{ label: "Forms & Requests", href: "/requests" }],
   "/commissions": [{ label: "Commissions", href: "/commissions" }],
@@ -43,8 +37,8 @@ const routeHierarchy: Record<string, BreadcrumbItem[]> = {
     { label: "Documents", href: "/commission-documents" },
     { label: "New Document", href: "/commission-documents/new" },
   ],
-  "/company": [{ label: "Company", href: "/company" }],
   "/directory": [{ label: "Who to Contact", href: "/directory" }],
+  "/vendors": [{ label: "Subs & Vendors", href: "/vendors" }],
   "/profile": [{ label: "Profile", href: "/profile" }],
   "/admin": [{ label: "Admin", href: "/admin" }],
 };
@@ -80,8 +74,7 @@ function getBreadcrumbs(pathname: string): BreadcrumbItem[] {
 
   if (pathname.startsWith("/warranties/")) {
     return [
-      { label: "Production", href: "/build-schedule" },
-      { label: "Warranties", href: "/warranties" },
+      { label: "Warranty Tracker", href: "/warranties" },
       { label: "Warranty Details", href: pathname },
     ];
   }
