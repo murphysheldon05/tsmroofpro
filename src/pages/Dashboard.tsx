@@ -66,10 +66,10 @@ export default function Dashboard() {
           )}
         </section>
 
-        {/* Pending Approvals - Only visible to managers/admins */}
+        {/* Pending Approvals - Only visible to managers/admins, only when there are pending items */}
         <PendingApprovalsWidget />
 
-        {/* Overdue Warranties Alert - Only visible to managers/admins */}
+        {/* Overdue Warranties Alert - Only visible when there are overdue items */}
         <OverdueWarrantiesWidget />
 
         {/* Resources Grid */}
