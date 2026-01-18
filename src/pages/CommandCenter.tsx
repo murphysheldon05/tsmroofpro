@@ -7,21 +7,18 @@ import { ActionRequiredWidget } from "@/components/command-center/ActionRequired
 import { QuickStatsWidget } from "@/components/command-center/QuickStatsWidget";
 import { CommandCenterQuickLinks } from "@/components/command-center/CommandCenterQuickLinks";
 import { WeatherWidget } from "@/components/command-center/WeatherWidget";
+import { CommandCenterSettings } from "@/components/command-center/CommandCenterSettings";
+import { useCommandCenterPreferences } from "@/hooks/useCommandCenterPreferences";
 import { LayoutGrid } from "lucide-react";
 
 export default function CommandCenter() {
   const { user, role, isAdmin, isManager } = useAuth();
-
-  // Sales role redirects to regular dashboard
-  // For now, we check if user has a specific department - this can be enhanced
-  // Based on the current role system: admin, manager, employee
-  // We'll show Command Center to admin and manager, and regular dashboard for employees
-  // unless they're in Production or Office departments
+  const { widgets, toggleWidget, resetToDefaults } = useCommandCenterPreferences();
 
   const firstName = user?.user_metadata?.full_name?.split(" ")[0] || "there";
 
   // Determine visibility based on role
-  const showBuilds = isAdmin || isManager || role === "employee"; // Production users can see
+  const showBuilds = isAdmin || isManager || role === "employee";
   const showDeliveries = isAdmin || isManager || role === "employee";
   const showActionRequired = isAdmin || isManager;
 
@@ -30,47 +27,60 @@ export default function CommandCenter() {
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <header className="pt-4 lg:pt-0">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-              <LayoutGrid className="w-5 h-5 text-primary" />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                <LayoutGrid className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-foreground">
+                  Command Center
+                </h1>
+                <p className="text-sm text-muted-foreground">
+                  Good {getTimeOfDay()}, {firstName}. Here's your daily overview.
+                </p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-2xl font-bold text-foreground">
-                Command Center
-              </h1>
-              <p className="text-sm text-muted-foreground">
-                Good {getTimeOfDay()}, {firstName}. Here's your daily overview.
-              </p>
-            </div>
+            <CommandCenterSettings
+              widgets={widgets}
+              onToggle={toggleWidget}
+              onReset={resetToDefaults}
+            />
           </div>
         </header>
 
         {/* Company Info - Always at top */}
-        <section>
-          <CompanyInfoWidget />
-        </section>
+        {widgets.companyInfo && (
+          <section>
+            <CompanyInfoWidget />
+          </section>
+        )}
 
         {/* Weather - Outdoor Work Conditions */}
-        <section>
-          <WeatherWidget />
-        </section>
+        {widgets.weather && (
+          <section>
+            <WeatherWidget />
+          </section>
+        )}
 
         {/* Quick Stats */}
-        <section>
-          <QuickStatsWidget />
-        </section>
+        {widgets.quickStats && (
+          <section>
+            <QuickStatsWidget />
+          </section>
+        )}
 
         {/* Main Grid - Today's Builds & Deliveries */}
         <div className="grid lg:grid-cols-2 gap-6">
           {/* Section 1: Today's Builds (Hero) */}
-          {showBuilds && (
+          {showBuilds && widgets.todaysBuilds && (
             <section>
               <TodaysBuildsWidget />
             </section>
           )}
 
           {/* Section 2: Today's Deliveries */}
-          {showDeliveries && (
+          {showDeliveries && widgets.todaysDeliveries && (
             <section>
               <TodaysDeliveriesWidget />
             </section>
@@ -78,17 +88,19 @@ export default function CommandCenter() {
         </div>
 
         {/* Section 3: Action Required */}
-        {showActionRequired && (
+        {showActionRequired && widgets.actionRequired && (
           <section>
             <ActionRequiredWidget />
           </section>
         )}
 
         {/* Section 5: Quick Links */}
-        <section>
-          <h2 className="text-sm font-medium text-muted-foreground mb-3">Quick Links</h2>
-          <CommandCenterQuickLinks />
-        </section>
+        {widgets.quickLinks && (
+          <section>
+            <h2 className="text-sm font-medium text-muted-foreground mb-3">Quick Links</h2>
+            <CommandCenterQuickLinks />
+          </section>
+        )}
       </div>
     </AppLayout>
   );
