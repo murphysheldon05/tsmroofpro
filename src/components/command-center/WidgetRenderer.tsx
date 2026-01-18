@@ -28,7 +28,8 @@ export function WidgetRenderer({
   // Role-based visibility checks
   const showBuilds = isAdmin || isManager || role === "employee";
   const showDeliveries = isAdmin || isManager || role === "employee";
-  const showActionRequired = isAdmin || isManager;
+  // Action Required widget is now visible to all users (shows different content based on role)
+  const showActionRequired = true;
 
   switch (widgetKey) {
     case "companyInfo":

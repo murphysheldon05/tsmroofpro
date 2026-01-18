@@ -61,8 +61,8 @@ const WIDGET_LABELS: Record<WidgetKey, { label: string; description: string }> =
     description: "Scheduled deliveries for today",
   },
   actionRequired: {
-    label: "Action Required",
-    description: "Items needing your attention",
+    label: "Pending Review / Needs Action",
+    description: "Role-based items requiring review or your action",
   },
   quickLinks: {
     label: "Quick Links",
