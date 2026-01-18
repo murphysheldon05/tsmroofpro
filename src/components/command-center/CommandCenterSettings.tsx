@@ -40,10 +40,6 @@ const WIDGET_LABELS: Record<WidgetKey, { label: string; description: string }> =
     label: "My Contact Info",
     description: "Your contact details and manager info",
   },
-  companyIdentity: {
-    label: "Company Identity",
-    description: "Mission, focus, and core values",
-  },
   weather: {
     label: "Weather",
     description: "Current weather and forecast",
@@ -107,6 +103,10 @@ export function CommandCenterSettings({
           <SheetTitle>Customize Command Center</SheetTitle>
           <SheetDescription>
             Drag to reorder widgets or toggle their visibility.
+            <br />
+            <span className="text-xs text-muted-foreground mt-1 block">
+              Note: Core Identity (Mission & Values) is pinned and cannot be moved.
+            </span>
           </SheetDescription>
         </SheetHeader>
 

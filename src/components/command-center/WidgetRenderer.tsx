@@ -1,6 +1,5 @@
 import { WidgetKey } from "@/hooks/useCommandCenterPreferences";
 import { CompanyInfoWidget } from "./CompanyInfoWidget";
-import { CompanyIdentityWidget } from "./CompanyIdentityWidget";
 import { WeatherWidget } from "./WeatherWidget";
 import { QuickStatsWidget } from "./QuickStatsWidget";
 import { TodaysBuildsWidget } from "./TodaysBuildsWidget";
@@ -36,12 +35,6 @@ export function WidgetRenderer({
       return (
         <section>
           <CompanyInfoWidget />
-        </section>
-      );
-    case "companyIdentity":
-      return (
-        <section>
-          <CompanyIdentityWidget />
         </section>
       );
     case "weather":

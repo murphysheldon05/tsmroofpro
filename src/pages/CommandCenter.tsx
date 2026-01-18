@@ -2,6 +2,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { CommandCenterSettings } from "@/components/command-center/CommandCenterSettings";
 import { WidgetRenderer } from "@/components/command-center/WidgetRenderer";
+import { CoreIdentityWidget } from "@/components/command-center/CoreIdentityWidget";
 import { useCommandCenterPreferences } from "@/hooks/useCommandCenterPreferences";
 import { LayoutGrid } from "lucide-react";
 
@@ -14,19 +15,19 @@ export default function CommandCenter() {
 
   return (
     <AppLayout>
-      <div className="max-w-7xl mx-auto space-y-6">
+      <div className="max-w-7xl mx-auto space-y-6 px-4 sm:px-0">
         {/* Header */}
         <header className="pt-4 lg:pt-0">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
                 <LayoutGrid className="w-5 h-5 text-primary" />
               </div>
-              <div>
-                <h1 className="text-2xl font-bold text-foreground">
+              <div className="min-w-0">
+                <h1 className="text-xl sm:text-2xl font-bold text-foreground truncate">
                   Command Center
                 </h1>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-muted-foreground truncate">
                   Good {getTimeOfDay()}, {firstName}. Here's your daily overview.
                 </p>
               </div>
@@ -40,6 +41,11 @@ export default function CommandCenter() {
             />
           </div>
         </header>
+
+        {/* LOCKED: Core Identity Widget - Always at top, cannot be removed or reordered */}
+        <section>
+          <CoreIdentityWidget />
+        </section>
 
         {/* Dynamic Widget Rendering Based on User Order */}
         {widgetOrder.map((widgetKey) => (
