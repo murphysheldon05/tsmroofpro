@@ -1,27 +1,16 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { CompanyInfoWidget } from "@/components/command-center/CompanyInfoWidget";
-import { CompanyIdentityWidget } from "@/components/command-center/CompanyIdentityWidget";
-import { TodaysBuildsWidget } from "@/components/command-center/TodaysBuildsWidget";
-import { TodaysDeliveriesWidget } from "@/components/command-center/TodaysDeliveriesWidget";
-import { ActionRequiredWidget } from "@/components/command-center/ActionRequiredWidget";
-import { QuickStatsWidget } from "@/components/command-center/QuickStatsWidget";
-import { CommandCenterQuickLinks } from "@/components/command-center/CommandCenterQuickLinks";
-import { WeatherWidget } from "@/components/command-center/WeatherWidget";
 import { CommandCenterSettings } from "@/components/command-center/CommandCenterSettings";
+import { WidgetRenderer } from "@/components/command-center/WidgetRenderer";
 import { useCommandCenterPreferences } from "@/hooks/useCommandCenterPreferences";
 import { LayoutGrid } from "lucide-react";
 
 export default function CommandCenter() {
   const { user, role, isAdmin, isManager } = useAuth();
-  const { widgets, toggleWidget, resetToDefaults } = useCommandCenterPreferences();
+  const { widgets, widgetOrder, toggleWidget, reorderWidgets, resetToDefaults } =
+    useCommandCenterPreferences();
 
   const firstName = user?.user_metadata?.full_name?.split(" ")[0] || "there";
-
-  // Determine visibility based on role
-  const showBuilds = isAdmin || isManager || role === "employee";
-  const showDeliveries = isAdmin || isManager || role === "employee";
-  const showActionRequired = isAdmin || isManager;
 
   return (
     <AppLayout>
@@ -44,71 +33,25 @@ export default function CommandCenter() {
             </div>
             <CommandCenterSettings
               widgets={widgets}
+              widgetOrder={widgetOrder}
               onToggle={toggleWidget}
+              onReorder={reorderWidgets}
               onReset={resetToDefaults}
             />
           </div>
         </header>
 
-        {/* My Contact Info */}
-        {widgets.companyInfo && (
-          <section>
-            <CompanyInfoWidget />
-          </section>
-        )}
-
-        {/* Company Identity - Mission & Values */}
-        {widgets.companyIdentity && (
-          <section>
-            <CompanyIdentityWidget />
-          </section>
-        )}
-
-        {/* Weather - Outdoor Work Conditions */}
-        {widgets.weather && (
-          <section>
-            <WeatherWidget />
-          </section>
-        )}
-
-        {/* Quick Stats */}
-        {widgets.quickStats && (
-          <section>
-            <QuickStatsWidget />
-          </section>
-        )}
-
-        {/* Main Grid - Today's Builds & Deliveries */}
-        <div className="grid lg:grid-cols-2 gap-6">
-          {/* Section 1: Today's Builds (Hero) */}
-          {showBuilds && widgets.todaysBuilds && (
-            <section>
-              <TodaysBuildsWidget />
-            </section>
-          )}
-
-          {/* Section 2: Today's Deliveries */}
-          {showDeliveries && widgets.todaysDeliveries && (
-            <section>
-              <TodaysDeliveriesWidget />
-            </section>
-          )}
-        </div>
-
-        {/* Section 3: Action Required */}
-        {showActionRequired && widgets.actionRequired && (
-          <section>
-            <ActionRequiredWidget />
-          </section>
-        )}
-
-        {/* Section 4: Quick Links */}
-        {widgets.quickLinks && (
-          <section>
-            <h2 className="text-sm font-medium text-muted-foreground mb-3">Quick Links</h2>
-            <CommandCenterQuickLinks />
-          </section>
-        )}
+        {/* Dynamic Widget Rendering Based on User Order */}
+        {widgetOrder.map((widgetKey) => (
+          <WidgetRenderer
+            key={widgetKey}
+            widgetKey={widgetKey}
+            isVisible={widgets[widgetKey]}
+            isAdmin={isAdmin}
+            isManager={isManager}
+            role={role}
+          />
+        ))}
       </div>
     </AppLayout>
   );

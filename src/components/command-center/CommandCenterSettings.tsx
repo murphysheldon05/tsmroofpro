@@ -8,18 +8,34 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { CommandCenterWidgets } from "@/hooks/useCommandCenterPreferences";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CommandCenterWidgets, WidgetKey } from "@/hooks/useCommandCenterPreferences";
+import { DraggableWidgetItem } from "./DraggableWidgetItem";
 
 interface CommandCenterSettingsProps {
   widgets: CommandCenterWidgets;
-  onToggle: (key: keyof CommandCenterWidgets) => void;
+  widgetOrder: WidgetKey[];
+  onToggle: (key: WidgetKey) => void;
+  onReorder: (newOrder: WidgetKey[]) => void;
   onReset: () => void;
 }
 
-const WIDGET_LABELS: Record<keyof CommandCenterWidgets, { label: string; description: string }> = {
+const WIDGET_LABELS: Record<WidgetKey, { label: string; description: string }> = {
   companyInfo: {
     label: "My Contact Info",
     description: "Your contact details and manager info",
@@ -56,9 +72,28 @@ const WIDGET_LABELS: Record<keyof CommandCenterWidgets, { label: string; descrip
 
 export function CommandCenterSettings({
   widgets,
+  widgetOrder,
   onToggle,
+  onReorder,
   onReset,
 }: CommandCenterSettingsProps) {
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      const oldIndex = widgetOrder.indexOf(active.id as WidgetKey);
+      const newIndex = widgetOrder.indexOf(over.id as WidgetKey);
+      onReorder(arrayMove(widgetOrder, oldIndex, newIndex));
+    }
+  };
+
   return (
     <Sheet>
       <SheetTrigger asChild>
@@ -71,33 +106,32 @@ export function CommandCenterSettings({
         <SheetHeader>
           <SheetTitle>Customize Command Center</SheetTitle>
           <SheetDescription>
-            Show or hide widgets to personalize your dashboard.
+            Drag to reorder widgets or toggle their visibility.
           </SheetDescription>
         </SheetHeader>
 
-        <div className="mt-6 space-y-4">
-          {(Object.keys(WIDGET_LABELS) as Array<keyof CommandCenterWidgets>).map(
-            (key) => (
-              <div
-                key={key}
-                className="flex items-center justify-between space-x-4 rounded-lg border p-4"
-              >
-                <div className="space-y-0.5">
-                  <Label htmlFor={key} className="text-sm font-medium">
-                    {WIDGET_LABELS[key].label}
-                  </Label>
-                  <p className="text-xs text-muted-foreground">
-                    {WIDGET_LABELS[key].description}
-                  </p>
-                </div>
-                <Switch
+        <div className="mt-6 space-y-2">
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={widgetOrder}
+              strategy={verticalListSortingStrategy}
+            >
+              {widgetOrder.map((key) => (
+                <DraggableWidgetItem
+                  key={key}
                   id={key}
-                  checked={widgets[key]}
-                  onCheckedChange={() => onToggle(key)}
+                  label={WIDGET_LABELS[key].label}
+                  description={WIDGET_LABELS[key].description}
+                  isVisible={widgets[key]}
+                  onToggle={() => onToggle(key)}
                 />
-              </div>
-            )
-          )}
+              ))}
+            </SortableContext>
+          </DndContext>
         </div>
 
         <Separator className="my-6" />
