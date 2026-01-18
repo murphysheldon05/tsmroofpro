@@ -73,6 +73,14 @@ const App = () => (
               }
             />
             <Route
+              path="/sops"
+              element={
+                <ProtectedRoute>
+                  <SOPLibrary />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/sops/:category"
               element={
                 <ProtectedRoute>
