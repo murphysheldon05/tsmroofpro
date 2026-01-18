@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 
@@ -15,7 +15,6 @@ import ResourceDetail from "./pages/ResourceDetail";
 import Training from "./pages/Training";
 import Tools from "./pages/Tools";
 import Requests from "./pages/Requests";
-import Company from "./pages/Company";
 import Admin from "./pages/Admin";
 import Profile from "./pages/Profile";
 import UserDirectory from "./pages/UserDirectory";
@@ -104,13 +103,10 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+            {/* Redirect /company to /command-center */}
             <Route
               path="/company"
-              element={
-                <ProtectedRoute>
-                  <Company />
-                </ProtectedRoute>
-              }
+              element={<Navigate to="/command-center" replace />}
             />
             <Route
               path="/admin"

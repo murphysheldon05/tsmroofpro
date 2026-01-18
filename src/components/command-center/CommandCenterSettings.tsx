@@ -24,6 +24,10 @@ const WIDGET_LABELS: Record<keyof CommandCenterWidgets, { label: string; descrip
     label: "My Contact Info",
     description: "Your contact details and manager info",
   },
+  companyIdentity: {
+    label: "Company Identity",
+    description: "Mission, focus, and core values",
+  },
   weather: {
     label: "Weather",
     description: "Current weather and forecast",
@@ -31,10 +35,6 @@ const WIDGET_LABELS: Record<keyof CommandCenterWidgets, { label: string; descrip
   quickStats: {
     label: "Quick Stats",
     description: "Summary of builds, deliveries, and approvals",
-  },
-  whoToContact: {
-    label: "Who to Contact",
-    description: "Department contacts quick reference",
   },
   todaysBuilds: {
     label: "Today's Builds",

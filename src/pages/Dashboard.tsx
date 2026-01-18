@@ -1,15 +1,12 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { SearchBar } from "@/components/SearchBar";
-import { QuickLinks } from "@/components/dashboard/QuickLinks";
 import { AnnouncementCard } from "@/components/dashboard/AnnouncementCard";
 import { ResourceCard } from "@/components/dashboard/ResourceCard";
-import { PendingApprovalsWidget } from "@/components/dashboard/PendingApprovalsWidget";
-import { OverdueWarrantiesWidget } from "@/components/dashboard/OverdueWarrantiesWidget";
 import { useAnnouncements } from "@/hooks/useAnnouncements";
 import { useRecentResources, usePopularResources } from "@/hooks/useResources";
 import { Skeleton } from "@/components/ui/skeleton";
-import { TrendingUp, Clock, Megaphone } from "lucide-react";
+import { TrendingUp, Clock, Megaphone, BarChart3 } from "lucide-react";
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -25,23 +22,22 @@ export default function Dashboard() {
         {/* Header */}
         <header className="pt-4 lg:pt-0">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-            <div>
-              <h1 className="text-3xl font-bold text-foreground">
-                Welcome back, {firstName}
-              </h1>
-              <p className="text-muted-foreground mt-1">
-                Here's what's happening at TSM Roofing
-              </p>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                <BarChart3 className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-foreground">
+                  Dashboard
+                </h1>
+                <p className="text-muted-foreground text-sm">
+                  Analytics, metrics, and company updates
+                </p>
+              </div>
             </div>
             <SearchBar className="w-full lg:w-80" />
           </div>
         </header>
-
-        {/* Quick Links */}
-        <section>
-          <h2 className="text-lg font-semibold text-foreground mb-4">Quick Access</h2>
-          <QuickLinks />
-        </section>
 
         {/* Announcements */}
         <section>
@@ -65,12 +61,6 @@ export default function Dashboard() {
             <p className="text-muted-foreground text-sm">No announcements at this time.</p>
           )}
         </section>
-
-        {/* Pending Approvals - Only visible to managers/admins, only when there are pending items */}
-        <PendingApprovalsWidget />
-
-        {/* Overdue Warranties Alert - Only visible when there are overdue items */}
-        <OverdueWarrantiesWidget />
 
         {/* Resources Grid */}
         <div className="grid lg:grid-cols-2 gap-8">
