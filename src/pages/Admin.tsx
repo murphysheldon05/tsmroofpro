@@ -34,6 +34,7 @@ import {
   Building2,
   Percent,
   UserPlus,
+  AlertTriangle,
 } from "lucide-react";
 import { UserPermissionsEditor } from "@/components/admin/UserPermissionsEditor";
 import { PendingApprovals } from "@/components/admin/PendingApprovals";
@@ -65,6 +66,7 @@ export default function Admin() {
     email: "",
     department_id: "" as string | null,
     commission_tier_id: "" as string | null,
+    manager_id: "" as string | null,
   });
 
   // Fetch user commission tier assignment
@@ -242,6 +244,7 @@ export default function Admin() {
         .update({
           full_name: editUserData.full_name.trim(),
           department_id: editUserData.department_id || null,
+          manager_id: editUserData.manager_id || null,
         })
         .eq("id", userId);
 
@@ -272,9 +275,35 @@ export default function Admin() {
           .eq("user_id", userId);
       }
 
+      // Update team assignment (manager relationship)
+      if (editUserData.manager_id) {
+        // Delete existing assignment
+        await supabase
+          .from("team_assignments")
+          .delete()
+          .eq("employee_id", userId);
+
+        // Insert new assignment
+        const { error: teamError } = await supabase
+          .from("team_assignments")
+          .insert({
+            employee_id: userId,
+            manager_id: editUserData.manager_id,
+          });
+
+        if (teamError) throw teamError;
+      } else {
+        // Remove team assignment if none selected
+        await supabase
+          .from("team_assignments")
+          .delete()
+          .eq("employee_id", userId);
+      }
+
       toast.success("User settings saved");
       queryClient.invalidateQueries({ queryKey: ["admin-users"] });
       queryClient.invalidateQueries({ queryKey: ["user-commission-tiers"] });
+      queryClient.invalidateQueries({ queryKey: ["team-assignments"] });
       setEditingUser(null);
     } catch (error: any) {
       toast.error("Failed to save: " + error.message);
@@ -413,6 +442,9 @@ export default function Admin() {
                       Department
                     </th>
                     <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground hidden xl:table-cell">
+                      Manager
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground hidden 2xl:table-cell">
                       Commission Tier
                     </th>
                     <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
@@ -424,10 +456,13 @@ export default function Admin() {
                   </tr>
                 </thead>
                 <tbody>
-                  {users?.map((user, index) => {
+                {users?.map((user, index) => {
                     const userTierId = getUserTier(user.id);
                     const tierName = commissionTiers?.find((t) => t.id === userTierId)?.name;
                     const deptName = departments?.find((d) => d.id === user.department_id)?.name;
+                    const userManagerId = getUserManager(user.id);
+                    const managerName = managers?.find((m) => m.id === userManagerId)?.full_name;
+                    const isSalesWithoutManager = user.role === "employee" && deptName?.toLowerCase() === "sales" && !userManagerId;
 
                     return (
                       <tr
@@ -439,9 +474,14 @@ export default function Admin() {
                         }
                       >
                         <td className="px-4 py-3">
-                          <p className="font-medium text-foreground">
-                            {user.full_name || "—"}
-                          </p>
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium text-foreground">
+                              {user.full_name || "—"}
+                            </p>
+                            {isSalesWithoutManager && (
+                              <Badge variant="destructive" className="text-xs">No Manager</Badge>
+                            )}
+                          </div>
                         </td>
                         <td className="px-4 py-3 hidden md:table-cell text-muted-foreground">
                           {user.email}
@@ -457,6 +497,16 @@ export default function Admin() {
                           )}
                         </td>
                         <td className="px-4 py-3 hidden xl:table-cell">
+                          {managerName ? (
+                            <Badge variant="outline" className="gap-1">
+                              <Users className="w-3 h-3" />
+                              {managerName}
+                            </Badge>
+                          ) : (
+                            <span className="text-muted-foreground text-sm">—</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 hidden 2xl:table-cell">
                           {tierName ? (
                             <Badge variant="secondary" className="gap-1">
                               <Percent className="w-3 h-3" />
@@ -526,6 +576,7 @@ export default function Admin() {
                                     email: user.email || "",
                                     department_id: user.department_id || null,
                                     commission_tier_id: getUserTier(user.id),
+                                    manager_id: getUserManager(user.id),
                                   });
                                 } else {
                                   setEditingUser(null);
@@ -577,6 +628,26 @@ export default function Admin() {
                                         ))}
                                       </SelectContent>
                                     </Select>
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label>Manager</Label>
+                                    <Select
+                                      value={editUserData.manager_id || "none"}
+                                      onValueChange={(v) => setEditUserData({ ...editUserData, manager_id: v === "none" ? null : v })}
+                                    >
+                                      <SelectTrigger>
+                                        <SelectValue placeholder="No manager assigned" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="none">No manager assigned</SelectItem>
+                                        {managers?.filter((m) => m.id !== user.id).map((manager) => (
+                                          <SelectItem key={manager.id} value={manager.id}>
+                                            {manager.full_name || manager.email}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                    <p className="text-xs text-muted-foreground">Commission forms route to this manager for approval</p>
                                   </div>
                                   <div className="space-y-2">
                                     <Label>Commission Tier</Label>
