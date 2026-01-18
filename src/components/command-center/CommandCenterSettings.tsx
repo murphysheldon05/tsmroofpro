@@ -52,6 +52,10 @@ const WIDGET_LABELS: Record<WidgetKey, { label: string; description: string }> =
     label: "Manager SLA Snapshot",
     description: "Review queue accountability at a glance (managers only)",
   },
+  quickSOPAccess: {
+    label: "Quick SOP Access",
+    description: "Search and find SOPs fast from Command Center",
+  },
   todaysBuilds: {
     label: "Today's Builds",
     description: "Scheduled builds for today",
