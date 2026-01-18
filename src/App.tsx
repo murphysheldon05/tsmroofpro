@@ -29,6 +29,7 @@ import CommissionDocumentDetail from "./pages/CommissionDocumentDetail";
 import BuildSchedule from "./pages/BuildSchedule";
 import DeliverySchedule from "./pages/DeliverySchedule";
 import CommandCenter from "./pages/CommandCenter";
+import PendingReview from "./pages/PendingReview";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -52,6 +53,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <CommandCenter />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/pending-review"
+              element={
+                <ProtectedRoute>
+                  <PendingReview />
                 </ProtectedRoute>
               }
             />
