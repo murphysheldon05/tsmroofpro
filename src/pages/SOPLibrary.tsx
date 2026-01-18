@@ -1,14 +1,15 @@
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { SearchBar } from "@/components/SearchBar";
 import { ResourceCard } from "@/components/dashboard/ResourceCard";
-import { useResources, useCategories, Resource } from "@/hooks/useResources";
+import { useResources, useCategories, useSearchResources, Resource } from "@/hooks/useResources";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useState, useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { ResourceDetailModal } from "@/components/resources/ResourceDetailModal";
-import { ProductionCalendar } from "@/components/production/ProductionCalendar";
 import {
   Select,
   SelectContent,
@@ -17,6 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  Search,
   TrendingUp,
   Hammer,
   FileCode,
@@ -24,6 +26,9 @@ import {
   Calculator,
   Shield,
   FileText,
+  List,
+  Grid,
+  ArrowLeft,
 } from "lucide-react";
 
 const categoryIcons: Record<string, React.ElementType> = {
@@ -36,13 +41,50 @@ const categoryIcons: Record<string, React.ElementType> = {
   "templates-scripts": FileText,
 };
 
+// Task type filters for Quick SOP Access
+const taskTypes = [
+  { value: "all", label: "All Tasks" },
+  { value: "inspection", label: "Inspection" },
+  { value: "estimate", label: "Estimate" },
+  { value: "production", label: "Production" },
+  { value: "admin", label: "Admin" },
+  { value: "closeout", label: "Closeout" },
+  { value: "sales", label: "Sales" },
+];
+
+// Role filters
+const roleFilters = [
+  { value: "all", label: "All Roles" },
+  { value: "field", label: "Field" },
+  { value: "office", label: "Office" },
+  { value: "manager", label: "Manager" },
+];
+
+// Urgency filters
+const urgencyFilters = [
+  { value: "all", label: "All Urgency" },
+  { value: "field", label: "Field (Immediate)" },
+  { value: "office", label: "Office (Same Day)" },
+  { value: "manager", label: "Manager (Review)" },
+];
+
 export default function SOPLibrary() {
   const { category } = useParams<{ category: string }>();
-  const { data: resources, isLoading } = useResources(category);
+  const navigate = useNavigate();
+  const { data: allResources, isLoading: allLoading } = useResources();
+  const { data: categoryResources, isLoading: categoryLoading } = useResources(category);
   const { data: categories } = useCategories();
+  
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [selectedResource, setSelectedResource] = useState<Resource | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<"quick" | "browse">(category ? "browse" : "quick");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [taskType, setTaskType] = useState("all");
+  const [roleFilter, setRoleFilter] = useState("all");
+  const [urgencyFilter, setUrgencyFilter] = useState("all");
+
+  const { data: searchResults, isLoading: searchLoading } = useSearchResources(searchQuery);
 
   const handleResourceClick = (resource: Resource) => {
     setSelectedResource(resource);
@@ -52,97 +94,273 @@ export default function SOPLibrary() {
   const currentCategory = categories?.find((c) => c.slug === category);
   const Icon = category ? categoryIcons[category] || FileText : FileText;
 
-  // Get all unique tags from resources
+  // Resources to display based on view mode
+  const displayResources = useMemo(() => {
+    if (viewMode === "quick") {
+      // Quick SOP Access - flat searchable list
+      let resources = searchQuery ? (searchResults || []) : (allResources || []);
+      
+      // Apply task type filter (based on tags)
+      if (taskType !== "all") {
+        resources = resources.filter(r => 
+          r.tags?.some(t => t.toLowerCase().includes(taskType.toLowerCase()))
+        );
+      }
+      
+      // Apply role filter (based on visibility or tags)
+      if (roleFilter !== "all") {
+        resources = resources.filter(r => 
+          r.tags?.some(t => t.toLowerCase().includes(roleFilter.toLowerCase())) ||
+          (roleFilter === "manager" && r.visibility === "manager") ||
+          (roleFilter === "field" && (r.visibility === "employee" || r.tags?.some(t => t.toLowerCase().includes("field"))))
+        );
+      }
+      
+      // Apply urgency filter
+      if (urgencyFilter !== "all") {
+        resources = resources.filter(r => 
+          r.tags?.some(t => t.toLowerCase().includes(urgencyFilter.toLowerCase()))
+        );
+      }
+      
+      return resources;
+    } else {
+      // Browse by Department
+      return categoryResources || [];
+    }
+  }, [viewMode, searchQuery, searchResults, allResources, categoryResources, taskType, roleFilter, urgencyFilter]);
+
+  // Get all unique tags from current resources
   const allTags = Array.from(
-    new Set(resources?.flatMap((r) => r.tags || []) || [])
+    new Set(displayResources?.flatMap((r) => r.tags || []) || [])
   ).sort();
 
-  // Filter resources by selected tag
+  // Filter by selected tag
   const filteredResources = selectedTag
-    ? resources?.filter((r) => r.tags?.includes(selectedTag))
-    : resources;
+    ? displayResources?.filter((r) => r.tags?.includes(selectedTag))
+    : displayResources;
+
+  const isLoading = viewMode === "quick" 
+    ? (searchQuery ? searchLoading : allLoading) 
+    : categoryLoading;
 
   return (
     <AppLayout>
-      <div className="max-w-7xl mx-auto space-y-6">
+      <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
         {/* Header */}
         <header className="pt-4 lg:pt-0">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div className="flex flex-col gap-4">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
-                <Icon className="w-6 h-6 text-primary" />
+              {category && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 flex-shrink-0"
+                  onClick={() => {
+                    setViewMode("quick");
+                    navigate("/sops");
+                  }}
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                </Button>
+              )}
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                <Icon className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
               </div>
-              <div>
-                <h1 className="text-2xl font-bold text-foreground">
+              <div className="min-w-0">
+                <h1 className="text-xl sm:text-2xl font-bold text-foreground truncate">
                   {currentCategory?.name || "SOP Library"}
                 </h1>
-                <p className="text-muted-foreground text-sm">
-                  {currentCategory?.description || "Browse all standard operating procedures"}
+                <p className="text-muted-foreground text-xs sm:text-sm truncate">
+                  {currentCategory?.description || "Find what you need, fast"}
                 </p>
               </div>
             </div>
-            <SearchBar className="w-full lg:w-80" />
           </div>
         </header>
 
-        {/* Filters */}
-        <div className="flex flex-col sm:flex-row gap-4">
-          <Select value={category || "all"} onValueChange={() => {}}>
-            <SelectTrigger className="w-full sm:w-48">
-              <SelectValue placeholder="Select category" />
-            </SelectTrigger>
-            <SelectContent>
-              {categories?.map((cat) => (
-                <SelectItem key={cat.slug} value={cat.slug}>
-                  {cat.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        {/* View Mode Tabs */}
+        <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "quick" | "browse")} className="w-full">
+          <TabsList className="grid w-full max-w-md grid-cols-2">
+            <TabsTrigger value="quick" className="gap-2">
+              <Search className="w-4 h-4" />
+              <span className="hidden sm:inline">Quick SOP Access</span>
+              <span className="sm:hidden">Quick Access</span>
+            </TabsTrigger>
+            <TabsTrigger value="browse" className="gap-2">
+              <Grid className="w-4 h-4" />
+              <span className="hidden sm:inline">Browse by Department</span>
+              <span className="sm:hidden">By Dept</span>
+            </TabsTrigger>
+          </TabsList>
 
-          {allTags.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              <Badge
-                variant={selectedTag === null ? "default" : "outline"}
-                className={cn(
-                  "cursor-pointer transition-all",
-                  selectedTag === null && "shadow-glow-sm"
-                )}
-                onClick={() => setSelectedTag(null)}
-              >
-                All
-              </Badge>
-              {allTags.slice(0, 6).map((tag) => (
-                <Badge
-                  key={tag}
-                  variant={selectedTag === tag ? "default" : "outline"}
-                  className={cn(
-                    "cursor-pointer transition-all",
-                    selectedTag === tag && "shadow-glow-sm"
-                  )}
-                  onClick={() => setSelectedTag(tag)}
-                >
-                  {tag}
-                </Badge>
-              ))}
+          {/* Quick SOP Access View */}
+          <TabsContent value="quick" className="mt-4 space-y-4">
+            {/* Search Bar */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Search SOPs by title or content..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 w-full"
+              />
             </div>
-          )}
-        </div>
 
-        {/* Production Calendar - Only show for production category */}
-        {category === "production" && (
-          <ProductionCalendar />
-        )}
+            {/* Filters - Mobile Optimized */}
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+              <Select value={taskType} onValueChange={setTaskType}>
+                <SelectTrigger className="w-full sm:w-36">
+                  <SelectValue placeholder="Task type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {taskTypes.map((t) => (
+                    <SelectItem key={t.value} value={t.value}>
+                      {t.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
-        {/* Resources Grid */}
+              <Select value={roleFilter} onValueChange={setRoleFilter}>
+                <SelectTrigger className="w-full sm:w-32">
+                  <SelectValue placeholder="Role" />
+                </SelectTrigger>
+                <SelectContent>
+                  {roleFilters.map((r) => (
+                    <SelectItem key={r.value} value={r.value}>
+                      {r.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={urgencyFilter} onValueChange={setUrgencyFilter}>
+                <SelectTrigger className="w-full sm:w-40">
+                  <SelectValue placeholder="Urgency" />
+                </SelectTrigger>
+                <SelectContent>
+                  {urgencyFilters.map((u) => (
+                    <SelectItem key={u.value} value={u.value}>
+                      {u.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {(taskType !== "all" || roleFilter !== "all" || urgencyFilter !== "all") && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setTaskType("all");
+                    setRoleFilter("all");
+                    setUrgencyFilter("all");
+                  }}
+                  className="text-xs"
+                >
+                  Clear Filters
+                </Button>
+              )}
+            </div>
+
+            {/* Tag Pills */}
+            {allTags.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 sm:gap-2">
+                <Badge
+                  variant={selectedTag === null ? "default" : "outline"}
+                  className={cn(
+                    "cursor-pointer transition-all text-xs",
+                    selectedTag === null && "shadow-glow-sm"
+                  )}
+                  onClick={() => setSelectedTag(null)}
+                >
+                  All
+                </Badge>
+                {allTags.slice(0, 8).map((tag) => (
+                  <Badge
+                    key={tag}
+                    variant={selectedTag === tag ? "default" : "outline"}
+                    className={cn(
+                      "cursor-pointer transition-all text-xs",
+                      selectedTag === tag && "shadow-glow-sm"
+                    )}
+                    onClick={() => setSelectedTag(tag)}
+                  >
+                    {tag}
+                  </Badge>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
+          {/* Browse by Department View */}
+          <TabsContent value="browse" className="mt-4 space-y-4">
+            {/* Department Selection */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
+              {categories?.map((cat) => {
+                const CatIcon = categoryIcons[cat.slug] || FileText;
+                const isActive = category === cat.slug;
+                return (
+                  <Link
+                    key={cat.id}
+                    to={`/sops/${cat.slug}`}
+                    className={cn(
+                      "p-3 sm:p-4 rounded-lg border text-center transition-all",
+                      isActive
+                        ? "bg-primary/10 border-primary/30 shadow-glow-sm"
+                        : "bg-card/50 border-border/50 hover:border-primary/20 hover:bg-primary/5"
+                    )}
+                  >
+                    <CatIcon className={cn("w-5 h-5 sm:w-6 sm:h-6 mx-auto mb-1.5", isActive ? "text-primary" : "text-muted-foreground")} />
+                    <p className={cn("text-xs sm:text-sm font-medium truncate", isActive && "text-primary")}>
+                      {cat.name}
+                    </p>
+                  </Link>
+                );
+              })}
+            </div>
+
+            {/* Tag Pills for Browse Mode */}
+            {category && allTags.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 sm:gap-2">
+                <Badge
+                  variant={selectedTag === null ? "default" : "outline"}
+                  className={cn(
+                    "cursor-pointer transition-all text-xs",
+                    selectedTag === null && "shadow-glow-sm"
+                  )}
+                  onClick={() => setSelectedTag(null)}
+                >
+                  All
+                </Badge>
+                {allTags.slice(0, 6).map((tag) => (
+                  <Badge
+                    key={tag}
+                    variant={selectedTag === tag ? "default" : "outline"}
+                    className={cn(
+                      "cursor-pointer transition-all text-xs",
+                      selectedTag === tag && "shadow-glow-sm"
+                    )}
+                    onClick={() => setSelectedTag(tag)}
+                  >
+                    {tag}
+                  </Badge>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
+
+        {/* Resources Grid - Mobile First */}
         {isLoading ? (
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
             {[1, 2, 3, 4, 5, 6].map((i) => (
-              <Skeleton key={i} className="h-48 w-full rounded-xl" />
+              <Skeleton key={i} className="h-44 sm:h-48 w-full rounded-xl" />
             ))}
           </div>
         ) : filteredResources && filteredResources.length > 0 ? (
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
             {filteredResources.map((resource) => (
               <ResourceCard 
                 key={resource.id} 
@@ -152,14 +370,34 @@ export default function SOPLibrary() {
             ))}
           </div>
         ) : (
-          <div className="text-center py-16">
-            <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-foreground mb-2">No resources found</h3>
-            <p className="text-muted-foreground">
-              {selectedTag
-                ? `No resources match the tag "${selectedTag}"`
-                : "No resources in this category yet"}
+          <div className="text-center py-12 sm:py-16">
+            <FileText className="w-10 h-10 sm:w-12 sm:h-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-base sm:text-lg font-medium text-foreground mb-2">No SOPs found</h3>
+            <p className="text-muted-foreground text-sm max-w-md mx-auto">
+              {searchQuery
+                ? `No results for "${searchQuery}"`
+                : selectedTag
+                ? `No SOPs match the tag "${selectedTag}"`
+                : viewMode === "browse" && !category
+                ? "Select a department to view SOPs"
+                : "No SOPs in this category yet"}
             </p>
+            {(searchQuery || selectedTag || taskType !== "all" || roleFilter !== "all" || urgencyFilter !== "all") && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-4"
+                onClick={() => {
+                  setSearchQuery("");
+                  setSelectedTag(null);
+                  setTaskType("all");
+                  setRoleFilter("all");
+                  setUrgencyFilter("all");
+                }}
+              >
+                Clear All Filters
+              </Button>
+            )}
           </div>
         )}
 

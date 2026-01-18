@@ -48,6 +48,10 @@ const WIDGET_LABELS: Record<WidgetKey, { label: string; description: string }> =
     label: "Quick Stats",
     description: "Summary of builds, deliveries, and approvals",
   },
+  slaSnapshot: {
+    label: "Manager SLA Snapshot",
+    description: "Review queue accountability at a glance (managers only)",
+  },
   todaysBuilds: {
     label: "Today's Builds",
     description: "Scheduled builds for today",

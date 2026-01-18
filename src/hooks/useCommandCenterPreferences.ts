@@ -7,6 +7,7 @@ export interface CommandCenterWidgets {
   todaysBuilds: boolean;
   todaysDeliveries: boolean;
   actionRequired: boolean;
+  slaSnapshot: boolean;
   quickLinks: boolean;
 }
 
@@ -20,6 +21,7 @@ const DEFAULT_WIDGETS: CommandCenterWidgets = {
   todaysBuilds: true,
   todaysDeliveries: true,
   actionRequired: true,
+  slaSnapshot: true,
   quickLinks: true,
 };
 
@@ -28,6 +30,7 @@ export const DEFAULT_WIDGET_ORDER: WidgetKey[] = [
   "companyInfo",
   "weather",
   "quickStats",
+  "slaSnapshot",
   "todaysBuilds",
   "todaysDeliveries",
   "actionRequired",
