@@ -1529,53 +1529,77 @@ export type Database = {
         Row: {
           body: string | null
           category_id: string | null
+          common_mistakes: string[] | null
           created_at: string
           description: string | null
           effective_date: string | null
           file_path: string | null
           id: string
+          last_updated_by: string | null
           owner_id: string | null
+          owner_role: string | null
+          purpose: string | null
+          role_target: string[] | null
           tags: string[] | null
+          task_type: string | null
           title: string
           updated_at: string
+          urgency: string | null
           url: string | null
           version: string | null
           view_count: number | null
           visibility: Database["public"]["Enums"]["app_role"]
+          when_to_use: string | null
         }
         Insert: {
           body?: string | null
           category_id?: string | null
+          common_mistakes?: string[] | null
           created_at?: string
           description?: string | null
           effective_date?: string | null
           file_path?: string | null
           id?: string
+          last_updated_by?: string | null
           owner_id?: string | null
+          owner_role?: string | null
+          purpose?: string | null
+          role_target?: string[] | null
           tags?: string[] | null
+          task_type?: string | null
           title: string
           updated_at?: string
+          urgency?: string | null
           url?: string | null
           version?: string | null
           view_count?: number | null
           visibility?: Database["public"]["Enums"]["app_role"]
+          when_to_use?: string | null
         }
         Update: {
           body?: string | null
           category_id?: string | null
+          common_mistakes?: string[] | null
           created_at?: string
           description?: string | null
           effective_date?: string | null
           file_path?: string | null
           id?: string
+          last_updated_by?: string | null
           owner_id?: string | null
+          owner_role?: string | null
+          purpose?: string | null
+          role_target?: string[] | null
           tags?: string[] | null
+          task_type?: string | null
           title?: string
           updated_at?: string
+          urgency?: string | null
           url?: string | null
           version?: string | null
           view_count?: number | null
           visibility?: Database["public"]["Enums"]["app_role"]
+          when_to_use?: string | null
         }
         Relationships: [
           {
