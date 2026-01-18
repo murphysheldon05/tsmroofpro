@@ -32,6 +32,10 @@ const WIDGET_LABELS: Record<keyof CommandCenterWidgets, { label: string; descrip
     label: "Quick Stats",
     description: "Summary of builds, deliveries, and approvals",
   },
+  whoToContact: {
+    label: "Who to Contact",
+    description: "Department contacts quick reference",
+  },
   todaysBuilds: {
     label: "Today's Builds",
     description: "Scheduled builds for today",

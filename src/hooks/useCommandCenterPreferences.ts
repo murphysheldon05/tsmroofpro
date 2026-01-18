@@ -4,6 +4,7 @@ export interface CommandCenterWidgets {
   companyInfo: boolean;
   weather: boolean;
   quickStats: boolean;
+  whoToContact: boolean;
   todaysBuilds: boolean;
   todaysDeliveries: boolean;
   actionRequired: boolean;
@@ -14,6 +15,7 @@ const DEFAULT_WIDGETS: CommandCenterWidgets = {
   companyInfo: true,
   weather: true,
   quickStats: true,
+  whoToContact: true,
   todaysBuilds: true,
   todaysDeliveries: true,
   actionRequired: true,
