@@ -6,6 +6,7 @@ import { TodaysBuildsWidget } from "./TodaysBuildsWidget";
 import { TodaysDeliveriesWidget } from "./TodaysDeliveriesWidget";
 import { ActionRequiredWidget } from "./ActionRequiredWidget";
 import { SlaSnapshotWidget } from "./SlaSnapshotWidget";
+import { QuickSOPAccessWidget } from "./QuickSOPAccessWidget";
 import { CommandCenterQuickLinks } from "./CommandCenterQuickLinks";
 
 interface WidgetRendererProps {
@@ -58,6 +59,12 @@ export function WidgetRenderer({
           <SlaSnapshotWidget />
         </section>
       ) : null;
+    case "quickSOPAccess":
+      return (
+        <section>
+          <QuickSOPAccessWidget />
+        </section>
+      );
     case "todaysBuilds":
       return showBuilds ? (
         <section>

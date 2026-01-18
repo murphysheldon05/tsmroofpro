@@ -100,25 +100,32 @@ export default function SOPLibrary() {
       // Quick SOP Access - flat searchable list
       let resources = searchQuery ? (searchResults || []) : (allResources || []);
       
-      // Apply task type filter (based on tags)
+      // Apply task type filter (use task_type field first, then fall back to tags)
       if (taskType !== "all") {
         resources = resources.filter(r => 
+          r.task_type?.toLowerCase() === taskType.toLowerCase() ||
           r.tags?.some(t => t.toLowerCase().includes(taskType.toLowerCase()))
         );
       }
       
-      // Apply role filter (based on visibility or tags)
+      // Apply role filter (use role_target field first, then fall back to tags/visibility)
       if (roleFilter !== "all") {
-        resources = resources.filter(r => 
-          r.tags?.some(t => t.toLowerCase().includes(roleFilter.toLowerCase())) ||
-          (roleFilter === "manager" && r.visibility === "manager") ||
-          (roleFilter === "field" && (r.visibility === "employee" || r.tags?.some(t => t.toLowerCase().includes("field"))))
-        );
+        resources = resources.filter(r => {
+          // Check role_target array first
+          if (r.role_target && r.role_target.length > 0) {
+            return r.role_target.some(rt => rt.toLowerCase().includes(roleFilter.toLowerCase()));
+          }
+          // Fall back to tags
+          return r.tags?.some(t => t.toLowerCase().includes(roleFilter.toLowerCase())) ||
+            (roleFilter === "manager" && r.visibility === "manager") ||
+            (roleFilter === "field" && (r.visibility === "employee" || r.tags?.some(t => t.toLowerCase().includes("field"))));
+        });
       }
       
-      // Apply urgency filter
+      // Apply urgency filter (use urgency field first, then fall back to tags)
       if (urgencyFilter !== "all") {
         resources = resources.filter(r => 
+          r.urgency?.toLowerCase() === urgencyFilter.toLowerCase() ||
           r.tags?.some(t => t.toLowerCase().includes(urgencyFilter.toLowerCase()))
         );
       }

@@ -18,6 +18,15 @@ export interface Resource {
   view_count: number;
   created_at: string;
   updated_at: string;
+  // New SOP metadata fields
+  task_type: string | null;
+  role_target: string[] | null;
+  urgency: string | null;
+  owner_role: string | null;
+  last_updated_by: string | null;
+  purpose: string | null;
+  when_to_use: string | null;
+  common_mistakes: string[] | null;
   categories?: {
     id: string;
     name: string;
@@ -147,7 +156,7 @@ export function useSearchResources(query: string) {
             slug
           )
         `)
-        .or(`title.ilike.%${query}%,description.ilike.%${query}%`)
+        .or(`title.ilike.%${query}%,description.ilike.%${query}%,purpose.ilike.%${query}%,body.ilike.%${query}%`)
         .order("updated_at", { ascending: false });
       
       if (error) throw error;
@@ -161,7 +170,16 @@ export function useCreateResource() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (resource: Omit<Resource, "id" | "created_at" | "updated_at" | "view_count" | "categories">) => {
+    mutationFn: async (resource: Omit<Resource, "id" | "created_at" | "updated_at" | "view_count" | "categories" | "task_type" | "role_target" | "urgency" | "owner_role" | "last_updated_by" | "purpose" | "when_to_use" | "common_mistakes"> & {
+      task_type?: string | null;
+      role_target?: string[] | null;
+      urgency?: string | null;
+      owner_role?: string | null;
+      last_updated_by?: string | null;
+      purpose?: string | null;
+      when_to_use?: string | null;
+      common_mistakes?: string[] | null;
+    }) => {
       const { data, error } = await supabase
         .from("resources")
         .insert(resource)
