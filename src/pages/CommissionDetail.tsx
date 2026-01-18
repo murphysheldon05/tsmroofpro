@@ -1,9 +1,9 @@
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
+
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { 
@@ -15,7 +15,6 @@ import {
   XCircle, 
   AlertCircle,
   DollarSign,
-  FileText,
   History,
   Loader2,
   UserCheck,
@@ -64,6 +63,7 @@ const APPROVAL_STAGE_CONFIG: Record<string, { label: string; icon: React.ReactNo
 export default function CommissionDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user, role } = useAuth();
   const { data: submission, isLoading, refetch } = useCommissionSubmission(id!);
   const { data: statusLog } = useCommissionStatusLog(id!);
@@ -73,10 +73,12 @@ export default function CommissionDetail() {
   
   const [rejectionReason, setRejectionReason] = useState("");
   const [reviewerNotes, setReviewerNotes] = useState("");
-  const [isEditing, setIsEditing] = useState(false);
+  
+  // Support ?edit=true URL param to auto-open edit mode
+  const editParam = searchParams.get("edit") === "true";
+  const [isEditing, setIsEditing] = useState(editParam);
 
   const isAdmin = role === "admin";
-  const isManager = role === "manager" || isAdmin;
   
   // Check if the current user is the submitter and can edit
   const isSubmitter = submission && user && submission.submitted_by === user.id;
@@ -176,9 +178,19 @@ export default function CommissionDetail() {
     setReviewerNotes("");
   };
 
+  // Handle closing edit mode
+  const handleCloseEdit = () => {
+    setIsEditing(false);
+    // Clear edit param from URL
+    if (searchParams.has("edit")) {
+      searchParams.delete("edit");
+      setSearchParams(searchParams);
+    }
+  };
+
   // Handle successful edit
   const handleEditSuccess = () => {
-    setIsEditing(false);
+    handleCloseEdit();
     refetch();
   };
 
@@ -188,7 +200,7 @@ export default function CommissionDetail() {
       <AppLayout>
         <div className="max-w-4xl mx-auto space-y-6">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => setIsEditing(false)}>
+            <Button variant="ghost" size="icon" onClick={handleCloseEdit}>
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div>
@@ -200,7 +212,7 @@ export default function CommissionDetail() {
           <CommissionEditForm
             submission={submission}
             onSuccess={handleEditSuccess}
-            onCancel={() => setIsEditing(false)}
+            onCancel={handleCloseEdit}
           />
         </div>
       </AppLayout>
