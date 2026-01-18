@@ -21,8 +21,9 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Check, X, Loader2, UserPlus, Clock, Building2 } from "lucide-react";
+import { Check, X, Loader2, UserPlus, Clock, Building2, Percent, Users } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useCommissionTiers } from "@/hooks/useCommissionTiers";
 
 interface PendingUser {
   id: string;
@@ -61,14 +62,17 @@ const ASSIGNABLE_ROLES = [
 export function PendingApprovals() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const { data: commissionTiers } = useCommissionTiers();
   const [approvingId, setApprovingId] = useState<string | null>(null);
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [selectedRoles, setSelectedRoles] = useState<Record<string, string>>({});
   const [selectedDepartments, setSelectedDepartments] = useState<Record<string, string>>({});
+  const [selectedTiers, setSelectedTiers] = useState<Record<string, string>>({});
   const [approvalDialog, setApprovalDialog] = useState<{ open: boolean; user: PendingUser | null }>({ open: false, user: null });
   const [customMessage, setCustomMessage] = useState("");
 
-  const { data: pendingUsers, isLoading } = useQuery({
+  // CRITICAL: Only fetch users where is_approved = false (strict filter)
+  const { data: pendingUsers, isLoading, refetch: refetchPending } = useQuery({
     queryKey: ["pending-approvals"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -80,7 +84,8 @@ export function PendingApprovals() {
       if (error) throw error;
       return data as PendingUser[];
     },
-    refetchInterval: 30000,
+    refetchInterval: 10000, // More frequent refresh
+    staleTime: 5000,
   });
 
   const { data: departments } = useQuery({
@@ -96,9 +101,32 @@ export function PendingApprovals() {
     },
   });
 
+  // Get managers for team assignment
+  const { data: managers } = useQuery({
+    queryKey: ["managers-for-approval"],
+    queryFn: async () => {
+      const { data: roles, error: rolesError } = await supabase
+        .from("user_roles")
+        .select("user_id, role")
+        .in("role", ["manager", "admin"]);
+
+      if (rolesError) throw rolesError;
+
+      const managerIds = roles?.map((r) => r.user_id) || [];
+      if (managerIds.length === 0) return [];
+
+      const { data: profiles, error: profilesError } = await supabase
+        .from("profiles")
+        .select("id, full_name, email")
+        .in("id", managerIds);
+
+      if (profilesError) throw profilesError;
+      return profiles || [];
+    },
+  });
+
   const getDefaultRole = (requestedRole: string | null): string => {
     if (!requestedRole) return "employee";
-    // Map requested roles to system roles
     if (requestedRole === "admin") return "admin";
     if (["office_admin", "va"].includes(requestedRole)) return "manager";
     return "employee";
@@ -119,13 +147,14 @@ export function PendingApprovals() {
   const handleApprove = async () => {
     const pendingUser = approvalDialog.user;
     if (!pendingUser) return;
-    
+
     const assignedRole = selectedRoles[pendingUser.id] || getDefaultRole(pendingUser.requested_role);
     const assignedDepartmentId = selectedDepartments[pendingUser.id] || null;
-    
+    const assignedTierId = selectedTiers[pendingUser.id] || null;
+
     setApprovingId(pendingUser.id);
     try {
-      // Update profile to approved with department
+      // STEP 1: Update profile to approved with department
       const { error: profileError } = await supabase
         .from("profiles")
         .update({
@@ -138,7 +167,7 @@ export function PendingApprovals() {
 
       if (profileError) throw profileError;
 
-      // Update user role
+      // STEP 2: Update user role
       const { error: roleError } = await supabase
         .from("user_roles")
         .update({ role: assignedRole as "admin" | "manager" | "employee" })
@@ -146,10 +175,31 @@ export function PendingApprovals() {
 
       if (roleError) throw roleError;
 
+      // STEP 3: Assign commission tier if selected
+      if (assignedTierId) {
+        // Delete any existing assignment first
+        await supabase
+          .from("user_commission_tiers")
+          .delete()
+          .eq("user_id", pendingUser.id);
+
+        const { error: tierError } = await supabase
+          .from("user_commission_tiers")
+          .insert({
+            user_id: pendingUser.id,
+            tier_id: assignedTierId,
+            assigned_by: user?.id,
+          });
+
+        if (tierError) {
+          console.error("Failed to assign commission tier:", tierError);
+        }
+      }
+
       // Get department name for notification
       const assignedDeptName = departments?.find(d => d.id === assignedDepartmentId)?.name || null;
 
-      // Send approval notification email
+      // STEP 4: Send approval notification email with CORRECT URL
       if (pendingUser.email) {
         try {
           await supabase.functions.invoke("send-approval-notification", {
@@ -167,9 +217,32 @@ export function PendingApprovals() {
       }
 
       toast.success(`User approved as ${assignedRole}${assignedDeptName ? ` in ${assignedDeptName}` : ''}!`);
+      
+      // STEP 5: FORCE UI RECONCILIATION - Clear dialog and invalidate queries
       setApprovalDialog({ open: false, user: null });
-      queryClient.invalidateQueries({ queryKey: ["pending-approvals"] });
-      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+      
+      // Clear cached selections for this user
+      setSelectedRoles(prev => {
+        const next = { ...prev };
+        delete next[pendingUser.id];
+        return next;
+      });
+      setSelectedDepartments(prev => {
+        const next = { ...prev };
+        delete next[pendingUser.id];
+        return next;
+      });
+      setSelectedTiers(prev => {
+        const next = { ...prev };
+        delete next[pendingUser.id];
+        return next;
+      });
+
+      // Invalidate and refetch immediately
+      await queryClient.invalidateQueries({ queryKey: ["pending-approvals"] });
+      await queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+      await refetchPending();
+      
     } catch (error: any) {
       toast.error("Failed to approve user: " + error.message);
     } finally {
@@ -191,8 +264,9 @@ export function PendingApprovals() {
       if (error) throw error;
 
       toast.success("User rejected and removed");
-      queryClient.invalidateQueries({ queryKey: ["pending-approvals"] });
-      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+      await queryClient.invalidateQueries({ queryKey: ["pending-approvals"] });
+      await queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+      await refetchPending();
     } catch (error: any) {
       toast.error("Failed to reject user: " + error.message);
     } finally {
@@ -335,19 +409,22 @@ export function PendingApprovals() {
         </table>
       </div>
 
-      {/* Approval Dialog */}
+      {/* Approval Dialog with full user configuration */}
       <Dialog open={approvalDialog.open} onOpenChange={(open) => setApprovalDialog({ open, user: open ? approvalDialog.user : null })}>
-        <DialogContent>
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Approve User</DialogTitle>
             <DialogDescription>
-              Approve {approvalDialog.user?.full_name || approvalDialog.user?.email} for access to TSM Hub.
+              Configure {approvalDialog.user?.full_name || approvalDialog.user?.email}'s account settings.
             </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label>Assigned Role</Label>
+              <Label className="flex items-center gap-2">
+                <Users className="w-4 h-4" />
+                Assigned Role
+              </Label>
               <Select
                 value={approvalDialog.user ? (selectedRoles[approvalDialog.user.id] || getDefaultRole(approvalDialog.user.requested_role)) : "employee"}
                 onValueChange={(value) => {
@@ -375,7 +452,10 @@ export function PendingApprovals() {
             </div>
             
             <div className="space-y-2">
-              <Label>Assigned Department</Label>
+              <Label className="flex items-center gap-2">
+                <Building2 className="w-4 h-4" />
+                Department
+              </Label>
               <Select
                 value={approvalDialog.user ? (selectedDepartments[approvalDialog.user.id] || "") : ""}
                 onValueChange={(value) => {
@@ -400,6 +480,32 @@ export function PendingApprovals() {
                   Requested: {DEPARTMENT_LABELS[approvalDialog.user.requested_department] || approvalDialog.user.requested_department}
                 </p>
               )}
+            </div>
+
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <Percent className="w-4 h-4" />
+                Commission Tier (optional)
+              </Label>
+              <Select
+                value={approvalDialog.user ? (selectedTiers[approvalDialog.user.id] || "") : ""}
+                onValueChange={(value) => {
+                  if (approvalDialog.user) {
+                    setSelectedTiers(prev => ({ ...prev, [approvalDialog.user!.id]: value }));
+                  }
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="No tier assigned" />
+                </SelectTrigger>
+                <SelectContent>
+                  {commissionTiers?.map((tier) => (
+                    <SelectItem key={tier.id} value={tier.id}>
+                      {tier.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             
             <div className="space-y-2">

@@ -29,3 +29,9 @@ verify_jwt = false
 
 [functions.send-commission-notification]
 verify_jwt = false
+
+[functions.send-warranty-notification]
+verify_jwt = false
+
+[functions.send-invite-email]
+verify_jwt = false
