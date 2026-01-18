@@ -72,15 +72,24 @@
 @layer base {
   * {
     @apply border-border;
+    box-sizing: border-box;
   }
 
   html {
     scroll-behavior: smooth;
+    overflow-x: hidden;
   }
 
   body {
     @apply bg-background text-foreground font-sans antialiased;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    overflow-x: hidden;
+    max-width: 100vw;
+  }
+
+  /* Global mobile-first overflow prevention */
+  main, section, article, div, header, footer, aside {
+    max-width: 100%;
   }
 
   /* Scrollbar styling */
@@ -100,6 +109,17 @@
 
   ::-webkit-scrollbar-thumb:hover {
     background: hsl(var(--muted-foreground));
+  }
+
+  /* Responsive table wrapper */
+  .table-responsive {
+    @apply overflow-x-auto -mx-4 px-4;
+  }
+
+  @media (max-width: 767px) {
+    .table-responsive table {
+      @apply min-w-[600px];
+    }
   }
 }
 

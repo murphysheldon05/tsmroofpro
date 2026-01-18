@@ -301,7 +301,7 @@ export default function PendingReview() {
           </CardContent>
         </Card>
 
-        {/* Table */}
+        {/* Mobile Card View / Desktop Table View */}
         <Card>
           <CardContent className="p-0">
             {filteredItems.length === 0 ? (
@@ -313,133 +313,236 @@ export default function PendingReview() {
                 <p className="text-sm text-muted-foreground">No items require your attention.</p>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[100px]">Type</TableHead>
-                      <TableHead>Title / Reference</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-center">Age</TableHead>
-                      <TableHead>SLA</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredItems.map((item) => {
-                      const TypeIcon = typeIcons[item.type];
-                      return (
-                        <TableRow key={`${item.type}-${item.id}`} className="cursor-pointer hover:bg-muted/50">
-                          <TableCell onClick={() => handleNavigate(item)}>
-                            <div className="flex items-center gap-2">
-                              <TypeIcon className={`w-4 h-4 ${typeColors[item.type]}`} />
-                              <span className="text-xs font-medium">{typeLabels[item.type]}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell onClick={() => handleNavigate(item)}>
-                            <div className="min-w-0">
-                              <p className="font-medium truncate max-w-[200px]">{item.title}</p>
-                              <p className="text-xs text-muted-foreground truncate max-w-[200px]">
-                                {item.subtitle}
-                              </p>
-                              {item.rejection_reason && (
-                                <p className="text-xs text-destructive mt-1 truncate max-w-[200px]">
-                                  Reason: {item.rejection_reason}
-                                </p>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell onClick={() => handleNavigate(item)}>
-                            <Badge variant="secondary" className="text-xs">
-                              {actionLabels[item.requires_action]}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-center" onClick={() => handleNavigate(item)}>
-                            <span className="text-sm font-medium">{item.age_days}</span>
-                            <span className="text-xs text-muted-foreground ml-1">days</span>
-                          </TableCell>
-                          <TableCell onClick={() => handleNavigate(item)}>
-                            <SlaBadge status={item.sla_status} />
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center justify-end gap-1">
-                              {isReviewer ? (
-                                // Manager/Admin Actions
+              <>
+                {/* Mobile Card View */}
+                <div className="md:hidden p-4 space-y-3">
+                  {filteredItems.map((item) => {
+                    const TypeIcon = typeIcons[item.type];
+                    return (
+                      <div
+                        key={`mobile-${item.type}-${item.id}`}
+                        className="p-4 rounded-lg border border-border bg-card/50 space-y-3"
+                        onClick={() => handleNavigate(item)}
+                      >
+                        {/* Header Row */}
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <TypeIcon className={`w-4 h-4 flex-shrink-0 ${typeColors[item.type]}`} />
+                            <span className="text-xs font-medium">{typeLabels[item.type]}</span>
+                          </div>
+                          <SlaBadge status={item.sla_status} />
+                        </div>
+                        
+                        {/* Title & Subtitle */}
+                        <div className="min-w-0">
+                          <p className="font-medium text-sm truncate">{item.title}</p>
+                          <p className="text-xs text-muted-foreground truncate">{item.subtitle}</p>
+                        </div>
+                        
+                        {/* Status Row */}
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Badge variant="secondary" className="text-xs">
+                            {actionLabels[item.requires_action]}
+                          </Badge>
+                          <span className="text-xs text-muted-foreground">
+                            {item.age_days} day{item.age_days !== 1 ? "s" : ""} old
+                          </span>
+                        </div>
+                        
+                        {/* Rejection Reason */}
+                        {item.rejection_reason && (
+                          <div className="p-2 rounded bg-destructive/5 border border-destructive/10">
+                            <p className="text-xs text-destructive font-medium">Reason:</p>
+                            <p className="text-xs text-muted-foreground line-clamp-2">{item.rejection_reason}</p>
+                          </div>
+                        )}
+                        
+                        {/* Actions */}
+                        <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-border/50">
+                          {isReviewer ? (
+                            <>
+                              <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); handleNavigate(item); }}>
+                                <Eye className="w-3 h-3 mr-1" />
+                                Review
+                              </Button>
+                              {item.type === "commission" && (
                                 <>
                                   <Button
-                                    variant="ghost"
                                     size="sm"
-                                    onClick={() => handleNavigate(item)}
+                                    variant="outline"
+                                    className="text-emerald-600"
+                                    onClick={(e) => { e.stopPropagation(); handleApprove(item); }}
+                                    disabled={isSubmitting}
                                   >
-                                    <Eye className="w-4 h-4 mr-1" />
-                                    Review
+                                    <CheckCircle className="w-3 h-3 mr-1" />
+                                    Approve
                                   </Button>
-                                  {item.type === "commission" && (
-                                    <>
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="text-emerald-600 hover:text-emerald-700"
-                                        onClick={() => handleApprove(item)}
-                                        disabled={isSubmitting}
-                                      >
-                                        <CheckCircle className="w-4 h-4 mr-1" />
-                                        Approve
-                                      </Button>
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="text-destructive hover:text-destructive"
-                                        onClick={() => handleOpenReject(item)}
-                                        disabled={isSubmitting}
-                                      >
-                                        <XCircle className="w-4 h-4 mr-1" />
-                                        Reject
-                                      </Button>
-                                    </>
-                                  )}
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="text-destructive"
+                                    onClick={(e) => { e.stopPropagation(); handleOpenReject(item); }}
+                                    disabled={isSubmitting}
+                                  >
+                                    <XCircle className="w-3 h-3 mr-1" />
+                                    Reject
+                                  </Button>
                                 </>
-                              ) : (
-                                // User Actions
-                                <>
-                                  {item.requires_action === "revision" && (
+                              )}
+                            </>
+                          ) : (
+                            <>
+                              {item.requires_action === "revision" && (
+                                <Button size="sm" onClick={(e) => { e.stopPropagation(); handleEdit(item); }}>
+                                  <Edit className="w-3 h-3 mr-1" />
+                                  Edit & Resubmit
+                                </Button>
+                              )}
+                              {item.requires_action === "info_needed" && (
+                                <Button size="sm" onClick={(e) => { e.stopPropagation(); handleNavigate(item); }}>
+                                  <MessageSquare className="w-3 h-3 mr-1" />
+                                  Provide Info
+                                </Button>
+                              )}
+                              <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); handleNavigate(item); }}>
+                                <Eye className="w-3 h-3 mr-1" />
+                                View
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Desktop Table View */}
+                <div className="hidden md:block overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-[100px]">Type</TableHead>
+                        <TableHead>Title / Reference</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-center">Age</TableHead>
+                        <TableHead>SLA</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredItems.map((item) => {
+                        const TypeIcon = typeIcons[item.type];
+                        return (
+                          <TableRow key={`${item.type}-${item.id}`} className="cursor-pointer hover:bg-muted/50">
+                            <TableCell onClick={() => handleNavigate(item)}>
+                              <div className="flex items-center gap-2">
+                                <TypeIcon className={`w-4 h-4 ${typeColors[item.type]}`} />
+                                <span className="text-xs font-medium">{typeLabels[item.type]}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell onClick={() => handleNavigate(item)}>
+                              <div className="min-w-0">
+                                <p className="font-medium truncate max-w-[200px]">{item.title}</p>
+                                <p className="text-xs text-muted-foreground truncate max-w-[200px]">
+                                  {item.subtitle}
+                                </p>
+                                {item.rejection_reason && (
+                                  <p className="text-xs text-destructive mt-1 truncate max-w-[200px]">
+                                    Reason: {item.rejection_reason}
+                                  </p>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell onClick={() => handleNavigate(item)}>
+                              <Badge variant="secondary" className="text-xs">
+                                {actionLabels[item.requires_action]}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-center" onClick={() => handleNavigate(item)}>
+                              <span className="text-sm font-medium">{item.age_days}</span>
+                              <span className="text-xs text-muted-foreground ml-1">days</span>
+                            </TableCell>
+                            <TableCell onClick={() => handleNavigate(item)}>
+                              <SlaBadge status={item.sla_status} />
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center justify-end gap-1">
+                                {isReviewer ? (
+                                  <>
                                     <Button
-                                      variant="default"
-                                      size="sm"
-                                      onClick={() => handleEdit(item)}
-                                    >
-                                      <Edit className="w-4 h-4 mr-1" />
-                                      Edit & Resubmit
-                                    </Button>
-                                  )}
-                                  {item.requires_action === "info_needed" && (
-                                    <Button
-                                      variant="default"
+                                      variant="ghost"
                                       size="sm"
                                       onClick={() => handleNavigate(item)}
                                     >
-                                      <MessageSquare className="w-4 h-4 mr-1" />
-                                      Provide Info
+                                      <Eye className="w-4 h-4 mr-1" />
+                                      Review
                                     </Button>
-                                  )}
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => handleNavigate(item)}
-                                  >
-                                    <Eye className="w-4 h-4 mr-1" />
-                                    View
-                                  </Button>
-                                </>
-                              )}
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
+                                    {item.type === "commission" && (
+                                      <>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="text-emerald-600 hover:text-emerald-700"
+                                          onClick={() => handleApprove(item)}
+                                          disabled={isSubmitting}
+                                        >
+                                          <CheckCircle className="w-4 h-4 mr-1" />
+                                          Approve
+                                        </Button>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="text-destructive hover:text-destructive"
+                                          onClick={() => handleOpenReject(item)}
+                                          disabled={isSubmitting}
+                                        >
+                                          <XCircle className="w-4 h-4 mr-1" />
+                                          Reject
+                                        </Button>
+                                      </>
+                                    )}
+                                  </>
+                                ) : (
+                                  <>
+                                    {item.requires_action === "revision" && (
+                                      <Button
+                                        variant="default"
+                                        size="sm"
+                                        onClick={() => handleEdit(item)}
+                                      >
+                                        <Edit className="w-4 h-4 mr-1" />
+                                        Edit & Resubmit
+                                      </Button>
+                                    )}
+                                    {item.requires_action === "info_needed" && (
+                                      <Button
+                                        variant="default"
+                                        size="sm"
+                                        onClick={() => handleNavigate(item)}
+                                      >
+                                        <MessageSquare className="w-4 h-4 mr-1" />
+                                        Provide Info
+                                      </Button>
+                                    )}
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleNavigate(item)}
+                                    >
+                                      <Eye className="w-4 h-4 mr-1" />
+                                      View
+                                    </Button>
+                                  </>
+                                )}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+              </>
             )}
           </CardContent>
         </Card>

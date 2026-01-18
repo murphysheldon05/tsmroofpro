@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 
 export interface CommandCenterWidgets {
   companyInfo: boolean;
-  companyIdentity: boolean;
   weather: boolean;
   quickStats: boolean;
   todaysBuilds: boolean;
@@ -13,9 +12,9 @@ export interface CommandCenterWidgets {
 
 export type WidgetKey = keyof CommandCenterWidgets;
 
+// Core Identity is LOCKED and always shown - not configurable
 const DEFAULT_WIDGETS: CommandCenterWidgets = {
   companyInfo: true,
-  companyIdentity: true,
   weather: true,
   quickStats: true,
   todaysBuilds: true,
@@ -24,9 +23,9 @@ const DEFAULT_WIDGETS: CommandCenterWidgets = {
   quickLinks: true,
 };
 
+// Core Identity is ALWAYS FIRST and LOCKED - cannot be reordered
 export const DEFAULT_WIDGET_ORDER: WidgetKey[] = [
   "companyInfo",
-  "companyIdentity",
   "weather",
   "quickStats",
   "todaysBuilds",

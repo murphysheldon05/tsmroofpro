@@ -255,13 +255,20 @@ export function ActionRequiredWidget() {
     }
   };
 
+  const hasItems = (data?.counts?.total || 0) > 0;
+
+  // For standard users (non-reviewers), hide the widget entirely if no action items exist
+  if (!isReviewer && !hasItems && !isLoading) {
+    return null;
+  }
+
   if (isLoading) {
     return (
-      <Card variant="neon">
+      <Card>
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-lg">
             <AlertTriangle className="w-5 h-5 text-amber-500" />
-            Pending Review / Needs Action
+            {isReviewer ? "Pending Review" : "Needs Your Action"}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -274,26 +281,24 @@ export function ActionRequiredWidget() {
       </Card>
     );
   }
-
-  const hasItems = (data?.counts?.total || 0) > 0;
   const displayItems = data?.items?.slice(0, 5) || [];
   
   // Count overdue items for alert
   const overdueCount = data?.items?.filter(i => i.sla_status === "overdue").length || 0;
 
   return (
-    <Card variant="neon">
+    <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-lg">
-          <AlertTriangle className="w-5 h-5 text-amber-500" />
-          {isReviewer ? "Pending Review" : "Needs Your Action"}
+        <CardTitle className="flex items-center gap-2 text-base sm:text-lg flex-wrap">
+          <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0" />
+          <span className="min-w-0">{isReviewer ? "Pending Review" : "Needs Your Action"}</span>
           {hasItems && (
-            <Badge variant="destructive" className="ml-2">
+            <Badge variant="destructive" className="ml-auto sm:ml-2">
               {data?.counts?.total}
             </Badge>
           )}
           {overdueCount > 0 && (
-            <Badge className="ml-1 bg-destructive text-destructive-foreground">
+            <Badge className="bg-destructive text-destructive-foreground">
               {overdueCount} Overdue
             </Badge>
           )}

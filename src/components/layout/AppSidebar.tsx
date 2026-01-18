@@ -12,7 +12,6 @@ import {
   GraduationCap,
   Wrench,
   Send,
-  Building2,
   Settings,
   LogOut,
   ChevronDown,
@@ -30,6 +29,7 @@ import {
   Truck,
   DollarSign,
   Calendar,
+  ClipboardCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -56,18 +56,13 @@ interface NavItem {
   children?: NavChild[];
 }
 
+// Main navigation - exact order as specified in TASK A2
 const navigation: NavItem[] = [
   {
     title: "Command Center",
     href: "/command-center",
     icon: LayoutGrid,
     sectionKey: "command-center",
-  },
-  {
-    title: "Pending Review",
-    href: "/pending-review",
-    icon: Send,
-    sectionKey: "pending-review",
   },
   {
     title: "Dashboard",
@@ -85,26 +80,13 @@ const navigation: NavItem[] = [
     ],
   },
   {
-    title: "Who to Contact",
-    href: "/directory",
-    icon: Users,
-    sectionKey: "directory",
-  },
-  {
     title: "Production",
     icon: Hammer,
     sectionKey: "production",
     children: [
+      { title: "Build Schedule", href: "/build-schedule", icon: Calendar, sectionKey: "production/build" },
+      { title: "Delivery Schedule", href: "/delivery-schedule", icon: Truck, sectionKey: "production/delivery" },
       { title: "Warranty Tracker", href: "/warranties", icon: Shield, sectionKey: "production/warranties" },
-    ],
-  },
-  {
-    title: "Production Calendar",
-    icon: Calendar,
-    sectionKey: "production-calendar",
-    children: [
-      { title: "Build Schedule", href: "/build-schedule", icon: Hammer, sectionKey: "production-calendar/build" },
-      { title: "Delivery Schedule", href: "/delivery-schedule", icon: Truck, sectionKey: "production-calendar/delivery" },
     ],
   },
   {
@@ -115,7 +97,7 @@ const navigation: NavItem[] = [
       { title: "Sales", href: "/sops/sales", icon: TrendingUp, sectionKey: "sops/sales" },
       { title: "Production", href: "/sops/production", icon: Hammer, sectionKey: "sops/production" },
       { title: "Supplements", href: "/sops/supplements", icon: FileCode, sectionKey: "sops/supplements" },
-      { title: "Office Admin", href: "/sops/office-admin", icon: Building2, sectionKey: "sops/office-admin" },
+      { title: "Office Admin", href: "/sops/office-admin", icon: FileText, sectionKey: "sops/office-admin" },
       { title: "Accounting", href: "/sops/accounting", icon: Calculator, sectionKey: "sops/accounting" },
       { title: "Human Resources", href: "/sops/safety-hr", icon: Shield, sectionKey: "sops/safety-hr" },
       { title: "Templates", href: "/sops/templates-scripts", icon: FileCode, sectionKey: "sops/templates-scripts" },
@@ -130,6 +112,12 @@ const navigation: NavItem[] = [
       { title: "Role Training", href: "/training/role-training", icon: GraduationCap, sectionKey: "training/role-training" },
       { title: "Video Library", href: "/training/video-library", icon: Video, sectionKey: "training/video-library" },
     ],
+  },
+  {
+    title: "Who to Contact",
+    href: "/directory",
+    icon: Users,
+    sectionKey: "directory",
   },
   {
     title: "Tools & Systems",
@@ -175,7 +163,6 @@ export function AppSidebar() {
 
     fetchProfile();
 
-    // Subscribe to profile changes
     const channel = supabase
       .channel(`profile-avatar-${user.id}`)
       .on(
@@ -242,11 +229,9 @@ export function AppSidebar() {
     .map((item) => {
       if (item.children) {
         const filteredChildren = item.children.filter((child) => {
-          // Check managerOnly flag
           if (child.managerOnly && !isManager && !isAdmin) return false;
           return isSectionVisible(child.sectionKey, userPermissions, role);
         });
-        // Only include parent if it has visible children
         if (filteredChildren.length === 0) return null;
         return { ...item, children: filteredChildren };
       }
@@ -368,20 +353,41 @@ export function AppSidebar() {
           </Badge>
         </button>
 
-        {isAdmin && (
-          <button
-            onClick={() => handleNavClick("/admin")}
-            className={cn(
-              "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 relative",
-              isActive("/admin")
-                ? "nav-item-active"
-                : "text-sidebar-foreground hover:bg-primary/5 hover:text-primary/80"
+        {/* Admin & Manager Panel - Only visible to admins/managers */}
+        {(isAdmin || isManager) && (
+          <div className="pt-2 border-t border-primary/10">
+            <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-3 mb-1 block">
+              Admin & Manager Panel
+            </span>
+            <button
+              onClick={() => handleNavClick("/pending-review")}
+              className={cn(
+                "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-200 relative",
+                isActive("/pending-review")
+                  ? "nav-item-active font-medium"
+                  : "text-sidebar-foreground/70 hover:bg-primary/5 hover:text-primary/80"
+              )}
+            >
+              <ClipboardCheck className={cn("w-4 h-4", isActive("/pending-review") && "nav-icon-glow")} />
+              Pending Review
+            </button>
+            {isAdmin && (
+              <button
+                onClick={() => handleNavClick("/admin")}
+                className={cn(
+                  "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-200 relative",
+                  isActive("/admin")
+                    ? "nav-item-active font-medium"
+                    : "text-sidebar-foreground/70 hover:bg-primary/5 hover:text-primary/80"
+                )}
+              >
+                <Settings className={cn("w-4 h-4", isActive("/admin") && "nav-icon-glow")} />
+                Admin Panel
+              </button>
             )}
-          >
-            <Settings className={cn("w-4 h-4", isActive("/admin") && "nav-icon-glow")} />
-            Admin Panel
-          </button>
+          </div>
         )}
+        
         <button
           onClick={() => signOut()}
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-sidebar-foreground hover:bg-destructive/10 hover:text-destructive transition-all duration-200"
@@ -416,7 +422,7 @@ export function AppSidebar() {
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed top-0 left-0 h-full w-64 sidebar-neon flex flex-col z-50 transition-transform duration-300 lg:translate-x-0",
+          "fixed top-0 left-0 h-full w-64 sidebar-neon flex flex-col z-50 transition-transform duration-300 lg:translate-x-0 overflow-y-auto",
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
