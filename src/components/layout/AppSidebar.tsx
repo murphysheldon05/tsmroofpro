@@ -64,6 +64,12 @@ const navigation: NavItem[] = [
     sectionKey: "command-center",
   },
   {
+    title: "Pending Review",
+    href: "/pending-review",
+    icon: Send,
+    sectionKey: "pending-review",
+  },
+  {
     title: "Dashboard",
     href: "/dashboard",
     icon: LayoutDashboard,

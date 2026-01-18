@@ -1,4 +1,4 @@
-import { usePendingReview, PendingItem } from "@/hooks/usePendingReview";
+import { usePendingReview, PendingItem, SlaStatus } from "@/hooks/usePendingReview";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -16,10 +16,10 @@ import {
   Edit,
   MessageSquare,
   ChevronRight,
-  RotateCcw,
+  Clock,
+  AlertCircle,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { formatDistanceToNow } from "date-fns";
 import {
   Tooltip,
   TooltipContent,
@@ -39,16 +39,40 @@ const typeColors = {
   warranty: "text-primary",
 };
 
-const priorityColors = {
-  high: "bg-destructive/10 text-destructive border-destructive/20",
-  medium: "bg-amber-500/10 text-amber-600 border-amber-500/20",
-  low: "bg-muted text-muted-foreground border-border",
+const typeLabels = {
+  commission: "Commission",
+  request: "Request",
+  warranty: "Warranty",
 };
 
 const actionLabels = {
   review: "Needs Review",
   revision: "Needs Revision",
   info_needed: "Info Requested",
+};
+
+// SLA Badge styling
+const slaStyles: Record<SlaStatus, { label: string; className: string; icon: React.ElementType }> = {
+  overdue: {
+    label: "Overdue",
+    className: "bg-destructive text-destructive-foreground",
+    icon: AlertCircle,
+  },
+  due_today: {
+    label: "Due Today",
+    className: "bg-amber-500 text-white",
+    icon: Clock,
+  },
+  due_tomorrow: {
+    label: "Due Tomorrow",
+    className: "bg-amber-200 text-amber-800 dark:bg-amber-800 dark:text-amber-200",
+    icon: Clock,
+  },
+  on_track: {
+    label: "On Track",
+    className: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300",
+    icon: CheckCircle,
+  },
 };
 
 interface ActionButtonProps {
@@ -77,6 +101,18 @@ function ActionButton({ icon: Icon, label, onClick, variant = "outline" }: Actio
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
+  );
+}
+
+function SlaBadge({ status }: { status: SlaStatus }) {
+  const style = slaStyles[status];
+  const Icon = style.icon;
+  
+  return (
+    <Badge className={`text-[10px] px-1.5 py-0 gap-0.5 ${style.className}`}>
+      <Icon className="w-2.5 h-2.5" />
+      {style.label}
+    </Badge>
   );
 }
 
@@ -112,86 +148,86 @@ function PendingItemRow({ item, isReviewer, onNavigate }: PendingItemRowProps) {
       <div className="flex items-start gap-3">
         <Icon className={`w-4 h-4 mt-0.5 flex-shrink-0 ${typeColors[item.type]}`} />
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <p className="text-sm font-medium truncate">{item.title}</p>
-            <Badge
-              variant="outline"
-              className={`text-[10px] px-1.5 py-0 ${priorityColors[item.priority]}`}
-            >
-              {item.priority}
+          {/* Title Row */}
+          <div className="flex items-center gap-2 mb-1 flex-wrap">
+            <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+              {typeLabels[item.type]}
             </Badge>
+            <p className="text-sm font-medium truncate flex-1">{item.title}</p>
           </div>
-          <p className="text-xs text-muted-foreground truncate">{item.subtitle}</p>
+          
+          {/* Subtitle */}
+          <p className="text-xs text-muted-foreground truncate mb-2">{item.subtitle}</p>
+          
+          {/* Status + SLA Row */}
+          <div className="flex items-center gap-2 flex-wrap mb-2">
+            <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+              {actionLabels[item.requires_action]}
+            </Badge>
+            <SlaBadge status={item.sla_status} />
+            <span className="text-[10px] text-muted-foreground">
+              {item.age_days} day{item.age_days !== 1 ? "s" : ""} old
+            </span>
+          </div>
           
           {/* Show rejection reason for revision items */}
           {item.rejection_reason && (
-            <div className="mt-2 p-2 rounded bg-destructive/5 border border-destructive/10">
+            <div className="p-2 rounded bg-destructive/5 border border-destructive/10 mb-2">
               <p className="text-xs text-destructive font-medium mb-0.5">Reason:</p>
               <p className="text-xs text-muted-foreground line-clamp-2">{item.rejection_reason}</p>
             </div>
           )}
           
-          <div className="flex items-center justify-between mt-2">
-            <div className="flex items-center gap-2">
-              <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                {actionLabels[item.requires_action]}
-              </Badge>
-              <span className="text-[10px] text-muted-foreground">
-                {formatDistanceToNow(new Date(item.updated_at), { addSuffix: true })}
-              </span>
-            </div>
-            
-            {/* Quick Actions */}
-            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-              {isReviewer ? (
-                // Manager/Admin Actions
-                <>
-                  <ActionButton
-                    icon={Eye}
-                    label="Review"
-                    onClick={handleReview}
-                  />
-                  {item.type === "commission" && (
-                    <>
-                      <ActionButton
-                        icon={CheckCircle}
-                        label="Approve"
-                        onClick={handleReview}
-                      />
-                      <ActionButton
-                        icon={XCircle}
-                        label="Request Revision"
-                        onClick={handleReview}
-                        variant="destructive"
-                      />
-                    </>
-                  )}
-                </>
-              ) : (
-                // User Actions for items needing their action
-                <>
-                  {item.requires_action === "revision" && (
+          {/* Quick Actions */}
+          <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            {isReviewer ? (
+              // Manager/Admin Actions
+              <>
+                <ActionButton
+                  icon={Eye}
+                  label="Review"
+                  onClick={handleReview}
+                />
+                {item.type === "commission" && (
+                  <>
                     <ActionButton
-                      icon={Edit}
-                      label="Edit & Resubmit"
-                      onClick={handleEdit}
-                    />
-                  )}
-                  {item.requires_action === "info_needed" && (
-                    <ActionButton
-                      icon={MessageSquare}
-                      label="Provide Info"
+                      icon={CheckCircle}
+                      label="Approve"
                       onClick={handleReview}
                     />
-                  )}
+                    <ActionButton
+                      icon={XCircle}
+                      label="Request Revision"
+                      onClick={handleReview}
+                      variant="destructive"
+                    />
+                  </>
+                )}
+              </>
+            ) : (
+              // User Actions for items needing their action
+              <>
+                {item.requires_action === "revision" && (
                   <ActionButton
-                    icon={Eye}
-                    label="View Details"
+                    icon={Edit}
+                    label="Edit & Resubmit"
+                    onClick={handleEdit}
+                  />
+                )}
+                {item.requires_action === "info_needed" && (
+                  <ActionButton
+                    icon={MessageSquare}
+                    label="Provide Info"
                     onClick={handleReview}
                   />
-                </>
-              )}
-            </div>
+                )}
+                <ActionButton
+                  icon={Eye}
+                  label="View Details"
+                  onClick={handleReview}
+                />
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -231,7 +267,7 @@ export function ActionRequiredWidget() {
         <CardContent>
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (
-              <Skeleton key={i} className="h-16 w-full rounded-lg" />
+              <Skeleton key={i} className="h-20 w-full rounded-lg" />
             ))}
           </div>
         </CardContent>
@@ -241,6 +277,9 @@ export function ActionRequiredWidget() {
 
   const hasItems = (data?.counts?.total || 0) > 0;
   const displayItems = data?.items?.slice(0, 5) || [];
+  
+  // Count overdue items for alert
+  const overdueCount = data?.items?.filter(i => i.sla_status === "overdue").length || 0;
 
   return (
     <Card variant="neon">
@@ -251,6 +290,11 @@ export function ActionRequiredWidget() {
           {hasItems && (
             <Badge variant="destructive" className="ml-2">
               {data?.counts?.total}
+            </Badge>
+          )}
+          {overdueCount > 0 && (
+            <Badge className="ml-1 bg-destructive text-destructive-foreground">
+              {overdueCount} Overdue
             </Badge>
           )}
         </CardTitle>
@@ -289,7 +333,7 @@ export function ActionRequiredWidget() {
               ) : null}
             </div>
 
-            <ScrollArea className="h-[280px] pr-2">
+            <ScrollArea className="h-[320px] pr-2">
               <div className="space-y-2">
                 {displayItems.map((item) => (
                   <PendingItemRow
@@ -303,24 +347,16 @@ export function ActionRequiredWidget() {
             </ScrollArea>
 
             {/* View All Link */}
-            {(data?.counts?.total || 0) > 5 && (
-              <div className="mt-4 pt-3 border-t border-border/50">
-                <Button
-                  variant="ghost"
-                  className="w-full justify-between text-sm"
-                  onClick={() => {
-                    if (isReviewer) {
-                      navigate("/requests?tab=review");
-                    } else {
-                      navigate("/requests?tab=my-requests");
-                    }
-                  }}
-                >
-                  <span>View All ({data?.counts?.total} items)</span>
-                  <ChevronRight className="w-4 h-4" />
-                </Button>
-              </div>
-            )}
+            <div className="mt-4 pt-3 border-t border-border/50">
+              <Button
+                variant="ghost"
+                className="w-full justify-between text-sm"
+                onClick={() => navigate("/pending-review")}
+              >
+                <span>View All {(data?.counts?.total || 0) > 5 ? `(${data?.counts?.total} items)` : ""}</span>
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </div>
           </>
         )}
       </CardContent>
