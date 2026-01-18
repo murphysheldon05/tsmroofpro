@@ -57,12 +57,16 @@ export function PendingApprovalsWidget() {
     enabled: userRole === "admin" || userRole === "manager",
   });
 
-  // Only show for managers and admins
+  // Only show for managers and admins, and only when there are pending items
   if (userRole !== "admin" && userRole !== "manager") {
     return null;
   }
 
+  // Don't show the widget at all if there are no pending requests
   const pendingCount = pendingRequests?.length || 0;
+  if (!isLoading && pendingCount === 0) {
+    return null;
+  }
 
   return (
     <Card variant="neon">
@@ -86,10 +90,10 @@ export function PendingApprovalsWidget() {
               <Skeleton key={i} className="h-14 w-full rounded-lg" />
             ))}
           </div>
-        ) : pendingRequests && pendingRequests.length > 0 ? (
+        ) : (
           <>
             <div className="space-y-2">
-              {pendingRequests.map((request) => (
+              {pendingRequests?.map((request) => (
                 <div
                   key={request.id}
                   className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border border-primary/10 hover:bg-muted/50 hover:border-primary/30 transition-all duration-200"
@@ -114,10 +118,6 @@ export function PendingApprovalsWidget() {
               </Link>
             </Button>
           </>
-        ) : (
-          <p className="text-muted-foreground text-sm text-center py-4">
-            No pending approvals
-          </p>
         )}
       </CardContent>
     </Card>

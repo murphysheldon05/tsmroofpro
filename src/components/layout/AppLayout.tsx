@@ -44,7 +44,7 @@ const routeHierarchy: Record<string, BreadcrumbItem[]> = {
     { label: "New Document", href: "/commission-documents/new" },
   ],
   "/company": [{ label: "Company", href: "/company" }],
-  "/directory": [{ label: "Team Directory", href: "/directory" }],
+  "/directory": [{ label: "Who to Contact", href: "/directory" }],
   "/profile": [{ label: "Profile", href: "/profile" }],
   "/admin": [{ label: "Admin", href: "/admin" }],
 };

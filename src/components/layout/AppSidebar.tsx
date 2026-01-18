@@ -138,7 +138,7 @@ const navigation: NavItem[] = [
     sectionKey: "company",
   },
   {
-    title: "Team Directory",
+    title: "Who to Contact",
     href: "/directory",
     icon: Users,
     sectionKey: "directory",
@@ -156,7 +156,7 @@ export function AppSidebar() {
   const navigate = useNavigate();
   const { signOut, isAdmin, isManager, role, user } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [openSections, setOpenSections] = useState<string[]>(["SOP Library", "Training", "Production", "Production Calendar", "Commissions"]);
+  const [openSections, setOpenSections] = useState<string[]>([]);
   const { data: userPermissions } = useCurrentUserPermissions();
   const [profile, setProfile] = useState<{ avatar_url: string | null; full_name: string | null } | null>(null);
 

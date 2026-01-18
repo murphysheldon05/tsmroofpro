@@ -27,6 +27,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useDepartments } from "@/hooks/useDepartments";
 import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
+import { WhoToContactChart } from "@/components/directory/WhoToContactChart";
 
 interface UserProfile {
   id: string;
@@ -152,13 +153,16 @@ export default function UserDirectory() {
               <Users className="w-6 h-6 text-primary" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-foreground">Team Directory</h1>
+              <h1 className="text-2xl font-bold text-foreground">Who to Contact</h1>
               <p className="text-muted-foreground text-sm">
-                Find and connect with your colleagues
+                Find the right person for your questions
               </p>
             </div>
           </div>
         </header>
+
+        {/* Who to Contact Quick Reference */}
+        <WhoToContactChart />
 
         {/* Search and Filters */}
         <div className="glass-card rounded-xl p-4">
