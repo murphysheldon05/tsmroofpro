@@ -42,8 +42,8 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
-            {/* Public routes */}
-            <Route path="/" element={<Navigate to="/command-center" replace />} />
+            {/* Public routes - root redirects to auth for login/signup flow */}
+            <Route path="/" element={<Navigate to="/auth" replace />} />
             <Route path="/landing" element={<Landing />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/signup" element={<Signup />} />
