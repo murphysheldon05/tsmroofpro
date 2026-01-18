@@ -68,6 +68,7 @@ export function PendingApprovals() {
   const [selectedRoles, setSelectedRoles] = useState<Record<string, string>>({});
   const [selectedDepartments, setSelectedDepartments] = useState<Record<string, string>>({});
   const [selectedTiers, setSelectedTiers] = useState<Record<string, string>>({});
+  const [selectedManagers, setSelectedManagers] = useState<Record<string, string>>({});
   const [approvalDialog, setApprovalDialog] = useState<{ open: boolean; user: PendingUser | null }>({ open: false, user: null });
   const [customMessage, setCustomMessage] = useState("");
 
@@ -151,10 +152,11 @@ export function PendingApprovals() {
     const assignedRole = selectedRoles[pendingUser.id] || getDefaultRole(pendingUser.requested_role);
     const assignedDepartmentId = selectedDepartments[pendingUser.id] || null;
     const assignedTierId = selectedTiers[pendingUser.id] || null;
+    const assignedManagerId = selectedManagers[pendingUser.id] || null;
 
     setApprovingId(pendingUser.id);
     try {
-      // STEP 1: Update profile to approved with department
+      // STEP 1: Update profile to approved with department and manager
       const { error: profileError } = await supabase
         .from("profiles")
         .update({
@@ -162,6 +164,7 @@ export function PendingApprovals() {
           approved_at: new Date().toISOString(),
           approved_by: user?.id,
           department_id: assignedDepartmentId,
+          manager_id: assignedManagerId,
         })
         .eq("id", pendingUser.id);
 
@@ -196,6 +199,26 @@ export function PendingApprovals() {
         }
       }
 
+      // STEP 4: Assign manager (team assignment) if selected
+      if (assignedManagerId) {
+        // Delete any existing assignment first
+        await supabase
+          .from("team_assignments")
+          .delete()
+          .eq("employee_id", pendingUser.id);
+
+        const { error: teamError } = await supabase
+          .from("team_assignments")
+          .insert({
+            employee_id: pendingUser.id,
+            manager_id: assignedManagerId,
+          });
+
+        if (teamError) {
+          console.error("Failed to assign team manager:", teamError);
+        }
+      }
+
       // Get department name for notification
       const assignedDeptName = departments?.find(d => d.id === assignedDepartmentId)?.name || null;
 
@@ -218,7 +241,7 @@ export function PendingApprovals() {
 
       toast.success(`User approved as ${assignedRole}${assignedDeptName ? ` in ${assignedDeptName}` : ''}!`);
       
-      // STEP 5: FORCE UI RECONCILIATION - Clear dialog and invalidate queries
+      // STEP 6: FORCE UI RECONCILIATION - Clear dialog and invalidate queries
       setApprovalDialog({ open: false, user: null });
       
       // Clear cached selections for this user
@@ -237,10 +260,16 @@ export function PendingApprovals() {
         delete next[pendingUser.id];
         return next;
       });
+      setSelectedManagers(prev => {
+        const next = { ...prev };
+        delete next[pendingUser.id];
+        return next;
+      });
 
       // Invalidate and refetch immediately
       await queryClient.invalidateQueries({ queryKey: ["pending-approvals"] });
       await queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+      await queryClient.invalidateQueries({ queryKey: ["team-assignments"] });
       await refetchPending();
       
     } catch (error: any) {
@@ -480,6 +509,35 @@ export function PendingApprovals() {
                   Requested: {DEPARTMENT_LABELS[approvalDialog.user.requested_department] || approvalDialog.user.requested_department}
                 </p>
               )}
+            </div>
+
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <Users className="w-4 h-4" />
+                Manager (for commission routing)
+              </Label>
+              <Select
+                value={approvalDialog.user ? (selectedManagers[approvalDialog.user.id] || "") : ""}
+                onValueChange={(value) => {
+                  if (approvalDialog.user) {
+                    setSelectedManagers(prev => ({ ...prev, [approvalDialog.user!.id]: value }));
+                  }
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="No manager assigned" />
+                </SelectTrigger>
+                <SelectContent>
+                  {managers?.map((manager) => (
+                    <SelectItem key={manager.id} value={manager.id}>
+                      {manager.full_name || manager.email}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Commission forms route through this manager for approval
+              </p>
             </div>
 
             <div className="space-y-2">
