@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { PasswordResetPrompt } from '@/components/auth/PasswordResetPrompt';
 
 type AppRole = 'admin' | 'manager' | 'employee';
+type EmployeeStatus = 'active' | 'pending' | 'rejected' | 'inactive';
 
 interface AuthContextType {
   user: User | null;
@@ -11,11 +12,13 @@ interface AuthContextType {
   loading: boolean;
   role: AppRole | null;
   isApproved: boolean | null;
+  employeeStatus: EmployeeStatus | null;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   isAdmin: boolean;
   isManager: boolean;
+  isActive: boolean; // True only when employee_status = 'active'
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -26,6 +29,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [role, setRole] = useState<AppRole | null>(null);
   const [isApproved, setIsApproved] = useState<boolean | null>(null);
+  const [employeeStatus, setEmployeeStatus] = useState<EmployeeStatus | null>(null);
   const [mustResetPassword, setMustResetPassword] = useState(false);
 
   const fetchUserRole = async (userId: string) => {
@@ -45,7 +49,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const checkProfileStatus = async (userId: string) => {
     const { data } = await supabase
       .from('profiles')
-      .select('must_reset_password, is_approved')
+      .select('must_reset_password, is_approved, employee_status')
       .eq('id', userId)
       .maybeSingle();
     
@@ -54,6 +58,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setMustResetPassword(true);
       }
       setIsApproved(data.is_approved ?? false);
+      setEmployeeStatus((data.employee_status as EmployeeStatus) || 'pending');
+    } else {
+      setEmployeeStatus('pending');
     }
   };
 
@@ -71,6 +78,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } else {
           setRole(null);
           setIsApproved(null);
+          setEmployeeStatus(null);
           setMustResetPassword(false);
         }
         
@@ -138,6 +146,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await supabase.auth.signOut();
     setRole(null);
     setIsApproved(null);
+    setEmployeeStatus(null);
     setMustResetPassword(false);
   };
 
@@ -145,17 +154,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setMustResetPassword(false);
   };
 
+  const isActive = employeeStatus === 'active' && isApproved === true;
+
   const value = {
     user,
     session,
     loading,
     role,
     isApproved,
+    employeeStatus,
     signIn,
     signUp,
     signOut,
     isAdmin: role === 'admin',
     isManager: role === 'manager' || role === 'admin',
+    isActive,
   };
 
   return (
