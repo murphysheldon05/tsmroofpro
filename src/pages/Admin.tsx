@@ -46,11 +46,13 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { NotificationSettingsManager } from "@/components/admin/NotificationSettingsManager";
 import { NotificationRoutingManager } from "@/components/admin/NotificationRoutingManager";
 import { useCommissionTiers } from "@/hooks/useCommissionTiers";
+import { useAdminAuditLog, AUDIT_ACTIONS, OBJECT_TYPES } from "@/hooks/useAdminAuditLog";
 
 export default function Admin() {
   const queryClient = useQueryClient();
   const { data: departments } = useDepartments();
   const { data: commissionTiers } = useCommissionTiers();
+  const { logAction } = useAdminAuditLog();
 
   const [isInvitingUser, setIsInvitingUser] = useState(false);
   const [isSendingInvite, setIsSendingInvite] = useState(false);
@@ -204,6 +206,9 @@ export default function Admin() {
   };
 
   const handleUpdateUserRole = async (userId: string, newRole: string) => {
+    // Get old role for audit log
+    const oldRole = users?.find((u) => u.id === userId)?.role;
+    
     const { error } = await supabase
       .from("user_roles")
       .update({ role: newRole as "admin" | "manager" | "employee" })
@@ -212,6 +217,15 @@ export default function Admin() {
     if (error) {
       toast.error("Failed to update role");
     } else {
+      // Audit log
+      logAction.mutate({
+        action_type: AUDIT_ACTIONS.ROLE_CHANGED,
+        object_type: OBJECT_TYPES.USER,
+        object_id: userId,
+        previous_value: { role: oldRole },
+        new_value: { role: newRole },
+      });
+      
       toast.success("Role updated");
       queryClient.invalidateQueries({ queryKey: ["admin-users"] });
     }
@@ -229,6 +243,15 @@ export default function Admin() {
 
       if (error) throw error;
 
+      // Audit log
+      logAction.mutate({
+        action_type: AUDIT_ACTIONS.USER_DELETED,
+        object_type: OBJECT_TYPES.USER,
+        object_id: userId,
+        previous_value: { name: userName },
+        new_value: null,
+      });
+
       toast.success("User deleted");
       queryClient.invalidateQueries({ queryKey: ["admin-users"] });
     } catch (error: any) {
@@ -238,6 +261,11 @@ export default function Admin() {
 
   const handleSaveUserSettings = async (userId: string) => {
     try {
+      // Get current values for audit log
+      const previousUser = users?.find((u) => u.id === userId);
+      const previousTier = getUserTier(userId);
+      const previousManager = getUserManager(userId);
+      
       // Update profile
       const { error: profileError } = await supabase
         .from("profiles")
@@ -298,6 +326,39 @@ export default function Admin() {
           .from("team_assignments")
           .delete()
           .eq("employee_id", userId);
+      }
+
+      // Audit log for department change
+      if (previousUser?.department_id !== editUserData.department_id) {
+        logAction.mutate({
+          action_type: AUDIT_ACTIONS.DEPARTMENT_CHANGED,
+          object_type: OBJECT_TYPES.USER,
+          object_id: userId,
+          previous_value: { department_id: previousUser?.department_id },
+          new_value: { department_id: editUserData.department_id },
+        });
+      }
+
+      // Audit log for manager change
+      if (previousManager !== editUserData.manager_id) {
+        logAction.mutate({
+          action_type: AUDIT_ACTIONS.MANAGER_CHANGED,
+          object_type: OBJECT_TYPES.USER,
+          object_id: userId,
+          previous_value: { manager_id: previousManager },
+          new_value: { manager_id: editUserData.manager_id },
+        });
+      }
+
+      // Audit log for commission tier change
+      if (previousTier !== editUserData.commission_tier_id) {
+        logAction.mutate({
+          action_type: AUDIT_ACTIONS.COMMISSION_TIER_CHANGED,
+          object_type: OBJECT_TYPES.USER,
+          object_id: userId,
+          previous_value: { tier_id: previousTier },
+          new_value: { tier_id: editUserData.commission_tier_id },
+        });
       }
 
       toast.success("User settings saved");

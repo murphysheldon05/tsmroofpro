@@ -146,6 +146,26 @@ export function useCreateCommission() {
     mutationFn: async (data: Partial<CommissionSubmission>) => {
       if (!user) throw new Error("Not authenticated");
       
+      // GOVERNANCE RULE: Check if user has a manager assigned (required for routing)
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("manager_id, full_name")
+        .eq("id", user.id)
+        .single();
+
+      // Check for team assignment as well
+      const { data: teamAssignment } = await supabase
+        .from("team_assignments")
+        .select("manager_id")
+        .eq("employee_id", user.id)
+        .maybeSingle();
+
+      const hasManager = profile?.manager_id || teamAssignment?.manager_id;
+
+      if (!hasManager) {
+        throw new Error("MANAGER_REQUIRED: You must have a manager assigned before submitting commissions. Please contact your administrator.");
+      }
+      
       const insertData = {
         ...data,
         submitted_by: user.id,
@@ -175,7 +195,13 @@ export function useCreateCommission() {
       toast.success("Commission submitted successfully");
     },
     onError: (error: Error) => {
-      toast.error("Failed to submit commission: " + error.message);
+      if (error.message.includes("MANAGER_REQUIRED")) {
+        toast.error("Manager Required", {
+          description: "You must have a manager assigned before submitting commissions. Please contact your administrator.",
+        });
+      } else {
+        toast.error("Failed to submit commission: " + error.message);
+      }
     },
   });
 }
