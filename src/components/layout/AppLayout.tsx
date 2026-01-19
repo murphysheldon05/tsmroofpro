@@ -1,7 +1,8 @@
 import { ReactNode, useMemo } from "react";
-import { useLocation, Link } from "react-router-dom";
+import { useLocation, Link, useNavigate } from "react-router-dom";
 import { AppSidebar } from "./AppSidebar";
-import { Home, ChevronRight } from "lucide-react";
+import { Home, ChevronRight, ArrowLeft } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface BreadcrumbItem {
   label: string;
@@ -93,6 +94,7 @@ interface AppLayoutProps {
 
 export function AppLayout({ children }: AppLayoutProps) {
   const location = useLocation();
+  const navigate = useNavigate();
   const isHome = location.pathname === "/command-center";
 
   const breadcrumbs = useMemo(
@@ -100,38 +102,60 @@ export function AppLayout({ children }: AppLayoutProps) {
     [location.pathname]
   );
 
+  const handleBack = () => {
+    navigate(-1);
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <AppSidebar />
       <main className="lg:pl-64 min-h-screen">
         <div className="p-4 lg:p-8">
-          {!isHome && breadcrumbs.length > 0 && (
-            <nav className="mb-4 flex items-center gap-1 text-sm" aria-label="Breadcrumb">
-              <Link
-                to="/command-center"
-                className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors"
+          {!isHome && (
+            <nav className="mb-4 flex items-center gap-2 text-sm" aria-label="Breadcrumb">
+              {/* Back button - prominent on mobile */}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleBack}
+                className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground -ml-2 mr-1"
               >
-                <Home className="h-4 w-4" />
-                <span>Home</span>
-              </Link>
-              {breadcrumbs.map((crumb, index) => {
-                const isLast = index === breadcrumbs.length - 1;
-                return (
-                  <span key={crumb.href || index} className="flex items-center gap-1">
-                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                    {isLast ? (
-                      <span className="font-medium text-foreground">{crumb.label}</span>
-                    ) : (
-                      <Link
-                        to={crumb.href}
-                        className="text-muted-foreground hover:text-foreground transition-colors"
-                      >
-                        {crumb.label}
-                      </Link>
-                    )}
-                  </span>
-                );
-              })}
+                <ArrowLeft className="h-4 w-4" />
+                <span className="lg:hidden">Back</span>
+              </Button>
+              
+              <div className="hidden sm:flex items-center gap-1">
+                <Link
+                  to="/command-center"
+                  className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <Home className="h-4 w-4" />
+                  <span>Home</span>
+                </Link>
+                {breadcrumbs.map((crumb, index) => {
+                  const isLast = index === breadcrumbs.length - 1;
+                  return (
+                    <span key={crumb.href || index} className="flex items-center gap-1">
+                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                      {isLast ? (
+                        <span className="font-medium text-foreground">{crumb.label}</span>
+                      ) : (
+                        <Link
+                          to={crumb.href}
+                          className="text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          {crumb.label}
+                        </Link>
+                      )}
+                    </span>
+                  );
+                })}
+              </div>
+              
+              {/* Mobile: Show current page title */}
+              <span className="sm:hidden font-medium text-foreground truncate">
+                {breadcrumbs.length > 0 ? breadcrumbs[breadcrumbs.length - 1].label : ""}
+              </span>
             </nav>
           )}
           {children}
