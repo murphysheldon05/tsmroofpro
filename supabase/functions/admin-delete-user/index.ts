@@ -84,7 +84,20 @@ serve(async (req: Request): Promise<Response> => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    // Delete from user_roles first (cascade should handle this but being explicit)
+    // Clear manager_id references in other profiles first
+    await admin.from("profiles").update({ manager_id: null }).eq("manager_id", userId);
+    console.log("Cleared manager references for:", userId);
+
+    // Delete team_assignments where user is employee or manager
+    await admin.from("team_assignments").delete().eq("employee_id", userId);
+    await admin.from("team_assignments").delete().eq("manager_id", userId);
+    console.log("Deleted team assignments for:", userId);
+
+    // Delete user_commission_tiers
+    await admin.from("user_commission_tiers").delete().eq("user_id", userId);
+    console.log("Deleted commission tiers for:", userId);
+
+    // Delete from user_roles
     await admin.from("user_roles").delete().eq("user_id", userId);
     console.log("Deleted user roles for:", userId);
 
