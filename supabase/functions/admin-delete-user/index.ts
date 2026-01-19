@@ -88,6 +88,34 @@ serve(async (req: Request): Promise<Response> => {
     await admin.from("profiles").update({ manager_id: null }).eq("manager_id", userId);
     console.log("Cleared manager references for:", userId);
 
+    // Clear references in requests table
+    await admin.from("requests").update({ assigned_to: null }).eq("assigned_to", userId);
+    await admin.from("requests").update({ assigned_manager_id: null }).eq("assigned_manager_id", userId);
+    await admin.from("requests").update({ submitted_by: null }).eq("submitted_by", userId);
+    console.log("Cleared request references for:", userId);
+
+    // Clear references in commission_submissions
+    await admin.from("commission_submissions").update({ submitted_by: null }).eq("submitted_by", userId);
+    await admin.from("commission_submissions").update({ sales_rep_id: null }).eq("sales_rep_id", userId);
+    await admin.from("commission_submissions").update({ approved_by: null }).eq("approved_by", userId);
+    await admin.from("commission_submissions").update({ manager_approved_by: null }).eq("manager_approved_by", userId);
+    await admin.from("commission_submissions").update({ paid_by: null }).eq("paid_by", userId);
+    console.log("Cleared commission submission references for:", userId);
+
+    // Clear references in commission_documents
+    await admin.from("commission_documents").update({ created_by: null }).eq("created_by", userId);
+    await admin.from("commission_documents").update({ approved_by: null }).eq("approved_by", userId);
+    console.log("Cleared commission document references for:", userId);
+
+    // Clear references in warranty_requests if exists
+    await admin.from("warranty_requests").update({ submitted_by: null }).eq("submitted_by", userId);
+    await admin.from("warranty_requests").update({ assigned_to: null }).eq("assigned_to", userId);
+    console.log("Cleared warranty references for:", userId);
+
+    // Clear department_managers
+    await admin.from("department_managers").delete().eq("manager_id", userId);
+    console.log("Cleared department manager references for:", userId);
+
     // Delete team_assignments where user is employee or manager
     await admin.from("team_assignments").delete().eq("employee_id", userId);
     await admin.from("team_assignments").delete().eq("manager_id", userId);
@@ -96,6 +124,10 @@ serve(async (req: Request): Promise<Response> => {
     // Delete user_commission_tiers
     await admin.from("user_commission_tiers").delete().eq("user_id", userId);
     console.log("Deleted commission tiers for:", userId);
+
+    // Delete user_files
+    await admin.from("user_files").delete().eq("user_id", userId);
+    console.log("Deleted user files for:", userId);
 
     // Delete from user_roles
     await admin.from("user_roles").delete().eq("user_id", userId);
