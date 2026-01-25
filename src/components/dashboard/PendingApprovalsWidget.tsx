@@ -10,7 +10,6 @@ import { Link } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
 
 const requestTypeLabels: Record<string, string> = {
-  commission: "Commission Form",
   sop_update: "SOP Update",
   it_access: "IT Access",
   hr: "HR Request",

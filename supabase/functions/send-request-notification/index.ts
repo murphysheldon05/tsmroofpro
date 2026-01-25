@@ -18,7 +18,6 @@ interface RequestNotification {
 }
 
 const requestTypeLabels: Record<string, string> = {
-  commission: "Commission Form",
   sop_update: "SOP Update Request",
   it_access: "IT Access Request",
   hr: "HR Request",
