@@ -35,6 +35,8 @@ import {
   Percent,
   UserPlus,
   AlertTriangle,
+  Wrench,
+  FolderOpen,
 } from "lucide-react";
 import { UserPermissionsEditor } from "@/components/admin/UserPermissionsEditor";
 import { PendingApprovals } from "@/components/admin/PendingApprovals";
@@ -45,6 +47,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { NotificationSettingsManager } from "@/components/admin/NotificationSettingsManager";
 import { NotificationRoutingManager } from "@/components/admin/NotificationRoutingManager";
+import { CommissionTierManager } from "@/components/admin/CommissionTierManager";
+import { CategoryManager } from "@/components/admin/CategoryManager";
+import { ToolsManager } from "@/components/admin/ToolsManager";
 import { useCommissionTiers } from "@/hooks/useCommissionTiers";
 import { useAdminAuditLog, AUDIT_ACTIONS, OBJECT_TYPES } from "@/hooks/useAdminAuditLog";
 
@@ -393,18 +398,30 @@ export default function Admin() {
             <div>
               <h1 className="text-2xl font-bold text-foreground">Admin Panel</h1>
               <p className="text-muted-foreground text-sm">
-                Manage users, notifications, and routing
+                Centralized system configuration — all editing authority lives here
               </p>
             </div>
           </div>
         </header>
 
-        {/* Tabs - HARD LOCKED to Users, Notifications, Routing only */}
+        {/* Admin Panel Tabs - Centralized Control Plane */}
         <Tabs defaultValue="users" className="space-y-6">
           <TabsList className="bg-secondary/50 flex-wrap h-auto gap-1 p-1">
             <TabsTrigger value="users" className="gap-2">
               <Users className="w-4 h-4" />
               Users
+            </TabsTrigger>
+            <TabsTrigger value="tiers" className="gap-2">
+              <Percent className="w-4 h-4" />
+              Commission Tiers
+            </TabsTrigger>
+            <TabsTrigger value="categories" className="gap-2">
+              <FolderOpen className="w-4 h-4" />
+              SOP Categories
+            </TabsTrigger>
+            <TabsTrigger value="tools" className="gap-2">
+              <Wrench className="w-4 h-4" />
+              Tools
             </TabsTrigger>
             <TabsTrigger value="notifications" className="gap-2">
               <Bell className="w-4 h-4" />
@@ -759,6 +776,21 @@ export default function Admin() {
                 </div>
               )}
             </div>
+          </TabsContent>
+
+          {/* Commission Tiers Tab - ADMIN ONLY */}
+          <TabsContent value="tiers" className="space-y-4">
+            <CommissionTierManager />
+          </TabsContent>
+
+          {/* SOP Categories Tab - ADMIN ONLY */}
+          <TabsContent value="categories" className="space-y-4">
+            <CategoryManager />
+          </TabsContent>
+
+          {/* Tools Tab - ADMIN ONLY */}
+          <TabsContent value="tools" className="space-y-4">
+            <ToolsManager />
           </TabsContent>
 
           {/* Notifications Tab */}
