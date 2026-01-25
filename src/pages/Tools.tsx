@@ -2,14 +2,9 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { ExternalLink, Wrench, Loader2, Smartphone, GraduationCap } from "lucide-react";
 import { useTools, Tool } from "@/hooks/useTools";
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@/contexts/AuthContext";
-import { ToolsManager } from "@/components/admin/ToolsManager";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function Tools() {
   const { data: tools, isLoading } = useTools();
-  const { role } = useAuth();
-  const isAdmin = role === "admin";
 
   return (
     <AppLayout>
@@ -29,22 +24,8 @@ export default function Tools() {
           </div>
         </header>
 
-        {isAdmin ? (
-          <Tabs defaultValue="browse" className="space-y-6">
-            <TabsList>
-              <TabsTrigger value="browse">Browse Tools</TabsTrigger>
-              <TabsTrigger value="manage">Manage Tools</TabsTrigger>
-            </TabsList>
-            <TabsContent value="browse">
-              <ToolsGrid tools={tools} isLoading={isLoading} />
-            </TabsContent>
-            <TabsContent value="manage">
-              <ToolsManager />
-            </TabsContent>
-          </Tabs>
-        ) : (
-          <ToolsGrid tools={tools} isLoading={isLoading} />
-        )}
+        {/* View-only grid - no edit capabilities outside Admin Panel */}
+        <ToolsGrid tools={tools} isLoading={isLoading} />
       </div>
     </AppLayout>
   );
