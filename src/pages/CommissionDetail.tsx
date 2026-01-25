@@ -3,7 +3,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-
+import { supabase } from "@/integrations/supabase/client";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { 
@@ -20,7 +20,8 @@ import {
   UserCheck,
   Calculator,
   Send,
-  Edit
+  Edit,
+  Ban
 } from "lucide-react";
 import { CommissionWorksheet } from "@/components/commissions/CommissionWorksheet";
 import { CommissionEditForm } from "@/components/commissions/CommissionEditForm";
@@ -49,15 +50,16 @@ import {
 const STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; icon: React.ReactNode; color: string }> = {
   pending_review: { label: "Pending Review", variant: "secondary", icon: <Clock className="h-4 w-4" />, color: "text-amber-600" },
   revision_required: { label: "Revision Required", variant: "destructive", icon: <AlertCircle className="h-4 w-4" />, color: "text-red-600" },
-  approved_for_payment: { label: "Approved for Payment", variant: "default", icon: <CheckCircle className="h-4 w-4" />, color: "text-green-600" },
+  approved: { label: "Approved", variant: "default", icon: <CheckCircle className="h-4 w-4" />, color: "text-green-600" },
+  denied: { label: "Denied", variant: "destructive", icon: <XCircle className="h-4 w-4" />, color: "text-red-800" },
   paid: { label: "Paid", variant: "outline", icon: <DollarSign className="h-4 w-4" />, color: "text-blue-600" },
-  on_hold: { label: "On Hold", variant: "secondary", icon: <XCircle className="h-4 w-4" />, color: "text-gray-600" },
 };
 
 const APPROVAL_STAGE_CONFIG: Record<string, { label: string; icon: React.ReactNode; color: string }> = {
   pending_manager: { label: "Awaiting Manager Approval", icon: <UserCheck className="h-4 w-4" />, color: "text-amber-600" },
-  manager_approved: { label: "Manager Approved - Awaiting Accounting", icon: <Calculator className="h-4 w-4" />, color: "text-blue-600" },
-  accounting_approved: { label: "Fully Approved", icon: <CheckCircle className="h-4 w-4" />, color: "text-green-600" },
+  pending_accounting: { label: "Manager Approved - Awaiting Accounting", icon: <Calculator className="h-4 w-4" />, color: "text-blue-600" },
+  pending_admin: { label: "Awaiting Admin Approval (Manager Submission)", icon: <UserCheck className="h-4 w-4" />, color: "text-purple-600" },
+  completed: { label: "Fully Approved", icon: <CheckCircle className="h-4 w-4" />, color: "text-green-600" },
 };
 
 export default function CommissionDetail() {
@@ -113,17 +115,23 @@ export default function CommissionDetail() {
   
   // Determine available actions based on approval stage
   const isPendingManager = submission.status === "pending_review" && submission.approval_stage === "pending_manager";
-  const isPendingAccounting = submission.status === "pending_review" && submission.approval_stage === "manager_approved";
-  const isApprovedForPayment = submission.status === "approved_for_payment";
+  const isPendingAccounting = submission.status === "pending_review" && submission.approval_stage === "pending_accounting";
+  const isPendingAdmin = submission.status === "pending_review" && submission.approval_stage === "pending_admin";
+  const isApproved = submission.status === "approved";
+  const isDenied = submission.status === "denied";
   
   // Manager can approve if pending_manager stage
   const canManagerApprove = isReviewer && isPendingManager;
-  // Accounting can approve if manager_approved stage (or user has payout permission)
+  // Accounting can approve if pending_accounting stage
   const canAccountingApprove = isReviewer && isPendingAccounting;
-  // Can reject at any pending stage
-  const canReject = isReviewer && (isPendingManager || isPendingAccounting);
+  // Admin can approve if pending_admin stage (manager submissions only)
+  const canAdminApprove = isAdmin && isPendingAdmin;
+  // Can request revision at any pending stage (except denied)
+  const canRequestRevision = isReviewer && (isPendingManager || isPendingAccounting || isPendingAdmin);
+  // Can deny at any pending stage
+  const canDeny = isReviewer && (isPendingManager || isPendingAccounting || isPendingAdmin);
   // Can mark paid only if approved and has payout permission
-  const canMarkPaid = canPayout && isApprovedForPayment;
+  const canMarkPaid = canPayout && isApproved;
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("en-US", {
@@ -136,28 +144,76 @@ export default function CommissionDetail() {
     await updateStatus.mutateAsync({
       id: submission.id,
       status: "pending_review",
-      approval_stage: "manager_approved",
+      approval_stage: "pending_accounting", // Move to accounting
       notes: reviewerNotes || "Manager approved - forwarded to accounting",
     });
     setReviewerNotes("");
   };
 
   const handleAccountingApprove = async () => {
+    // Check if this is a manager submission (needs admin approval)
+    if (submission.is_manager_submission) {
+      await updateStatus.mutateAsync({
+        id: submission.id,
+        status: "pending_review",
+        approval_stage: "pending_admin", // Route to admin (Sheldon)
+        notes: reviewerNotes || "Accounting approved - awaiting admin final approval",
+      });
+    } else {
+      // Regular submission - accounting is final
+      await updateStatus.mutateAsync({
+        id: submission.id,
+        status: "approved",
+        approval_stage: "completed",
+        notes: reviewerNotes || "🎉 Approved - ready for payout",
+      });
+    }
+    setReviewerNotes("");
+  };
+
+  const handleAdminApprove = async () => {
     await updateStatus.mutateAsync({
       id: submission.id,
-      status: "approved_for_payment",
-      approval_stage: "accounting_approved",
-      notes: reviewerNotes || "Accounting approved - ready for payout",
+      status: "approved",
+      approval_stage: "completed",
+      notes: reviewerNotes || "🎉 Admin approved - ready for payout",
     });
     setReviewerNotes("");
   };
 
-  const handleReject = async () => {
+  const handleRequestRevision = async () => {
+    if (!rejectionReason.trim()) return;
     await updateStatus.mutateAsync({
       id: submission.id,
       status: "revision_required",
       rejection_reason: rejectionReason,
     });
+    setRejectionReason("");
+  };
+
+  const handleDeny = async () => {
+    if (!rejectionReason.trim()) return;
+    // Deny commission - this will lock the job number
+    await updateStatus.mutateAsync({
+      id: submission.id,
+      status: "denied",
+      approval_stage: "completed",
+      rejection_reason: rejectionReason,
+    });
+    
+    // Lock job number if exists
+    if (submission.acculynx_job_id && submission.acculynx_job_id.length === 4) {
+      try {
+        await supabase.from("denied_job_numbers").insert({
+          job_number: submission.acculynx_job_id,
+          commission_id: submission.id,
+          denied_by: user?.id,
+          denial_reason: rejectionReason,
+        });
+      } catch (e) {
+        // Ignore duplicate key errors
+      }
+    }
     setRejectionReason("");
   };
 
@@ -167,15 +223,6 @@ export default function CommissionDetail() {
       status: "paid",
       notes: "Marked as paid",
     });
-  };
-
-  const handlePutOnHold = async () => {
-    await updateStatus.mutateAsync({
-      id: submission.id,
-      status: "on_hold",
-      notes: reviewerNotes || "Put on hold",
-    });
-    setReviewerNotes("");
   };
 
   // Handle closing edit mode
@@ -309,14 +356,15 @@ export default function CommissionDetail() {
               <CardDescription>
                 {isPendingManager && "This commission is awaiting manager approval."}
                 {isPendingAccounting && "Manager approved. Please review and approve for accounting."}
-                {isApprovedForPayment && "This commission is approved and ready for payout."}
+                {isPendingAdmin && "Awaiting admin approval for this manager submission."}
+                {isApproved && "This commission is approved and ready for payout."}
                 {submission.status === "paid" && "This commission has been paid."}
                 {submission.status === "revision_required" && "This commission requires revision from the submitter."}
-                {submission.status === "on_hold" && "This commission is currently on hold."}
+                {isDenied && "This commission has been denied. The job number is permanently locked."}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {(canManagerApprove || canAccountingApprove) && (
+              {(canManagerApprove || canAccountingApprove || canAdminApprove) && (
                 <div className="space-y-2">
                   <Label>Reviewer Notes (Optional)</Label>
                   <Textarea
@@ -356,16 +404,32 @@ export default function CommissionDetail() {
                     ) : (
                       <CheckCircle className="h-4 w-4" />
                     )}
-                    Approve for Payment
+                    {submission.is_manager_submission ? "Approve & Send to Admin" : "Approve for Payment"}
+                  </Button>
+                )}
+                
+                {/* Admin Approve Button (for manager submissions) */}
+                {canAdminApprove && (
+                  <Button 
+                    onClick={handleAdminApprove}
+                    disabled={updateStatus.isPending}
+                    className="gap-2 bg-green-600 hover:bg-green-700"
+                  >
+                    {updateStatus.isPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <CheckCircle className="h-4 w-4" />
+                    )}
+                    Admin Final Approval
                   </Button>
                 )}
                 
                 {/* Request Revision Button */}
-                {canReject && (
+                {canRequestRevision && (
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
-                      <Button variant="destructive" className="gap-2">
-                        <XCircle className="h-4 w-4" />
+                      <Button variant="outline" className="gap-2 border-amber-500 text-amber-600 hover:bg-amber-50">
+                        <AlertCircle className="h-4 w-4" />
                         Request Revision
                       </Button>
                     </AlertDialogTrigger>
@@ -378,7 +442,7 @@ export default function CommissionDetail() {
                       </AlertDialogHeader>
                       <div className="py-4">
                         <Textarea
-                          placeholder="Enter reason for revision..."
+                          placeholder="Enter reason for revision (required)..."
                           value={rejectionReason}
                           onChange={(e) => setRejectionReason(e.target.value)}
                           rows={4}
@@ -387,28 +451,54 @@ export default function CommissionDetail() {
                       <AlertDialogFooter>
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
                         <AlertDialogAction 
-                          onClick={handleReject}
+                          onClick={handleRequestRevision}
                           disabled={!rejectionReason.trim() || updateStatus.isPending}
-                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          className="bg-amber-600 hover:bg-amber-700"
                         >
-                          Submit
+                          Request Revision
                         </AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>
                   </AlertDialog>
                 )}
                 
-                {/* Put On Hold Button */}
-                {(canManagerApprove || canAccountingApprove) && (
-                  <Button 
-                    onClick={handlePutOnHold}
-                    disabled={updateStatus.isPending}
-                    variant="outline"
-                    className="gap-2"
-                  >
-                    <Clock className="h-4 w-4" />
-                    Put On Hold
-                  </Button>
+                {/* Deny Button */}
+                {canDeny && (
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="destructive" className="gap-2">
+                        <Ban className="h-4 w-4" />
+                        Deny Commission
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle className="text-destructive">Deny Commission</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          <strong className="text-destructive">Warning:</strong> Denying a commission will permanently lock the job number. 
+                          This action cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <div className="py-4">
+                        <Textarea
+                          placeholder="Enter denial reason (required)..."
+                          value={rejectionReason}
+                          onChange={(e) => setRejectionReason(e.target.value)}
+                          rows={4}
+                        />
+                      </div>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction 
+                          onClick={handleDeny}
+                          disabled={!rejectionReason.trim() || updateStatus.isPending}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          Confirm Denial
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 )}
                 
                 {/* Mark as Paid Button */}

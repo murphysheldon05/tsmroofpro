@@ -550,6 +550,53 @@ export type Database = {
         }
         Relationships: []
       }
+      commission_revision_log: {
+        Row: {
+          commission_id: string
+          created_at: string
+          id: string
+          new_amount: number | null
+          previous_amount: number | null
+          reason: string
+          requested_by: string
+          requested_by_name: string | null
+          requested_by_role: string | null
+          revision_number: number
+        }
+        Insert: {
+          commission_id: string
+          created_at?: string
+          id?: string
+          new_amount?: number | null
+          previous_amount?: number | null
+          reason: string
+          requested_by: string
+          requested_by_name?: string | null
+          requested_by_role?: string | null
+          revision_number: number
+        }
+        Update: {
+          commission_id?: string
+          created_at?: string
+          id?: string
+          new_amount?: number | null
+          previous_amount?: number | null
+          reason?: string
+          requested_by?: string
+          requested_by_name?: string | null
+          requested_by_role?: string | null
+          revision_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commission_revision_log_commission_id_fkey"
+            columns: ["commission_id"]
+            isOneToOne: false
+            referencedRelation: "commission_submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       commission_status_log: {
         Row: {
           changed_by: string
@@ -591,21 +638,30 @@ export type Database = {
       commission_submissions: {
         Row: {
           acculynx_job_id: string | null
+          admin_approved_at: string | null
+          admin_approved_by: string | null
           advances_paid: number
           approval_stage: string | null
           approved_at: string | null
           approved_by: string | null
+          commission_approved: number | null
+          commission_approved_at: string | null
+          commission_approved_by: string | null
           commission_percentage: number
+          commission_requested: number | null
           commission_tier: string | null
           contract_amount: number
           contract_date: string
           created_at: string
           custom_commission_percentage: number | null
+          denied_at: string | null
+          denied_by: string | null
           flat_fee_amount: number | null
           gross_commission: number | null
           id: string
           install_completion_date: string | null
           is_flat_fee: boolean | null
+          is_manager_submission: boolean | null
           job_address: string
           job_name: string
           job_type: string
@@ -618,6 +674,7 @@ export type Database = {
           rejection_reason: string | null
           rep_role: string | null
           reviewer_notes: string | null
+          revision_count: number | null
           roof_type: string
           sales_rep_id: string | null
           sales_rep_name: string | null
@@ -631,21 +688,30 @@ export type Database = {
         }
         Insert: {
           acculynx_job_id?: string | null
+          admin_approved_at?: string | null
+          admin_approved_by?: string | null
           advances_paid?: number
           approval_stage?: string | null
           approved_at?: string | null
           approved_by?: string | null
+          commission_approved?: number | null
+          commission_approved_at?: string | null
+          commission_approved_by?: string | null
           commission_percentage?: number
+          commission_requested?: number | null
           commission_tier?: string | null
           contract_amount?: number
           contract_date: string
           created_at?: string
           custom_commission_percentage?: number | null
+          denied_at?: string | null
+          denied_by?: string | null
           flat_fee_amount?: number | null
           gross_commission?: number | null
           id?: string
           install_completion_date?: string | null
           is_flat_fee?: boolean | null
+          is_manager_submission?: boolean | null
           job_address: string
           job_name: string
           job_type: string
@@ -658,6 +724,7 @@ export type Database = {
           rejection_reason?: string | null
           rep_role?: string | null
           reviewer_notes?: string | null
+          revision_count?: number | null
           roof_type: string
           sales_rep_id?: string | null
           sales_rep_name?: string | null
@@ -671,21 +738,30 @@ export type Database = {
         }
         Update: {
           acculynx_job_id?: string | null
+          admin_approved_at?: string | null
+          admin_approved_by?: string | null
           advances_paid?: number
           approval_stage?: string | null
           approved_at?: string | null
           approved_by?: string | null
+          commission_approved?: number | null
+          commission_approved_at?: string | null
+          commission_approved_by?: string | null
           commission_percentage?: number
+          commission_requested?: number | null
           commission_tier?: string | null
           contract_amount?: number
           contract_date?: string
           created_at?: string
           custom_commission_percentage?: number | null
+          denied_at?: string | null
+          denied_by?: string | null
           flat_fee_amount?: number | null
           gross_commission?: number | null
           id?: string
           install_completion_date?: string | null
           is_flat_fee?: boolean | null
+          is_manager_submission?: boolean | null
           job_address?: string
           job_name?: string
           job_type?: string
@@ -698,6 +774,7 @@ export type Database = {
           rejection_reason?: string | null
           rep_role?: string | null
           reviewer_notes?: string | null
+          revision_count?: number | null
           roof_type?: string
           sales_rep_id?: string | null
           sales_rep_name?: string | null
@@ -853,6 +930,44 @@ export type Database = {
             columns: ["crew_id"]
             isOneToOne: false
             referencedRelation: "crews"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      denied_job_numbers: {
+        Row: {
+          commission_id: string | null
+          created_at: string
+          denial_reason: string
+          denied_at: string
+          denied_by: string
+          id: string
+          job_number: string
+        }
+        Insert: {
+          commission_id?: string | null
+          created_at?: string
+          denial_reason: string
+          denied_at?: string
+          denied_by: string
+          id?: string
+          job_number: string
+        }
+        Update: {
+          commission_id?: string | null
+          created_at?: string
+          denial_reason?: string
+          denied_at?: string
+          denied_by?: string
+          id?: string
+          job_number?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "denied_job_numbers_commission_id_fkey"
+            columns: ["commission_id"]
+            isOneToOne: false
+            referencedRelation: "commission_submissions"
             referencedColumns: ["id"]
           },
         ]
