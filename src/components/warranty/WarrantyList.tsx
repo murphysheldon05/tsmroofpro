@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DatePickerField } from "@/components/ui/date-picker-field";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import {
   useWarranties,
   useDeleteWarranty,
@@ -42,6 +43,7 @@ export function WarrantyList({ onEdit, onView }: WarrantyListProps) {
 
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
+  const [filterSheetOpen, setFilterSheetOpen] = useState(false);
 
   // Filters
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -114,6 +116,16 @@ export function WarrantyList({ onEdit, onView }: WarrantyListProps) {
     setSearch("");
   };
 
+  const hasActiveFilters = statusFilter !== "all" || priorityFilter !== "all" || roofTypeFilter !== "all" || memberFilter !== "all" || dateFrom || dateTo;
+  const activeFilterCount = [
+    statusFilter !== "all",
+    priorityFilter !== "all",
+    roofTypeFilter !== "all",
+    memberFilter !== "all",
+    !!dateFrom,
+    !!dateTo,
+  ].filter(Boolean).length;
+
   const getStatusBadge = (status: string) => {
     const statusConfig = WARRANTY_STATUSES.find((s) => s.value === status);
     return <Badge className={statusConfig?.color || ""}>{statusConfig?.label || status}</Badge>;
@@ -130,6 +142,127 @@ export function WarrantyList({ onEdit, onView }: WarrantyListProps) {
     return differenceInDays(new Date(), lastChange) >= 7;
   };
 
+  // Mobile card component
+  const WarrantyCard = ({ warranty }: { warranty: WarrantyRequest }) => (
+    <div 
+      className={`p-4 bg-card border rounded-lg ${isOverdue(warranty) ? 'border-destructive/50 bg-destructive/5' : 'border-border'}`}
+    >
+      <div className="flex items-start justify-between gap-2 mb-2">
+        <div className="flex-1 min-w-0">
+          <div className="font-medium truncate">{warranty.customer_name}</div>
+          {isOverdue(warranty) && (
+            <Badge variant="destructive" className="text-xs mt-1">OVERDUE</Badge>
+          )}
+        </div>
+        <div className="flex gap-1">
+          {getStatusBadge(warranty.status)}
+          {getPriorityBadge(warranty.priority_level)}
+        </div>
+      </div>
+      
+      <div className="text-sm text-muted-foreground mb-2 truncate">{warranty.job_address}</div>
+      
+      <div className="flex items-center justify-between text-xs text-muted-foreground mb-3">
+        <span>Job #{warranty.original_job_number}</span>
+        <span>{format(parseISO(warranty.date_submitted), "MMM d, yyyy")}</span>
+      </div>
+      
+      {warranty.assigned_production_member && (
+        <div className="text-xs text-muted-foreground mb-3">
+          Assigned: {profilesMap[warranty.assigned_production_member] || "Unknown"}
+        </div>
+      )}
+      
+      <div className="flex gap-2 pt-2 border-t">
+        <Button variant="outline" size="sm" className="flex-1" onClick={() => onView(warranty)}>
+          <Eye className="h-4 w-4 mr-1" />
+          View
+        </Button>
+        <Button variant="outline" size="sm" className="flex-1" onClick={() => onEdit(warranty)}>
+          <Pencil className="h-4 w-4 mr-1" />
+          Edit
+        </Button>
+        {canDelete && (
+          <Button variant="outline" size="sm" onClick={() => setDeleteId(warranty.id)}>
+            <Trash2 className="h-4 w-4 text-destructive" />
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+
+  // Filter content component
+  const FilterContent = ({ isMobile = false }: { isMobile?: boolean }) => (
+    <div className={`space-y-4 ${isMobile ? '' : 'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 p-4 bg-muted rounded-lg'}`}>
+      <div className="space-y-1">
+        <label className="text-xs font-medium">Status</label>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Statuses</SelectItem>
+            {WARRANTY_STATUSES.map((s) => (
+              <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="space-y-1">
+        <label className="text-xs font-medium">Priority</label>
+        <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Priorities</SelectItem>
+            {PRIORITY_LEVELS.map((p) => (
+              <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="space-y-1">
+        <label className="text-xs font-medium">Roof Type</label>
+        <Select value={roofTypeFilter} onValueChange={setRoofTypeFilter}>
+          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Types</SelectItem>
+            {ROOF_TYPES.map((r) => (
+              <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="space-y-1">
+        <label className="text-xs font-medium">Assigned To</label>
+        <Select value={memberFilter} onValueChange={setMemberFilter}>
+          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Members</SelectItem>
+            {profiles.map((p) => (
+              <SelectItem key={p.id} value={p.id}>{p.full_name || "Unknown"}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <DatePickerField
+        label="From Date"
+        value={dateFrom}
+        onChange={setDateFrom}
+        className="space-y-1"
+      />
+      <DatePickerField
+        label="To Date"
+        value={dateTo}
+        onChange={setDateTo}
+        className="space-y-1"
+      />
+      {isMobile && hasActiveFilters && (
+        <Button variant="outline" onClick={clearFilters} className="w-full mt-2">
+          <X className="h-4 w-4 mr-1" />
+          Clear Filters
+        </Button>
+      )}
+    </div>
+  );
+
   if (isLoading) {
     return <div className="text-center py-8">Loading warranties...</div>;
   }
@@ -137,91 +270,56 @@ export function WarrantyList({ onEdit, onView }: WarrantyListProps) {
   return (
     <div className="space-y-4">
       {/* Search and Filter Toggle */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2 sm:gap-4">
         <Input
-          placeholder="Search customer, address, or job #..."
+          placeholder="Search..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="max-w-sm"
+          className="flex-1 sm:max-w-sm"
         />
+        
+        {/* Mobile Filter Button */}
+        <Sheet open={filterSheetOpen} onOpenChange={setFilterSheetOpen}>
+          <SheetTrigger asChild>
+            <Button variant="outline" size="icon" className="sm:hidden relative">
+              <Filter className="h-4 w-4" />
+              {activeFilterCount > 0 && (
+                <span className="absolute -top-1 -right-1 h-4 w-4 bg-primary text-primary-foreground text-xs rounded-full flex items-center justify-center">
+                  {activeFilterCount}
+                </span>
+              )}
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="bottom" className="h-auto max-h-[80vh]">
+            <SheetHeader className="mb-4">
+              <SheetTitle>Filters</SheetTitle>
+            </SheetHeader>
+            <FilterContent isMobile />
+          </SheetContent>
+        </Sheet>
+
+        {/* Desktop Filter Button */}
         <Button
           variant={showFilters ? "secondary" : "outline"}
           onClick={() => setShowFilters(!showFilters)}
+          className="hidden sm:flex"
         >
           <Filter className="h-4 w-4 mr-2" />
           Filters
         </Button>
-        {(statusFilter !== "all" || priorityFilter !== "all" || roofTypeFilter !== "all" || memberFilter !== "all" || dateFrom || dateTo) && (
-          <Button variant="ghost" size="sm" onClick={clearFilters}>
+        
+        {hasActiveFilters && (
+          <Button variant="ghost" size="sm" onClick={clearFilters} className="hidden sm:flex">
             <X className="h-4 w-4 mr-1" />
             Clear
           </Button>
         )}
       </div>
 
-      {/* Filters Panel */}
+      {/* Desktop Filters Panel */}
       {showFilters && (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 p-4 bg-muted rounded-lg">
-          <div className="space-y-1">
-            <label className="text-xs font-medium">Status</label>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                {WARRANTY_STATUSES.map((s) => (
-                  <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1">
-            <label className="text-xs font-medium">Priority</label>
-            <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Priorities</SelectItem>
-                {PRIORITY_LEVELS.map((p) => (
-                  <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1">
-            <label className="text-xs font-medium">Roof Type</label>
-            <Select value={roofTypeFilter} onValueChange={setRoofTypeFilter}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                {ROOF_TYPES.map((r) => (
-                  <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1">
-            <label className="text-xs font-medium">Production Member</label>
-            <Select value={memberFilter} onValueChange={setMemberFilter}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Members</SelectItem>
-                {profiles.map((p) => (
-                  <SelectItem key={p.id} value={p.id}>{p.full_name || "Unknown"}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <DatePickerField
-            label="From Date"
-            value={dateFrom}
-            onChange={setDateFrom}
-            className="space-y-1"
-          />
-          <DatePickerField
-            label="To Date"
-            value={dateTo}
-            onChange={setDateTo}
-            className="space-y-1"
-          />
+        <div className="hidden sm:block">
+          <FilterContent />
         </div>
       )}
 
@@ -230,8 +328,21 @@ export function WarrantyList({ onEdit, onView }: WarrantyListProps) {
         Showing {filteredWarranties.length} of {warranties.length} warranties
       </p>
 
-      {/* Table */}
-      <div className="border rounded-lg overflow-hidden">
+      {/* Mobile Card View */}
+      <div className="sm:hidden space-y-3">
+        {filteredWarranties.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            No warranty requests found
+          </div>
+        ) : (
+          filteredWarranties.map((warranty) => (
+            <WarrantyCard key={warranty.id} warranty={warranty} />
+          ))
+        )}
+      </div>
+
+      {/* Desktop Table */}
+      <div className="hidden sm:block border rounded-lg overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow>

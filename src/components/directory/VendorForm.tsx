@@ -69,7 +69,7 @@ export function VendorForm({ open, onOpenChange, vendor }: VendorFormProps) {
           <DialogTitle>{isEditing ? "Edit Vendor" : "Add New Vendor"}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="vendor_name">Vendor Name *</Label>
               <Input id="vendor_name" {...register("vendor_name", { required: true })} />
