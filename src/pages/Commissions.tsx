@@ -29,9 +29,9 @@ import { format } from "date-fns";
 const STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; icon: React.ReactNode }> = {
   pending_review: { label: "Pending Review", variant: "secondary", icon: <Clock className="h-3 w-3" /> },
   revision_required: { label: "Revision Required", variant: "destructive", icon: <AlertCircle className="h-3 w-3" /> },
-  approved_for_payment: { label: "Approved", variant: "default", icon: <CheckCircle className="h-3 w-3" /> },
+  approved: { label: "Approved", variant: "default", icon: <CheckCircle className="h-3 w-3" /> },
+  denied: { label: "Denied", variant: "destructive", icon: <XCircle className="h-3 w-3" /> },
   paid: { label: "Paid", variant: "outline", icon: <DollarSign className="h-3 w-3" /> },
-  on_hold: { label: "On Hold", variant: "secondary", icon: <XCircle className="h-3 w-3" /> },
 };
 
 export default function Commissions() {
@@ -68,10 +68,10 @@ export default function Commissions() {
   const summaryStats = {
     total: submissions?.length || 0,
     pending: submissions?.filter((s) => s.status === "pending_review").length || 0,
-    approved: submissions?.filter((s) => s.status === "approved_for_payment").length || 0,
+    approved: submissions?.filter((s) => s.status === "approved").length || 0,
     paid: submissions?.filter((s) => s.status === "paid").length || 0,
     totalOwed: submissions?.reduce((sum, s) => {
-      if (s.status !== "paid") {
+      if (s.status !== "paid" && s.status !== "denied") {
         return sum + (s.net_commission_owed || 0);
       }
       return sum;
@@ -194,9 +194,9 @@ export default function Commissions() {
                   <SelectItem value="all">All Status</SelectItem>
                   <SelectItem value="pending_review">Pending Review</SelectItem>
                   <SelectItem value="revision_required">Revision Required</SelectItem>
-                  <SelectItem value="approved_for_payment">Approved</SelectItem>
+                  <SelectItem value="approved">Approved</SelectItem>
+                  <SelectItem value="denied">Denied</SelectItem>
                   <SelectItem value="paid">Paid</SelectItem>
-                  <SelectItem value="on_hold">On Hold</SelectItem>
                 </SelectContent>
               </Select>
             </div>

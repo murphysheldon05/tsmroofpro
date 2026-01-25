@@ -4,7 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -12,10 +12,12 @@ import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Building2, User, FileSpreadsheet, Paperclip, Send, Loader2 } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Building2, User, FileSpreadsheet, Paperclip, Send, Loader2, AlertCircle, Ban } from "lucide-react";
 import { CommissionWorksheet } from "./CommissionWorksheet";
 import { CommissionAttachments } from "./CommissionAttachments";
 import { useCreateCommission, useSalesReps, COMMISSION_TIERS } from "@/hooks/useCommissions";
+import { useIsJobNumberDenied } from "@/hooks/useGovernedCommissionWorkflow";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { DatePickerField } from "@/components/ui/date-picker-field";
@@ -24,7 +26,11 @@ const formSchema = z.object({
   // Job Information
   job_name: z.string().min(1, "Job name is required"),
   job_address: z.string().min(1, "Job address is required"),
-  acculynx_job_id: z.string().optional(),
+  // 4-digit AccuLynx Job Number - REQUIRED
+  acculynx_job_id: z.string()
+    .min(4, "AccuLynx Job Number must be exactly 4 digits")
+    .max(4, "AccuLynx Job Number must be exactly 4 digits")
+    .regex(/^\d{4}$/, "Must be exactly 4 digits"),
   job_type: z.enum(["insurance", "retail", "hoa"]),
   roof_type: z.enum(["shingle", "tile", "flat", "foam", "other"]),
   contract_date: z.string().min(1, "Contract date is required"),
@@ -57,10 +63,15 @@ interface CommissionSubmitFormProps {
 
 export function CommissionSubmitForm({ variant = "employee" }: CommissionSubmitFormProps) {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, role } = useAuth();
   const createCommission = useCreateCommission();
   const { data: salesReps } = useSalesReps();
   const [attachments, setAttachments] = useState<File[]>([]);
+  
+  // Track entered job number to check if denied
+  const [enteredJobNumber, setEnteredJobNumber] = useState<string>("");
+  const { data: isJobDenied } = useIsJobNumberDenied(enteredJobNumber);
+  const isManagerSubmission = role === "manager" || role === "admin";
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -68,7 +79,7 @@ export function CommissionSubmitForm({ variant = "employee" }: CommissionSubmitF
       submission_type: variant,
       job_name: "",
       job_address: "",
-      acculynx_job_id: "",
+      acculynx_job_id: "", // Required 4-digit
       job_type: "insurance",
       roof_type: "shingle",
       sales_rep_name: "",
@@ -81,6 +92,14 @@ export function CommissionSubmitForm({ variant = "employee" }: CommissionSubmitF
       advances_paid: 0,
     },
   });
+
+  // Watch job number field for denied check
+  const watchJobNumber = form.watch("acculynx_job_id");
+  useEffect(() => {
+    if (watchJobNumber && watchJobNumber.length === 4) {
+      setEnteredJobNumber(watchJobNumber);
+    }
+  }, [watchJobNumber]);
 
   const isSubcontractor = variant === "subcontractor";
   const watchCommissionTier = form.watch("commission_tier");
@@ -110,12 +129,20 @@ export function CommissionSubmitForm({ variant = "employee" }: CommissionSubmitF
   };
 
   const onSubmit = async (data: FormData) => {
+    // Block if job number is denied
+    if (isJobDenied) {
+      toast.error("This job has been denied", {
+        description: "This job number has been permanently locked and cannot be resubmitted.",
+      });
+      return;
+    }
+    
     try {
       await createCommission.mutateAsync({
         submission_type: variant,
         job_name: data.job_name,
         job_address: data.job_address,
-        acculynx_job_id: data.acculynx_job_id || null,
+        acculynx_job_id: data.acculynx_job_id,
         job_type: data.job_type,
         roof_type: data.roof_type,
         contract_date: data.contract_date,
@@ -131,7 +158,11 @@ export function CommissionSubmitForm({ variant = "employee" }: CommissionSubmitF
         supplements_approved: data.supplements_approved,
         commission_percentage: data.commission_percentage,
         advances_paid: data.advances_paid,
-      });
+        // Mark if this is a manager submission for routing
+        is_manager_submission: isManagerSubmission,
+        // Set commission_requested to the calculated amount
+        commission_requested: worksheetData.contract_amount * (worksheetData.commission_percentage / 100) - worksheetData.advances_paid,
+      } as any);
       
       navigate("/commissions");
     } catch (error) {
@@ -185,10 +216,26 @@ export function CommissionSubmitForm({ variant = "employee" }: CommissionSubmitF
               name="acculynx_job_id"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>AccuLynx Job ID</FormLabel>
+                  <FormLabel>AccuLynx Job Number *</FormLabel>
                   <FormControl>
-                    <Input placeholder="Enter AccuLynx ID" {...field} />
+                    <Input 
+                      placeholder="4-digit job number" 
+                      maxLength={4}
+                      {...field} 
+                      className={isJobDenied ? "border-destructive" : ""}
+                    />
                   </FormControl>
+                  <FormDescription>
+                    Enter the 4-digit AccuLynx Job Number (required)
+                  </FormDescription>
+                  {isJobDenied && (
+                    <Alert variant="destructive" className="mt-2">
+                      <Ban className="h-4 w-4" />
+                      <AlertDescription>
+                        This job has been denied and cannot be resubmitted.
+                      </AlertDescription>
+                    </Alert>
+                  )}
                   <FormMessage />
                 </FormItem>
               )}

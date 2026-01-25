@@ -7,13 +7,14 @@ export interface CommissionSubmission {
   id: string;
   submitted_by: string;
   submission_type: "employee" | "subcontractor";
-  status: "pending_review" | "revision_required" | "approved_for_payment" | "paid" | "on_hold";
-  approval_stage: "pending_manager" | "manager_approved" | "accounting_approved" | null;
+  // Governed states: approved, revision_required, denied (plus pending_review for in-flight)
+  status: "pending_review" | "revision_required" | "approved" | "denied" | "paid";
+  approval_stage: "pending_manager" | "pending_accounting" | "pending_admin" | "completed" | null;
   
   // Job Information
   job_name: string;
   job_address: string;
-  acculynx_job_id: string | null;
+  acculynx_job_id: string | null; // 4-digit required
   job_type: "insurance" | "retail" | "hoa";
   roof_type: "shingle" | "tile" | "flat" | "foam" | "other";
   contract_date: string;
@@ -39,6 +40,18 @@ export interface CommissionSubmission {
   gross_commission: number;
   advances_paid: number;
   net_commission_owed: number;
+  
+  // Governed Workflow Fields
+  commission_requested: number;  // Editable by rep
+  commission_approved: number;   // Editable by manager/accounting, read-only to rep
+  commission_approved_at: string | null;
+  commission_approved_by: string | null;
+  revision_count: number;
+  is_manager_submission: boolean; // Routes to admin for final approval
+  admin_approved_at: string | null;
+  admin_approved_by: string | null;
+  denied_at: string | null;
+  denied_by: string | null;
   
   // Workflow
   reviewer_notes: string | null;
@@ -240,16 +253,18 @@ export function useUpdateCommissionStatus() {
         updateData.approval_stage = approval_stage;
       }
       
-      // Handle manager approval
-      if (approval_stage === "manager_approved") {
+      // Handle manager approval -> move to accounting stage
+      if (approval_stage === "pending_accounting") {
         updateData.manager_approved_at = new Date().toISOString();
         updateData.manager_approved_by = user.id;
       }
       
-      // Handle final (accounting) approval
-      if (status === "approved_for_payment" && approval_stage === "accounting_approved") {
+      // Handle final (accounting) approval for regular submissions
+      if (status === "approved" && approval_stage === "completed") {
         updateData.approved_at = new Date().toISOString();
         updateData.approved_by = user.id;
+        updateData.commission_approved_at = new Date().toISOString();
+        updateData.commission_approved_by = user.id;
       }
       
       // Handle paid status
@@ -262,6 +277,13 @@ export function useUpdateCommissionStatus() {
         updateData.rejection_reason = rejection_reason;
         // Reset approval stage when requesting revision
         updateData.approval_stage = "pending_manager";
+        // Increment revision count
+        const { data: currentCount } = await supabase
+          .from("commission_submissions")
+          .select("revision_count")
+          .eq("id", id)
+          .single();
+        updateData.revision_count = (currentCount?.revision_count || 0) + 1;
       }
       
       if (notes) {
@@ -276,10 +298,10 @@ export function useUpdateCommissionStatus() {
       if (error) throw error;
       
       // Log the status change
-      const logNotes = approval_stage === "manager_approved" 
+      const logNotes = approval_stage === "pending_accounting" 
         ? "Manager approved - sent to accounting"
-        : approval_stage === "accounting_approved"
-        ? "Accounting approved - ready for payment"
+        : approval_stage === "completed" && status === "approved"
+        ? "🎉 Approved - ready for payment"
         : notes || rejection_reason || `Status changed to ${status}`;
       
       await supabase.from("commission_status_log").insert({
@@ -293,10 +315,11 @@ export function useUpdateCommissionStatus() {
       // Send notification
       try {
         const notificationType = 
-          approval_stage === "manager_approved" ? "manager_approved" :
-          approval_stage === "accounting_approved" ? "accounting_approved" :
+          approval_stage === "pending_accounting" ? "manager_approved" :
+          (approval_stage === "completed" && status === "approved") ? "approved" :
           status === "paid" ? "paid" :
           status === "revision_required" ? "revision_required" : 
+          status === "denied" ? "denied" :
           "status_change";
 
         // Get submitter info
@@ -337,10 +360,11 @@ export function useUpdateCommissionStatus() {
       queryClient.invalidateQueries({ queryKey: ["commission-status-log", variables.id] });
       
       const message = 
-        variables.approval_stage === "manager_approved" ? "Approved by manager - sent to accounting" :
-        variables.approval_stage === "accounting_approved" ? "Approved by accounting - ready for payment" :
+        variables.approval_stage === "pending_accounting" ? "Approved by manager - sent to accounting" :
+        (variables.approval_stage === "completed" && variables.status === "approved") ? "🎉 Commission Approved!" :
         variables.status === "paid" ? "Marked as paid" :
         variables.status === "revision_required" ? "Revision requested" :
+        variables.status === "denied" ? "Commission denied" :
         "Commission status updated";
       
       toast.success(message);

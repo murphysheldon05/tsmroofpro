@@ -155,7 +155,7 @@ export default function PendingReview() {
         await updateCommissionStatus.mutateAsync({
           id: item.id,
           status: "pending_review",
-          approval_stage: "manager_approved",
+          approval_stage: "pending_accounting", // Manager approved -> to accounting
           notes: "Approved via Pending Review page",
         });
         refetch();
