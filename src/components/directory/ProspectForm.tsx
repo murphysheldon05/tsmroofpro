@@ -66,7 +66,7 @@ export function ProspectForm({ open, onOpenChange, prospect }: ProspectFormProps
           <DialogTitle>{isEditing ? "Edit Prospect" : "Add New Prospect"}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="company_name">Company/Name *</Label>
               <Input id="company_name" {...register("company_name", { required: true })} />

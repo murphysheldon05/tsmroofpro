@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -10,10 +10,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { 
   Plus, Search, FileText, Eye, Download, FileSpreadsheet, 
-  Filter, Calendar, DollarSign, TrendingUp, Users, BarChart3,
-  CheckCircle, Clock, XCircle
+  Filter, Calendar, DollarSign, TrendingUp, 
+  CheckCircle, Clock, XCircle, X
 } from "lucide-react";
 import { useCommissionDocuments, type CommissionDocument } from "@/hooks/useCommissionDocuments";
 import { formatCurrency } from "@/lib/commissionDocumentCalculations";
@@ -32,6 +33,7 @@ export default function CommissionDocuments() {
   const [salesRepFilter, setSalesRepFilter] = useState<string>("all");
   const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
   const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
+  const [filterSheetOpen, setFilterSheetOpen] = useState(false);
 
   const { data: documents, isLoading } = useCommissionDocuments(statusFilter);
 
@@ -148,7 +150,7 @@ export default function CommissionDocuments() {
         className={`gap-1 ${status === 'approved' ? 'bg-green-100 text-green-800 border-green-300' : ''}`}
       >
         {icons[status]}
-        {status.charAt(0).toUpperCase() + status.slice(1)}
+        <span className="hidden sm:inline">{status.charAt(0).toUpperCase() + status.slice(1)}</span>
       </Badge>
     );
   };
@@ -306,15 +308,140 @@ export default function CommissionDocuments() {
   };
 
   const hasActiveFilters = searchQuery || statusFilter !== "all" || salesRepFilter !== "all" || dateFrom || dateTo;
+  const activeFilterCount = [
+    statusFilter !== "all",
+    salesRepFilter !== "all",
+    !!dateFrom,
+    !!dateTo,
+  ].filter(Boolean).length;
+
+  // Mobile card component for documents
+  const DocumentCard = ({ doc }: { doc: CommissionDocument }) => (
+    <button
+      onClick={() => navigate(`/commission-documents/${doc.id}`)}
+      className="w-full text-left p-4 bg-card border border-border rounded-lg hover:border-primary/30 hover:bg-muted/30 transition-all"
+    >
+      <div className="flex items-start justify-between gap-2 mb-2">
+        <div className="font-medium text-foreground truncate flex-1">{doc.job_name_id}</div>
+        {getStatusBadge(doc.status)}
+      </div>
+      <div className="text-sm text-muted-foreground mb-2">{doc.sales_rep}</div>
+      <div className="grid grid-cols-2 gap-2 text-sm">
+        <div>
+          <span className="text-muted-foreground">Gross:</span>
+          <span className="ml-1 font-mono">{formatCurrency(doc.gross_contract_total)}</span>
+        </div>
+        <div>
+          <span className="text-muted-foreground">Commission:</span>
+          <span className="ml-1 font-mono font-semibold text-green-600">{formatCurrency(doc.rep_commission)}</span>
+        </div>
+      </div>
+      {doc.job_date && (
+        <div className="text-xs text-muted-foreground mt-2">
+          {format(parseISO(doc.job_date), 'MMM d, yyyy')}
+        </div>
+      )}
+    </button>
+  );
+
+  // Filter content for both mobile sheet and desktop
+  const FilterContent = ({ isMobile = false }: { isMobile?: boolean }) => (
+    <div className={`space-y-4 ${isMobile ? '' : 'flex flex-col sm:flex-row gap-4'}`}>
+      {/* Status Filter */}
+      <div className="space-y-1">
+        <label className="text-xs font-medium text-muted-foreground">Status</label>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Statuses</SelectItem>
+            <SelectItem value="draft">Draft</SelectItem>
+            <SelectItem value="submitted">Submitted</SelectItem>
+            <SelectItem value="approved">Approved</SelectItem>
+            <SelectItem value="rejected">Rejected</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Sales Rep Filter */}
+      <div className="space-y-1">
+        <label className="text-xs font-medium text-muted-foreground">Sales Rep</label>
+        <Select value={salesRepFilter} onValueChange={setSalesRepFilter}>
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="Sales Rep" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Sales Reps</SelectItem>
+            {uniqueSalesReps.map(rep => (
+              <SelectItem key={rep.name} value={rep.name}>
+                {rep.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Date Range */}
+      <div className="space-y-1">
+        <label className="text-xs font-medium text-muted-foreground">From Date</label>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" size="sm" className="w-full justify-start gap-2">
+              <Calendar className="h-4 w-4" />
+              {dateFrom ? format(dateFrom, "MMM d, yyyy") : "Start Date"}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <CalendarComponent
+              mode="single"
+              selected={dateFrom}
+              onSelect={setDateFrom}
+              initialFocus
+            />
+          </PopoverContent>
+        </Popover>
+      </div>
+      
+      <div className="space-y-1">
+        <label className="text-xs font-medium text-muted-foreground">To Date</label>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" size="sm" className="w-full justify-start gap-2">
+              <Calendar className="h-4 w-4" />
+              {dateTo ? format(dateTo, "MMM d, yyyy") : "End Date"}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <CalendarComponent
+              mode="single"
+              selected={dateTo}
+              onSelect={setDateTo}
+              initialFocus
+            />
+          </PopoverContent>
+        </Popover>
+      </div>
+
+      {hasActiveFilters && (
+        <div className={isMobile ? 'pt-2' : 'flex items-end'}>
+          <Button variant="ghost" size="sm" onClick={clearFilters} className="w-full sm:w-auto">
+            <X className="h-4 w-4 mr-1" />
+            Clear Filters
+          </Button>
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <AppLayout>
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         {/* Header */}
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-bold">Commission Documents</h1>
-            <p className="text-muted-foreground">
+            <h1 className="text-xl sm:text-2xl font-bold">Commission Documents</h1>
+            <p className="text-sm text-muted-foreground">
               {isAdmin 
                 ? "View and manage all commission documents" 
                 : isManager 
@@ -325,9 +452,9 @@ export default function CommissionDocuments() {
           <div className="flex gap-2">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="gap-2">
+                <Button variant="outline" size="sm" className="gap-2">
                   <Download className="h-4 w-4" />
-                  Export
+                  <span className="hidden sm:inline">Export</span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
@@ -341,157 +468,104 @@ export default function CommissionDocuments() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            <Button onClick={() => navigate('/commissions/new')}>
-              <Plus className="h-4 w-4 mr-2" />
-              New Document
+            <Button size="sm" onClick={() => navigate('/commissions/new')}>
+              <Plus className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">New Document</span>
             </Button>
           </div>
         </div>
 
-        {/* Summary Cards */}
-        <div className="grid gap-4 md:grid-cols-4">
+        {/* Summary Cards - Mobile: 2x2 grid, Desktop: 4 columns */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                <FileText className="h-4 w-4" />
-                Total Documents
+            <CardHeader className="pb-1 pt-3 px-3 sm:pb-2 sm:pt-4 sm:px-6">
+              <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-1 sm:gap-2">
+                <FileText className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="truncate">Total Docs</span>
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.total}</div>
+            <CardContent className="px-3 pb-3 sm:px-6 sm:pb-4">
+              <div className="text-xl sm:text-2xl font-bold">{stats.total}</div>
             </CardContent>
           </Card>
           
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                <Clock className="h-4 w-4" />
-                Pending Review
+            <CardHeader className="pb-1 pt-3 px-3 sm:pb-2 sm:pt-4 sm:px-6">
+              <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-1 sm:gap-2">
+                <Clock className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="truncate">Pending</span>
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-amber-600">{stats.pending}</div>
+            <CardContent className="px-3 pb-3 sm:px-6 sm:pb-4">
+              <div className="text-xl sm:text-2xl font-bold text-amber-600">{stats.pending}</div>
             </CardContent>
           </Card>
           
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                <TrendingUp className="h-4 w-4" />
-                Approved Profit
+            <CardHeader className="pb-1 pt-3 px-3 sm:pb-2 sm:pt-4 sm:px-6">
+              <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-1 sm:gap-2">
+                <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="truncate">Net Profit</span>
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">{formatCurrency(stats.totalProfit)}</div>
+            <CardContent className="px-3 pb-3 sm:px-6 sm:pb-4">
+              <div className="text-lg sm:text-2xl font-bold text-green-600">{formatCurrency(stats.totalProfit)}</div>
             </CardContent>
           </Card>
           
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                <DollarSign className="h-4 w-4" />
-                Total Commission
+            <CardHeader className="pb-1 pt-3 px-3 sm:pb-2 sm:pt-4 sm:px-6">
+              <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-1 sm:gap-2">
+                <DollarSign className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="truncate">Commission</span>
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-primary">{formatCurrency(stats.totalCommission)}</div>
+            <CardContent className="px-3 pb-3 sm:px-6 sm:pb-4">
+              <div className="text-lg sm:text-2xl font-bold text-primary">{formatCurrency(stats.totalCommission)}</div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Filters */}
+        {/* Search and Filters */}
         <Card>
-          <CardHeader className="pb-4">
-            <div className="flex flex-col gap-4">
-              <div className="flex flex-col sm:flex-row gap-4">
-                {/* Search */}
+          <CardHeader className="pb-3 sm:pb-4">
+            <div className="flex flex-col gap-3">
+              {/* Search + Filter Button (Mobile) */}
+              <div className="flex gap-2">
                 <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
-                    placeholder="Search by Job Name or Sales Rep..."
+                    placeholder="Search..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="pl-10"
                   />
                 </div>
                 
-                {/* Status Filter */}
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-[150px]">
-                    <SelectValue placeholder="Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Statuses</SelectItem>
-                    <SelectItem value="draft">Draft</SelectItem>
-                    <SelectItem value="submitted">Submitted</SelectItem>
-                    <SelectItem value="approved">Approved</SelectItem>
-                    <SelectItem value="rejected">Rejected</SelectItem>
-                  </SelectContent>
-                </Select>
-
-                {/* Sales Rep Filter */}
-                <Select value={salesRepFilter} onValueChange={setSalesRepFilter}>
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Sales Rep" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Sales Reps</SelectItem>
-                    {uniqueSalesReps.map(rep => (
-                      <SelectItem key={rep.name} value={rep.name}>
-                        {rep.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {/* Mobile Filter Button */}
+                <Sheet open={filterSheetOpen} onOpenChange={setFilterSheetOpen}>
+                  <SheetTrigger asChild>
+                    <Button variant="outline" size="icon" className="sm:hidden relative">
+                      <Filter className="h-4 w-4" />
+                      {activeFilterCount > 0 && (
+                        <span className="absolute -top-1 -right-1 h-4 w-4 bg-primary text-primary-foreground text-xs rounded-full flex items-center justify-center">
+                          {activeFilterCount}
+                        </span>
+                      )}
+                    </Button>
+                  </SheetTrigger>
+                  <SheetContent side="bottom" className="h-auto max-h-[80vh]">
+                    <SheetHeader className="mb-4">
+                      <SheetTitle>Filters</SheetTitle>
+                    </SheetHeader>
+                    <FilterContent isMobile />
+                  </SheetContent>
+                </Sheet>
               </div>
-
-              {/* Date Range Filters */}
-              <div className="flex flex-wrap gap-4 items-center">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">From:</span>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button variant="outline" size="sm" className="gap-2 w-[140px] justify-start">
-                        <Calendar className="h-4 w-4" />
-                        {dateFrom ? format(dateFrom, "MMM d, yyyy") : "Start Date"}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <CalendarComponent
-                        mode="single"
-                        selected={dateFrom}
-                        onSelect={setDateFrom}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-                
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">To:</span>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button variant="outline" size="sm" className="gap-2 w-[140px] justify-start">
-                        <Calendar className="h-4 w-4" />
-                        {dateTo ? format(dateTo, "MMM d, yyyy") : "End Date"}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <CalendarComponent
-                        mode="single"
-                        selected={dateTo}
-                        onSelect={setDateTo}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-
-                {hasActiveFilters && (
-                  <Button variant="ghost" size="sm" onClick={clearFilters}>
-                    Clear Filters
-                  </Button>
-                )}
+              
+              {/* Desktop Filters - Hidden on Mobile */}
+              <div className="hidden sm:block">
+                <FilterContent />
               </div>
             </div>
           </CardHeader>
@@ -514,53 +588,63 @@ export default function CommissionDocuments() {
                 )}
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Job Name & ID</TableHead>
-                      <TableHead>Job Date</TableHead>
-                      <TableHead>Sales Rep</TableHead>
-                      <TableHead className="text-right">Gross Contract</TableHead>
-                      <TableHead className="text-right">Net Profit</TableHead>
-                      <TableHead className="text-right">Rep Commission</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredDocuments?.map((doc) => (
-                      <TableRow 
-                        key={doc.id} 
-                        className="cursor-pointer hover:bg-muted/50" 
-                        onClick={() => navigate(`/commission-documents/${doc.id}`)}
-                      >
-                        <TableCell className="font-medium">{doc.job_name_id}</TableCell>
-                        <TableCell>{doc.job_date ? format(parseISO(doc.job_date), 'MM/dd/yyyy') : '-'}</TableCell>
-                        <TableCell>{doc.sales_rep}</TableCell>
-                        <TableCell className="text-right font-mono">{formatCurrency(doc.gross_contract_total)}</TableCell>
-                        <TableCell className="text-right font-mono">{formatCurrency(doc.net_profit)}</TableCell>
-                        <TableCell className="text-right font-mono font-semibold text-green-600">
-                          {formatCurrency(doc.rep_commission)}
-                        </TableCell>
-                        <TableCell>{getStatusBadge(doc.status)}</TableCell>
-                        <TableCell className="text-right">
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            onClick={(e) => { 
-                              e.stopPropagation(); 
-                              navigate(`/commission-documents/${doc.id}`); 
-                            }}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
+              <>
+                {/* Mobile Card View */}
+                <div className="sm:hidden space-y-3">
+                  {filteredDocuments?.map((doc) => (
+                    <DocumentCard key={doc.id} doc={doc} />
+                  ))}
+                </div>
+
+                {/* Desktop Table View */}
+                <div className="hidden sm:block overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Job Name & ID</TableHead>
+                        <TableHead>Job Date</TableHead>
+                        <TableHead>Sales Rep</TableHead>
+                        <TableHead className="text-right">Gross Contract</TableHead>
+                        <TableHead className="text-right">Net Profit</TableHead>
+                        <TableHead className="text-right">Rep Commission</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredDocuments?.map((doc) => (
+                        <TableRow 
+                          key={doc.id} 
+                          className="cursor-pointer hover:bg-muted/50" 
+                          onClick={() => navigate(`/commission-documents/${doc.id}`)}
+                        >
+                          <TableCell className="font-medium">{doc.job_name_id}</TableCell>
+                          <TableCell>{doc.job_date ? format(parseISO(doc.job_date), 'MM/dd/yyyy') : '-'}</TableCell>
+                          <TableCell>{doc.sales_rep}</TableCell>
+                          <TableCell className="text-right font-mono">{formatCurrency(doc.gross_contract_total)}</TableCell>
+                          <TableCell className="text-right font-mono">{formatCurrency(doc.net_profit)}</TableCell>
+                          <TableCell className="text-right font-mono font-semibold text-green-600">
+                            {formatCurrency(doc.rep_commission)}
+                          </TableCell>
+                          <TableCell>{getStatusBadge(doc.status)}</TableCell>
+                          <TableCell className="text-right">
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              onClick={(e) => { 
+                                e.stopPropagation(); 
+                                navigate(`/commission-documents/${doc.id}`); 
+                              }}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </>
             )}
           </CardContent>
         </Card>
