@@ -35,7 +35,7 @@ function buildMapUrl(addressFull: string): string {
 }
 
 function buildAccuLynxJobUrl(jobId: string): string {
-  return `https://app.acculynx.com/jobs/${jobId}`;
+  return `https://app.aculynx.com/jobs/${jobId}`;
 }
 
 function classifyEventType(eventType: string): "DELIVERY" | "LABOR" | "IGNORE" {
@@ -245,7 +245,8 @@ Deno.serve(async (req) => {
                 job_name: appt.jobName || appt.title,
                 address_full: addressFull,
                 scheduled_datetime: appt.start,
-                map_url: mapUrl,
+                map_url_primary: mapUrl,
+                map_url_google: mapUrl,
                 acculynx_job_url: acculynxJobUrl,
                 source_event_id: appt.id,
                 last_synced_at: new Date().toISOString(),
@@ -268,7 +269,8 @@ Deno.serve(async (req) => {
                 scheduled_datetime: appt.start,
                 roof_type: null,
                 squares: null,
-                map_url: mapUrl,
+                map_url_primary: mapUrl,
+                map_url_google: mapUrl,
                 acculynx_job_url: acculynxJobUrl,
                 source_event_id: appt.id,
                 last_synced_at: new Date().toISOString(),
