@@ -49,6 +49,7 @@ import { NotificationSettingsManager } from "@/components/admin/NotificationSett
 import { NotificationRoutingManager } from "@/components/admin/NotificationRoutingManager";
 import { CommissionTierManager } from "@/components/admin/CommissionTierManager";
 import { CategoryManager } from "@/components/admin/CategoryManager";
+import { SOPManager } from "@/components/admin/SOPManager";
 import { ToolsManager } from "@/components/admin/ToolsManager";
 import { useCommissionTiers } from "@/hooks/useCommissionTiers";
 import { useAdminAuditLog, AUDIT_ACTIONS, OBJECT_TYPES } from "@/hooks/useAdminAuditLog";
@@ -414,6 +415,10 @@ export default function Admin() {
             <TabsTrigger value="tiers" className="gap-2">
               <Percent className="w-4 h-4" />
               Commission Tiers
+            </TabsTrigger>
+            <TabsTrigger value="sops" className="gap-2">
+              <FolderOpen className="w-4 h-4" />
+              SOPs
             </TabsTrigger>
             <TabsTrigger value="categories" className="gap-2">
               <FolderOpen className="w-4 h-4" />
@@ -781,6 +786,11 @@ export default function Admin() {
           {/* Commission Tiers Tab - ADMIN ONLY */}
           <TabsContent value="tiers" className="space-y-4">
             <CommissionTierManager />
+          </TabsContent>
+
+          {/* SOPs Management Tab - ADMIN ONLY */}
+          <TabsContent value="sops" className="space-y-4">
+            <SOPManager />
           </TabsContent>
 
           {/* SOP Categories Tab - ADMIN ONLY */}

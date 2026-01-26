@@ -2,6 +2,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
+export type SOPStatus = 'draft' | 'live' | 'archived';
+
 export interface Resource {
   id: string;
   title: string;
@@ -18,7 +20,7 @@ export interface Resource {
   view_count: number;
   created_at: string;
   updated_at: string;
-  // New SOP metadata fields
+  // SOP metadata fields
   task_type: string | null;
   role_target: string[] | null;
   urgency: string | null;
@@ -27,6 +29,12 @@ export interface Resource {
   purpose: string | null;
   when_to_use: string | null;
   common_mistakes: string[] | null;
+  // SOP status governance
+  status: SOPStatus;
+  published_at: string | null;
+  published_by: string | null;
+  archived_at: string | null;
+  archived_by: string | null;
   categories?: {
     id: string;
     name: string;

@@ -1,6 +1,6 @@
-import { Resource } from "@/hooks/useResources";
+import { Resource, SOPStatus } from "@/hooks/useResources";
 import { cn } from "@/lib/utils";
-import { FileText, ExternalLink, Eye, Clock } from "lucide-react";
+import { FileText, ExternalLink, Eye, Clock, CheckCircle, Archive } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 
@@ -8,9 +8,16 @@ interface ResourceCardProps {
   resource: Resource;
   compact?: boolean;
   onClick?: () => void;
+  showStatus?: boolean;
 }
 
-export function ResourceCard({ resource, compact = false, onClick }: ResourceCardProps) {
+const statusConfig: Record<SOPStatus, { label: string; color: string; icon: React.ElementType }> = {
+  live: { label: "Live", color: "bg-green-500/15 text-green-600 border-green-500/30", icon: CheckCircle },
+  draft: { label: "Draft", color: "bg-yellow-500/15 text-yellow-600 border-yellow-500/30", icon: Clock },
+  archived: { label: "Archived", color: "bg-gray-500/15 text-gray-500 border-gray-500/30", icon: Archive },
+};
+
+export function ResourceCard({ resource, compact = false, onClick, showStatus = false }: ResourceCardProps) {
   const handleClick = () => {
     if (onClick) {
       onClick();
@@ -22,6 +29,10 @@ export function ResourceCard({ resource, compact = false, onClick }: ResourceCar
     }
   };
 
+  const status = resource.status || 'live';
+  const statusConf = statusConfig[status];
+  const StatusIcon = statusConf.icon;
+
   if (compact) {
     return (
       <button
@@ -32,9 +43,16 @@ export function ResourceCard({ resource, compact = false, onClick }: ResourceCar
           <FileText className="w-4 h-4 text-primary group-hover:drop-shadow-[0_0_6px_hsl(var(--primary)/0.5)]" />
         </div>
         <div className="flex-1 min-w-0">
-          <h4 className="text-sm font-medium text-foreground truncate group-hover:text-primary transition-colors">
-            {resource.title}
-          </h4>
+          <div className="flex items-center gap-2">
+            <h4 className="text-sm font-medium text-foreground truncate group-hover:text-primary transition-colors">
+              {resource.title}
+            </h4>
+            {showStatus && status !== 'live' && (
+              <Badge variant="outline" className={cn("text-[10px] px-1.5 py-0", statusConf.color)}>
+                {statusConf.label}
+              </Badge>
+            )}
+          </div>
           <p className="text-xs text-muted-foreground">
             {resource.categories?.name || "Uncategorized"}
           </p>
@@ -58,9 +76,27 @@ export function ResourceCard({ resource, compact = false, onClick }: ResourceCar
         <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0 group-hover:bg-primary/20 group-hover:shadow-[0_0_15px_hsl(var(--primary)/0.3)] transition-all duration-300">
           <FileText className="w-5 h-5 text-primary group-hover:drop-shadow-[0_0_8px_hsl(var(--primary)/0.5)]" />
         </div>
-        <Badge variant="secondary" className="text-xs">
-          {resource.version}
-        </Badge>
+        <div className="flex items-center gap-1.5">
+          {/* Status Badge - Show for draft/archived */}
+          {showStatus && status !== 'live' && (
+            <Badge variant="outline" className={cn("text-xs", statusConf.color)}>
+              <StatusIcon className="h-3 w-3 mr-1" />
+              {statusConf.label}
+            </Badge>
+          )}
+          {/* Live badge - subtle green indicator */}
+          {showStatus && status === 'live' && (
+            <Badge variant="outline" className={cn("text-xs", statusConf.color)}>
+              <StatusIcon className="h-3 w-3 mr-1" />
+              {statusConf.label}
+            </Badge>
+          )}
+          {!showStatus && (
+            <Badge variant="secondary" className="text-xs">
+              {resource.version}
+            </Badge>
+          )}
+        </div>
       </div>
 
       <h3 className="font-semibold text-foreground mb-2 group-hover:text-primary transition-colors line-clamp-2">

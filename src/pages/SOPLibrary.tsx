@@ -1,7 +1,7 @@
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { ResourceCard } from "@/components/dashboard/ResourceCard";
-import { useResources, useCategories, useSearchResources, Resource } from "@/hooks/useResources";
+import { useResources, useCategories, useSearchResources, Resource, SOPStatus } from "@/hooks/useResources";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useState, useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { ResourceDetailModal } from "@/components/resources/ResourceDetailModal";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   Select,
   SelectContent,
@@ -71,8 +72,9 @@ const urgencyFilters = [
 export default function SOPLibrary() {
   const { category } = useParams<{ category: string }>();
   const navigate = useNavigate();
-  const { data: allResources, isLoading: allLoading } = useResources();
-  const { data: categoryResources, isLoading: categoryLoading } = useResources(category);
+  const { isAdmin, isManager } = useAuth();
+  const { data: allResourcesRaw, isLoading: allLoading } = useResources();
+  const { data: categoryResourcesRaw, isLoading: categoryLoading } = useResources(category);
   const { data: categories } = useCategories();
   
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
@@ -84,7 +86,35 @@ export default function SOPLibrary() {
   const [roleFilter, setRoleFilter] = useState("all");
   const [urgencyFilter, setUrgencyFilter] = useState("all");
 
-  const { data: searchResults, isLoading: searchLoading } = useSearchResources(searchQuery);
+  const { data: searchResultsRaw, isLoading: searchLoading } = useSearchResources(searchQuery);
+
+  // Filter resources by status based on user role
+  // Sales Reps: ONLY Live
+  // Managers: Live + Draft (with draft badges)
+  // Admins: ALL (Live, Draft, Archived)
+  const filterByStatus = (resources: Resource[] | undefined): Resource[] => {
+    if (!resources) return [];
+    
+    return resources.filter(r => {
+      const status = r.status || 'live';
+      
+      // Admins see everything
+      if (isAdmin) return true;
+      
+      // Managers see Live and Draft
+      if (isManager) return status === 'live' || status === 'draft';
+      
+      // Sales Reps (employees) see only Live
+      return status === 'live';
+    });
+  };
+
+  const allResources = filterByStatus(allResourcesRaw);
+  const categoryResources = filterByStatus(categoryResourcesRaw);
+  const searchResults = filterByStatus(searchResultsRaw);
+
+  // Show status badges for managers and admins (so they can see which are drafts)
+  const showStatusBadges = isAdmin || isManager;
 
   const handleResourceClick = (resource: Resource) => {
     setSelectedResource(resource);
@@ -373,6 +403,7 @@ export default function SOPLibrary() {
                 key={resource.id} 
                 resource={resource} 
                 onClick={() => handleResourceClick(resource)}
+                showStatus={showStatusBadges}
               />
             ))}
           </div>

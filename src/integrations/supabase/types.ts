@@ -1684,6 +1684,8 @@ export type Database = {
       }
       resources: {
         Row: {
+          archived_at: string | null
+          archived_by: string | null
           body: string | null
           category_id: string | null
           common_mistakes: string[] | null
@@ -1695,8 +1697,11 @@ export type Database = {
           last_updated_by: string | null
           owner_id: string | null
           owner_role: string | null
+          published_at: string | null
+          published_by: string | null
           purpose: string | null
           role_target: string[] | null
+          status: Database["public"]["Enums"]["sop_status"]
           tags: string[] | null
           task_type: string | null
           title: string
@@ -1709,6 +1714,8 @@ export type Database = {
           when_to_use: string | null
         }
         Insert: {
+          archived_at?: string | null
+          archived_by?: string | null
           body?: string | null
           category_id?: string | null
           common_mistakes?: string[] | null
@@ -1720,8 +1727,11 @@ export type Database = {
           last_updated_by?: string | null
           owner_id?: string | null
           owner_role?: string | null
+          published_at?: string | null
+          published_by?: string | null
           purpose?: string | null
           role_target?: string[] | null
+          status?: Database["public"]["Enums"]["sop_status"]
           tags?: string[] | null
           task_type?: string | null
           title: string
@@ -1734,6 +1744,8 @@ export type Database = {
           when_to_use?: string | null
         }
         Update: {
+          archived_at?: string | null
+          archived_by?: string | null
           body?: string | null
           category_id?: string | null
           common_mistakes?: string[] | null
@@ -1745,8 +1757,11 @@ export type Database = {
           last_updated_by?: string | null
           owner_id?: string | null
           owner_role?: string | null
+          published_at?: string | null
+          published_by?: string | null
           purpose?: string | null
           role_target?: string[] | null
+          status?: Database["public"]["Enums"]["sop_status"]
           tags?: string[] | null
           task_type?: string | null
           title?: string
@@ -2473,6 +2488,7 @@ export type Database = {
         | "north_valley"
         | "prescott"
         | "other"
+      sop_status: "draft" | "live" | "archived"
       trade_type:
         | "roofing"
         | "tile"
@@ -2690,6 +2706,7 @@ export const Constants = {
         "prescott",
         "other",
       ],
+      sop_status: ["draft", "live", "archived"],
       trade_type: [
         "roofing",
         "tile",

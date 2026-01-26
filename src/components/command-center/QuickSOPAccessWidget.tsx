@@ -14,18 +14,45 @@ import {
   TrendingUp,
   User,
 } from "lucide-react";
-import { useSearchResources, useRecentResources, usePopularResources, Resource } from "@/hooks/useResources";
+import { useSearchResources, useRecentResources, usePopularResources, Resource, SOPStatus } from "@/hooks/useResources";
 import { useAuth } from "@/contexts/AuthContext";
 import { formatDistanceToNow } from "date-fns";
 
+// Filter resources by status based on user role
+const filterByStatus = (
+  resources: Resource[] | undefined, 
+  isAdmin: boolean, 
+  isManager: boolean
+): Resource[] => {
+  if (!resources) return [];
+  
+  return resources.filter(r => {
+    const status = r.status || 'live';
+    
+    // Admins see everything
+    if (isAdmin) return true;
+    
+    // Managers see Live and Draft
+    if (isManager) return status === 'live' || status === 'draft';
+    
+    // Sales Reps (employees) see only Live
+    return status === 'live';
+  });
+};
+
 export function QuickSOPAccessWidget() {
   const navigate = useNavigate();
-  const { role } = useAuth();
+  const { role, isAdmin, isManager } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   
-  const { data: searchResults, isLoading: searchLoading } = useSearchResources(searchQuery);
-  const { data: recentResources, isLoading: recentLoading } = useRecentResources(5);
-  const { data: popularResources, isLoading: popularLoading } = usePopularResources(5);
+  const { data: searchResultsRaw, isLoading: searchLoading } = useSearchResources(searchQuery);
+  const { data: recentResourcesRaw, isLoading: recentLoading } = useRecentResources(5);
+  const { data: popularResourcesRaw, isLoading: popularLoading } = usePopularResources(5);
+
+  // Filter by status based on role
+  const searchResults = filterByStatus(searchResultsRaw, isAdmin, isManager);
+  const recentResources = filterByStatus(recentResourcesRaw, isAdmin, isManager);
+  const popularResources = filterByStatus(popularResourcesRaw, isAdmin, isManager);
 
   const handleResourceClick = (resource: Resource) => {
     if (resource.categories?.slug) {
