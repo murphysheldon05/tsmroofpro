@@ -84,6 +84,23 @@ serve(async (req: Request): Promise<Response> => {
     // HARD LOCK: Always use tsmroofpro.com for all portal links - never use any other domain
     const adminUrl = "https://tsmroofpro.com/admin";
 
+    // Plain text version for deliverability
+    const plainText = `New User Signup - Action Required
+
+A new user has signed up and is waiting for approval.
+
+User Details:
+- Name: ${full_name || "Not provided"}
+- Email: ${email}
+${requested_role ? `- Requested Role: ${requested_role}` : ""}
+${requested_department ? `- Requested Department: ${requested_department}` : ""}
+
+ACTION REQUIRED: Please review and approve this user in the Admin panel.
+
+Review in Admin Panel: ${adminUrl}
+
+© ${new Date().getFullYear()} TSM Roofing. All rights reserved.`;
+
     const emailHtml = `
       <!DOCTYPE html>
       <html>
@@ -132,11 +149,22 @@ serve(async (req: Request): Promise<Response> => {
             </p>
           </div>
           
-           <div style="text-align: center; margin: 30px 0;">
-             <a href="${adminUrl}" target="_blank" rel="noopener noreferrer" style="display: inline-block; background: #2563eb; color: white; padding: 14px 30px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
-               Review in Admin Panel
-             </a>
-           </div>
+          <!-- Outlook-compatible table-based button -->
+          <div style="text-align: center; margin: 30px 0;">
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center">
+              <tr>
+                <td style="background-color: #111827; border: 2px solid #111827; border-radius: 8px;">
+                  <a href="${adminUrl}" target="_blank" style="display: inline-block; padding: 14px 28px; font-size: 16px; font-weight: 600; color: #ffffff !important; text-decoration: none;">
+                    Review in Admin Panel
+                  </a>
+                </td>
+              </tr>
+            </table>
+          </div>
+          
+          <p style="font-size: 14px; color: #6b7280; text-align: center;">
+            Or copy this link: <a href="${adminUrl}" style="color: #3b82f6;">${adminUrl}</a>
+          </p>
         </div>
         
         <div style="background: #1e3a5f; padding: 20px; border-radius: 0 0 10px 10px; text-align: center;">
@@ -150,8 +178,10 @@ serve(async (req: Request): Promise<Response> => {
 
     const emailResponse = await resend.emails.send({
       from: "TSM Roofing <notifications@tsmroofpro.com>",
+      reply_to: "sheldonmurphy@tsmroofs.com",
       to: recipients,
       subject: `New User Signup: ${full_name || email}`,
+      text: plainText,
       html: emailHtml,
     });
 

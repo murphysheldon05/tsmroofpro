@@ -23,7 +23,7 @@ const requestTypeLabels: Record<string, string> = {
   hr: "HR Request",
 };
 
-async function sendEmail(to: string[], subject: string, html: string) {
+async function sendEmail(to: string[], subject: string, html: string, text: string) {
   console.log("Sending email to:", to);
   
   const response = await fetch("https://api.resend.com/emails", {
@@ -34,8 +34,10 @@ async function sendEmail(to: string[], subject: string, html: string) {
     },
     body: JSON.stringify({
       from: "TSM Roofing <notifications@tsmroofpro.com>",
+      reply_to: "sheldonmurphy@tsmroofs.com",
       to,
       subject,
+      text,
       html,
     }),
   });
@@ -146,6 +148,22 @@ serve(async (req: Request): Promise<Response> => {
     // Send notification to managers (if any recipients configured)
     let managerEmailResponse = null;
     if (recipientEmails.length > 0) {
+      const managerPlainText = `New ${requestLabel} Submitted
+
+A team member has submitted a new request for your review.
+
+Request Type: ${requestLabel}
+Subject: ${title}
+Submitted By: ${submitter_name}
+Email: ${submitter_email}
+${description ? `Details: ${description}` : ''}
+
+${attachmentNote}
+
+Please log in to the TSM Portal to review and take action on this request.
+
+TSM Roofing Employee Portal`;
+
       const managerHtml = `
         <!DOCTYPE html>
         <html>
@@ -210,13 +228,27 @@ serve(async (req: Request): Promise<Response> => {
       managerEmailResponse = await sendEmail(
         recipientEmails,
         `New ${requestLabel} Submitted: ${title}`,
-        managerHtml
+        managerHtml,
+        managerPlainText
       );
 
       console.log("Manager notification sent:", managerEmailResponse);
     }
 
     // Send confirmation to submitter
+    const submitterPlainText = `Request Received!
+
+Hi ${submitter_name},
+
+Your ${requestLabel} titled "${title}" has been successfully submitted and is now pending review.
+
+A manager will review your request and you'll be notified once a decision is made.
+
+Thank you,
+TSM Roofing Team
+
+TSM Roofing Employee Portal`;
+
     const submitterHtml = `
       <!DOCTYPE html>
       <html>
@@ -253,7 +285,8 @@ serve(async (req: Request): Promise<Response> => {
     const submitterEmailResponse = await sendEmail(
       [submitter_email],
       `Your ${requestLabel} Has Been Submitted`,
-      submitterHtml
+      submitterHtml,
+      submitterPlainText
     );
 
     console.log("Submitter confirmation sent:", submitterEmailResponse);

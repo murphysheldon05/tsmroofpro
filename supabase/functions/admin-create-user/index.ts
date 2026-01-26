@@ -275,10 +275,32 @@ serve(async (req: Request): Promise<Response> => {
         // Extract first name from full name
         const firstName = fullName?.split(' ')[0] || 'there';
 
+        // Plain text version for deliverability
+        const plainText = `TSM Roofing Hub - You've Been Invited
+
+Hi ${firstName},
+
+You've been invited to join the TSM Roofing Hub — our internal portal for SOPs, forms, trackers, and team resources.
+
+What to expect:
+- If you already have an account, log in and you'll be taken directly into the hub.
+- If you're new, create your login using this email address.
+- Access is role-based. If your access is still pending, you'll see a brief "Pending Approval" message until an admin approves your account.
+
+Open the TSM Roofing Hub: ${loginUrl}
+
+If you have any trouble getting in, reply to this email and we'll fix it fast.
+
+— TSM Roofing Team
+
+© ${new Date().getFullYear()} TSM Roofing. All rights reserved.`;
+
         const emailResponse = await resend.emails.send({
           from: "TSM Roofing <notifications@tsmroofpro.com>",
+          reply_to: "sheldonmurphy@tsmroofs.com",
           to: [email],
           subject: "You've been invited to the TSM Roofing Hub — Activate your access",
+          text: plainText,
           html: `
             <!DOCTYPE html>
             <html>
@@ -300,10 +322,17 @@ serve(async (req: Request): Promise<Response> => {
                   You've been invited to join the <strong>TSM Roofing Hub</strong> — our internal portal for SOPs, forms, trackers, and team resources.
                 </p>
                 
+                <!-- Outlook-compatible table-based button -->
                 <div style="text-align: center; margin: 30px 0;">
-                  <a href="${loginUrl}" style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; display: inline-block;">
-                    Open the TSM Roofing Hub
-                  </a>
+                  <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center">
+                    <tr>
+                      <td style="background-color: #111827; border: 2px solid #111827; border-radius: 8px;">
+                        <a href="${loginUrl}" target="_blank" style="display: inline-block; padding: 14px 28px; font-size: 16px; font-weight: 600; color: #ffffff !important; text-decoration: none;">
+                          Open the TSM Roofing Hub
+                        </a>
+                      </td>
+                    </tr>
+                  </table>
                 </div>
                 
                 <div style="background: #f8fafc; border-radius: 8px; padding: 20px; margin: 20px 0;">
@@ -314,6 +343,10 @@ serve(async (req: Request): Promise<Response> => {
                     <li style="margin-bottom: 8px;">Access is role-based. If your access is still pending, you'll see a brief "Pending Approval" message until an admin approves your account.</li>
                   </ul>
                 </div>
+                
+                <p style="font-size: 14px; color: #6b7280; text-align: center;">
+                  Or copy this link: <a href="${loginUrl}" style="color: #3b82f6;">${loginUrl}</a>
+                </p>
                 
                 <p style="font-size: 14px; color: #6b7280; margin-top: 20px;">
                   If you have any trouble getting in, reply to this email and we'll fix it fast.

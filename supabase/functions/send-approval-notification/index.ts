@@ -40,10 +40,30 @@ const handler = async (req: Request): Promise<Response> => {
 
     const roleDisplay = assigned_role ? ROLE_LABELS[assigned_role] || assigned_role : null;
 
+    // Plain text version for deliverability
+    const plainText = `Account Approved!
+
+Hi ${user_name || "there"},
+
+Great news! Your TSM Hub account has been approved by an administrator. You now have full access to the platform.
+
+${roleDisplay ? `Role: ${roleDisplay}` : ""}
+${assigned_department ? `Department: ${assigned_department}` : ""}
+
+${custom_message ? `Message from the Admin:\n${custom_message}` : ""}
+
+Log in to TSM Hub: ${loginUrl}
+
+If you have any questions, please reach out to your manager or administrator.
+
+© ${new Date().getFullYear()} TSM Roofing. All rights reserved.`;
+
     const emailResponse = await resend.emails.send({
       from: "TSM Hub <notifications@tsmroofpro.com>",
+      reply_to: "sheldonmurphy@tsmroofs.com",
       to: [user_email],
       subject: "Your TSM Hub Account Has Been Approved!",
+      text: plainText,
       html: `
         <!DOCTYPE html>
         <html>
@@ -92,10 +112,17 @@ const handler = async (req: Request): Promise<Response> => {
             </div>
             ` : ''}
             
+            <!-- Outlook-compatible table-based button -->
             <div style="text-align: center; margin: 30px 0;">
-              <a href="${loginUrl}" style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; display: inline-block;">
-                Log In to TSM Hub
-              </a>
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center">
+                <tr>
+                  <td style="background-color: #111827; border: 2px solid #111827; border-radius: 8px;">
+                    <a href="${loginUrl}" target="_blank" style="display: inline-block; padding: 14px 28px; font-size: 16px; font-weight: 600; color: #ffffff !important; text-decoration: none;">
+                      Log In to TSM Hub
+                    </a>
+                  </td>
+                </tr>
+              </table>
             </div>
             
             <p style="font-size: 14px; color: #6b7280; text-align: center;">

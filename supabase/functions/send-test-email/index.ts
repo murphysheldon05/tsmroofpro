@@ -124,6 +124,21 @@ serve(async (req: Request): Promise<Response> => {
     // NOTE: The app route is /auth (NOT /auth/login) - do not change this!
     const signupUrl = "https://tsmroofpro.com/auth";
 
+    // Plain text version for deliverability
+    const plainText = `${template.heading}
+
+${template.intro_text}
+
+Your Email: ${recipientEmail}
+
+${template.button_text}: ${signupUrl}
+
+If the button doesn't work, copy and paste this link: ${signupUrl}
+
+${template.footer_text || ""}
+
+© ${new Date().getFullYear()} TSM Roofing. All rights reserved.`;
+
     const emailHtml = `
       <!DOCTYPE html>
       <html>
@@ -147,17 +162,24 @@ serve(async (req: Request): Promise<Response> => {
             </p>
           </div>
           
-           <div style="text-align: center; margin: 30px 0;">
-             <a href="${signupUrl}" target="_blank" rel="noopener noreferrer" style="display: inline-block; background: #2563eb; color: white; padding: 14px 30px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
-               ${template.button_text}
-             </a>
-           </div>
+          <!-- Outlook-compatible table-based button -->
+          <div style="text-align: center; margin: 30px 0;">
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center">
+              <tr>
+                <td style="background-color: #111827; border: 2px solid #111827; border-radius: 8px;">
+                  <a href="${signupUrl}" target="_blank" style="display: inline-block; padding: 14px 28px; font-size: 16px; font-weight: 600; color: #ffffff !important; text-decoration: none;">
+                    ${template.button_text}
+                  </a>
+                </td>
+              </tr>
+            </table>
+          </div>
 
-           <p style="font-size: 13px; color: #64748b; margin: 0 0 10px; text-align: center;">
-             If the button doesn't work, copy and paste this link:
-             <br />
-             <a href="${signupUrl}" style="color: #2563eb; word-break: break-all;">${signupUrl}</a>
-           </p>
+          <p style="font-size: 13px; color: #64748b; margin: 0 0 10px; text-align: center;">
+            If the button doesn't work, copy and paste this link:
+            <br />
+            <a href="${signupUrl}" style="color: #2563eb; word-break: break-all;">${signupUrl}</a>
+          </p>
           
           ${template.footer_text ? `<p style="font-size: 14px; color: #64748b; margin-top: 30px;">${template.footer_text}</p>` : ""}
         </div>
@@ -173,8 +195,10 @@ serve(async (req: Request): Promise<Response> => {
 
     const emailResponse = await resend.emails.send({
       from: "TSM Roofing <notifications@tsmroofpro.com>",
+      reply_to: "sheldonmurphy@tsmroofs.com",
       to: [recipientEmail],
       subject: template.subject,
+      text: plainText,
       html: emailHtml,
     });
 
