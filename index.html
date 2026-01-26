@@ -8,25 +8,6 @@
     <meta name="author" content="TSM Roofing LLC" />
     <link rel="icon" type="image/png" href="/favicon.png" />
 
-    <!-- CRITICAL: Early domain redirect - runs BEFORE React loads -->
-    <!-- This catches users on preview domains immediately, preventing "Access Denied" confusion -->
-    <script>
-      (function() {
-        var h = window.location.hostname;
-        // Catch ALL Lovable domains including preview/project domains
-        if (h.endsWith('.lovable.dev') || h.endsWith('.lovable.app') || h.endsWith('.lovableproject.com')) {
-          var url = 'https://hub.tsmroofs.com' + window.location.pathname + window.location.search + window.location.hash;
-          console.log('[Early Redirect] Redirecting from ' + h + ' to hub.tsmroofs.com');
-          window.location.replace(url);
-        }
-      })();
-    </script>
-
-    <!-- Fallback for users with JavaScript disabled -->
-    <noscript>
-      <meta http-equiv="refresh" content="0;url=https://hub.tsmroofs.com">
-    </noscript>
-
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
