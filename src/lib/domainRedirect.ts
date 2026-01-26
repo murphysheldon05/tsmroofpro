@@ -9,6 +9,21 @@ const CANONICAL_DOMAIN = "hub.tsmroofs.com";
 const LOVABLE_DOMAIN_PATTERNS = [".lovable.dev", ".lovable.app"];
 
 /**
+ * Lovable preview runs inside an iframe. Redirecting inside the iframe causes
+ * the preview to constantly navigate/reload and/or hit frame restrictions.
+ * Canonical enforcement should only happen for top-level navigation.
+ */
+function isInIframe(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return window.self !== window.top;
+  } catch {
+    // Cross-origin access to window.top can throw; treat as iframe.
+    return true;
+  }
+}
+
+/**
  * Check if current hostname is a Lovable preview/dev domain
  */
 export function isLovableDomain(): boolean {
@@ -22,6 +37,9 @@ export function isLovableDomain(): boolean {
  * Preserves the full path and query string
  */
 export function enforceCanonicalDomain(): void {
+  // Never enforce inside the Lovable preview iframe.
+  if (isInIframe()) return;
+
   if (isLovableDomain()) {
     const { pathname, search, hash } = window.location;
     const canonicalUrl = `https://${CANONICAL_DOMAIN}${pathname}${search}${hash}`;
