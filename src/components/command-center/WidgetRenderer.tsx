@@ -2,13 +2,12 @@ import { WidgetKey } from "@/hooks/useCommandCenterPreferences";
 import { CompanyInfoWidget } from "./CompanyInfoWidget";
 import { WeatherWidget } from "./WeatherWidget";
 import { QuickStatsWidget } from "./QuickStatsWidget";
-import { TodaysBuildsWidget } from "./TodaysBuildsWidget";
-import { TodaysDeliveriesWidget } from "./TodaysDeliveriesWidget";
+import { TodaysBuildsWidgetV2 } from "./TodaysBuildsWidgetV2";
+import { TodaysDeliveriesWidgetV2 } from "./TodaysDeliveriesWidgetV2";
 import { ActionRequiredWidget } from "./ActionRequiredWidget";
 import { SlaSnapshotWidget } from "./SlaSnapshotWidget";
 import { QuickSOPAccessWidget } from "./QuickSOPAccessWidget";
 import { CommandCenterQuickLinks } from "./CommandCenterQuickLinks";
-
 interface WidgetRendererProps {
   widgetKey: WidgetKey;
   isVisible: boolean;
@@ -68,13 +67,13 @@ export function WidgetRenderer({
     case "todaysBuilds":
       return showBuilds ? (
         <section>
-          <TodaysBuildsWidget />
+          <TodaysBuildsWidgetV2 />
         </section>
       ) : null;
     case "todaysDeliveries":
       return showDeliveries ? (
         <section>
-          <TodaysDeliveriesWidget />
+          <TodaysDeliveriesWidgetV2 />
         </section>
       ) : null;
     case "actionRequired":
