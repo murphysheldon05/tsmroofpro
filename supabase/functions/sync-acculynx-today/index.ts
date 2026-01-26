@@ -29,8 +29,9 @@ interface AccuLynxAppointment {
   eventType: string; // "Personal" | "Initial Appointment" | "Material Order" | "Labor Order"
 }
 
+// Use maps.google.com instead of www.google.com to avoid ERR_BLOCKED_BY_RESPONSE
 function buildMapUrl(addressFull: string): string {
-  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addressFull)}`;
+  return `https://maps.google.com/?q=${encodeURIComponent(addressFull)}`;
 }
 
 function buildAccuLynxJobUrl(jobId: string): string {
