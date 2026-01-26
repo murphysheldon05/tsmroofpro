@@ -157,8 +157,8 @@ serve(async (req: Request): Promise<Response> => {
     const payload: WarrantyNotification = await req.json();
     console.log("Warranty notification payload:", payload);
 
-    // HARD LOCK: Always use tsm-roofing-hub.lovable.app for all portal links - never use any other domain
-    const appUrl = "https://tsm-roofing-hub.lovable.app";
+    // HARD LOCK: Always use hub.tsmroofs.com for all portal links - never use any other domain
+    const appUrl = "https://hub.tsmroofs.com";
     const warrantyUrl = `${appUrl}/warranties?id=${payload.warranty_id}`;
     const priorityColor = PRIORITY_COLORS[payload.priority_level] || "#6b7280";
 

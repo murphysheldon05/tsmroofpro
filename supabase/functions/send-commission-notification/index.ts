@@ -91,8 +91,8 @@ const handler = async (req: Request): Promise<Response> => {
     const payload: CommissionNotification = await req.json();
     console.log("Commission notification payload:", payload);
 
-    // HARD LOCK: Always use tsm-roofing-hub.lovable.app for all portal links - never use any other domain
-    const appUrl = "https://tsm-roofing-hub.lovable.app";
+    // HARD LOCK: Always use hub.tsmroofs.com for all portal links - never use any other domain
+    const appUrl = "https://hub.tsmroofs.com";
     const commissionUrl = `${appUrl}/commissions/${payload.commission_id}`;
 
     const formatCurrency = (value: number) => {
