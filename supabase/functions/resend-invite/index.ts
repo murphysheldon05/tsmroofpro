@@ -161,15 +161,15 @@ serve(async (req: Request): Promise<Response> => {
     // Send invite email
     let emailSent = false;
     try {
-      // HARD LOCK: Always use hub.tsmroofs.com for all auth emails - never use any other domain
+      // HARD LOCK: Always use tsmroofpro.com for all auth emails - never use any other domain
       // NOTE: The app route is /auth (NOT /auth/login) - do not change this!
-      const loginUrl = "https://hub.tsmroofs.com/auth";
+      const loginUrl = "https://tsmroofpro.com/auth";
       
       // Extract first name from full name
       const firstName = profile.full_name?.split(' ')[0] || 'there';
 
       const emailResponse = await resend.emails.send({
-        from: "TSM Roofing <notifications@hub.tsmroofs.com>",
+        from: "TSM Roofing <notifications@tsmroofpro.com>",
         to: [profile.email],
         subject: "You've been invited to the TSM Roofing Hub — Activate your access",
         html: `

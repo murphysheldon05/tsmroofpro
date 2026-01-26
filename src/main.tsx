@@ -4,7 +4,7 @@ import "./index.css";
 import { enforceCanonicalDomain } from "./lib/domainRedirect";
 
 // FAILSAFE: If user hits any lovable.dev or lovable.app domain,
-// redirect them to hub.tsmroofs.com with the same path/query
+// redirect them to tsmroofpro.com with the same path/query
 enforceCanonicalDomain();
 
 createRoot(document.getElementById("root")!).render(<App />);

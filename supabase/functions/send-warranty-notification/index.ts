@@ -34,7 +34,7 @@ async function sendEmail(to: string[], subject: string, html: string) {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      from: "TSM Roofing <notifications@hub.tsmroofs.com>",
+      from: "TSM Roofing <notifications@tsmroofpro.com>",
       to,
       subject,
       html,
@@ -157,8 +157,8 @@ serve(async (req: Request): Promise<Response> => {
     const payload: WarrantyNotification = await req.json();
     console.log("Warranty notification payload:", payload);
 
-    // HARD LOCK: Always use hub.tsmroofs.com for all portal links - never use any other domain
-    const appUrl = "https://hub.tsmroofs.com";
+    // HARD LOCK: Always use tsmroofpro.com for all portal links - never use any other domain
+    const appUrl = "https://tsmroofpro.com";
     const warrantyUrl = `${appUrl}/warranties?id=${payload.warranty_id}`;
     const priorityColor = PRIORITY_COLORS[payload.priority_level] || "#6b7280";
 

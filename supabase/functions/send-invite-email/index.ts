@@ -25,13 +25,13 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("Sending invite to:", email);
 
-    // HARD LOCK: Always use hub.tsmroofs.com for ALL auth emails
+    // HARD LOCK: Always use tsmroofpro.com for ALL auth emails
     // Never use lovable.dev, lovable.app, or any other domain
     // The app route is /auth - user will create their own account
-    const signupUrl = "https://hub.tsmroofs.com/auth";
+    const signupUrl = "https://tsmroofpro.com/auth";
 
     const emailResponse = await resend.emails.send({
-      from: "TSM Hub <notifications@hub.tsmroofs.com>",
+      from: "TSM Hub <notifications@tsmroofpro.com>",
       to: [email],
       subject: "You're Invited to Join TSM Hub",
       html: `

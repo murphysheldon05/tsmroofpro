@@ -120,9 +120,9 @@ serve(async (req: Request): Promise<Response> => {
       footer_text: "If you have any questions, please contact your manager or the admin team.",
     };
 
-    // HARD LOCK: Always use hub.tsmroofs.com for all auth emails - never use any other domain
+    // HARD LOCK: Always use tsmroofpro.com for all auth emails - never use any other domain
     // NOTE: The app route is /auth (NOT /auth/login) - do not change this!
-    const signupUrl = "https://hub.tsmroofs.com/auth";
+    const signupUrl = "https://tsmroofpro.com/auth";
 
     const emailHtml = `
       <!DOCTYPE html>
@@ -172,7 +172,7 @@ serve(async (req: Request): Promise<Response> => {
     `;
 
     const emailResponse = await resend.emails.send({
-      from: "TSM Roofing <notifications@hub.tsmroofs.com>",
+      from: "TSM Roofing <notifications@tsmroofpro.com>",
       to: [recipientEmail],
       subject: template.subject,
       html: emailHtml,

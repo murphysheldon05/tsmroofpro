@@ -81,8 +81,8 @@ serve(async (req: Request): Promise<Response> => {
       });
     }
 
-    // HARD LOCK: Always use hub.tsmroofs.com for all portal links - never use any other domain
-    const adminUrl = "https://hub.tsmroofs.com/admin";
+    // HARD LOCK: Always use tsmroofpro.com for all portal links - never use any other domain
+    const adminUrl = "https://tsmroofpro.com/admin";
 
     const emailHtml = `
       <!DOCTYPE html>
@@ -149,7 +149,7 @@ serve(async (req: Request): Promise<Response> => {
     `;
 
     const emailResponse = await resend.emails.send({
-      from: "TSM Roofing <notifications@hub.tsmroofs.com>",
+      from: "TSM Roofing <notifications@tsmroofpro.com>",
       to: recipients,
       subject: `New User Signup: ${full_name || email}`,
       html: emailHtml,
