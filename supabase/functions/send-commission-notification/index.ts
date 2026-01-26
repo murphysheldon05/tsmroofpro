@@ -112,57 +112,23 @@ const handler = async (req: Request): Promise<Response> => {
     let buttonText = "View Commission";
     let recipientEmails: string[] = [];
     let additionalContent = "";
-    let headerColor = "linear-gradient(135deg, #1e40af 0%, #3b82f6 100%)";
+    let additionalPlainText = "";
+    let headerColor = "#1e40af";
 
     switch (payload.notification_type) {
       case "submitted":
         subject = `📋 New Commission Submitted: ${payload.job_name}`;
         heading = "New Commission Submitted";
         introText = `A new commission has been submitted and is awaiting manager review.`;
-        headerColor = "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)";
-        // Use dynamic routing for commission submissions
+        headerColor = "#d97706";
         recipientEmails = await resolveRecipients(supabaseClient, "commission_submission");
+        additionalPlainText = `Job Name: ${payload.job_name}\nJob Address: ${payload.job_address}\nRep/Subcontractor: ${repName}\nContract Amount: ${formatCurrency(payload.contract_amount)}\nNet Commission: ${formatCurrency(payload.net_commission_owed)}`;
         additionalContent = `
-          <tr>
-            <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">
-              <strong>Job Name:</strong>
-            </td>
-            <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">
-              ${payload.job_name}
-            </td>
-          </tr>
-          <tr>
-            <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">
-              <strong>Job Address:</strong>
-            </td>
-            <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">
-              ${payload.job_address}
-            </td>
-          </tr>
-          <tr>
-            <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">
-              <strong>Rep/Subcontractor:</strong>
-            </td>
-            <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">
-              ${repName}
-            </td>
-          </tr>
-          <tr>
-            <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">
-              <strong>Contract Amount:</strong>
-            </td>
-            <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">
-              ${formatCurrency(payload.contract_amount)}
-            </td>
-          </tr>
-          <tr>
-            <td style="padding: 10px 0;">
-              <strong>Net Commission:</strong>
-            </td>
-            <td style="padding: 10px 0; color: #16a34a; font-weight: bold;">
-              ${formatCurrency(payload.net_commission_owed)}
-            </td>
-          </tr>
+          <tr><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;"><strong>Job Name:</strong></td><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">${payload.job_name}</td></tr>
+          <tr><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;"><strong>Job Address:</strong></td><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">${payload.job_address}</td></tr>
+          <tr><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;"><strong>Rep/Subcontractor:</strong></td><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">${repName}</td></tr>
+          <tr><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;"><strong>Contract Amount:</strong></td><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">${formatCurrency(payload.contract_amount)}</td></tr>
+          <tr><td style="padding: 10px 0;"><strong>Net Commission:</strong></td><td style="padding: 10px 0; color: #16a34a; font-weight: bold;">${formatCurrency(payload.net_commission_owed)}</td></tr>
         `;
         break;
 
@@ -170,42 +136,15 @@ const handler = async (req: Request): Promise<Response> => {
         subject = `✅ Commission Manager Approved: ${payload.job_name}`;
         heading = "Manager Approved - Pending Accounting";
         introText = `The commission for ${payload.job_name} has been approved by the manager and is now awaiting accounting review.`;
-        headerColor = "linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)";
-        // Notify accounting via dynamic routing + submitter
+        headerColor = "#1d4ed8";
         recipientEmails = await resolveRecipients(supabaseClient, "commission_accounting");
-        if (payload.submitter_email) {
-          recipientEmails.push(payload.submitter_email);
-        }
+        if (payload.submitter_email) recipientEmails.push(payload.submitter_email);
+        additionalPlainText = `Job: ${payload.job_name}\nRep: ${repName}\nCommission Amount: ${formatCurrency(payload.net_commission_owed)}\nStatus: Waiting for accounting review and final approval.`;
         additionalContent = `
-          <tr>
-            <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">
-              <strong>Job:</strong>
-            </td>
-            <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">
-              ${payload.job_name}
-            </td>
-          </tr>
-          <tr>
-            <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">
-              <strong>Rep:</strong>
-            </td>
-            <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">
-              ${repName}
-            </td>
-          </tr>
-          <tr>
-            <td style="padding: 10px 0;">
-              <strong>Commission Amount:</strong>
-            </td>
-            <td style="padding: 10px 0; color: #3b82f6; font-weight: bold;">
-              ${formatCurrency(payload.net_commission_owed)}
-            </td>
-          </tr>
-          <tr>
-            <td colspan="2" style="padding: 15px; background: #dbeafe; border-radius: 8px; margin-top: 10px;">
-              <strong>Status:</strong> Waiting for accounting review and final approval.
-            </td>
-          </tr>
+          <tr><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;"><strong>Job:</strong></td><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">${payload.job_name}</td></tr>
+          <tr><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;"><strong>Rep:</strong></td><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">${repName}</td></tr>
+          <tr><td style="padding: 10px 0;"><strong>Commission Amount:</strong></td><td style="padding: 10px 0; color: #3b82f6; font-weight: bold;">${formatCurrency(payload.net_commission_owed)}</td></tr>
+          <tr><td colspan="2" style="padding: 15px; background: #dbeafe; border-radius: 8px; margin-top: 10px;"><strong>Status:</strong> Waiting for accounting review and final approval.</td></tr>
         `;
         break;
 
@@ -213,33 +152,15 @@ const handler = async (req: Request): Promise<Response> => {
         subject = `💰 Commission Approved for Payment: ${payload.job_name}`;
         heading = "Commission Approved for Payment!";
         introText = `Great news! The commission for ${payload.job_name} has been fully approved and is ready for payout.`;
-        headerColor = "linear-gradient(135deg, #059669 0%, #10b981 100%)";
-        // Notify submitter + accounting
+        headerColor = "#059669";
         recipientEmails = payload.submitter_email ? [payload.submitter_email] : [];
         const accountingRecipients = await resolveRecipients(supabaseClient, "commission_accounting");
         recipientEmails.push(...accountingRecipients);
+        additionalPlainText = `Job: ${payload.job_name}\nCommission Amount: ${formatCurrency(payload.net_commission_owed)}\n\n✅ Fully Approved - This commission is now ready for payout processing.`;
         additionalContent = `
-          <tr>
-            <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">
-              <strong>Job:</strong>
-            </td>
-            <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">
-              ${payload.job_name}
-            </td>
-          </tr>
-          <tr>
-            <td style="padding: 10px 0;">
-              <strong>Commission Amount:</strong>
-            </td>
-            <td style="padding: 10px 0; color: #16a34a; font-weight: bold; font-size: 20px;">
-              ${formatCurrency(payload.net_commission_owed)}
-            </td>
-          </tr>
-          <tr>
-            <td colspan="2" style="padding: 15px; background: #dcfce7; border-radius: 8px; margin-top: 10px;">
-              ✅ <strong>Fully Approved</strong> - This commission is now ready for payout processing.
-            </td>
-          </tr>
+          <tr><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;"><strong>Job:</strong></td><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">${payload.job_name}</td></tr>
+          <tr><td style="padding: 10px 0;"><strong>Commission Amount:</strong></td><td style="padding: 10px 0; color: #16a34a; font-weight: bold; font-size: 20px;">${formatCurrency(payload.net_commission_owed)}</td></tr>
+          <tr><td colspan="2" style="padding: 15px; background: #dcfce7; border-radius: 8px; margin-top: 10px;">✅ <strong>Fully Approved</strong> - This commission is now ready for payout processing.</td></tr>
         `;
         break;
 
@@ -247,22 +168,12 @@ const handler = async (req: Request): Promise<Response> => {
         subject = `🎉 Commission Paid: ${payload.job_name}`;
         heading = "Commission Paid! 🎉";
         introText = `Your commission for ${payload.job_name} has been processed and paid.`;
-        headerColor = "linear-gradient(135deg, #059669 0%, #10b981 100%)";
+        headerColor = "#059669";
         recipientEmails = payload.submitter_email ? [payload.submitter_email] : [];
+        additionalPlainText = `Amount Paid: ${formatCurrency(payload.net_commission_owed)}\n\n🎉 Payment Complete!`;
         additionalContent = `
-          <tr>
-            <td style="padding: 10px 0;">
-              <strong>Amount Paid:</strong>
-            </td>
-            <td style="padding: 10px 0; color: #16a34a; font-weight: bold; font-size: 24px;">
-              ${formatCurrency(payload.net_commission_owed)}
-            </td>
-          </tr>
-          <tr>
-            <td colspan="2" style="padding: 20px; background: #dcfce7; border-radius: 8px; margin-top: 10px; text-align: center;">
-              🎉 <strong>Payment Complete!</strong>
-            </td>
-          </tr>
+          <tr><td style="padding: 10px 0;"><strong>Amount Paid:</strong></td><td style="padding: 10px 0; color: #16a34a; font-weight: bold; font-size: 24px;">${formatCurrency(payload.net_commission_owed)}</td></tr>
+          <tr><td colspan="2" style="padding: 20px; background: #dcfce7; border-radius: 8px; margin-top: 10px; text-align: center;">🎉 <strong>Payment Complete!</strong></td></tr>
         `;
         break;
 
@@ -270,27 +181,12 @@ const handler = async (req: Request): Promise<Response> => {
         subject = `⚠️ Commission Needs Revision: ${payload.job_name}`;
         heading = "Commission Revision Required";
         introText = `The commission submission for ${payload.job_name} requires revisions before it can be approved.`;
-        headerColor = "linear-gradient(135deg, #dc2626 0%, #ef4444 100%)";
+        headerColor = "#dc2626";
         recipientEmails = payload.submitter_email ? [payload.submitter_email] : [];
-        additionalContent = `
-          <tr>
-            <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">
-              <strong>Job:</strong>
-            </td>
-            <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">
-              ${payload.job_name}
-            </td>
-          </tr>
-        `;
+        additionalPlainText = `Job: ${payload.job_name}${payload.notes ? `\nRevision Reason: ${payload.notes}` : ""}`;
+        additionalContent = `<tr><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;"><strong>Job:</strong></td><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">${payload.job_name}</td></tr>`;
         if (payload.notes) {
-          additionalContent += `
-            <tr>
-              <td colspan="2" style="padding: 15px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; margin-top: 10px;">
-                <strong>Revision Reason:</strong><br>
-                <span style="color: #dc2626;">${payload.notes}</span>
-              </td>
-            </tr>
-          `;
+          additionalContent += `<tr><td colspan="2" style="padding: 15px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; margin-top: 10px;"><strong>Revision Reason:</strong><br><span style="color: #dc2626;">${payload.notes}</span></td></tr>`;
         }
         buttonText = "View & Revise";
         break;
@@ -299,33 +195,13 @@ const handler = async (req: Request): Promise<Response> => {
         subject = `📋 Commission Status Updated: ${payload.job_name}`;
         heading = "Commission Status Changed";
         introText = `The status for commission "${payload.job_name}" has been updated.`;
-        headerColor = "linear-gradient(135deg, #6b7280 0%, #4b5563 100%)";
+        headerColor = "#4b5563";
         recipientEmails = payload.submitter_email ? [payload.submitter_email] : [];
+        additionalPlainText = `Previous Status: ${payload.previous_status?.replace(/_/g, " ") || "N/A"}\nNew Status: ${payload.status?.replace(/_/g, " ")}${payload.notes ? `\nNotes: ${payload.notes}` : ""}`;
         additionalContent = `
-          <tr>
-            <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">
-              <strong>Previous Status:</strong>
-            </td>
-            <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">
-              ${payload.previous_status?.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase()) || "N/A"}
-            </td>
-          </tr>
-          <tr>
-            <td style="padding: 10px 0;">
-              <strong>New Status:</strong>
-            </td>
-            <td style="padding: 10px 0; font-weight: bold; color: #1e40af;">
-              ${payload.status?.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase())}
-            </td>
-          </tr>
-          ${payload.notes ? `
-            <tr>
-              <td colspan="2" style="padding: 15px; background: #f3f4f6; border-radius: 8px; margin-top: 10px;">
-                <strong>Notes:</strong><br>
-                ${payload.notes}
-              </td>
-            </tr>
-          ` : ""}
+          <tr><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;"><strong>Previous Status:</strong></td><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">${payload.previous_status?.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase()) || "N/A"}</td></tr>
+          <tr><td style="padding: 10px 0;"><strong>New Status:</strong></td><td style="padding: 10px 0; font-weight: bold; color: #1e40af;">${payload.status?.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase())}</td></tr>
+          ${payload.notes ? `<tr><td colspan="2" style="padding: 15px; background: #f3f4f6; border-radius: 8px; margin-top: 10px;"><strong>Notes:</strong><br>${payload.notes}</td></tr>` : ""}
         `;
         break;
 
@@ -344,6 +220,19 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    // Plain text version for deliverability
+    const plainText = `${heading}
+
+${introText}
+
+${additionalPlainText}
+
+${buttonText}: ${commissionUrl}
+
+If you have questions, please contact your supervisor or the accounting team.
+
+© ${new Date().getFullYear()} TSM Roofing. All rights reserved.`;
+
     const emailHtml = `
       <!DOCTYPE html>
       <html>
@@ -352,7 +241,7 @@ const handler = async (req: Request): Promise<Response> => {
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
       </head>
       <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <div style="background: ${headerColor}; padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
+        <div style="background-color: ${headerColor}; padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
           <h1 style="color: white; margin: 0; font-size: 24px;">${heading}</h1>
         </div>
         
@@ -365,11 +254,22 @@ const handler = async (req: Request): Promise<Response> => {
             ${additionalContent}
           </table>
           
+          <!-- Outlook-compatible table-based button -->
           <div style="text-align: center; margin: 30px 0;">
-            <a href="${commissionUrl}" style="background: ${headerColor}; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; display: inline-block;">
-              ${buttonText}
-            </a>
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center">
+              <tr>
+                <td style="background-color: #111827; border: 2px solid #111827; border-radius: 8px;">
+                  <a href="${commissionUrl}" target="_blank" style="display: inline-block; padding: 14px 28px; font-size: 16px; font-weight: 600; color: #ffffff !important; text-decoration: none;">
+                    ${buttonText}
+                  </a>
+                </td>
+              </tr>
+            </table>
           </div>
+          
+          <p style="font-size: 14px; color: #6b7280; text-align: center;">
+            Or copy this link: <a href="${commissionUrl}" style="color: #3b82f6;">${commissionUrl}</a>
+          </p>
           
           <p style="font-size: 14px; color: #6b7280; margin-top: 30px;">
             If you have questions, please contact your supervisor or the accounting team.
@@ -387,8 +287,10 @@ const handler = async (req: Request): Promise<Response> => {
 
     const emailResponse = await resend.emails.send({
       from: "TSM Hub <notifications@tsmroofpro.com>",
+      reply_to: "sheldonmurphy@tsmroofs.com",
       to: recipientEmails,
       subject,
+      text: plainText,
       html: emailHtml,
     });
 

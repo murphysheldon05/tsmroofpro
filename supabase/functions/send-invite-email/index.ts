@@ -30,10 +30,31 @@ const handler = async (req: Request): Promise<Response> => {
     // The app route is /auth - user will create their own account
     const signupUrl = "https://tsmroofpro.com/auth";
 
+    // Plain text version for deliverability
+    const plainText = `You're Invited to Join TSM Hub
+
+Hello!
+
+${inviter_name ? `${inviter_name} has invited you` : "You've been invited"} to join TSM Hub, the central platform for TSM Roofing LLC.
+
+Getting Started:
+1. Click the link below to create your account
+2. Fill out the signup form with your information
+3. Wait for an admin to approve your account
+4. Once approved, you'll receive an email to log in!
+
+Create your account: ${signupUrl}
+
+If you have any questions, please reach out to your manager or administrator.
+
+© ${new Date().getFullYear()} TSM Roofing. All rights reserved.`;
+
     const emailResponse = await resend.emails.send({
       from: "TSM Hub <notifications@tsmroofpro.com>",
+      reply_to: "sheldonmurphy@tsmroofs.com",
       to: [email],
       subject: "You're Invited to Join TSM Hub",
+      text: plainText,
       html: `
         <!DOCTYPE html>
         <html>
@@ -65,10 +86,17 @@ const handler = async (req: Request): Promise<Response> => {
               </ol>
             </div>
             
+            <!-- Outlook-compatible table-based button -->
             <div style="text-align: center; margin: 30px 0;">
-              <a href="${signupUrl}" style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; display: inline-block;">
-                Create My Account
-              </a>
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center">
+                <tr>
+                  <td style="background-color: #111827; border: 2px solid #111827; border-radius: 8px;">
+                    <a href="${signupUrl}" target="_blank" style="display: inline-block; padding: 14px 28px; font-size: 16px; font-weight: 600; color: #ffffff !important; text-decoration: none;">
+                      Create My Account
+                    </a>
+                  </td>
+                </tr>
+              </table>
             </div>
             
             <p style="font-size: 14px; color: #6b7280; text-align: center;">

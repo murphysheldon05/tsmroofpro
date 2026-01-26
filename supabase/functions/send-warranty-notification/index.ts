@@ -24,7 +24,7 @@ interface WarrantyNotification {
   notes?: string;
 }
 
-async function sendEmail(to: string[], subject: string, html: string) {
+async function sendEmail(to: string[], subject: string, html: string, text: string) {
   console.log("Sending warranty email to:", to);
   
   const response = await fetch("https://api.resend.com/emails", {
@@ -35,8 +35,10 @@ async function sendEmail(to: string[], subject: string, html: string) {
     },
     body: JSON.stringify({
       from: "TSM Roofing <notifications@tsmroofpro.com>",
+      reply_to: "sheldonmurphy@tsmroofs.com",
       to,
       subject,
+      text,
       html,
     }),
   });
@@ -184,30 +186,47 @@ serve(async (req: Request): Promise<Response> => {
 
     let subject = "";
     let heading = "";
-    let headerColor = "linear-gradient(135deg, #1e40af 0%, #3b82f6 100%)";
+    let headerColor = "#1e40af";
 
     switch (payload.notification_type) {
       case "submitted":
         subject = `🔧 New Warranty Request: ${payload.customer_name}`;
         heading = "New Warranty Request Submitted";
-        headerColor = "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)";
+        headerColor = "#d97706";
         break;
       case "status_change":
         subject = `📋 Warranty Status Updated: ${payload.customer_name}`;
         heading = "Warranty Status Changed";
-        headerColor = "linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)";
+        headerColor = "#1d4ed8";
         break;
       case "assigned":
         subject = `👤 Warranty Assigned: ${payload.customer_name}`;
         heading = "Warranty Request Assigned";
-        headerColor = "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)";
+        headerColor = "#7c3aed";
         break;
       case "completed":
         subject = `✅ Warranty Completed: ${payload.customer_name}`;
         heading = "Warranty Request Completed";
-        headerColor = "linear-gradient(135deg, #059669 0%, #10b981 100%)";
+        headerColor = "#059669";
         break;
     }
+
+    // Plain text version for deliverability
+    const plainText = `${heading}
+
+Customer: ${payload.customer_name}
+Address: ${payload.job_address}
+Priority: ${payload.priority_level.toUpperCase()}
+Status: ${payload.status.replace(/_/g, " ")}
+${payload.previous_status ? `Previous Status: ${payload.previous_status.replace(/_/g, " ")}` : ""}
+${payload.assigned_to ? `Assigned To: ${payload.assigned_to}` : ""}
+
+Issue Description:
+${payload.issue_description}
+
+View Warranty Details: ${warrantyUrl}
+
+© ${new Date().getFullYear()} TSM Roofing. All rights reserved.`;
 
     const emailHtml = `
       <!DOCTYPE html>
@@ -217,7 +236,7 @@ serve(async (req: Request): Promise<Response> => {
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
       </head>
       <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <div style="background: ${headerColor}; padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
+        <div style="background-color: ${headerColor}; padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
           <h1 style="color: white; margin: 0; font-size: 24px;">${heading}</h1>
         </div>
         
@@ -285,11 +304,22 @@ serve(async (req: Request): Promise<Response> => {
             </tr>
           </table>
           
+          <!-- Outlook-compatible table-based button -->
           <div style="text-align: center; margin: 30px 0;">
-            <a href="${warrantyUrl}" style="background: ${headerColor}; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; display: inline-block;">
-              View Warranty Details
-            </a>
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center">
+              <tr>
+                <td style="background-color: #111827; border: 2px solid #111827; border-radius: 8px;">
+                  <a href="${warrantyUrl}" target="_blank" style="display: inline-block; padding: 14px 28px; font-size: 16px; font-weight: 600; color: #ffffff !important; text-decoration: none;">
+                    View Warranty Details
+                  </a>
+                </td>
+              </tr>
+            </table>
           </div>
+          
+          <p style="font-size: 14px; color: #6b7280; text-align: center;">
+            Or copy this link: <a href="${warrantyUrl}" style="color: #3b82f6;">${warrantyUrl}</a>
+          </p>
         </div>
         
         <div style="text-align: center; padding: 20px; color: #9ca3af; font-size: 12px;">
@@ -299,7 +329,7 @@ serve(async (req: Request): Promise<Response> => {
       </html>
     `;
 
-    const emailResponse = await sendEmail(recipientEmails, subject, emailHtml);
+    const emailResponse = await sendEmail(recipientEmails, subject, emailHtml, plainText);
     console.log("Warranty notification sent:", emailResponse);
 
     return new Response(

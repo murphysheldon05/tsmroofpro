@@ -98,13 +98,43 @@ const handler = async (req: Request): Promise<Response> => {
       `;
     }).join("");
 
+    // Build credentials plain text
+    const credentialsPlain = credentials.map(cred => {
+      let lines = [`${cred.accessType}:`];
+      if (cred.inviteSent) lines.push("  ✓ Invite sent to tsmroofs.com email");
+      if (cred.email) lines.push(`  Email: ${cred.email}`);
+      if (cred.password) lines.push(`  Password: ${cred.password}`);
+      if (cred.notes) lines.push(`  Note: ${cred.notes}`);
+      return lines.join("\n");
+    }).join("\n\n");
+
     // HARD LOCK: Always use tsmroofpro.com for all portal links - never use any other domain
     const appBaseUrl = "https://tsmroofpro.com";
 
+    // Plain text version for deliverability
+    const plainText = `Access Credentials Ready - ${newHireName}
+
+Hi ${submitterProfile.full_name || 'there'},
+
+The access credentials for ${newHireName} have been set up and are ready for use.
+
+Access Details:
+${credentialsPlain}
+
+${generalNotes ? `Additional Notes:\n${generalNotes}` : ""}
+
+⚠️ Security Notice: Please share these credentials securely with the new hire and advise them to change their passwords upon first login.
+
+View in Portal: ${appBaseUrl}/training/new-hire
+
+TSM Roofing Employee Portal`;
+
     const emailPayload: Record<string, unknown> = {
       from: "TSM Roofing <notifications@tsmroofpro.com>",
+      reply_to: "sheldonmurphy@tsmroofs.com",
       to: [submitterProfile.email],
       subject: `Access Credentials Ready: ${newHireName}`,
+      text: plainText,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <div style="background: linear-gradient(135deg, #059669 0%, #10b981 100%); padding: 30px; text-align: center;">
@@ -132,12 +162,22 @@ const handler = async (req: Request): Promise<Response> => {
               </p>
             </div>
 
+            <!-- Outlook-compatible table-based button -->
             <div style="text-align: center; margin-top: 30px;">
-              <a href="${appBaseUrl}/training/new-hire" 
-                 style="display: inline-block; background: #3b82f6; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: 600;">
-                View in Portal
-              </a>
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center">
+                <tr>
+                  <td style="background-color: #111827; border: 2px solid #111827; border-radius: 8px;">
+                    <a href="${appBaseUrl}/training/new-hire" target="_blank" style="display: inline-block; padding: 14px 28px; font-size: 16px; font-weight: 600; color: #ffffff !important; text-decoration: none;">
+                      View in Portal
+                    </a>
+                  </td>
+                </tr>
+              </table>
             </div>
+            
+            <p style="font-size: 14px; color: #6b7280; text-align: center; margin-top: 20px;">
+              Or copy this link: <a href="${appBaseUrl}/training/new-hire" style="color: #3b82f6;">${appBaseUrl}/training/new-hire</a>
+            </p>
           </div>
           <div style="padding: 20px; text-align: center; color: #64748b; font-size: 12px;">
             <p>TSM Roofing Employee Portal</p>
