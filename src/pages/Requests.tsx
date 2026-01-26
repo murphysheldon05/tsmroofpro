@@ -44,6 +44,7 @@ import { Badge } from "@/components/ui/badge";
 import { formatDistanceToNow, format } from "date-fns";
 import { useRequestTypes, type RequestType } from "@/hooks/useRequestTypes";
 import { NewHireForm } from "@/components/training/NewHireForm";
+import { useAdminAuditLog, AUDIT_ACTIONS, OBJECT_TYPES } from "@/hooks/useAdminAuditLog";
 
 // Icon map for dynamic icon rendering
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -104,6 +105,7 @@ export default function Requests() {
   const { user, isManager, isAdmin } = useAuth();
   const queryClient = useQueryClient();
   const { data: requestTypes = [] } = useRequestTypes();
+  const { logAction } = useAdminAuditLog();
   const [type, setType] = useState("");
   const [hrSubType, setHrSubType] = useState<"simple" | "new-hire" | null>(null);
   const [title, setTitle] = useState("");
@@ -258,12 +260,31 @@ export default function Requests() {
   const handleStatusUpdate = async (requestId: string, newStatus: string) => {
     setIsUpdating(true);
     try {
+      const previousStatus = selectedRequest?.status;
       const { error } = await supabase
         .from("requests")
         .update({ status: newStatus })
         .eq("id", requestId);
 
       if (error) throw error;
+
+      // Log audit trail
+      const actionType = newStatus === "completed" 
+        ? AUDIT_ACTIONS.REQUEST_COMPLETED 
+        : newStatus === "approved" 
+          ? AUDIT_ACTIONS.REQUEST_APPROVED 
+          : newStatus === "rejected" 
+            ? AUDIT_ACTIONS.REQUEST_REJECTED 
+            : AUDIT_ACTIONS.REQUEST_STATUS_CHANGED;
+      
+      logAction.mutate({
+        action_type: actionType,
+        object_type: OBJECT_TYPES.REQUEST,
+        object_id: requestId,
+        previous_value: { status: previousStatus },
+        new_value: { status: newStatus },
+        notes: `${newStatus === "completed" ? "Completed" : newStatus === "approved" ? "Approved" : newStatus === "rejected" ? "Rejected" : "Updated"} request: "${selectedRequest?.title}"`,
+      });
 
       toast.success(`Request ${newStatus === "completed" ? "completed" : "updated"}`);
       refetchAll();
