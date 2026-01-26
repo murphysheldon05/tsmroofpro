@@ -55,18 +55,30 @@ function classifyEventType(eventType: string): "DELIVERY" | "LABOR" | "IGNORE" {
 }
 
 // Get today's date in Phoenix timezone (YYYY-MM-DD format)
+// Phoenix is MST (UTC-7) year-round, no daylight saving time
 function getTodayPhoenix(): string {
-  // Phoenix is UTC-7 (no DST)
-  const now = new Date();
-  const phoenixOffset = -7 * 60; // minutes
-  const localOffset = now.getTimezoneOffset();
-  const phoenixTime = new Date(now.getTime() + (localOffset + phoenixOffset) * 60 * 1000);
+  // Create a date string in Phoenix timezone using Intl API
+  const formatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Phoenix',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+  
+  // en-CA format gives us YYYY-MM-DD
+  return formatter.format(new Date());
+}
 
-  const year = phoenixTime.getFullYear();
-  const month = String(phoenixTime.getMonth() + 1).padStart(2, "0");
-  const day = String(phoenixTime.getDate()).padStart(2, "0");
-
-  return `${year}-${month}-${day}`;
+// Convert a UTC datetime to Phoenix date (YYYY-MM-DD)
+function getPhoenixDate(utcDatetime: string): string {
+  const date = new Date(utcDatetime);
+  const formatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Phoenix',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+  return formatter.format(date);
 }
 
 async function fetchCalendars(apiKey: string): Promise<AccuLynxCalendar[]> {
@@ -158,23 +170,27 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Step 2: Clear existing data for today
+    // Step 2: Clear existing data (delete ALL rows in these "today" tables)
     const { error: deleteLaborError } = await supabase
       .from("today_labor")
       .delete()
-      .neq("id", "00000000-0000-0000-0000-000000000000"); // Delete all rows
+      .gte("id", "00000000-0000-0000-0000-000000000000"); // Matches all UUIDs
 
     if (deleteLaborError) {
       console.error("Error clearing today_labor:", deleteLaborError);
+    } else {
+      console.log("Successfully cleared today_labor table");
     }
 
     const { error: deleteDeliveryError } = await supabase
       .from("today_deliveries")
       .delete()
-      .neq("id", "00000000-0000-0000-0000-000000000000"); // Delete all rows
+      .gte("id", "00000000-0000-0000-0000-000000000000"); // Matches all UUIDs
 
     if (deleteDeliveryError) {
       console.error("Error clearing today_deliveries:", deleteDeliveryError);
+    } else {
+      console.log("Successfully cleared today_deliveries table");
     }
 
     let laborCount = 0;
@@ -187,6 +203,14 @@ Deno.serve(async (req) => {
         const appointments = await fetchAppointments(acculynxApiKey, calendar.id, todayDate, todayDate);
 
         for (const appt of appointments) {
+          // Filter: Only include appointments scheduled for today (Phoenix time)
+          const apptPhoenixDate = getPhoenixDate(appt.start);
+          if (apptPhoenixDate !== todayDate) {
+            console.log(`Skipping appointment ${appt.id} - scheduled for ${apptPhoenixDate}, not today (${todayDate})`);
+            ignoredCount++;
+            continue;
+          }
+
           const category = classifyEventType(appt.eventType);
 
           if (category === "IGNORE") {
@@ -234,6 +258,7 @@ Deno.serve(async (req) => {
               deliveryCount++;
             }
           } else if (category === "LABOR") {
+            console.log(`Inserting labor: ${appt.jobName || appt.title}, scheduled: ${appt.start}, eventId: ${appt.id}`);
             const { error } = await supabase.from("today_labor").upsert(
               {
                 job_id: appt.jobId,
