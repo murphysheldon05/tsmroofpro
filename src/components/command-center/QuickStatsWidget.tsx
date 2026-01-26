@@ -1,22 +1,27 @@
 import { useQuickStats } from "@/hooks/useCommandCenter";
+import { useTodayLaborCount, useTodayDeliveriesCount } from "@/hooks/useAccuLynxToday";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Hammer, Truck, Shield, Clock } from "lucide-react";
 
 export function QuickStatsWidget() {
-  const { data: stats, isLoading } = useQuickStats();
+  const { data: stats, isLoading: statsLoading } = useQuickStats();
+  const { data: laborCount, isLoading: laborLoading } = useTodayLaborCount();
+  const { data: deliveriesCount, isLoading: deliveriesLoading } = useTodayDeliveriesCount();
+
+  const isLoading = statsLoading || laborLoading || deliveriesLoading;
 
   const statItems = [
     {
       label: "Builds Today",
-      value: stats?.buildsToday || 0,
+      value: laborCount || 0,
       icon: Hammer,
       color: "text-emerald-500",
       bgColor: "bg-emerald-500/10",
     },
     {
       label: "Deliveries Today",
-      value: stats?.deliveriesToday || 0,
+      value: deliveriesCount || 0,
       icon: Truck,
       color: "text-amber-500",
       bgColor: "bg-amber-500/10",
