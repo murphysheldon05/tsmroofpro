@@ -11,7 +11,7 @@
  */
 
 const CANONICAL_DOMAIN = "hub.tsmroofs.com";
-const LOVABLE_DOMAIN_PATTERNS = [".lovable.dev", ".lovable.app"];
+const LOVABLE_DOMAIN_PATTERNS = [".lovable.dev", ".lovable.app", ".lovableproject.com"];
 
 /**
  * Check if current hostname is a Lovable preview/dev domain
