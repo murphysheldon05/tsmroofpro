@@ -145,6 +145,10 @@ serve(async (req: Request): Promise<Response> => {
     const requestLabel = requestTypeLabels[type] || type;
     const attachmentNote = has_attachment ? "📎 This request includes an attached document." : "";
 
+    // HARD LOCK: Always use tsmroofpro.com for all portal links - never use any other domain
+    const appUrl = "https://tsmroofpro.com";
+    const requestsUrl = `${appUrl}/requests`;
+
     // Send notification to managers (if any recipients configured)
     let managerEmailResponse = null;
     if (recipientEmails.length > 0) {
@@ -160,7 +164,9 @@ ${description ? `Details: ${description}` : ''}
 
 ${attachmentNote}
 
-Please log in to the TSM Portal to review and take action on this request.
+Review this request: ${requestsUrl}
+
+If the link doesn't work, copy and paste this URL: ${requestsUrl}
 
 TSM Roofing Employee Portal`;
 
@@ -168,58 +174,59 @@ TSM Roofing Employee Portal`;
         <!DOCTYPE html>
         <html>
         <head>
-          <style>
-            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); color: white; padding: 30px; border-radius: 8px 8px 0 0; }
-            .content { background: #f8fafc; padding: 30px; border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 8px 8px; }
-            .badge { display: inline-block; background: #3b82f6; color: white; padding: 4px 12px; border-radius: 9999px; font-size: 12px; font-weight: 600; }
-            .details { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #e2e8f0; }
-            .detail-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f1f5f9; }
-            .detail-row:last-child { border-bottom: none; }
-            .label { color: #64748b; }
-            .value { font-weight: 500; }
-            .attachment-note { background: #fef3c7; border: 1px solid #f59e0b; padding: 12px; border-radius: 6px; margin-top: 16px; }
-            .footer { text-align: center; margin-top: 20px; color: #64748b; font-size: 12px; }
-          </style>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
         </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <h1 style="margin: 0; font-size: 24px;">New Request Submitted</h1>
-              <p style="margin: 10px 0 0 0; opacity: 0.9;">A team member has submitted a new request for your review.</p>
-            </div>
-            <div class="content">
-              <span class="badge">${requestLabel}</span>
-              
-              <div class="details">
-                <div class="detail-row">
-                  <span class="label">Subject:</span>
-                  <span class="value">${title}</span>
-                </div>
-                <div class="detail-row">
-                  <span class="label">Submitted By:</span>
-                  <span class="value">${submitter_name}</span>
-                </div>
-                <div class="detail-row">
-                  <span class="label">Email:</span>
-                  <span class="value">${submitter_email}</span>
-                </div>
-                ${description ? `
-                <div style="padding-top: 12px;">
-                  <span class="label">Details:</span>
-                  <p style="margin: 8px 0 0 0;">${description}</p>
-                </div>
-                ` : ''}
+        <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); color: white; padding: 30px; border-radius: 8px 8px 0 0;">
+            <h1 style="margin: 0; font-size: 24px;">New Request Submitted</h1>
+            <p style="margin: 10px 0 0 0; opacity: 0.9;">A team member has submitted a new request for your review.</p>
+          </div>
+          <div style="background: #f8fafc; padding: 30px; border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 8px 8px;">
+            <span style="display: inline-block; background: #3b82f6; color: white; padding: 4px 12px; border-radius: 9999px; font-size: 12px; font-weight: 600;">${requestLabel}</span>
+            
+            <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #e2e8f0;">
+              <div style="padding: 8px 0; border-bottom: 1px solid #f1f5f9;">
+                <span style="color: #64748b;">Subject:</span>
+                <span style="font-weight: 500; margin-left: 8px;">${title}</span>
               </div>
-              
-              ${attachmentNote ? `<div class="attachment-note">${attachmentNote}</div>` : ''}
-              
-              <p style="margin-top: 20px;">Please log in to the TSM Portal to review and take action on this request.</p>
+              <div style="padding: 8px 0; border-bottom: 1px solid #f1f5f9;">
+                <span style="color: #64748b;">Submitted By:</span>
+                <span style="font-weight: 500; margin-left: 8px;">${submitter_name}</span>
+              </div>
+              <div style="padding: 8px 0; border-bottom: 1px solid #f1f5f9;">
+                <span style="color: #64748b;">Email:</span>
+                <span style="font-weight: 500; margin-left: 8px;">${submitter_email}</span>
+              </div>
+              ${description ? `
+              <div style="padding-top: 12px;">
+                <span style="color: #64748b;">Details:</span>
+                <p style="margin: 8px 0 0 0;">${description}</p>
+              </div>
+              ` : ''}
             </div>
-            <div class="footer">
-              <p>TSM Roofing Employee Portal</p>
+            
+            ${attachmentNote ? `<div style="background: #fef3c7; border: 1px solid #f59e0b; padding: 12px; border-radius: 6px; margin-top: 16px;">${attachmentNote}</div>` : ''}
+            
+            <!-- Outlook-compatible table-based button -->
+            <div style="text-align: center; margin: 30px 0;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center">
+                <tr>
+                  <td style="background-color: #111827; border: 2px solid #111827; border-radius: 8px;">
+                    <a href="${requestsUrl}" target="_blank" style="display: inline-block; padding: 14px 28px; font-size: 16px; font-weight: 600; color: #ffffff !important; text-decoration: none;">
+                      Review Request
+                    </a>
+                  </td>
+                </tr>
+              </table>
             </div>
+            
+            <p style="font-size: 14px; color: #6b7280; text-align: center;">
+              Or copy this link: <a href="${requestsUrl}" style="color: #3b82f6;">${requestsUrl}</a>
+            </p>
+          </div>
+          <div style="text-align: center; margin-top: 20px; color: #64748b; font-size: 12px;">
+            <p>TSM Roofing Employee Portal</p>
           </div>
         </body>
         </html>
@@ -244,6 +251,10 @@ Your ${requestLabel} titled "${title}" has been successfully submitted and is no
 
 A manager will review your request and you'll be notified once a decision is made.
 
+View your requests: ${requestsUrl}
+
+If the link doesn't work, copy and paste this URL: ${requestsUrl}
+
 Thank you,
 TSM Roofing Team
 
@@ -253,30 +264,40 @@ TSM Roofing Employee Portal`;
       <!DOCTYPE html>
       <html>
       <head>
-        <style>
-          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; }
-          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .header { background: linear-gradient(135deg, #059669 0%, #10b981 100%); color: white; padding: 30px; border-radius: 8px 8px 0 0; }
-          .content { background: #f8fafc; padding: 30px; border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 8px 8px; }
-          .checkmark { font-size: 48px; margin-bottom: 16px; }
-          .footer { text-align: center; margin-top: 20px; color: #64748b; font-size: 12px; }
-        </style>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
       </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <div class="checkmark">✓</div>
-            <h1 style="margin: 0; font-size: 24px;">Request Received!</h1>
+      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background: linear-gradient(135deg, #059669 0%, #10b981 100%); color: white; padding: 30px; border-radius: 8px 8px 0 0; text-align: center;">
+          <div style="font-size: 48px; margin-bottom: 16px;">✓</div>
+          <h1 style="margin: 0; font-size: 24px;">Request Received!</h1>
+        </div>
+        <div style="background: #f8fafc; padding: 30px; border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 8px 8px;">
+          <p>Hi ${submitter_name},</p>
+          <p>Your <strong>${requestLabel}</strong> titled "<strong>${title}</strong>" has been successfully submitted and is now pending review.</p>
+          <p>A manager will review your request and you'll be notified once a decision is made.</p>
+          
+          <!-- Outlook-compatible table-based button -->
+          <div style="text-align: center; margin: 30px 0;">
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center">
+              <tr>
+                <td style="background-color: #111827; border: 2px solid #111827; border-radius: 8px;">
+                  <a href="${requestsUrl}" target="_blank" style="display: inline-block; padding: 14px 28px; font-size: 16px; font-weight: 600; color: #ffffff !important; text-decoration: none;">
+                    View My Requests
+                  </a>
+                </td>
+              </tr>
+            </table>
           </div>
-          <div class="content">
-            <p>Hi ${submitter_name},</p>
-            <p>Your <strong>${requestLabel}</strong> titled "<strong>${title}</strong>" has been successfully submitted and is now pending review.</p>
-            <p>A manager will review your request and you'll be notified once a decision is made.</p>
-            <p style="margin-top: 24px;">Thank you,<br>TSM Roofing Team</p>
-          </div>
-          <div class="footer">
-            <p>TSM Roofing Employee Portal</p>
-          </div>
+          
+          <p style="font-size: 14px; color: #6b7280; text-align: center;">
+            Or copy this link: <a href="${requestsUrl}" style="color: #3b82f6;">${requestsUrl}</a>
+          </p>
+          
+          <p style="margin-top: 24px;">Thank you,<br>TSM Roofing Team</p>
+        </div>
+        <div style="text-align: center; margin-top: 20px; color: #64748b; font-size: 12px;">
+          <p>TSM Roofing Employee Portal</p>
         </div>
       </body>
       </html>
