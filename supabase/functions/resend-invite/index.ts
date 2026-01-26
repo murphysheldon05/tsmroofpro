@@ -161,9 +161,9 @@ serve(async (req: Request): Promise<Response> => {
     // Send invite email
     let emailSent = false;
     try {
-      // HARD LOCK: Always use tsm-roofing-hub.lovable.app for all auth emails - never use any other domain
+      // HARD LOCK: Always use hub.tsmroofs.com for all auth emails - never use any other domain
       // NOTE: The app route is /auth (NOT /auth/login) - do not change this!
-      const loginUrl = "https://tsm-roofing-hub.lovable.app/auth";
+      const loginUrl = "https://hub.tsmroofs.com/auth";
       
       // Extract first name from full name
       const firstName = profile.full_name?.split(' ')[0] || 'there';

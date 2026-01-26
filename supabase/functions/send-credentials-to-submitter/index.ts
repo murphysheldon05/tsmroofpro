@@ -98,8 +98,8 @@ const handler = async (req: Request): Promise<Response> => {
       `;
     }).join("");
 
-    // HARD LOCK: Always use tsm-roofing-hub.lovable.app for all portal links - never use any other domain
-    const appBaseUrl = "https://tsm-roofing-hub.lovable.app";
+    // HARD LOCK: Always use hub.tsmroofs.com for all portal links - never use any other domain
+    const appBaseUrl = "https://hub.tsmroofs.com";
 
     const emailPayload: Record<string, unknown> = {
       from: "TSM Roofing <notifications@hub.tsmroofs.com>",

@@ -55,8 +55,8 @@ const handler = async (req: Request): Promise<Response> => {
       ? requiredAccess.map(a => `<li>${a}</li>`).join("")
       : "<li>No specific access requested</li>";
 
-    // HARD LOCK: Always use tsm-roofing-hub.lovable.app for all portal links - never use any other domain
-    const appBaseUrl = "https://tsm-roofing-hub.lovable.app";
+    // HARD LOCK: Always use hub.tsmroofs.com for all portal links - never use any other domain
+    const appBaseUrl = "https://hub.tsmroofs.com";
 
     // Send email to all HR recipients
      for (const recipient of recipients) {

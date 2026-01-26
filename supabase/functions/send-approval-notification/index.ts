@@ -34,9 +34,9 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("Sending approval notification to:", user_email, "role:", assigned_role, "dept:", assigned_department);
 
-    // HARD LOCK: Always use tsm-roofing-hub.lovable.app for all auth emails - never use any other domain
+    // HARD LOCK: Always use hub.tsmroofs.com for all auth emails - never use any other domain
     // NOTE: The app route is /auth (NOT /auth/login) - do not change this!
-    const loginUrl = "https://tsm-roofing-hub.lovable.app/auth";
+    const loginUrl = "https://hub.tsmroofs.com/auth";
 
     const roleDisplay = assigned_role ? ROLE_LABELS[assigned_role] || assigned_role : null;
 

@@ -268,9 +268,9 @@ serve(async (req: Request): Promise<Response> => {
           footer_text: "If you have any questions, please contact your manager or the admin team.",
         };
 
-        // HARD LOCK: Always use tsm-roofing-hub.lovable.app for all auth emails - never use any other domain
+        // HARD LOCK: Always use hub.tsmroofs.com for all auth emails - never use any other domain
         // NOTE: The app route is /auth (NOT /auth/login) - do not change this!
-        const loginUrl = "https://tsm-roofing-hub.lovable.app/auth";
+        const loginUrl = "https://hub.tsmroofs.com/auth";
         
         // Extract first name from full name
         const firstName = fullName?.split(' ')[0] || 'there';
