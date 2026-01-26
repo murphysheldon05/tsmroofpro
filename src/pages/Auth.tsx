@@ -6,8 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Logo } from "@/components/Logo";
 import { toast } from "sonner";
-import { Eye, EyeOff, ArrowLeft, Clock } from "lucide-react";
+import { Eye, EyeOff, ArrowLeft } from "lucide-react";
 import { z } from "zod";
+import { PendingApprovalScreen } from "@/components/auth/PendingApprovalScreen";
 
 const authSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -21,16 +22,16 @@ export default function Auth() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const { signIn, user, loading, isApproved, signOut } = useAuth();
+  // GOVERNANCE: Use isActive (employee_status='active') as the canonical check
+  const { signIn, user, loading, isActive, employeeStatus } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Only redirect if user is logged in AND approved
-    if (!loading && user && isApproved === true) {
-      // Redirect to command-center (primary hub landing page)
+    // Only redirect if user is logged in AND active
+    if (!loading && user && isActive) {
       navigate("/command-center", { replace: true });
     }
-  }, [user, loading, isApproved, navigate]);
+  }, [user, loading, isActive, navigate]);
 
   const validateForm = () => {
     try {
@@ -84,40 +85,10 @@ export default function Auth() {
     );
   }
 
-  // Show pending approval screen if user is logged in but not approved
-  if (user && isApproved === false) {
-    return (
-      <div className="min-h-screen bg-background flex flex-col">
-        <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top_right,_hsl(var(--primary)/0.08)_0%,_transparent_50%)]" />
-        
-        <main className="relative z-10 flex-1 flex items-center justify-center px-4">
-          <div className="w-full max-w-md text-center">
-            <Logo size="lg" className="justify-center mb-6" />
-            
-            <div className="glass-card rounded-2xl p-8">
-              <div className="w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center mx-auto mb-4">
-                <Clock className="w-8 h-8 text-amber-600" />
-              </div>
-              <h1 className="text-2xl font-bold text-foreground mb-2">
-                Approval Pending
-              </h1>
-              <p className="text-muted-foreground mb-6">
-                Your account is awaiting admin approval. You'll be able to access the portal once an administrator approves your account.
-              </p>
-              <Button
-                variant="outline"
-                onClick={() => signOut()}
-                className="w-full"
-              >
-                Sign Out
-              </Button>
-            </div>
-          </div>
-        </main>
-      </div>
-    );
+  // GOVERNANCE: Show pending approval screen if user is logged in but not active
+  if (user && employeeStatus === 'pending') {
+    return <PendingApprovalScreen />;
   }
-
 
   return (
     <div className="min-h-screen bg-background flex flex-col">

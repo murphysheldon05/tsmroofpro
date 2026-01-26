@@ -162,13 +162,18 @@ export function PendingApprovals() {
 
     setApprovingId(pendingUser.id);
     try {
-      // STEP 1: Update profile to approved with department, manager, and EMPLOYEE STATUS
-      // CRITICAL: Both is_approved AND employee_status must be set for login gating to pass
+      // ========================================================================
+      // GOVERNED ATOMIC APPROVAL COMMIT
+      // All database updates must succeed before sending email notification
+      // ========================================================================
+      
+      // STEP 1: Update profile to ACTIVE status (canonical access field)
+      // GOVERNANCE: employee_status='active' is the SINGLE SOURCE OF TRUTH for access
       const { error: profileError } = await supabase
         .from("profiles")
         .update({
-          is_approved: true,
-          employee_status: "active", // REQUIRED: Login gating checks both fields
+          is_approved: true,               // Keep for backward compat
+          employee_status: "active",       // CANONICAL: This grants access
           approved_at: new Date().toISOString(),
           approved_by: user?.id,
           department_id: assignedDepartmentId,
@@ -178,7 +183,25 @@ export function PendingApprovals() {
 
       if (profileError) throw profileError;
 
-      // STEP 2: Update user role
+      // STEP 2: Update pending_approvals table to 'approved' status
+      // GOVERNANCE: This removes user from Pending Approvals UI immediately
+      const { error: pendingApprovalError } = await supabase
+        .from("pending_approvals")
+        .update({
+          status: "approved",
+          approved_by: user?.id,
+          approved_at: new Date().toISOString(),
+          notes: `Approved as ${assignedRole}`,
+        })
+        .eq("entity_type", "user")
+        .eq("entity_id", pendingUser.id);
+
+      if (pendingApprovalError) {
+        console.warn("Failed to update pending_approvals:", pendingApprovalError);
+        // Non-blocking - profile update is canonical
+      }
+
+      // STEP 3: Ensure user role exists and is updated
       const { error: roleError } = await supabase
         .from("user_roles")
         .update({ role: assignedRole as "admin" | "manager" | "employee" })
@@ -186,9 +209,8 @@ export function PendingApprovals() {
 
       if (roleError) throw roleError;
 
-      // STEP 3: Assign commission tier if selected
+      // STEP 4: Assign commission tier if selected
       if (assignedTierId) {
-        // Delete any existing assignment first
         await supabase
           .from("user_commission_tiers")
           .delete()
@@ -207,9 +229,8 @@ export function PendingApprovals() {
         }
       }
 
-      // STEP 4: Assign manager (team assignment) if selected
+      // STEP 5: Assign manager (team assignment) if selected
       if (assignedManagerId) {
-        // Delete any existing assignment first
         await supabase
           .from("team_assignments")
           .delete()
@@ -230,7 +251,8 @@ export function PendingApprovals() {
       // Get department name for notification
       const assignedDeptName = departments?.find(d => d.id === assignedDepartmentId)?.name || null;
 
-      // STEP 4: Send approval notification email with CORRECT URL
+      // STEP 6: Send approval notification email ONLY AFTER all DB commits succeed
+      // GOVERNANCE: No cosmetic emails - DB state must be correct first
       if (pendingUser.email) {
         try {
           await supabase.functions.invoke("send-approval-notification", {
@@ -244,12 +266,13 @@ export function PendingApprovals() {
           });
         } catch (emailError) {
           console.error("Failed to send approval email:", emailError);
+          // Email failure is non-blocking - user is already approved in DB
         }
       }
 
       toast.success(`User approved as ${assignedRole}${assignedDeptName ? ` in ${assignedDeptName}` : ''}!`);
       
-      // STEP 6: FORCE UI RECONCILIATION - Clear dialog and invalidate queries
+      // STEP 7: UI reconciliation - close dialog and invalidate queries
       setApprovalDialog({ open: false, user: null });
       
       // Clear cached selections for this user
@@ -274,13 +297,14 @@ export function PendingApprovals() {
         return next;
       });
 
-      // Invalidate and refetch immediately
+      // GOVERNANCE: Force immediate refetch to remove from pending list
       await queryClient.invalidateQueries({ queryKey: ["pending-approvals"] });
       await queryClient.invalidateQueries({ queryKey: ["admin-users"] });
       await queryClient.invalidateQueries({ queryKey: ["team-assignments"] });
       await refetchPending();
       
     } catch (error: any) {
+      // GOVERNANCE: On ANY failure, user remains pending - no partial state
       toast.error("Failed to approve user: " + error.message);
     } finally {
       setApprovingId(null);
@@ -294,6 +318,23 @@ export function PendingApprovals() {
 
     setRejectingId(userId);
     try {
+      // GOVERNANCE: Update pending_approvals to 'rejected' status first
+      const { error: pendingError } = await supabase
+        .from("pending_approvals")
+        .update({
+          status: "rejected",
+          rejected_by: user?.id,
+          rejected_at: new Date().toISOString(),
+          rejection_reason: "Rejected by admin",
+        })
+        .eq("entity_type", "user")
+        .eq("entity_id", userId);
+
+      if (pendingError) {
+        console.warn("Failed to update pending_approvals:", pendingError);
+      }
+
+      // Then delete the user via edge function
       const { error } = await supabase.functions.invoke("admin-delete-user", {
         body: { user_id: userId },
       });

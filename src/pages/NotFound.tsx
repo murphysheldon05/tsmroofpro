@@ -4,7 +4,8 @@ import { useAuth } from "@/contexts/AuthContext";
 
 const NotFound = () => {
   const location = useLocation();
-  const { user, loading, isApproved } = useAuth();
+  // GOVERNANCE: Use isActive (employee_status='active') as the canonical check
+  const { user, loading, isActive } = useAuth();
 
   useEffect(() => {
     console.error("404 Error: User attempted to access non-existent route:", location.pathname);
@@ -20,14 +21,14 @@ const NotFound = () => {
   }
 
   // SAFETY NET: Redirect to appropriate route based on auth state
-  // - Authenticated & approved users → /command-center
-  // - Authenticated but pending → /auth (will show pending approval screen)
+  // - Authenticated & active users → /command-center
+  // - Authenticated but pending/inactive → /auth (ProtectedRoute will handle display)
   // - Unauthenticated users → /auth
-  if (user && isApproved === true) {
+  if (user && isActive) {
     return <Navigate to="/command-center" replace />;
   }
 
-  // For unauthenticated or pending approval users, redirect to /auth
+  // For unauthenticated or non-active users, redirect to /auth
   return <Navigate to="/auth" replace />;
 };
 

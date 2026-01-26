@@ -1344,6 +1344,66 @@ export type Database = {
           },
         ]
       }
+      pending_approvals: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          assigned_to_role: string | null
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          entity_id: string
+          entity_type: string
+          id: string
+          notes: string | null
+          rejected_at: string | null
+          rejected_by: string | null
+          rejection_reason: string | null
+          status: string
+          submitted_at: string
+          submitted_by: string | null
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          assigned_to_role?: string | null
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          entity_id: string
+          entity_type: string
+          id?: string
+          notes?: string | null
+          rejected_at?: string | null
+          rejected_by?: string | null
+          rejection_reason?: string | null
+          status?: string
+          submitted_at?: string
+          submitted_by?: string | null
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          assigned_to_role?: string | null
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          notes?: string | null
+          rejected_at?: string | null
+          rejected_by?: string | null
+          rejection_reason?: string | null
+          status?: string
+          submitted_at?: string
+          submitted_by?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       policies: {
         Row: {
           created_at: string

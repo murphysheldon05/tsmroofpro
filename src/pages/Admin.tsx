@@ -135,11 +135,11 @@ export default function Admin() {
   } = useQuery({
     queryKey: ["admin-users"],
     queryFn: async () => {
-      // Fetch profiles - only approved users for the main list
+      // GOVERNANCE: Fetch only active users (employee_status is canonical)
       const { data: profiles, error: profilesError } = await supabase
         .from("profiles")
         .select("*")
-        .eq("is_approved", true)
+        .eq("employee_status", "active")
         .order("created_at", { ascending: false });
 
       if (profilesError) throw profilesError;
