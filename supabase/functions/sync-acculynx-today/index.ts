@@ -8,26 +8,25 @@ const corsHeaders = {
 // AccuLynx API base URL
 const ACCULYNX_API_BASE = "https://api.acculynx.com/api/v2";
 
-interface AccuLynxEvent {
-  id: string;
-  jobId: string;
-  scheduledDateTime: string;
-  icon?: string;
-  eventIcon?: string;
-  type?: string;
-  category?: string;
-  title?: string;
-}
-
-interface AccuLynxJob {
+interface AccuLynxCalendar {
   id: string;
   name: string;
-  address: {
-    line1: string;
-    city: string;
-    state: string;
-    zip: string;
+}
+
+interface AccuLynxAppointment {
+  id: string;
+  title: string;
+  start: string;
+  end: string;
+  jobId: string;
+  jobName: string;
+  location: {
+    streetAddress?: string;
+    city?: string;
+    state?: string;
+    zip?: string;
   };
+  eventType: string; // "Personal" | "Initial Appointment" | "Material Order" | "Labor Order"
 }
 
 function buildMapUrl(addressFull: string): string {
@@ -38,23 +37,25 @@ function buildAccuLynxJobUrl(jobId: string): string {
   return `https://app.acculynx.com/jobs/${jobId}`;
 }
 
-function classifyByIcon(event: AccuLynxEvent): "DELIVERY" | "LABOR" | "IGNORE" {
-  const icon = (event.icon || event.eventIcon || "").toLowerCase();
-  const type = (event.type || event.category || "").toLowerCase();
+function classifyEventType(eventType: string): "DELIVERY" | "LABOR" | "IGNORE" {
+  const type = (eventType || "").toLowerCase();
 
-  if (icon.includes("truck") || type.includes("delivery")) {
+  // Material Order = Delivery (truck icon in AccuLynx)
+  if (type.includes("material") || type.includes("delivery")) {
     return "DELIVERY";
   }
 
-  if (icon.includes("hammer") || type.includes("labor") || type.includes("install")) {
+  // Labor Order = Build/Install (hammer icon in AccuLynx)
+  if (type.includes("labor") || type.includes("install")) {
     return "LABOR";
   }
 
+  // Ignore Personal and Initial Appointment types
   return "IGNORE";
 }
 
-// Get today's date range in Phoenix timezone
-function getTodayRangePhoenix(): { start: string; end: string } {
+// Get today's date in Phoenix timezone (YYYY-MM-DD format)
+function getTodayPhoenix(): string {
   // Phoenix is UTC-7 (no DST)
   const now = new Date();
   const phoenixOffset = -7 * 60; // minutes
@@ -65,55 +66,61 @@ function getTodayRangePhoenix(): { start: string; end: string } {
   const month = String(phoenixTime.getMonth() + 1).padStart(2, "0");
   const day = String(phoenixTime.getDate()).padStart(2, "0");
 
-  return {
-    start: `${year}-${month}-${day}T00:00:00`,
-    end: `${year}-${month}-${day}T23:59:59`,
-  };
+  return `${year}-${month}-${day}`;
 }
 
-async function fetchAccuLynxEvents(apiKey: string, dateStart: string, dateEnd: string): Promise<AccuLynxEvent[]> {
-  console.log(`Fetching AccuLynx events from ${dateStart} to ${dateEnd}`);
+async function fetchCalendars(apiKey: string): Promise<AccuLynxCalendar[]> {
+  console.log("Fetching AccuLynx calendars...");
   
-  const response = await fetch(
-    `${ACCULYNX_API_BASE}/scheduler/events?startDate=${encodeURIComponent(dateStart)}&endDate=${encodeURIComponent(dateEnd)}`,
-    {
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-    }
-  );
+  const response = await fetch(`${ACCULYNX_API_BASE}/calendars`, {
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+  });
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error(`AccuLynx API error: ${response.status} - ${errorText}`);
-    throw new Error(`AccuLynx API error: ${response.status}`);
+    console.error(`AccuLynx calendars API error: ${response.status} - ${errorText}`);
+    throw new Error(`AccuLynx calendars API error: ${response.status}`);
   }
 
   const data = await response.json();
-  console.log(`Fetched ${data.length || 0} events from AccuLynx`);
-  return data || [];
+  console.log("Calendars API response:", JSON.stringify(data));
+  
+  // Handle both array and object with items property
+  const calendars = Array.isArray(data) ? data : (data.items || data.calendars || []);
+  console.log(`Found ${calendars.length} calendars`);
+  return calendars;
 }
 
-async function fetchAccuLynxJob(apiKey: string, jobId: string): Promise<AccuLynxJob | null> {
-  try {
-    const response = await fetch(`${ACCULYNX_API_BASE}/jobs/${jobId}`, {
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-    });
+async function fetchAppointments(
+  apiKey: string,
+  calendarId: string,
+  startDate: string,
+  endDate: string
+): Promise<AccuLynxAppointment[]> {
+  console.log(`Fetching appointments from calendar ${calendarId} for ${startDate} to ${endDate}`);
+  
+  const url = `${ACCULYNX_API_BASE}/calendars/${calendarId}/appointments?startDate=${startDate}&endDate=${endDate}&pageSize=50`;
+  
+  const response = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+  });
 
-    if (!response.ok) {
-      console.warn(`Failed to fetch job ${jobId}: ${response.status}`);
-      return null;
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error(`Error fetching job ${jobId}:`, error);
-    return null;
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error(`AccuLynx appointments API error: ${response.status} - ${errorText}`);
+    throw new Error(`AccuLynx appointments API error: ${response.status}`);
   }
+
+  const data = await response.json();
+  const appointments = data.items || data || [];
+  console.log(`Found ${appointments.length} appointments in calendar ${calendarId}`);
+  return appointments;
 }
 
 Deno.serve(async (req) => {
@@ -136,19 +143,26 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Get today's date range in Phoenix timezone
-    const { start: todayStart, end: todayEnd } = getTodayRangePhoenix();
-    console.log(`Syncing AccuLynx for Phoenix date range: ${todayStart} to ${todayEnd}`);
+    // Get today's date in Phoenix timezone
+    const todayDate = getTodayPhoenix();
+    console.log(`Syncing AccuLynx for Phoenix date: ${todayDate}`);
 
-    // Fetch events from AccuLynx
-    const events = await fetchAccuLynxEvents(acculynxApiKey, todayStart, todayEnd);
+    // Step 1: Fetch all calendars
+    const calendars = await fetchCalendars(acculynxApiKey);
+    
+    if (calendars.length === 0) {
+      console.log("No calendars found in AccuLynx");
+      return new Response(
+        JSON.stringify({ success: true, synced: { labor: 0, deliveries: 0 }, message: "No calendars found" }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
-    // Clear existing data for today
+    // Step 2: Clear existing data for today
     const { error: deleteLaborError } = await supabase
       .from("today_labor")
       .delete()
-      .gte("scheduled_datetime", todayStart)
-      .lte("scheduled_datetime", todayEnd);
+      .neq("id", "00000000-0000-0000-0000-000000000000"); // Delete all rows
 
     if (deleteLaborError) {
       console.error("Error clearing today_labor:", deleteLaborError);
@@ -157,8 +171,7 @@ Deno.serve(async (req) => {
     const { error: deleteDeliveryError } = await supabase
       .from("today_deliveries")
       .delete()
-      .gte("scheduled_datetime", todayStart)
-      .lte("scheduled_datetime", todayEnd);
+      .neq("id", "00000000-0000-0000-0000-000000000000"); // Delete all rows
 
     if (deleteDeliveryError) {
       console.error("Error clearing today_deliveries:", deleteDeliveryError);
@@ -168,68 +181,85 @@ Deno.serve(async (req) => {
     let deliveryCount = 0;
     let ignoredCount = 0;
 
-    // Process each event
-    for (const event of events) {
-      const category = classifyByIcon(event);
+    // Step 3: Fetch appointments from all calendars
+    for (const calendar of calendars) {
+      try {
+        const appointments = await fetchAppointments(acculynxApiKey, calendar.id, todayDate, todayDate);
 
-      if (category === "IGNORE") {
-        ignoredCount++;
-        continue;
-      }
+        for (const appt of appointments) {
+          const category = classifyEventType(appt.eventType);
 
-      // Fetch job details
-      const job = await fetchAccuLynxJob(acculynxApiKey, event.jobId);
-      if (!job) {
-        console.warn(`Skipping event ${event.id} - could not fetch job ${event.jobId}`);
-        continue;
-      }
+          if (category === "IGNORE") {
+            ignoredCount++;
+            continue;
+          }
 
-      const addressFull = `${job.address.line1}, ${job.address.city}, ${job.address.state} ${job.address.zip}`;
-      const mapUrl = buildMapUrl(addressFull);
-      const acculynxJobUrl = buildAccuLynxJobUrl(event.jobId);
+          // Skip if no job associated
+          if (!appt.jobId) {
+            console.log(`Skipping appointment ${appt.id} - no job associated`);
+            continue;
+          }
 
-      if (category === "DELIVERY") {
-        const { error } = await supabase.from("today_deliveries").upsert(
-          {
-            job_id: event.jobId,
-            job_name: job.name,
-            address_full: addressFull,
-            scheduled_datetime: event.scheduledDateTime,
-            map_url: mapUrl,
-            acculynx_job_url: acculynxJobUrl,
-            source_event_id: event.id,
-            last_synced_at: new Date().toISOString(),
-          },
-          { onConflict: "source_event_id" }
-        );
+          // Build address from location
+          const location = appt.location || {};
+          const addressParts = [
+            location.streetAddress,
+            location.city,
+            location.state,
+            location.zip,
+          ].filter(Boolean);
+          const addressFull = addressParts.join(", ") || appt.title || "Address not available";
+          
+          const mapUrl = buildMapUrl(addressFull);
+          const acculynxJobUrl = buildAccuLynxJobUrl(appt.jobId);
 
-        if (error) {
-          console.error(`Error inserting delivery for event ${event.id}:`, error);
-        } else {
-          deliveryCount++;
+          if (category === "DELIVERY") {
+            const { error } = await supabase.from("today_deliveries").upsert(
+              {
+                job_id: appt.jobId,
+                job_name: appt.jobName || appt.title,
+                address_full: addressFull,
+                scheduled_datetime: appt.start,
+                map_url: mapUrl,
+                acculynx_job_url: acculynxJobUrl,
+                source_event_id: appt.id,
+                last_synced_at: new Date().toISOString(),
+              },
+              { onConflict: "source_event_id" }
+            );
+
+            if (error) {
+              console.error(`Error inserting delivery for appointment ${appt.id}:`, error);
+            } else {
+              deliveryCount++;
+            }
+          } else if (category === "LABOR") {
+            const { error } = await supabase.from("today_labor").upsert(
+              {
+                job_id: appt.jobId,
+                job_name: appt.jobName || appt.title,
+                address_full: addressFull,
+                scheduled_datetime: appt.start,
+                roof_type: null,
+                squares: null,
+                map_url: mapUrl,
+                acculynx_job_url: acculynxJobUrl,
+                source_event_id: appt.id,
+                last_synced_at: new Date().toISOString(),
+              },
+              { onConflict: "source_event_id" }
+            );
+
+            if (error) {
+              console.error(`Error inserting labor for appointment ${appt.id}:`, error);
+            } else {
+              laborCount++;
+            }
+          }
         }
-      } else if (category === "LABOR") {
-        const { error } = await supabase.from("today_labor").upsert(
-          {
-            job_id: event.jobId,
-            job_name: job.name,
-            address_full: addressFull,
-            scheduled_datetime: event.scheduledDateTime,
-            roof_type: null,
-            squares: null,
-            map_url: mapUrl,
-            acculynx_job_url: acculynxJobUrl,
-            source_event_id: event.id,
-            last_synced_at: new Date().toISOString(),
-          },
-          { onConflict: "source_event_id" }
-        );
-
-        if (error) {
-          console.error(`Error inserting labor for event ${event.id}:`, error);
-        } else {
-          laborCount++;
-        }
+      } catch (calendarError) {
+        console.error(`Error processing calendar ${calendar.name}:`, calendarError);
+        // Continue with other calendars
       }
     }
 
@@ -243,7 +273,8 @@ Deno.serve(async (req) => {
           deliveries: deliveryCount,
           ignored: ignoredCount,
         },
-        dateRange: { start: todayStart, end: todayEnd },
+        calendarsProcessed: calendars.length,
+        date: todayDate,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
