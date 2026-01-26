@@ -35,7 +35,76 @@ function buildMapUrl(addressFull: string): string {
 }
 
 function buildAccuLynxJobUrl(jobId: string): string {
-  return `https://app.aculynx.com/jobs/${jobId}`;
+  return `https://app.acculynx.com/jobs/${jobId}`;
+}
+
+interface AccuLynxLocationAddress {
+  street1?: string;
+  street2?: string;
+  city?: string;
+  state?: {
+    id: number;
+    name: string;
+    abbreviation: string;
+  };
+  zipCode?: string;
+}
+
+interface AccuLynxJob {
+  id: string;
+  locationAddress?: AccuLynxLocationAddress;
+  jobName?: string;
+}
+
+async function fetchJobDetails(apiKey: string, jobId: string): Promise<AccuLynxJob | null> {
+  console.log(`Fetching job details for job ${jobId}`);
+  
+  try {
+    const response = await fetch(`${ACCULYNX_API_BASE}/jobs/${jobId}`, {
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`AccuLynx job API error for ${jobId}: ${response.status} - ${errorText}`);
+      return null;
+    }
+
+    const job = await response.json();
+    // Log the entire job object to understand its structure
+    console.log(`Job ${jobId} FULL response:`, JSON.stringify(job));
+    return job;
+  } catch (error) {
+    console.error(`Failed to fetch job details for ${jobId}:`, error);
+    return null;
+  }
+}
+
+function extractAddressFromJob(job: AccuLynxJob | null, fallbackTitle: string): string {
+  if (!job || !job.locationAddress) {
+    console.warn(`No job or locationAddress data, using fallback: ${fallbackTitle}`);
+    return fallbackTitle || "Address not available";
+  }
+
+  const loc = job.locationAddress;
+  const addressParts = [
+    loc.street1,
+    loc.city,
+    loc.state?.abbreviation,
+    loc.zipCode,
+  ].filter(Boolean);
+
+  if (addressParts.length > 0) {
+    const fullAddress = addressParts.join(", ");
+    console.log(`Extracted address: ${fullAddress}`);
+    return fullAddress;
+  }
+
+  console.warn(`Empty address parts for job, using fallback: ${fallbackTitle}`);
+  return fallbackTitle || "Address not available";
 }
 
 function classifyEventType(eventType: string): "DELIVERY" | "LABOR" | "IGNORE" {
@@ -225,15 +294,9 @@ Deno.serve(async (req) => {
             continue;
           }
 
-          // Build address from location
-          const location = appt.location || {};
-          const addressParts = [
-            location.streetAddress,
-            location.city,
-            location.state,
-            location.zip,
-          ].filter(Boolean);
-          const addressFull = addressParts.join(", ") || appt.title || "Address not available";
+          // Fetch full job details to get the complete street address
+          const job = await fetchJobDetails(acculynxApiKey, appt.jobId);
+          const addressFull = extractAddressFromJob(job, appt.title);
           
           const mapUrl = buildMapUrl(addressFull);
           const acculynxJobUrl = buildAccuLynxJobUrl(appt.jobId);
@@ -260,7 +323,7 @@ Deno.serve(async (req) => {
               deliveryCount++;
             }
           } else if (category === "LABOR") {
-            console.log(`Inserting labor: ${appt.jobName || appt.title}, scheduled: ${appt.start}, eventId: ${appt.id}`);
+            console.log(`Inserting labor: ${appt.jobName || appt.title}, address: ${addressFull}, scheduled: ${appt.start}`);
             const { error } = await supabase.from("today_labor").upsert(
               {
                 job_id: appt.jobId,
