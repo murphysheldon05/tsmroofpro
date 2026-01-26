@@ -13,7 +13,8 @@
     <script>
       (function() {
         var h = window.location.hostname;
-        if (h.endsWith('.lovable.dev') || h.endsWith('.lovable.app')) {
+        // Catch ALL Lovable domains including preview/project domains
+        if (h.endsWith('.lovable.dev') || h.endsWith('.lovable.app') || h.endsWith('.lovableproject.com')) {
           var url = 'https://hub.tsmroofs.com' + window.location.pathname + window.location.search + window.location.hash;
           console.log('[Early Redirect] Redirecting from ' + h + ' to hub.tsmroofs.com');
           window.location.replace(url);
