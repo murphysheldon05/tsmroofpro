@@ -1945,6 +1945,90 @@ export type Database = {
         }
         Relationships: []
       }
+      today_deliveries: {
+        Row: {
+          acculynx_job_url: string
+          address_full: string
+          created_at: string
+          id: string
+          job_id: string
+          job_name: string
+          last_synced_at: string
+          map_url: string
+          scheduled_datetime: string
+          source_event_id: string
+        }
+        Insert: {
+          acculynx_job_url: string
+          address_full: string
+          created_at?: string
+          id?: string
+          job_id: string
+          job_name: string
+          last_synced_at?: string
+          map_url: string
+          scheduled_datetime: string
+          source_event_id: string
+        }
+        Update: {
+          acculynx_job_url?: string
+          address_full?: string
+          created_at?: string
+          id?: string
+          job_id?: string
+          job_name?: string
+          last_synced_at?: string
+          map_url?: string
+          scheduled_datetime?: string
+          source_event_id?: string
+        }
+        Relationships: []
+      }
+      today_labor: {
+        Row: {
+          acculynx_job_url: string
+          address_full: string
+          created_at: string
+          id: string
+          job_id: string
+          job_name: string
+          last_synced_at: string
+          map_url: string
+          roof_type: string | null
+          scheduled_datetime: string
+          source_event_id: string
+          squares: number | null
+        }
+        Insert: {
+          acculynx_job_url: string
+          address_full: string
+          created_at?: string
+          id?: string
+          job_id: string
+          job_name: string
+          last_synced_at?: string
+          map_url: string
+          roof_type?: string | null
+          scheduled_datetime: string
+          source_event_id: string
+          squares?: number | null
+        }
+        Update: {
+          acculynx_job_url?: string
+          address_full?: string
+          created_at?: string
+          id?: string
+          job_id?: string
+          job_name?: string
+          last_synced_at?: string
+          map_url?: string
+          roof_type?: string | null
+          scheduled_datetime?: string
+          source_event_id?: string
+          squares?: number | null
+        }
+        Relationships: []
+      }
       tools: {
         Row: {
           android_app_url: string | null
