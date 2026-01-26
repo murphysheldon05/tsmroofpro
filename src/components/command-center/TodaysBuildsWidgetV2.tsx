@@ -63,15 +63,13 @@ export function TodaysBuildsWidgetV2() {
                       <p className="font-medium text-foreground truncate">
                         {build.job_name}
                       </p>
-                      <a
-                        href={build.map_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-xs text-primary hover:underline flex items-center gap-1 mt-1"
+                      <button
+                        onClick={() => window.open(build.map_url, "_blank", "noopener,noreferrer")}
+                        className="text-xs text-primary hover:underline flex items-center gap-1 mt-1 text-left"
                       >
                         <MapPin className="w-3 h-3 flex-shrink-0" />
                         <span className="truncate">{build.address_full}</span>
-                      </a>
+                      </button>
                       <div className="flex items-center gap-2 mt-2">
                         {build.roof_type && (
                           <Badge variant="outline" className="text-xs">
@@ -88,17 +86,11 @@ export function TodaysBuildsWidgetV2() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      asChild
                       className="flex-shrink-0"
+                      onClick={() => window.open(build.acculynx_job_url, "_blank", "noopener,noreferrer")}
+                      title="Open in AccuLynx"
                     >
-                      <a
-                        href={build.acculynx_job_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        title="Open in AccuLynx"
-                      >
-                        <ExternalLink className="w-4 h-4" />
-                      </a>
+                      <ExternalLink className="w-4 h-4" />
                     </Button>
                   </div>
                 </div>

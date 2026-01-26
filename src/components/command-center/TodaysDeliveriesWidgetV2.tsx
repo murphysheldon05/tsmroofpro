@@ -63,30 +63,22 @@ export function TodaysDeliveriesWidgetV2() {
                       <p className="font-medium text-foreground truncate">
                         {delivery.job_name}
                       </p>
-                      <a
-                        href={delivery.map_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-xs text-primary hover:underline flex items-center gap-1 mt-1"
+                      <button
+                        onClick={() => window.open(delivery.map_url, "_blank", "noopener,noreferrer")}
+                        className="text-xs text-primary hover:underline flex items-center gap-1 mt-1 text-left"
                       >
                         <MapPin className="w-3 h-3 flex-shrink-0" />
                         <span className="truncate">{delivery.address_full}</span>
-                      </a>
+                      </button>
                     </div>
                     <Button
                       variant="ghost"
                       size="sm"
-                      asChild
                       className="flex-shrink-0"
+                      onClick={() => window.open(delivery.acculynx_job_url, "_blank", "noopener,noreferrer")}
+                      title="Open in AccuLynx"
                     >
-                      <a
-                        href={delivery.acculynx_job_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        title="Open in AccuLynx"
-                      >
-                        <ExternalLink className="w-4 h-4" />
-                      </a>
+                      <ExternalLink className="w-4 h-4" />
                     </Button>
                   </div>
                 </div>
