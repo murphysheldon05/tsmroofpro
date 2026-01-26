@@ -1,11 +1,11 @@
 /**
  * CANONICAL DOMAIN ENFORCEMENT
  * 
- * All traffic must route through hub.tsmroofs.com.
- * If users hit any lovable domain, they are redirected to the canonical hub domain.
+ * All traffic must route through tsmroofpro.com.
+ * If users hit any lovable domain, they are redirected to the canonical domain.
  */
 
-const CANONICAL_DOMAIN = "hub.tsmroofs.com";
+const CANONICAL_DOMAIN = "tsmroofpro.com";
 const LOVABLE_DOMAIN_PATTERNS = [".lovable.dev", ".lovable.app"];
 
 /**
@@ -50,7 +50,7 @@ export function enforceCanonicalDomain(): void {
 
 /**
  * Get the canonical app base URL
- * Always returns https://hub.tsmroofs.com for production use
+ * Always returns https://tsmroofpro.com for production use
  */
 export function getAppBaseUrl(): string {
   return `https://${CANONICAL_DOMAIN}`;

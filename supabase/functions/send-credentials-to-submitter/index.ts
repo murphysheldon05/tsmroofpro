@@ -98,11 +98,11 @@ const handler = async (req: Request): Promise<Response> => {
       `;
     }).join("");
 
-    // HARD LOCK: Always use hub.tsmroofs.com for all portal links - never use any other domain
-    const appBaseUrl = "https://hub.tsmroofs.com";
+    // HARD LOCK: Always use tsmroofpro.com for all portal links - never use any other domain
+    const appBaseUrl = "https://tsmroofpro.com";
 
     const emailPayload: Record<string, unknown> = {
-      from: "TSM Roofing <notifications@hub.tsmroofs.com>",
+      from: "TSM Roofing <notifications@tsmroofpro.com>",
       to: [submitterProfile.email],
       subject: `Access Credentials Ready: ${newHireName}`,
       html: `

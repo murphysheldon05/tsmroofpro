@@ -91,8 +91,8 @@ const handler = async (req: Request): Promise<Response> => {
     const payload: CommissionNotification = await req.json();
     console.log("Commission notification payload:", payload);
 
-    // HARD LOCK: Always use hub.tsmroofs.com for all portal links - never use any other domain
-    const appUrl = "https://hub.tsmroofs.com";
+    // HARD LOCK: Always use tsmroofpro.com for all portal links - never use any other domain
+    const appUrl = "https://tsmroofpro.com";
     const commissionUrl = `${appUrl}/commissions/${payload.commission_id}`;
 
     const formatCurrency = (value: number) => {
@@ -386,7 +386,7 @@ const handler = async (req: Request): Promise<Response> => {
     console.log("Sending commission notification to:", recipientEmails);
 
     const emailResponse = await resend.emails.send({
-      from: "TSM Hub <notifications@hub.tsmroofs.com>",
+      from: "TSM Hub <notifications@tsmroofpro.com>",
       to: recipientEmails,
       subject,
       html: emailHtml,
