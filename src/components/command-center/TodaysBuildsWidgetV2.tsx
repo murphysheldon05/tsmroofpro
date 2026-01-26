@@ -2,9 +2,8 @@ import { useTodayLabor } from "@/hooks/useAccuLynxToday";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Hammer, MapPin, ExternalLink } from "lucide-react";
+import { Hammer, MapPin } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Button } from "@/components/ui/button";
 
 export function TodaysBuildsWidgetV2() {
   const { data: builds, isLoading } = useTodayLabor();
@@ -58,41 +57,30 @@ export function TodaysBuildsWidgetV2() {
                   key={build.id}
                   className="p-3 rounded-lg bg-card/50 border border-border/50 hover:border-primary/30 hover:bg-primary/5 transition-all duration-200"
                 >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-foreground truncate">
-                        {build.job_name}
-                      </p>
-                      <button
-                        onClick={() => window.open(build.map_url, "_blank", "noopener,noreferrer")}
-                        className="text-xs text-primary hover:underline flex items-center gap-1 mt-1 text-left"
-                      >
-                        <MapPin className="w-3 h-3 flex-shrink-0" />
-                        <span className="truncate">{build.address_full}</span>
-                      </button>
-                      <div className="flex items-center gap-2 mt-2">
-                        {build.roof_type && (
-                          <Badge variant="outline" className="text-xs">
-                            {build.roof_type}
-                          </Badge>
-                        )}
-                        {build.squares && (
-                          <Badge variant="outline" className="text-xs">
-                            {build.squares} sq
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="flex-shrink-0"
-                      onClick={() => window.open(build.acculynx_job_url, "_blank", "noopener,noreferrer")}
-                      title="Open in AccuLynx"
-                    >
-                      <ExternalLink className="w-4 h-4" />
-                    </Button>
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-foreground truncate">
+                    {build.job_name}
+                  </p>
+                  <button
+                    onClick={() => window.open(build.map_url_primary, "_blank", "noopener,noreferrer")}
+                    className="text-xs text-primary hover:underline flex items-center gap-1 mt-1 text-left"
+                  >
+                    <MapPin className="w-3 h-3 flex-shrink-0" />
+                    <span className="truncate">{build.address_full}</span>
+                  </button>
+                  <div className="flex items-center gap-2 mt-2">
+                    {build.roof_type && (
+                      <Badge variant="outline" className="text-xs">
+                        {build.roof_type}
+                      </Badge>
+                    )}
+                    {build.squares && (
+                      <Badge variant="outline" className="text-xs">
+                        {build.squares} sq
+                      </Badge>
+                    )}
                   </div>
+                </div>
                 </div>
               ))}
             </div>
