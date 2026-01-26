@@ -61,13 +61,15 @@ export function TodaysDeliveriesWidgetV2() {
                   <p className="font-medium text-foreground truncate">
                     {delivery.job_name}
                   </p>
-                  <button
-                    onClick={() => window.open(delivery.map_url_primary, "_blank", "noopener,noreferrer")}
-                    className="text-xs text-primary hover:underline flex items-center gap-1 mt-1 text-left"
+                  <a
+                    href={delivery.map_url_primary}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-primary hover:underline flex items-center gap-1 mt-1"
                   >
                     <MapPin className="w-3 h-3 flex-shrink-0" />
                     <span className="truncate">{delivery.address_full}</span>
-                  </button>
+                  </a>
                 </div>
                 </div>
               ))}
