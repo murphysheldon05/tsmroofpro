@@ -29,13 +29,19 @@ interface AccuLynxAppointment {
   eventType: string; // "Personal" | "Initial Appointment" | "Material Order" | "Labor Order"
 }
 
-// Use maps.google.com instead of www.google.com to avoid ERR_BLOCKED_BY_RESPONSE
-function buildMapUrl(addressFull: string): string {
-  return `https://maps.google.com/?q=${encodeURIComponent(addressFull)}`;
+// Primary map link - OpenStreetMap (reliable, rarely blocked)
+function buildMapUrlPrimary(addressFull: string): string {
+  return `https://www.openstreetmap.org/search?query=${encodeURIComponent(addressFull)}`;
 }
 
+// Secondary map link - Google Maps (optional fallback)
+function buildMapUrlGoogle(addressFull: string): string {
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addressFull)}`;
+}
+
+// AccuLynx job deep link (CRITICAL: domain is app.aculynx.com with single 'c')
 function buildAccuLynxJobUrl(jobId: string): string {
-  return `https://app.acculynx.com/jobs/${jobId}`;
+  return `https://app.aculynx.com/jobs/${jobId}`;
 }
 
 function classifyEventType(eventType: string): "DELIVERY" | "LABOR" | "IGNORE" {
@@ -234,8 +240,9 @@ Deno.serve(async (req) => {
             location.zip,
           ].filter(Boolean);
           const addressFull = addressParts.join(", ") || appt.title || "Address not available";
-          
-          const mapUrl = buildMapUrl(addressFull);
+
+          const mapUrlPrimary = buildMapUrlPrimary(addressFull);
+          const mapUrlGoogle = buildMapUrlGoogle(addressFull);
           const acculynxJobUrl = buildAccuLynxJobUrl(appt.jobId);
 
           if (category === "DELIVERY") {
@@ -245,7 +252,8 @@ Deno.serve(async (req) => {
                 job_name: appt.jobName || appt.title,
                 address_full: addressFull,
                 scheduled_datetime: appt.start,
-                map_url: mapUrl,
+                map_url_primary: mapUrlPrimary,
+                map_url_google: mapUrlGoogle,
                 acculynx_job_url: acculynxJobUrl,
                 source_event_id: appt.id,
                 last_synced_at: new Date().toISOString(),
@@ -268,7 +276,8 @@ Deno.serve(async (req) => {
                 scheduled_datetime: appt.start,
                 roof_type: null,
                 squares: null,
-                map_url: mapUrl,
+                map_url_primary: mapUrlPrimary,
+                map_url_google: mapUrlGoogle,
                 acculynx_job_url: acculynxJobUrl,
                 source_event_id: appt.id,
                 last_synced_at: new Date().toISOString(),
