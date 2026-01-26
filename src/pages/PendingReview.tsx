@@ -3,12 +3,15 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePendingReview, PendingItem, SlaStatus } from "@/hooks/usePendingReview";
 import { useUpdateCommissionStatus } from "@/hooks/useCommissions";
+import { useUpdateWarranty } from "@/hooks/useWarranties";
+import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "sonner";
 import {
   Table,
   TableBody,
@@ -47,6 +50,7 @@ import {
   Search,
   Filter,
   Loader2,
+  CheckSquare,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -114,6 +118,7 @@ export default function PendingReview() {
   const { data, isLoading, refetch } = usePendingReview();
   const navigate = useNavigate();
   const updateCommissionStatus = useUpdateCommissionStatus();
+  const updateWarranty = useUpdateWarranty();
   const isReviewer = isAdmin || isManager;
   
   const [searchTerm, setSearchTerm] = useState("");
@@ -162,6 +167,34 @@ export default function PendingReview() {
       } finally {
         setIsSubmitting(false);
       }
+    }
+  };
+
+  // COMPLETE HANDLER: Mark items as completed to remove from pending queue
+  const handleComplete = async (item: PendingItem) => {
+    setIsSubmitting(true);
+    try {
+      if (item.type === "request") {
+        const { error } = await supabase
+          .from("requests")
+          .update({ status: "completed" })
+          .eq("id", item.id);
+        if (error) throw error;
+        toast.success("Request marked as completed");
+      } else if (item.type === "warranty") {
+        await updateWarranty.mutateAsync({
+          id: item.id,
+          status: "completed",
+          previousStatus: item.status,
+          date_completed: new Date().toISOString().split("T")[0],
+        });
+        toast.success("Warranty marked as completed");
+      }
+      refetch();
+    } catch (error: any) {
+      toast.error("Failed to complete item: " + error.message);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -389,6 +422,19 @@ export default function PendingReview() {
                                   </Button>
                                 </>
                               )}
+                              {/* Complete button for Requests and Warranties */}
+                              {(item.type === "request" || item.type === "warranty") && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-emerald-600"
+                                  onClick={(e) => { e.stopPropagation(); handleComplete(item); }}
+                                  disabled={isSubmitting}
+                                >
+                                  <CheckSquare className="w-3 h-3 mr-1" />
+                                  Complete
+                                </Button>
+                              )}
                             </>
                           ) : (
                             <>
@@ -500,6 +546,19 @@ export default function PendingReview() {
                                           Reject
                                         </Button>
                                       </>
+                                    )}
+                                    {/* Complete button for Requests and Warranties */}
+                                    {(item.type === "request" || item.type === "warranty") && (
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="text-emerald-600 hover:text-emerald-700"
+                                        onClick={() => handleComplete(item)}
+                                        disabled={isSubmitting}
+                                      >
+                                        <CheckSquare className="w-4 h-4 mr-1" />
+                                        Complete
+                                      </Button>
                                     )}
                                   </>
                                 ) : (

@@ -525,6 +525,19 @@ export default function Requests() {
                     </Button>
                   </DialogFooter>
                 )}
+
+                {/* Action for approved requests - mark as completed to close out */}
+                {isManager && selectedRequest.status === "approved" && (
+                  <DialogFooter className="pt-4">
+                    <Button
+                      onClick={() => handleStatusUpdate(selectedRequest.id, "completed")}
+                      disabled={isUpdating}
+                    >
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                      Mark Complete
+                    </Button>
+                  </DialogFooter>
+                )}
               </div>
             )}
           </DialogContent>

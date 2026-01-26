@@ -146,11 +146,12 @@ export function usePendingReview() {
           });
         });
 
-        // Pending requests needing review
+        // Pending requests needing review (exclude completed/closed)
         const { data: pendingRequests } = await supabase
           .from("requests")
           .select("id, title, type, status, updated_at, created_at, submitted_by")
           .eq("status", "pending")
+          .not("status", "in", '("completed","closed","rejected")')
           .order("created_at", { ascending: true })
           .limit(20);
 
@@ -177,11 +178,11 @@ export function usePendingReview() {
           });
         });
 
-        // Pending warranties needing review
+        // Pending warranties needing review (exclude completed/denied)
         const { data: pendingWarranties } = await supabase
           .from("warranty_requests")
           .select("id, customer_name, job_address, status, priority_level, updated_at, created_at, date_submitted")
-          .in("status", ["submitted", "pending_assignment", "in_progress"])
+          .in("status", ["new", "assigned", "in_review", "scheduled", "in_progress", "waiting_on_materials", "waiting_on_manufacturer"])
           .order("created_at", { ascending: true })
           .limit(20);
 
