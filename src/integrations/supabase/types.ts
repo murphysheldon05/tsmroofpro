@@ -1954,8 +1954,7 @@ export type Database = {
           job_id: string
           job_name: string
           last_synced_at: string
-          map_url_google: string | null
-          map_url_primary: string
+          map_url: string
           scheduled_datetime: string
           source_event_id: string
         }
@@ -1967,8 +1966,7 @@ export type Database = {
           job_id: string
           job_name: string
           last_synced_at?: string
-          map_url_google?: string | null
-          map_url_primary: string
+          map_url: string
           scheduled_datetime: string
           source_event_id: string
         }
@@ -1980,8 +1978,7 @@ export type Database = {
           job_id?: string
           job_name?: string
           last_synced_at?: string
-          map_url_google?: string | null
-          map_url_primary?: string
+          map_url?: string
           scheduled_datetime?: string
           source_event_id?: string
         }
@@ -1996,8 +1993,7 @@ export type Database = {
           job_id: string
           job_name: string
           last_synced_at: string
-          map_url_google: string | null
-          map_url_primary: string
+          map_url: string
           roof_type: string | null
           scheduled_datetime: string
           source_event_id: string
@@ -2011,8 +2007,7 @@ export type Database = {
           job_id: string
           job_name: string
           last_synced_at?: string
-          map_url_google?: string | null
-          map_url_primary: string
+          map_url: string
           roof_type?: string | null
           scheduled_datetime: string
           source_event_id: string
@@ -2026,8 +2021,7 @@ export type Database = {
           job_id?: string
           job_name?: string
           last_synced_at?: string
-          map_url_google?: string | null
-          map_url_primary?: string
+          map_url?: string
           roof_type?: string | null
           scheduled_datetime?: string
           source_event_id?: string

@@ -2,7 +2,7 @@ import { useTodayLabor } from "@/hooks/useAccuLynxToday";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Hammer, MapPin, ExternalLink, Map } from "lucide-react";
+import { Hammer, MapPin, ExternalLink } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 
@@ -64,7 +64,7 @@ export function TodaysBuildsWidgetV2() {
                         {build.job_name}
                       </p>
                       <button
-                        onClick={() => window.open(build.map_url_primary, "_blank", "noopener,noreferrer")}
+                        onClick={() => window.open(build.map_url, "_blank", "noopener,noreferrer")}
                         className="text-xs text-primary hover:underline flex items-center gap-1 mt-1 text-left"
                       >
                         <MapPin className="w-3 h-3 flex-shrink-0" />
@@ -83,26 +83,15 @@ export function TodaysBuildsWidgetV2() {
                         )}
                       </div>
                     </div>
-                    <div className="flex flex-col gap-1 flex-shrink-0">
-                      {build.map_url_google && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => window.open(build.map_url_google!, "_blank", "noopener,noreferrer")}
-                          title="Open in Google Maps"
-                        >
-                          <Map className="w-4 h-4" />
-                        </Button>
-                      )}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => window.open(build.acculynx_job_url, "_blank", "noopener,noreferrer")}
-                        title="Open in AccuLynx"
-                      >
-                        <ExternalLink className="w-4 h-4" />
-                      </Button>
-                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="flex-shrink-0"
+                      onClick={() => window.open(build.acculynx_job_url, "_blank", "noopener,noreferrer")}
+                      title="Open in AccuLynx"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                    </Button>
                   </div>
                 </div>
               ))}

@@ -9,8 +9,7 @@ export interface TodayLaborItem {
   scheduled_datetime: string;
   roof_type: string | null;
   squares: number | null;
-  map_url_primary: string;
-  map_url_google: string | null;
+  map_url: string;
   acculynx_job_url: string;
   source_event_id: string;
   last_synced_at: string;
@@ -22,8 +21,7 @@ export interface TodayDeliveryItem {
   job_name: string;
   address_full: string;
   scheduled_datetime: string;
-  map_url_primary: string;
-  map_url_google: string | null;
+  map_url: string;
   acculynx_job_url: string;
   source_event_id: string;
   last_synced_at: string;
