@@ -72,18 +72,24 @@ export function PendingApprovals() {
   const [approvalDialog, setApprovalDialog] = useState<{ open: boolean; user: PendingUser | null }>({ open: false, user: null });
   const [customMessage, setCustomMessage] = useState("");
 
-  // CRITICAL: Only fetch users where is_approved = false (strict filter)
+  // CRITICAL: Fetch users where is_approved = false AND employee_status is pending/null
+  // This ensures we only show truly pending users, not those with mismatched data
   const { data: pendingUsers, isLoading, refetch: refetchPending } = useQuery({
     queryKey: ["pending-approvals"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, email, full_name, requested_role, requested_department, company_name, created_at")
+        .select("id, email, full_name, requested_role, requested_department, company_name, created_at, employee_status")
         .eq("is_approved", false)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      return data as PendingUser[];
+      
+      // Filter to only truly pending users (exclude those with active employee_status but is_approved=false)
+      // This handles edge cases where data got out of sync
+      return (data || []).filter(u => 
+        u.employee_status === 'pending' || u.employee_status === null || u.employee_status === undefined
+      ) as PendingUser[];
     },
     refetchInterval: 10000, // More frequent refresh
     staleTime: 5000,
@@ -156,11 +162,13 @@ export function PendingApprovals() {
 
     setApprovingId(pendingUser.id);
     try {
-      // STEP 1: Update profile to approved with department and manager
+      // STEP 1: Update profile to approved with department, manager, and EMPLOYEE STATUS
+      // CRITICAL: Both is_approved AND employee_status must be set for login gating to pass
       const { error: profileError } = await supabase
         .from("profiles")
         .update({
           is_approved: true,
+          employee_status: "active", // REQUIRED: Login gating checks both fields
           approved_at: new Date().toISOString(),
           approved_by: user?.id,
           department_id: assignedDepartmentId,
