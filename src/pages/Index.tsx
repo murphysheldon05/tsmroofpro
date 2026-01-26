@@ -1,7 +1,8 @@
 import { Navigate } from "react-router-dom";
 
 const Index = () => {
-  return <Navigate to="/" replace />;
+  // Redirect to auth page - matches the route configuration in App.tsx
+  return <Navigate to="/auth" replace />;
 };
 
 export default Index;
