@@ -53,11 +53,11 @@ export default function UserDirectory() {
   const { data: users, isLoading } = useQuery({
     queryKey: ["user-directory"],
     queryFn: async () => {
-      // Fetch profiles that the current user can see (RLS enforced)
+      // GOVERNANCE: employee_status='active' is the canonical access check
       const { data: profiles, error: profilesError } = await supabase
         .from("profiles")
         .select("id, full_name, email, phone_number, department_id, data_consent_given, avatar_url")
-        .eq("is_approved", true)
+        .eq("employee_status", "active")
         .order("full_name", { ascending: true });
 
       if (profilesError) throw profilesError;

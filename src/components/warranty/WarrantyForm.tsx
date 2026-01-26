@@ -45,10 +45,11 @@ export function WarrantyForm({ open, onOpenChange, warranty }: WarrantyFormProps
   const { data: productionMembers = [] } = useQuery({
     queryKey: ["production-members"],
     queryFn: async () => {
+      // GOVERNANCE: employee_status='active' is the canonical access check
       const { data, error } = await supabase
         .from("profiles")
         .select("id, full_name")
-        .eq("is_approved", true);
+        .eq("employee_status", "active");
 
       if (error) throw error;
       return data as ProductionMember[];

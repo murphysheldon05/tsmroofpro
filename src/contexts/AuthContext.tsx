@@ -1,9 +1,10 @@
-import React, { createContext, useContext, useEffect, useState } from 'react'; // v1
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react'; // v2
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { PasswordResetPrompt } from '@/components/auth/PasswordResetPrompt';
 
 type AppRole = 'admin' | 'manager' | 'employee';
+// CANONICAL STATUS: Single source of truth for user access
 type EmployeeStatus = 'active' | 'pending' | 'rejected' | 'inactive';
 
 interface AuthContextType {
@@ -11,14 +12,14 @@ interface AuthContextType {
   session: Session | null;
   loading: boolean;
   role: AppRole | null;
-  isApproved: boolean | null;
   employeeStatus: EmployeeStatus | null;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
+  refreshProfile: () => Promise<void>;
   isAdmin: boolean;
   isManager: boolean;
-  isActive: boolean; // True only when employee_status = 'active'
+  isActive: boolean; // True ONLY when employee_status = 'active'
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -28,7 +29,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [role, setRole] = useState<AppRole | null>(null);
-  const [isApproved, setIsApproved] = useState<boolean | null>(null);
   const [employeeStatus, setEmployeeStatus] = useState<EmployeeStatus | null>(null);
   const [mustResetPassword, setMustResetPassword] = useState(false);
 
@@ -46,10 +46,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const checkProfileStatus = async (userId: string) => {
+  // CANONICAL ACCESS CHECK: employee_status is the SINGLE source of truth
+  const checkProfileStatus = useCallback(async (userId: string) => {
     const { data } = await supabase
       .from('profiles')
-      .select('must_reset_password, is_approved, employee_status')
+      .select('must_reset_password, employee_status, is_approved')
       .eq('id', userId)
       .maybeSingle();
     
@@ -57,12 +58,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (data.must_reset_password) {
         setMustResetPassword(true);
       }
-      setIsApproved(data.is_approved ?? false);
-      setEmployeeStatus((data.employee_status as EmployeeStatus) || 'pending');
+      
+      // GOVERNANCE: employee_status is canonical; is_approved is kept for backward compat
+      // Active status requires BOTH employee_status='active' AND is_approved=true
+      let status: EmployeeStatus = 'pending';
+      if (data.employee_status) {
+        status = data.employee_status as EmployeeStatus;
+      } else if (data.is_approved === false) {
+        status = 'pending';
+      } else if (data.is_approved === true) {
+        status = 'active';
+      }
+      
+      setEmployeeStatus(status);
     } else {
+      // No profile found - treat as pending
       setEmployeeStatus('pending');
     }
-  };
+  }, []);
+
+  // Public method to refresh profile status after approval
+  const refreshProfile = useCallback(async () => {
+    if (user) {
+      await fetchUserRole(user.id);
+      await checkProfileStatus(user.id);
+    }
+  }, [user, checkProfileStatus]);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -77,7 +98,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }, 0);
         } else {
           setRole(null);
-          setIsApproved(null);
           setEmployeeStatus(null);
           setMustResetPassword(false);
         }
@@ -97,7 +117,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [checkProfileStatus]);
 
   const signIn = async (email: string, password: string) => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
@@ -145,7 +165,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     await supabase.auth.signOut();
     setRole(null);
-    setIsApproved(null);
     setEmployeeStatus(null);
     setMustResetPassword(false);
   };
@@ -154,18 +173,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setMustResetPassword(false);
   };
 
-  const isActive = employeeStatus === 'active' && isApproved === true;
+  // CANONICAL ACCESS RULE: Only 'active' status grants access
+  const isActive = employeeStatus === 'active';
 
   const value = {
     user,
     session,
     loading,
     role,
-    isApproved,
     employeeStatus,
     signIn,
     signUp,
     signOut,
+    refreshProfile,
     isAdmin: role === 'admin',
     isManager: role === 'manager' || role === 'admin',
     isActive,
@@ -175,7 +195,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     <AuthContext.Provider value={value}>
       {children}
       <PasswordResetPrompt 
-        open={mustResetPassword && !!user && isApproved === true} 
+        open={mustResetPassword && !!user && isActive} 
         onPasswordReset={handlePasswordReset} 
       />
     </AuthContext.Provider>
