@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { usePendingReview, PendingItem, SlaStatus } from "@/hooks/usePendingReview";
 import { useUpdateCommissionStatus } from "@/hooks/useCommissions";
 import { useUpdateWarranty } from "@/hooks/useWarranties";
+import { useAdminAuditLog, AUDIT_ACTIONS, OBJECT_TYPES } from "@/hooks/useAdminAuditLog";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -53,7 +54,6 @@ import {
   CheckSquare,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-
 const typeIcons = {
   commission: DollarSign,
   request: FileText,
@@ -119,6 +119,7 @@ export default function PendingReview() {
   const navigate = useNavigate();
   const updateCommissionStatus = useUpdateCommissionStatus();
   const updateWarranty = useUpdateWarranty();
+  const { logAction } = useAdminAuditLog();
   const isReviewer = isAdmin || isManager;
   
   const [searchTerm, setSearchTerm] = useState("");
@@ -180,6 +181,17 @@ export default function PendingReview() {
           .update({ status: "completed" })
           .eq("id", item.id);
         if (error) throw error;
+        
+        // Log audit trail
+        logAction.mutate({
+          action_type: AUDIT_ACTIONS.REQUEST_COMPLETED,
+          object_type: OBJECT_TYPES.REQUEST,
+          object_id: item.id,
+          previous_value: { status: item.status },
+          new_value: { status: "completed" },
+          notes: `Marked request "${item.title}" as completed`,
+        });
+        
         toast.success("Request marked as completed");
       } else if (item.type === "warranty") {
         await updateWarranty.mutateAsync({
@@ -188,6 +200,17 @@ export default function PendingReview() {
           previousStatus: item.status,
           date_completed: new Date().toISOString().split("T")[0],
         });
+        
+        // Log audit trail
+        logAction.mutate({
+          action_type: AUDIT_ACTIONS.WARRANTY_COMPLETED,
+          object_type: OBJECT_TYPES.WARRANTY,
+          object_id: item.id,
+          previous_value: { status: item.status },
+          new_value: { status: "completed" },
+          notes: `Marked warranty "${item.title}" as completed`,
+        });
+        
         toast.success("Warranty marked as completed");
       }
       refetch();
@@ -197,7 +220,6 @@ export default function PendingReview() {
       setIsSubmitting(false);
     }
   };
-
   const handleOpenReject = (item: PendingItem) => {
     setSelectedItem(item);
     setRejectionReason("");

@@ -37,6 +37,7 @@ import {
   AlertTriangle,
   Wrench,
   FolderOpen,
+  FileText,
 } from "lucide-react";
 import { UserPermissionsEditor } from "@/components/admin/UserPermissionsEditor";
 import { PendingApprovals } from "@/components/admin/PendingApprovals";
@@ -51,6 +52,7 @@ import { CommissionTierManager } from "@/components/admin/CommissionTierManager"
 import { CategoryManager } from "@/components/admin/CategoryManager";
 import { SOPManager } from "@/components/admin/SOPManager";
 import { ToolsManager } from "@/components/admin/ToolsManager";
+import { AuditLogViewer } from "@/components/admin/AuditLogViewer";
 import { useCommissionTiers } from "@/hooks/useCommissionTiers";
 import { useAdminAuditLog, AUDIT_ACTIONS, OBJECT_TYPES } from "@/hooks/useAdminAuditLog";
 
@@ -436,6 +438,10 @@ export default function Admin() {
               <Route className="w-4 h-4" />
               Routing
             </TabsTrigger>
+            <TabsTrigger value="audit" className="gap-2">
+              <FileText className="w-4 h-4" />
+              Audit Log
+            </TabsTrigger>
           </TabsList>
 
           {/* Users Tab */}
@@ -811,6 +817,11 @@ export default function Admin() {
           {/* Routing Tab */}
           <TabsContent value="routing" className="space-y-4">
             <NotificationRoutingManager />
+          </TabsContent>
+
+          {/* Audit Log Tab */}
+          <TabsContent value="audit" className="space-y-4">
+            <AuditLogViewer />
           </TabsContent>
         </Tabs>
       </div>

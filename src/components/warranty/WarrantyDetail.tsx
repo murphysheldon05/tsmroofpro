@@ -21,7 +21,9 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format, parseISO, differenceInDays } from "date-fns";
-import { Send, Upload, FileText, Image, Download, Clock, AlertTriangle } from "lucide-react";
+import { Send, Upload, FileText, Image, Download, Clock, AlertTriangle, History } from "lucide-react";
+import { ActivityHistory } from "@/components/audit/ActivityHistory";
+import { OBJECT_TYPES } from "@/hooks/useAdminAuditLog";
 
 interface WarrantyDetailProps {
   open: boolean;
@@ -128,6 +130,10 @@ export function WarrantyDetail({ open, onOpenChange, warranty, onEdit }: Warrant
             <TabsTrigger value="details">Details</TabsTrigger>
             <TabsTrigger value="notes">Notes ({notes.length})</TabsTrigger>
             <TabsTrigger value="documents">Documents ({documents.length})</TabsTrigger>
+            <TabsTrigger value="activity" className="flex items-center gap-1">
+              <History className="h-3.5 w-3.5" />
+              Activity
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="details" className="space-y-4">
@@ -376,6 +382,10 @@ export function WarrantyDetail({ open, onOpenChange, warranty, onEdit }: Warrant
                 ))}
               </div>
             )}
+          </TabsContent>
+
+          <TabsContent value="activity" className="mt-4">
+            <ActivityHistory objectType={OBJECT_TYPES.WARRANTY} objectId={warranty?.id} />
           </TabsContent>
         </Tabs>
       </DialogContent>
