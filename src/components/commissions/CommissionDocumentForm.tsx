@@ -110,9 +110,31 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
     return calculateAllFields(inputData);
   }, [formData]);
 
+  // Track which field is being edited to show raw input
+  const [editingField, setEditingField] = useState<string | null>(null);
+  const [editingValue, setEditingValue] = useState<string>("");
+
   const handleNumberChange = (field: keyof typeof formData, value: string) => {
+    setEditingValue(value);
     const numValue = parseFloat(value) || 0;
     setFormData(prev => ({ ...prev, [field]: numValue }));
+  };
+
+  const handleNumberFocus = (field: string, currentValue: number) => {
+    setEditingField(field);
+    setEditingValue(currentValue === 0 ? "" : currentValue.toString());
+  };
+
+  const handleNumberBlur = () => {
+    setEditingField(null);
+    setEditingValue("");
+  };
+
+  const getNumberInputValue = (field: string, value: number): string => {
+    if (editingField === field) {
+      return editingValue;
+    }
+    return value === 0 ? "" : value.toString();
   };
 
   const handleSave = async (submit: boolean = false) => {
@@ -289,8 +311,10 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
                   type="number"
                   step="0.01"
                   min="0"
-                  value={formData.gross_contract_total || ''}
+                  value={getNumberInputValue('gross_contract_total', formData.gross_contract_total)}
                   onChange={(e) => handleNumberChange('gross_contract_total', e.target.value)}
+                  onFocus={() => handleNumberFocus('gross_contract_total', formData.gross_contract_total)}
+                  onBlur={handleNumberBlur}
                   disabled={!canEdit}
                   className={numberInputClasses}
                   placeholder="$0.00"
@@ -345,8 +369,10 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
                   type="number"
                   step="0.01"
                   min="0"
-                  value={formData.material_cost || ''}
+                  value={getNumberInputValue('material_cost', formData.material_cost)}
                   onChange={(e) => handleNumberChange('material_cost', e.target.value)}
+                  onFocus={() => handleNumberFocus('material_cost', formData.material_cost)}
+                  onBlur={handleNumberBlur}
                   disabled={!canEdit}
                   className={numberInputClasses}
                   placeholder="$0.00"
@@ -359,8 +385,10 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
                   type="number"
                   step="0.01"
                   min="0"
-                  value={formData.labor_cost || ''}
+                  value={getNumberInputValue('labor_cost', formData.labor_cost)}
                   onChange={(e) => handleNumberChange('labor_cost', e.target.value)}
+                  onFocus={() => handleNumberFocus('labor_cost', formData.labor_cost)}
+                  onBlur={handleNumberBlur}
                   disabled={!canEdit}
                   className={numberInputClasses}
                   placeholder="$0.00"
@@ -380,8 +408,10 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
                   type="number"
                   step="0.01"
                   min="0"
-                  value={formData.neg_exp_1 || ''}
+                  value={getNumberInputValue('neg_exp_1', formData.neg_exp_1)}
                   onChange={(e) => handleNumberChange('neg_exp_1', e.target.value)}
+                  onFocus={() => handleNumberFocus('neg_exp_1', formData.neg_exp_1)}
+                  onBlur={handleNumberBlur}
                   disabled={!canEdit}
                   className={numberInputClasses}
                   placeholder="$0.00"
@@ -393,8 +423,10 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
                   type="number"
                   step="0.01"
                   min="0"
-                  value={formData.neg_exp_2 || ''}
+                  value={getNumberInputValue('neg_exp_2', formData.neg_exp_2)}
                   onChange={(e) => handleNumberChange('neg_exp_2', e.target.value)}
+                  onFocus={() => handleNumberFocus('neg_exp_2', formData.neg_exp_2)}
+                  onBlur={handleNumberBlur}
                   disabled={!canEdit}
                   className={numberInputClasses}
                   placeholder="$0.00"
@@ -406,8 +438,10 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
                   type="number"
                   step="0.01"
                   min="0"
-                  value={formData.neg_exp_3 || ''}
+                  value={getNumberInputValue('neg_exp_3', formData.neg_exp_3)}
                   onChange={(e) => handleNumberChange('neg_exp_3', e.target.value)}
+                  onFocus={() => handleNumberFocus('neg_exp_3', formData.neg_exp_3)}
+                  onBlur={handleNumberBlur}
                   disabled={!canEdit}
                   className={numberInputClasses}
                   placeholder="$0.00"
@@ -419,8 +453,10 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
                   type="number"
                   step="0.01"
                   min="0"
-                  value={formData.neg_exp_4 || ''}
+                  value={getNumberInputValue('neg_exp_4', formData.neg_exp_4)}
                   onChange={(e) => handleNumberChange('neg_exp_4', e.target.value)}
+                  onFocus={() => handleNumberFocus('neg_exp_4', formData.neg_exp_4)}
+                  onBlur={handleNumberBlur}
                   disabled={!canEdit}
                   className={numberInputClasses}
                   placeholder="$0.00"
@@ -439,8 +475,10 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
                   type="number"
                   step="0.01"
                   min="0"
-                  value={formData.pos_exp_1 || ''}
+                  value={getNumberInputValue('pos_exp_1', formData.pos_exp_1)}
                   onChange={(e) => handleNumberChange('pos_exp_1', e.target.value)}
+                  onFocus={() => handleNumberFocus('pos_exp_1', formData.pos_exp_1)}
+                  onBlur={handleNumberBlur}
                   disabled={!canEdit}
                   className={numberInputClasses}
                   placeholder="$0.00"
@@ -452,8 +490,10 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
                   type="number"
                   step="0.01"
                   min="0"
-                  value={formData.pos_exp_2 || ''}
+                  value={getNumberInputValue('pos_exp_2', formData.pos_exp_2)}
                   onChange={(e) => handleNumberChange('pos_exp_2', e.target.value)}
+                  onFocus={() => handleNumberFocus('pos_exp_2', formData.pos_exp_2)}
+                  onBlur={handleNumberBlur}
                   disabled={!canEdit}
                   className={numberInputClasses}
                   placeholder="$0.00"
@@ -465,8 +505,10 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
                   type="number"
                   step="0.01"
                   min="0"
-                  value={formData.pos_exp_3 || ''}
+                  value={getNumberInputValue('pos_exp_3', formData.pos_exp_3)}
                   onChange={(e) => handleNumberChange('pos_exp_3', e.target.value)}
+                  onFocus={() => handleNumberFocus('pos_exp_3', formData.pos_exp_3)}
+                  onBlur={handleNumberBlur}
                   disabled={!canEdit}
                   className={numberInputClasses}
                   placeholder="$0.00"
@@ -478,8 +520,10 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
                   type="number"
                   step="0.01"
                   min="0"
-                  value={formData.pos_exp_4 || ''}
+                  value={getNumberInputValue('pos_exp_4', formData.pos_exp_4)}
                   onChange={(e) => handleNumberChange('pos_exp_4', e.target.value)}
+                  onFocus={() => handleNumberFocus('pos_exp_4', formData.pos_exp_4)}
+                  onBlur={handleNumberBlur}
                   disabled={!canEdit}
                   className={numberInputClasses}
                   placeholder="$0.00"
@@ -548,8 +592,10 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
                   type="number"
                   step="0.01"
                   min="0"
-                  value={formData.advance_total || ''}
+                  value={getNumberInputValue('advance_total', formData.advance_total)}
                   onChange={(e) => handleNumberChange('advance_total', e.target.value)}
+                  onFocus={() => handleNumberFocus('advance_total', formData.advance_total)}
+                  onBlur={handleNumberBlur}
                   disabled={!canEdit}
                   className={numberInputClasses}
                   placeholder="$0.00"
