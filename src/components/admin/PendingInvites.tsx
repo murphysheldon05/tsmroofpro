@@ -113,7 +113,7 @@ export function PendingInvites() {
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
             <Mail className="w-4 h-4" />
-            Pending Invites
+            Sent Invites
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -133,9 +133,9 @@ export function PendingInvites() {
     return (
       <Card className="border-dashed">
         <CardContent className="py-6">
-          <div className="flex items-center justify-center gap-2 text-muted-foreground">
+        <div className="flex items-center justify-center gap-2 text-muted-foreground">
             <Mail className="w-4 h-4" />
-            <span className="text-sm">No pending invites</span>
+            <span className="text-sm">No sent invites</span>
           </div>
         </CardContent>
       </Card>
@@ -148,7 +148,7 @@ export function PendingInvites() {
         <div className="flex items-center justify-between">
           <CardTitle className="text-base flex items-center gap-2">
             <Mail className="w-4 h-4 text-primary" />
-            Pending Invites
+            Sent Invites
             <Badge variant="secondary" className="ml-2">
               {inviteCount}
             </Badge>
