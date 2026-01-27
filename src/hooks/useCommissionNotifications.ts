@@ -17,6 +17,7 @@ interface NotificationPayload {
   previous_status?: string;
   notes?: string;
   changed_by_name?: string;
+  scheduled_pay_date?: string;
 }
 
 export async function sendCommissionNotification(
