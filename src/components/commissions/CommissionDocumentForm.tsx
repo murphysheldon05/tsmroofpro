@@ -3,7 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { parseCurrencyInput } from "@/lib/commissionDocumentCalculations";
+import { CommissionDocumentFormRow as FormRow } from "@/components/commissions/CommissionDocumentFormRow";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -12,16 +13,16 @@ import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { 
-  calculateAllFields, 
-  formatCurrency, 
+import {
+  calculateAllFields,
+  formatCurrency,
   validateCommissionDocument,
   PROFIT_SPLIT_OPTIONS,
   OP_PERCENT_OPTIONS,
   getProfitSplitFromLabel,
   generateProfitSplitOptions,
   filterOpPercentOptions,
-  type CommissionDocumentData 
+  type CommissionDocumentData,
 } from "@/lib/commissionDocumentCalculations";
 import { 
   useCreateCommissionDocument, 
@@ -207,31 +208,31 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
     return calculateAllFields(inputData);
   }, [formData]);
 
-  // Track which field is being edited to show raw input
-  const [editingField, setEditingField] = useState<string | null>(null);
-  const [editingValue, setEditingValue] = useState<string>("");
+  // Raw-string editing state (prevents caret jumps + focus loss)
+  const [editingField, setEditingField] = useState<keyof typeof formData | null>(null);
+  const [rawValue, setRawValue] = useState<string>("");
 
-  const handleNumberChange = (field: keyof typeof formData, value: string) => {
-    setEditingValue(value);
-    const numValue = parseFloat(value) || 0;
-    setFormData(prev => ({ ...prev, [field]: numValue }));
-  };
-
-  const handleNumberFocus = (field: string, currentValue: number) => {
+  const handleMoneyFocus = (field: keyof typeof formData, currentValue: number) => {
     setEditingField(field);
-    setEditingValue(currentValue === 0 ? "" : currentValue.toString());
+    // show unformatted numeric value for editing
+    setRawValue(currentValue ? String(currentValue) : "");
   };
 
-  const handleNumberBlur = () => {
+  const handleMoneyChange = (value: string) => {
+    // RULE: onChange only updates the raw string; no parsing
+    setRawValue(value);
+  };
+
+  const commitMoneyValue = (field: keyof typeof formData) => {
+    const numValue = parseCurrencyInput(rawValue);
+    setFormData((prev) => ({ ...prev, [field]: numValue }));
     setEditingField(null);
-    setEditingValue("");
+    setRawValue("");
   };
 
-  const getNumberInputValue = (field: string, value: number): string => {
-    if (editingField === field) {
-      return editingValue;
-    }
-    return value === 0 ? "" : value.toString();
+  const getMoneyInputValue = (field: keyof typeof formData, numericValue: number) => {
+    if (editingField === field) return rawValue;
+    return numericValue ? formatCurrency(numericValue) : "";
   };
 
   const handleSave = async (submit: boolean = false) => {
@@ -290,41 +291,6 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
 
   const isLoading = createMutation.isPending || updateMutation.isPending;
   const canEdit = !readOnly && (!document || document.status === 'draft');
-
-  // Form row component
-  const FormRow = ({ 
-    label, 
-    children, 
-    hint, 
-    variant = 'default',
-    highlight = false 
-  }: { 
-    label: React.ReactNode; 
-    children: React.ReactNode; 
-    hint?: string;
-    variant?: 'default' | 'negative' | 'positive' | 'calculated';
-    highlight?: boolean;
-  }) => {
-    const variantClasses = {
-      default: 'hover:bg-muted/20',
-      negative: 'hover:bg-destructive/5',
-      positive: 'hover:bg-emerald-50/50 dark:hover:bg-emerald-950/20',
-      calculated: 'bg-muted/30 rounded-md',
-    };
-    
-    return (
-      <div className={`py-3 sm:py-2 border-b transition-colors ${variantClasses[variant]} ${highlight ? 'bg-emerald-50 dark:bg-emerald-900/20 rounded-lg' : ''}`}>
-        <div className="flex flex-col gap-2 sm:grid sm:grid-cols-[180px_1fr] lg:grid-cols-[200px_180px_1fr] sm:gap-3 sm:items-center">
-          <Label className={`font-medium text-sm sm:text-base ${variant === 'negative' ? 'text-destructive' : ''} ${variant === 'positive' ? 'text-emerald-600' : ''}`}>
-            {label}
-          </Label>
-          <div className="w-full sm:w-auto">{children}</div>
-          {hint && <span className="text-xs sm:text-sm text-muted-foreground hidden lg:block">{hint}</span>}
-        </div>
-        {hint && <p className="text-xs text-muted-foreground mt-1 lg:hidden">{hint}</p>}
-      </div>
-    );
-  };
 
   return (
     <div className="space-y-4 sm:space-y-6 pb-24 sm:pb-6">
@@ -426,13 +392,13 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
               
               <FormRow label="Contract Total (Gross)">
                 <Input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={getNumberInputValue('gross_contract_total', formData.gross_contract_total)}
-                  onChange={(e) => handleNumberChange('gross_contract_total', e.target.value)}
-                  onFocus={() => handleNumberFocus('gross_contract_total', formData.gross_contract_total)}
-                  onBlur={handleNumberBlur}
+                  type="text"
+                  inputMode="decimal"
+                  value={getMoneyInputValue("gross_contract_total", formData.gross_contract_total)}
+                  onChange={(e) => handleMoneyChange(e.target.value)}
+                  onFocus={() => handleMoneyFocus("gross_contract_total", formData.gross_contract_total)}
+                  onBlur={() => commitMoneyValue("gross_contract_total")}
+                  onWheel={(e) => e.currentTarget.blur()}
                   disabled={!canEdit}
                   className={numberInputClasses}
                   placeholder="$0.00"
@@ -484,13 +450,13 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
               
               <FormRow label="Material" hint="Initial Material order">
                 <Input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={getNumberInputValue('material_cost', formData.material_cost)}
-                  onChange={(e) => handleNumberChange('material_cost', e.target.value)}
-                  onFocus={() => handleNumberFocus('material_cost', formData.material_cost)}
-                  onBlur={handleNumberBlur}
+                  type="text"
+                  inputMode="decimal"
+                  value={getMoneyInputValue("material_cost", formData.material_cost)}
+                  onChange={(e) => handleMoneyChange(e.target.value)}
+                  onFocus={() => handleMoneyFocus("material_cost", formData.material_cost)}
+                  onBlur={() => commitMoneyValue("material_cost")}
+                  onWheel={(e) => e.currentTarget.blur()}
                   disabled={!canEdit}
                   className={numberInputClasses}
                   placeholder="$0.00"
@@ -500,13 +466,13 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
 
               <FormRow label="Labor" hint="Initial Labor Order">
                 <Input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={getNumberInputValue('labor_cost', formData.labor_cost)}
-                  onChange={(e) => handleNumberChange('labor_cost', e.target.value)}
-                  onFocus={() => handleNumberFocus('labor_cost', formData.labor_cost)}
-                  onBlur={handleNumberBlur}
+                  type="text"
+                  inputMode="decimal"
+                  value={getMoneyInputValue("labor_cost", formData.labor_cost)}
+                  onChange={(e) => handleMoneyChange(e.target.value)}
+                  onFocus={() => handleMoneyFocus("labor_cost", formData.labor_cost)}
+                  onBlur={() => commitMoneyValue("labor_cost")}
+                  onWheel={(e) => e.currentTarget.blur()}
                   disabled={!canEdit}
                   className={numberInputClasses}
                   placeholder="$0.00"
@@ -523,13 +489,13 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
               
               <FormRow label="Additional expenses (-) #1" variant="negative" hint="Will calls, lumber, Home Depot, Misc. expenses">
                 <Input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={getNumberInputValue('neg_exp_1', formData.neg_exp_1)}
-                  onChange={(e) => handleNumberChange('neg_exp_1', e.target.value)}
-                  onFocus={() => handleNumberFocus('neg_exp_1', formData.neg_exp_1)}
-                  onBlur={handleNumberBlur}
+                  type="text"
+                  inputMode="decimal"
+                  value={getMoneyInputValue("neg_exp_1", formData.neg_exp_1)}
+                  onChange={(e) => handleMoneyChange(e.target.value)}
+                  onFocus={() => handleMoneyFocus("neg_exp_1", formData.neg_exp_1)}
+                  onBlur={() => commitMoneyValue("neg_exp_1")}
+                  onWheel={(e) => e.currentTarget.blur()}
                   disabled={!canEdit}
                   className={numberInputClasses}
                   placeholder="$0.00"
@@ -538,13 +504,13 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
 
               <FormRow label="Additional expenses (-) #2" variant="negative" hint="Will calls, lumber, Home Depot, Misc. expenses">
                 <Input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={getNumberInputValue('neg_exp_2', formData.neg_exp_2)}
-                  onChange={(e) => handleNumberChange('neg_exp_2', e.target.value)}
-                  onFocus={() => handleNumberFocus('neg_exp_2', formData.neg_exp_2)}
-                  onBlur={handleNumberBlur}
+                  type="text"
+                  inputMode="decimal"
+                  value={getMoneyInputValue("neg_exp_2", formData.neg_exp_2)}
+                  onChange={(e) => handleMoneyChange(e.target.value)}
+                  onFocus={() => handleMoneyFocus("neg_exp_2", formData.neg_exp_2)}
+                  onBlur={() => commitMoneyValue("neg_exp_2")}
+                  onWheel={(e) => e.currentTarget.blur()}
                   disabled={!canEdit}
                   className={numberInputClasses}
                   placeholder="$0.00"
@@ -553,13 +519,13 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
 
               <FormRow label="Additional expenses (-) #3" variant="negative" hint="Will calls, lumber, Home Depot, Misc. expenses">
                 <Input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={getNumberInputValue('neg_exp_3', formData.neg_exp_3)}
-                  onChange={(e) => handleNumberChange('neg_exp_3', e.target.value)}
-                  onFocus={() => handleNumberFocus('neg_exp_3', formData.neg_exp_3)}
-                  onBlur={handleNumberBlur}
+                  type="text"
+                  inputMode="decimal"
+                  value={getMoneyInputValue("neg_exp_3", formData.neg_exp_3)}
+                  onChange={(e) => handleMoneyChange(e.target.value)}
+                  onFocus={() => handleMoneyFocus("neg_exp_3", formData.neg_exp_3)}
+                  onBlur={() => commitMoneyValue("neg_exp_3")}
+                  onWheel={(e) => e.currentTarget.blur()}
                   disabled={!canEdit}
                   className={numberInputClasses}
                   placeholder="$0.00"
@@ -568,13 +534,13 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
 
               <FormRow label="Additional expenses (-) #4" variant="negative" hint="Supplement fees">
                 <Input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={getNumberInputValue('neg_exp_4', formData.neg_exp_4)}
-                  onChange={(e) => handleNumberChange('neg_exp_4', e.target.value)}
-                  onFocus={() => handleNumberFocus('neg_exp_4', formData.neg_exp_4)}
-                  onBlur={handleNumberBlur}
+                  type="text"
+                  inputMode="decimal"
+                  value={getMoneyInputValue("neg_exp_4", formData.neg_exp_4)}
+                  onChange={(e) => handleMoneyChange(e.target.value)}
+                  onFocus={() => handleMoneyFocus("neg_exp_4", formData.neg_exp_4)}
+                  onBlur={() => commitMoneyValue("neg_exp_4")}
+                  onWheel={(e) => e.currentTarget.blur()}
                   disabled={!canEdit}
                   className={numberInputClasses}
                   placeholder="$0.00"
@@ -590,13 +556,13 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
               
               <FormRow label="Additional expenses (+) #1" variant="positive" hint="Returns added back if rep returns materials">
                 <Input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={getNumberInputValue('pos_exp_1', formData.pos_exp_1)}
-                  onChange={(e) => handleNumberChange('pos_exp_1', e.target.value)}
-                  onFocus={() => handleNumberFocus('pos_exp_1', formData.pos_exp_1)}
-                  onBlur={handleNumberBlur}
+                  type="text"
+                  inputMode="decimal"
+                  value={getMoneyInputValue("pos_exp_1", formData.pos_exp_1)}
+                  onChange={(e) => handleMoneyChange(e.target.value)}
+                  onFocus={() => handleMoneyFocus("pos_exp_1", formData.pos_exp_1)}
+                  onBlur={() => commitMoneyValue("pos_exp_1")}
+                  onWheel={(e) => e.currentTarget.blur()}
                   disabled={!canEdit}
                   className={numberInputClasses}
                   placeholder="$0.00"
@@ -605,13 +571,13 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
 
               <FormRow label="Additional expenses (+) #2" variant="positive">
                 <Input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={getNumberInputValue('pos_exp_2', formData.pos_exp_2)}
-                  onChange={(e) => handleNumberChange('pos_exp_2', e.target.value)}
-                  onFocus={() => handleNumberFocus('pos_exp_2', formData.pos_exp_2)}
-                  onBlur={handleNumberBlur}
+                  type="text"
+                  inputMode="decimal"
+                  value={getMoneyInputValue("pos_exp_2", formData.pos_exp_2)}
+                  onChange={(e) => handleMoneyChange(e.target.value)}
+                  onFocus={() => handleMoneyFocus("pos_exp_2", formData.pos_exp_2)}
+                  onBlur={() => commitMoneyValue("pos_exp_2")}
+                  onWheel={(e) => e.currentTarget.blur()}
                   disabled={!canEdit}
                   className={numberInputClasses}
                   placeholder="$0.00"
@@ -620,13 +586,13 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
 
               <FormRow label="Additional expenses (+) #3" variant="positive">
                 <Input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={getNumberInputValue('pos_exp_3', formData.pos_exp_3)}
-                  onChange={(e) => handleNumberChange('pos_exp_3', e.target.value)}
-                  onFocus={() => handleNumberFocus('pos_exp_3', formData.pos_exp_3)}
-                  onBlur={handleNumberBlur}
+                  type="text"
+                  inputMode="decimal"
+                  value={getMoneyInputValue("pos_exp_3", formData.pos_exp_3)}
+                  onChange={(e) => handleMoneyChange(e.target.value)}
+                  onFocus={() => handleMoneyFocus("pos_exp_3", formData.pos_exp_3)}
+                  onBlur={() => commitMoneyValue("pos_exp_3")}
+                  onWheel={(e) => e.currentTarget.blur()}
                   disabled={!canEdit}
                   className={numberInputClasses}
                   placeholder="$0.00"
@@ -635,13 +601,13 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
 
               <FormRow label="Additional expenses (+) #4" variant="positive">
                 <Input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={getNumberInputValue('pos_exp_4', formData.pos_exp_4)}
-                  onChange={(e) => handleNumberChange('pos_exp_4', e.target.value)}
-                  onFocus={() => handleNumberFocus('pos_exp_4', formData.pos_exp_4)}
-                  onBlur={handleNumberBlur}
+                  type="text"
+                  inputMode="decimal"
+                  value={getMoneyInputValue("pos_exp_4", formData.pos_exp_4)}
+                  onChange={(e) => handleMoneyChange(e.target.value)}
+                  onFocus={() => handleMoneyFocus("pos_exp_4", formData.pos_exp_4)}
+                  onBlur={() => commitMoneyValue("pos_exp_4")}
+                  onWheel={(e) => e.currentTarget.blur()}
                   disabled={!canEdit}
                   className={numberInputClasses}
                   placeholder="$0.00"
@@ -707,13 +673,13 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
 
               <FormRow label="Advance Total">
                 <Input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={getNumberInputValue('advance_total', formData.advance_total)}
-                  onChange={(e) => handleNumberChange('advance_total', e.target.value)}
-                  onFocus={() => handleNumberFocus('advance_total', formData.advance_total)}
-                  onBlur={handleNumberBlur}
+                  type="text"
+                  inputMode="decimal"
+                  value={getMoneyInputValue("advance_total", formData.advance_total)}
+                  onChange={(e) => handleMoneyChange(e.target.value)}
+                  onFocus={() => handleMoneyFocus("advance_total", formData.advance_total)}
+                  onBlur={() => commitMoneyValue("advance_total")}
+                  onWheel={(e) => e.currentTarget.blur()}
                   disabled={!canEdit}
                   className={numberInputClasses}
                   placeholder="$0.00"
