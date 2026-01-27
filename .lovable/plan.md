@@ -1,275 +1,273 @@
 
-# Streamlined Commission Workflow Implementation
+
+# Enhanced Commission Payment Notification System
 
 ## Overview
 
-This plan consolidates the commission management system into a **single, unified workflow** where:
-- **Commissions** = The form that gets submitted (the Excel-style spreadsheet form)
-- **Documents** = The receipts/records of paid commissions (for export)
-
-The workflow follows: **Rep submits → Manager reviews → Accounting approves → Paid → Document generated**
+This update adds a **celebratory email notification with scheduled pay date** when Accounting approves a commission for payment. The pay date is calculated based on the Wednesday 4 PM MST deadline rule and displayed throughout the commission lifecycle.
 
 ---
 
-## Current State Analysis
+## New Requirements
 
-**What Exists:**
-- Spreadsheet-style Commission Document form with live calculations
-- Separate "Submissions" and "Documents" navigation items
-- Basic email notification system via edge function
-- Action Required widget on Command Center
-- Commission tier system restricting O&P % and profit split options
+1. **Celebratory Email on Accounting Approval**: Send an exciting email to the rep/manager when their commission is approved for payment
+2. **Scheduled Pay Date Calculation**: Automatically calculate the Friday pay date based on when the commission was approved
+3. **Pay Date Display in Hub**: Show the scheduled pay date on approved commissions in the Commission list/detail view
+4. **Pay Date in Email**: Include the calculated Friday pay date in the approval notification
 
-**What's Missing:**
-- Unified workflow (currently two separate systems)
-- In-app notifications in header
-- Manager routing based on profile assignment
-- Revision workflow with mandatory notes
-- Dashboard metrics for reps (Submitted, Pending, Approved, Paid, Revisions)
-- Manager view restricted to their assigned reps only
-- Excel/PDF/Print export for paid documents
+---
+
+## Business Logic: Pay Date Calculation
+
+The pay date follows this rule:
+- **If approved by Wednesday 4 PM MST** → Paid on **that Friday**
+- **If approved after Wednesday 4 PM MST** → Paid on **next Friday**
+
+```text
+Example Timeline:
+- Approved Monday 10 AM MST     → Pays Friday (same week)
+- Approved Wednesday 2 PM MST   → Pays Friday (same week)
+- Approved Wednesday 5 PM MST   → Pays Friday (next week)
+- Approved Thursday 9 AM MST    → Pays Friday (next week)
+```
 
 ---
 
 ## Implementation Tasks
 
-### 1. Database Schema Updates
+### 1. Database Schema Update
 
-**Modify `commission_documents` table:**
-- Add `manager_id` (UUID) - assigned manager for routing
-- Add `manager_approved_at` (timestamp)
-- Add `manager_approved_by` (UUID)
-- Add `accounting_approved_at` (timestamp)
-- Add `accounting_approved_by` (UUID)
-- Add `paid_at` (timestamp)
-- Add `paid_by` (UUID)
-- Add `revision_reason` (text) - mandatory when status = revision_required
-- Add `revision_count` (integer, default 0)
-- Add `submitted_at` (timestamp)
-- Update `status` enum: draft → submitted → revision_required → manager_approved → accounting_approved → paid
+**Add new column to `commission_documents` table:**
+- `scheduled_pay_date` (DATE, nullable) - Calculated Friday pay date, set when accounting approves
 
-**Create `user_notifications` table:**
-- `id` (UUID, primary key)
-- `user_id` (UUID, required)
-- `notification_type` (text: commission_submitted, revision_required, approved, paid)
-- `title` (text)
-- `message` (text)
-- `entity_type` (text: commission)
-- `entity_id` (UUID)
-- `is_read` (boolean, default false)
-- `created_at` (timestamp)
-
-**RLS Policies:**
-- Sales reps: view/create their own commissions
-- Managers: view/update commissions for their assigned reps only
-- Admins/Accounting: view/update all commissions
-- Mark as paid: only users with `can_payout` permission
+This field gets populated when:
+- Status changes to `accounting_approved`
+- Calculated based on the approval timestamp
 
 ---
 
-### 2. Update Commission Document Form
+### 2. Pay Date Calculation Utility
 
-**Auto-population:**
-- Sales rep name auto-fills from user profile (already implemented)
-- Manager ID auto-fills from profile.manager_id
-- Tier-based restrictions for O&P% and profit splits (already implemented)
+**Create utility function in `src/lib/commissionPayDateCalculations.ts`:**
 
-**Locked Formulas:**
-- All calculated fields are read-only (already implemented)
-- Only expense lines can be added (negatives and positives)
+```typescript
+// Calculate the scheduled Friday pay date based on approval time
+// Rule: Approved by Wednesday 4 PM MST = same week Friday
+//       Approved after Wednesday 4 PM MST = next week Friday
 
-**Form Validation:**
-- Prevent submission if no manager assigned in profile
-- Show warning banner if tier not assigned
+export function calculateScheduledPayDate(approvalDate: Date): Date {
+  // Convert to MST (UTC-7)
+  const mstOffset = -7 * 60; // minutes
+  const approvalMST = new Date(approvalDate.getTime() + (mstOffset - approvalDate.getTimezoneOffset()) * 60000);
+  
+  const dayOfWeek = approvalMST.getDay(); // 0=Sun, 3=Wed, 5=Fri
+  const hour = approvalMST.getHours();
+  
+  // Wednesday = 3, deadline is 4 PM (16:00)
+  const isBeforeDeadline = dayOfWeek < 3 || (dayOfWeek === 3 && hour < 16);
+  
+  // Calculate days until Friday
+  let daysUntilFriday = (5 - dayOfWeek + 7) % 7;
+  if (daysUntilFriday === 0) daysUntilFriday = 7; // If Friday, go to next Friday
+  
+  if (!isBeforeDeadline) {
+    daysUntilFriday += 7; // Push to next week
+  }
+  
+  const payDate = new Date(approvalMST);
+  payDate.setDate(payDate.getDate() + daysUntilFriday);
+  return payDate;
+}
 
----
-
-### 3. Unified Commission Page Restructure
-
-**Merge "Submissions" and "Documents" into single `/commissions` route:**
-
-**Tab Structure:**
-1. **My Commissions** (default for reps) - user's own submissions
-2. **Pending Review** (managers/accounting) - items awaiting their action
-3. **Paid Documents** - paid commissions available for export
-
-**Summary Dashboard Cards (role-based):**
-| Metric | Sales Rep | Manager | Admin |
-|--------|-----------|---------|-------|
-| Total Submitted | Own only | Assigned reps | All |
-| Pending Approval | Own only | Assigned reps | All |
-| Approved | Own only | Assigned reps | All |
-| Paid | Own only | Assigned reps | All |
-| Revisions Needed | Own only | Assigned reps | All |
-
----
-
-### 4. Manager Review Workflow
-
-**When manager opens a submitted commission:**
-- View all form details (read-only except approved amount)
-- Can edit the final approved commission amount
-- Must provide a note explaining any changes
-
-**Action buttons:**
-- **Approve** → Changes status to `manager_approved`, routes to Accounting
-- **Request Revision** → Changes status to `revision_required`, mandatory reason required
-- **Deny** → Changes status to `denied`, mandatory reason required
-
-**Automatic Notifications:**
-- Email to Accounting when manager approves
-- Email + in-app notification to rep when revision requested
-- In-app notification stores revision reason for display
+export function formatPayDate(date: Date): string {
+  return date.toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric'
+  });
+}
+```
 
 ---
 
-### 5. Accounting Approval & Payment
+### 3. Update Edge Function for Celebratory Email
 
-**After Manager Approval:**
-- Accounting reviews the commission
-- Can adjust final approved amount with notes
-- **Approve for Payment** → Status changes to `accounting_approved`
+**Modify `supabase/functions/send-commission-notification/index.ts`:**
 
-**Mark as Paid:**
-- Only users with `can_payout` permission
-- Sets `paid_at` timestamp
-- Moves commission to "Paid Documents" tab
-- Triggers paid notification to rep
+Add new payload field and update the `accounting_approved` email template:
+
+**New Payload Field:**
+```typescript
+interface CommissionNotification {
+  // ... existing fields
+  scheduled_pay_date?: string; // ISO date string of Friday pay date
+}
+```
+
+**Updated Email Template for `accounting_approved`:**
+
+```typescript
+case "accounting_approved":
+  const payDateFormatted = payload.scheduled_pay_date 
+    ? new Date(payload.scheduled_pay_date).toLocaleDateString('en-US', {
+        weekday: 'long',
+        month: 'long', 
+        day: 'numeric',
+        year: 'numeric'
+      })
+    : 'this Friday';
+    
+  subject = `🎉 Commission Approved - Payment Scheduled for ${payDateFormatted}!`;
+  heading = "Congratulations! Your Commission is Approved! 🎉";
+  introText = `Great news! Your commission for ${payload.job_name} has been fully approved by accounting and is scheduled to be paid!`;
+  headerColor = "#059669";
+  recipientEmails = payload.submitter_email ? [payload.submitter_email] : [];
+  
+  additionalPlainText = `
+Job: ${payload.job_name}
+Commission Amount: ${formatCurrency(payload.net_commission_owed)}
+Payment Date: ${payDateFormatted}
+
+🎉 Your hard work is paying off! This commission will be deposited on ${payDateFormatted}.
+`;
+
+  additionalContent = `
+    <tr><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;"><strong>Job:</strong></td><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">${payload.job_name}</td></tr>
+    <tr><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;"><strong>Commission Amount:</strong></td><td style="padding: 10px 0; color: #16a34a; font-weight: bold; font-size: 24px;">${formatCurrency(payload.net_commission_owed)}</td></tr>
+    <tr><td style="padding: 10px 0;"><strong>Payment Date:</strong></td><td style="padding: 10px 0; color: #1e40af; font-weight: bold; font-size: 20px;">📅 ${payDateFormatted}</td></tr>
+    <tr><td colspan="2" style="padding: 25px; background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%); border-radius: 12px; margin-top: 15px; text-align: center;">
+      <div style="font-size: 40px; margin-bottom: 10px;">🎉💰🎉</div>
+      <div style="font-size: 18px; font-weight: bold; color: #166534;">Your hard work is paying off!</div>
+      <div style="font-size: 14px; color: #15803d; margin-top: 5px;">Payment will be deposited on ${payDateFormatted}</div>
+    </td></tr>
+  `;
+  break;
+```
 
 ---
 
-### 6. In-App Notification System
+### 4. Update Commission Documents Hook
 
-**Header Bell Icon Component:**
-- Shows unread count badge
-- Dropdown shows recent notifications
-- Click notification navigates to relevant commission
+**Modify `src/hooks/useCommissionDocuments.ts`:**
 
-**Command Center Widget Enhancement:**
-- Add "Revisions Needed" category to Action Required widget
-- Show revision reason in the pending item card
-- Direct link to edit & resubmit
+Add the pay date calculation when status changes to `accounting_approved`:
 
-**Notification Triggers:**
-1. Rep submits → Notify assigned manager
-2. Manager requests revision → Notify rep (email + in-app)
-3. Manager approves → Notify accounting
-4. Accounting approves → Notify rep
-5. Marked as paid → Notify rep
+```typescript
+// Add to CommissionDocument interface:
+scheduled_pay_date: string | null;
 
----
-
-### 7. Export Functionality
-
-**Paid Documents Tab Features:**
-- Filter by date range, sales rep (admin/manager only)
-- Search by job name/ID
-
-**Export Options:**
-- **Excel/CSV**: Download filtered list with all commission details
-- **PDF**: Generate printable document for individual commission
-- **Print View**: Browser print-optimized layout
-
-**Export Fields:**
-- Job Name/ID, Job Date, Sales Rep
-- Contract Total, O&P Amount, Material Cost, Labor Cost
-- All expense lines (negative and positive)
-- Net Profit, Rep Commission, Company Profit
-- Status, Approved Date, Paid Date, Approved By
+// Update useUpdateCommissionDocumentStatus mutation:
+mutationFn: async ({ id, status, approval_comment }) => {
+  const updateData: Partial<CommissionDocument> = { status };
+  
+  if (status === 'accounting_approved') {
+    // Calculate scheduled pay date
+    const now = new Date();
+    const payDate = calculateScheduledPayDate(now);
+    updateData.scheduled_pay_date = payDate.toISOString().split('T')[0]; // YYYY-MM-DD
+    updateData.approved_by = user?.id || null;
+    updateData.approved_at = new Date().toISOString();
+  }
+  
+  // ... rest of mutation
+}
+```
 
 ---
 
-### 8. Business Rules
+### 5. Display Pay Date in Commission Hub
 
-**Payout Deadline:**
-- Display deadline reminder: "Submit by Wednesday 4 PM MST for Friday payout"
-- Show this prominently in the form header
+**Update Commission List/Detail Views:**
 
-**Revision Loop:**
-- When revision requested: status → `revision_required`
-- Rep edits and resubmits: status → `submitted`, increment `revision_count`
-- Revision reason always visible to rep
+Add a "Scheduled Pay Date" column/badge that appears when status is `manager_approved` or later:
 
-**Access Control Matrix:**
-| Action | Rep | Manager | Admin | Accounting |
-|--------|-----|---------|-------|------------|
-| Create Commission | ✅ | ✅ | ✅ | ❌ |
-| View Own | ✅ | ✅ | ✅ | ✅ |
-| View Assigned Reps | ❌ | ✅ | ✅ | ✅ |
-| View All | ❌ | ❌ | ✅ | ✅ |
-| Approve (Manager) | ❌ | ✅ | ✅ | ❌ |
-| Approve (Accounting) | ❌ | ❌ | ✅ | ✅ |
-| Mark Paid | ❌ | ❌ | ✅ | ✅ |
-| Export Paid | ✅ own | ✅ assigned | ✅ all | ✅ all |
+```text
+┌────────────────────────────────────────────────────────────────┐
+│ Job Name       │ Status              │ Scheduled Pay Date      │
+├────────────────────────────────────────────────────────────────┤
+│ Smith Roof     │ Manager Approved    │ Est. Friday, Jan 31     │
+│ Jones Project  │ Accounting Approved │ 📅 Friday, Jan 31       │
+│ Brown House    │ Paid                │ ✅ Paid Jan 31          │
+└────────────────────────────────────────────────────────────────┘
+```
+
+**Badge States:**
+- `manager_approved`: Shows "Est." prefix (pending accounting)
+- `accounting_approved`: Shows calendar icon with confirmed date
+- `paid`: Shows checkmark with actual paid date
+
+---
+
+### 6. Update Notification Trigger
+
+**When Accounting Approves:**
+
+1. Calculate `scheduled_pay_date` using the utility function
+2. Store in database
+3. Send celebratory email with pay date to submitter
+4. Create in-app notification with pay date
 
 ---
 
 ## File Changes Summary
 
 ### New Files
-- `src/components/notifications/NotificationBell.tsx` - Header notification dropdown
-- `src/components/notifications/NotificationItem.tsx` - Individual notification card
-- `src/hooks/useNotifications.ts` - Fetch/mark-read notifications
-- `src/components/commissions/CommissionReviewPanel.tsx` - Manager/Accounting review UI
-- `src/components/commissions/CommissionExportDialog.tsx` - Export options modal
-- `src/lib/commissionExport.ts` - Excel/PDF generation utilities
+- `src/lib/commissionPayDateCalculations.ts` - Pay date calculation utility
 
 ### Modified Files
-- `src/pages/Commissions.tsx` - Unified page with tabs
-- `src/pages/CommissionDocuments.tsx` - Redirect to `/commissions?tab=paid`
-- `src/components/commissions/CommissionDocumentForm.tsx` - Add manager routing
-- `src/components/command-center/ActionRequiredWidget.tsx` - Add revision items
-- `src/components/layout/AppLayout.tsx` - Add NotificationBell to header
-- `src/components/layout/AppSidebar.tsx` - Simplify to single "Commissions" link
-- `src/hooks/useCommissionDocuments.ts` - Add manager/accounting approval mutations
-- `supabase/functions/send-commission-notification/index.ts` - Update for new flow
+- `src/hooks/useCommissionDocuments.ts` - Add scheduled_pay_date to interface, update status mutation
+- `src/hooks/useCommissionNotifications.ts` - Include scheduled_pay_date in notification payload
+- `supabase/functions/send-commission-notification/index.ts` - Enhanced celebratory email template
+- Commission list/detail components - Display scheduled pay date badge
 
-### Database Migrations
-- Add new columns to `commission_documents`
-- Create `user_notifications` table with RLS
-- Update RLS policies for manager-based access
+### Database Migration
+- Add `scheduled_pay_date` column to `commission_documents` table
 
 ---
 
-## Visual Flow
+## Email Preview
 
-```text
-┌─────────────────────────────────────────────────────────────────────┐
-│                        COMMISSION WORKFLOW                          │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                     │
-│   ┌─────────┐      ┌──────────┐      ┌────────────┐      ┌──────┐  │
-│   │  DRAFT  │ ───► │ SUBMITTED│ ───► │  MANAGER   │ ───► │ ACCT │  │
-│   │         │      │          │      │  APPROVED  │      │APPRVD│  │
-│   └─────────┘      └────┬─────┘      └────────────┘      └──┬───┘  │
-│                         │                                    │      │
-│                         ▼                                    ▼      │
-│                    ┌──────────┐                         ┌──────┐   │
-│                    │ REVISION │◄─────────────────────── │ PAID │   │
-│                    │ REQUIRED │                         │      │   │
-│                    └────┬─────┘                         └──────┘   │
-│                         │                                          │
-│                         └─── Rep edits & resubmits ───────►        │
-│                                                                     │
-└─────────────────────────────────────────────────────────────────────┘
+**Subject:** 🎉 Commission Approved - Payment Scheduled for Friday, January 31, 2026!
+
+**Body:**
+```
+┌─────────────────────────────────────────────────────────────┐
+│           🎉 Congratulations! Your Commission              │
+│                    is Approved! 🎉                         │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  Great news! Your commission for Smith Residential Roof    │
+│  has been fully approved by accounting and is scheduled    │
+│  to be paid!                                                │
+│                                                             │
+│  Job:              Smith Residential Roof                   │
+│  Commission:       $2,450.00                                │
+│  Payment Date:     📅 Friday, January 31, 2026              │
+│                                                             │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │              🎉💰🎉                                  │   │
+│  │       Your hard work is paying off!                 │   │
+│  │   Payment will be deposited on Friday, Jan 31      │   │
+│  └─────────────────────────────────────────────────────┘   │
+│                                                             │
+│              [View Commission Details]                      │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
 ## Acceptance Checklist
 
-- [ ] Sales rep can submit commission form with auto-populated name and tier
-- [ ] Manager receives email when commission submitted by their assigned rep
-- [ ] Manager can only view commissions from reps assigned to them
-- [ ] Manager can approve, request revision, or deny with mandatory notes
-- [ ] Rep receives email + in-app notification when revision requested
-- [ ] Rep sees revision reason and can edit & resubmit
-- [ ] Accounting can approve after manager approval
-- [ ] Accounting can mark commission as paid
-- [ ] Paid commissions appear in Documents tab
-- [ ] Documents can be exported as Excel/CSV, PDF, or Print View
-- [ ] Header shows notification bell with unread count
-- [ ] Command Center shows pending revisions in Action Required widget
-- [ ] Dashboard cards show correct metrics per role
-- [ ] Admin can view and manage all commissions
-- [ ] Deadline reminder displays in submission form
+- [ ] New `scheduled_pay_date` column added to `commission_documents` table
+- [ ] Pay date calculated correctly: Wed 4 PM MST cutoff for same-week Friday
+- [ ] Pay date stored in database when accounting approves
+- [ ] Celebratory email sent to rep/manager on accounting approval
+- [ ] Email includes job name, commission amount, and scheduled pay date
+- [ ] Email has celebratory design with emojis and green success styling
+- [ ] Commission Hub shows scheduled pay date on approved commissions
+- [ ] Estimated pay date shows for manager-approved (pending accounting)
+- [ ] Confirmed pay date shows for accounting-approved/paid
+- [ ] In-app notification also includes pay date information
+
