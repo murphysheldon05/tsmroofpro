@@ -137,19 +137,30 @@ serve(async (req: Request): Promise<Response> => {
     await admin.from("user_permissions").delete().eq("user_id", userId);
     console.log("Deleted user permissions for:", userId);
 
+    // Delete from pending_approvals (for invited users who haven't completed signup)
+    await admin.from("pending_approvals").delete().eq("entity_id", userId);
+    console.log("Deleted pending approvals for:", userId);
+
     // Delete from profiles
     await admin.from("profiles").delete().eq("id", userId);
     console.log("Deleted profile for:", userId);
 
-    // Delete the auth user
+    // Delete the auth user - don't fail if user doesn't exist in auth
     const { error: deleteError } = await admin.auth.admin.deleteUser(userId);
 
     if (deleteError) {
-      console.error("Delete user error:", deleteError);
-      return new Response(JSON.stringify({ error: deleteError.message ?? "Failed to delete user" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      // Log the error but don't fail - the profile is already deleted
+      // This can happen if the auth user was already deleted or never fully created
+      console.warn("Auth user delete warning (non-fatal):", deleteError.message);
+      
+      // Only fail if it's NOT a "user not found" type error
+      const errorMsg = deleteError.message?.toLowerCase() || "";
+      if (!errorMsg.includes("not found") && !errorMsg.includes("does not exist")) {
+        return new Response(JSON.stringify({ error: deleteError.message ?? "Failed to delete user" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
 
     console.log("Successfully deleted user:", userId);
