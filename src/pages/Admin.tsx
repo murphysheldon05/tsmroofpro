@@ -180,33 +180,43 @@ export default function Admin() {
 
     setIsSendingInvite(true);
     try {
-      // Check if user already exists
-      const { data: existingProfile } = await supabase
-        .from("profiles")
-        .select("id, email")
-        .eq("email", inviteData.email.trim().toLowerCase())
-        .single();
-
-      if (existingProfile) {
-        toast.error("A user with this email already exists");
-        setIsSendingInvite(false);
-        return;
-      }
-
-      // Send invite email - user will sign up via /auth
-      const { error: emailError } = await supabase.functions.invoke("send-invite-email", {
+      // Generate a secure temporary password (user will reset on first login)
+      const tempPassword = crypto.randomUUID().slice(0, 8) + "Aa1!@#$%";
+      
+      // Create user via admin-create-user (creates auth user + profile + sends invite)
+      const { data, error } = await supabase.functions.invoke("admin-create-user", {
         body: {
           email: inviteData.email.trim(),
+          password: tempPassword,
+          full_name: inviteData.email.split("@")[0], // Use email prefix as temp name
+          role: "employee",
+          send_invite_email: true,
         },
       });
 
-      if (emailError) {
-        console.error("Failed to send invite email:", emailError);
+      if (error) {
+        const errorData = error.message ? JSON.parse(error.message) : error;
+        if (errorData?.code === "email_exists") {
+          toast.error("A user with this email already exists. Use 'Resend Invite' if they haven't logged in.");
+        } else {
+          throw new Error(errorData?.error || error.message);
+        }
+        return;
       }
 
-      toast.success("Invite email sent! User can now sign up at /auth and will appear in Pending Approvals.");
+      // Audit log
+      logAction.mutate({
+        action_type: AUDIT_ACTIONS.INVITE_SENT,
+        object_type: OBJECT_TYPES.USER,
+        object_id: data?.user_id || inviteData.email,
+        new_value: { email: inviteData.email.trim() },
+        notes: `Invite sent to ${inviteData.email.trim()}`,
+      });
+
+      toast.success("Invite sent! User will appear in Pending Invites until they log in.");
       setIsInvitingUser(false);
       setInviteData({ email: "" });
+      queryClient.invalidateQueries({ queryKey: ["pending-invites"] });
     } catch (error: any) {
       toast.error("Failed to send invite: " + error.message);
     } finally {
