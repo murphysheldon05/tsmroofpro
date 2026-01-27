@@ -37,7 +37,7 @@ export interface CommissionDocument {
   dollars_increased: number | null;
   supplement_fee: number | null;
   notes: string | null;
-  status: 'draft' | 'submitted' | 'approved' | 'rejected' | 'manager_approved' | 'accounting_approved' | 'paid';
+  status: 'draft' | 'submitted' | 'approved' | 'rejected' | 'manager_approved' | 'accounting_approved' | 'paid' | 'revision_required';
   created_by: string;
   created_at: string;
   updated_at: string;
@@ -45,9 +45,27 @@ export interface CommissionDocument {
   approved_at: string | null;
   approval_comment: string | null;
   scheduled_pay_date: string | null;
+  // New workflow fields
+  manager_id: string | null;
+  manager_approved_at: string | null;
+  manager_approved_by: string | null;
+  accounting_approved_at: string | null;
+  accounting_approved_by: string | null;
+  paid_at: string | null;
+  paid_by: string | null;
+  revision_reason: string | null;
+  revision_count: number;
+  submitted_at: string | null;
+  submitter_email: string | null;
 }
 
-export type CommissionDocumentInsert = Omit<CommissionDocument, 'id' | 'created_at' | 'updated_at' | 'contract_total_net' | 'net_profit' | 'rep_commission' | 'company_profit' | 'dollars_increased' | 'supplement_fee' | 'scheduled_pay_date'>;
+export type CommissionDocumentInsert = Omit<CommissionDocument, 
+  'id' | 'created_at' | 'updated_at' | 'contract_total_net' | 'net_profit' | 
+  'rep_commission' | 'company_profit' | 'dollars_increased' | 'supplement_fee' | 
+  'scheduled_pay_date' | 'manager_id' | 'manager_approved_at' | 'manager_approved_by' |
+  'accounting_approved_at' | 'accounting_approved_by' | 'paid_at' | 'paid_by' |
+  'revision_reason' | 'revision_count' | 'submitted_at' | 'submitter_email'
+>;
 
 export function useCommissionDocuments(statusFilter?: string) {
   const { user } = useAuth();
@@ -223,12 +241,57 @@ export function useUpdateCommissionDocumentStatus() {
   const { user } = useAuth();
 
   return useMutation({
-    mutationFn: async ({ id, status, approval_comment }: { id: string; status: 'draft' | 'submitted' | 'approved' | 'rejected' | 'manager_approved' | 'accounting_approved' | 'paid'; approval_comment?: string }) => {
-      const updateData: Partial<CommissionDocument> = { status };
+    mutationFn: async ({ 
+      id, 
+      status, 
+      approval_comment,
+      revision_reason 
+    }: { 
+      id: string; 
+      status: 'draft' | 'submitted' | 'approved' | 'rejected' | 'manager_approved' | 'accounting_approved' | 'paid' | 'revision_required'; 
+      approval_comment?: string;
+      revision_reason?: string;
+    }) => {
+      const updateData: Record<string, any> = { status };
       
-      if (status === 'approved' || status === 'rejected' || status === 'manager_approved') {
-        updateData.approved_by = user?.id || null;
-        updateData.approved_at = new Date().toISOString();
+      // Handle submission - fetch manager from profile
+      if (status === 'submitted') {
+        updateData.submitted_at = new Date().toISOString();
+        
+        // Get user's profile to find their manager
+        if (user) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('manager_id, email')
+            .eq('id', user.id)
+            .single();
+          
+          if (profile?.manager_id) {
+            updateData.manager_id = profile.manager_id;
+          }
+          updateData.submitter_email = profile?.email || null;
+        }
+      }
+
+      // Handle revision required
+      if (status === 'revision_required') {
+        if (!revision_reason) {
+          throw new Error('Revision reason is required');
+        }
+        updateData.revision_reason = revision_reason;
+        // Get current revision count and increment
+        const { data: currentDoc } = await supabase
+          .from('commission_documents')
+          .select('revision_count')
+          .eq('id', id)
+          .single();
+        updateData.revision_count = ((currentDoc?.revision_count || 0) + 1);
+      }
+      
+      // Handle manager approval
+      if (status === 'manager_approved') {
+        updateData.manager_approved_by = user?.id || null;
+        updateData.manager_approved_at = new Date().toISOString();
         if (approval_comment) {
           updateData.approval_comment = approval_comment;
         }
@@ -236,6 +299,8 @@ export function useUpdateCommissionDocumentStatus() {
 
       // Calculate scheduled pay date when accounting approves
       if (status === 'accounting_approved') {
+        updateData.accounting_approved_by = user?.id || null;
+        updateData.accounting_approved_at = new Date().toISOString();
         updateData.approved_by = user?.id || null;
         updateData.approved_at = new Date().toISOString();
         if (approval_comment) {
@@ -245,6 +310,12 @@ export function useUpdateCommissionDocumentStatus() {
         const { calculateScheduledPayDate } = await import('@/lib/commissionPayDateCalculations');
         const payDate = calculateScheduledPayDate(new Date());
         updateData.scheduled_pay_date = payDate.toISOString().split('T')[0]; // YYYY-MM-DD format
+      }
+
+      // Handle paid status
+      if (status === 'paid') {
+        updateData.paid_by = user?.id || null;
+        updateData.paid_at = new Date().toISOString();
       }
 
       const { data, error } = await supabase
@@ -260,7 +331,10 @@ export function useUpdateCommissionDocumentStatus() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['commission-documents'] });
       queryClient.invalidateQueries({ queryKey: ['commission-document', variables.id] });
-      toast.success(`Commission document ${variables.status.replace(/_/g, ' ')}`);
+      const statusLabel = variables.status === 'revision_required' 
+        ? 'returned for revision' 
+        : variables.status.replace(/_/g, ' ');
+      toast.success(`Commission document ${statusLabel}`);
     },
     onError: (error) => {
       console.error('Error updating status:', error);

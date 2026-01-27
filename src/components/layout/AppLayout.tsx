@@ -3,6 +3,7 @@ import { useLocation, Link, useNavigate } from "react-router-dom";
 import { AppSidebar } from "./AppSidebar";
 import { Home, ChevronRight, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 
 interface BreadcrumbItem {
   label: string;
@@ -110,6 +111,16 @@ export function AppLayout({ children }: AppLayoutProps) {
     <div className="min-h-screen bg-background">
       <AppSidebar />
       <main className="lg:pl-64 min-h-screen">
+        {/* Header with notification bell */}
+        <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b lg:hidden">
+          <div className="flex items-center justify-end px-4 py-2">
+            <NotificationBell />
+          </div>
+        </div>
+        {/* Desktop notification bell - fixed position */}
+        <div className="hidden lg:block fixed top-4 right-4 z-20">
+          <NotificationBell />
+        </div>
         <div className="p-4 lg:p-8">
           {!isHome && (
             <nav className="mb-4 flex items-center gap-2 text-sm" aria-label="Breadcrumb">
