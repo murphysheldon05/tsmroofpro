@@ -405,6 +405,8 @@ export type Database = {
       }
       commission_documents: {
         Row: {
+          accounting_approved_at: string | null
+          accounting_approved_by: string | null
           advance_total: number
           approval_comment: string | null
           approved_at: string | null
@@ -421,6 +423,9 @@ export type Database = {
           job_date: string
           job_name_id: string
           labor_cost: number
+          manager_approved_at: string | null
+          manager_approved_by: string | null
+          manager_id: string | null
           material_cost: number
           neg_exp_1: number
           neg_exp_2: number
@@ -428,21 +433,29 @@ export type Database = {
           net_profit: number
           notes: string | null
           op_percent: number
+          paid_at: string | null
+          paid_by: string | null
           pos_exp_1: number
           pos_exp_2: number
           pos_exp_3: number
           pos_exp_4: number
           rep_commission: number
+          revision_count: number | null
+          revision_reason: string | null
           sales_rep: string
           sales_rep_id: string | null
           scheduled_pay_date: string | null
           starting_claim_amount: number | null
           status: string
+          submitted_at: string | null
+          submitter_email: string | null
           supplement_fee: number | null
           supplement_fees_expense: number
           updated_at: string
         }
         Insert: {
+          accounting_approved_at?: string | null
+          accounting_approved_by?: string | null
           advance_total?: number
           approval_comment?: string | null
           approved_at?: string | null
@@ -459,6 +472,9 @@ export type Database = {
           job_date: string
           job_name_id: string
           labor_cost?: number
+          manager_approved_at?: string | null
+          manager_approved_by?: string | null
+          manager_id?: string | null
           material_cost?: number
           neg_exp_1?: number
           neg_exp_2?: number
@@ -466,21 +482,29 @@ export type Database = {
           net_profit?: number
           notes?: string | null
           op_percent?: number
+          paid_at?: string | null
+          paid_by?: string | null
           pos_exp_1?: number
           pos_exp_2?: number
           pos_exp_3?: number
           pos_exp_4?: number
           rep_commission?: number
+          revision_count?: number | null
+          revision_reason?: string | null
           sales_rep: string
           sales_rep_id?: string | null
           scheduled_pay_date?: string | null
           starting_claim_amount?: number | null
           status?: string
+          submitted_at?: string | null
+          submitter_email?: string | null
           supplement_fee?: number | null
           supplement_fees_expense?: number
           updated_at?: string
         }
         Update: {
+          accounting_approved_at?: string | null
+          accounting_approved_by?: string | null
           advance_total?: number
           approval_comment?: string | null
           approved_at?: string | null
@@ -497,6 +521,9 @@ export type Database = {
           job_date?: string
           job_name_id?: string
           labor_cost?: number
+          manager_approved_at?: string | null
+          manager_approved_by?: string | null
+          manager_id?: string | null
           material_cost?: number
           neg_exp_1?: number
           neg_exp_2?: number
@@ -504,21 +531,56 @@ export type Database = {
           net_profit?: number
           notes?: string | null
           op_percent?: number
+          paid_at?: string | null
+          paid_by?: string | null
           pos_exp_1?: number
           pos_exp_2?: number
           pos_exp_3?: number
           pos_exp_4?: number
           rep_commission?: number
+          revision_count?: number | null
+          revision_reason?: string | null
           sales_rep?: string
           sales_rep_id?: string | null
           scheduled_pay_date?: string | null
           starting_claim_amount?: number | null
           status?: string
+          submitted_at?: string | null
+          submitter_email?: string | null
           supplement_fee?: number | null
           supplement_fees_expense?: number
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "commission_documents_accounting_approved_by_fkey"
+            columns: ["accounting_approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_documents_manager_approved_by_fkey"
+            columns: ["manager_approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_documents_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_documents_paid_by_fkey"
+            columns: ["paid_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       commission_reviewers: {
         Row: {
@@ -2255,6 +2317,50 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      user_notifications: {
+        Row: {
+          created_at: string | null
+          entity_id: string | null
+          entity_type: string | null
+          id: string
+          is_read: boolean | null
+          message: string
+          notification_type: string
+          title: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          is_read?: boolean | null
+          message: string
+          notification_type: string
+          title: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          is_read?: boolean | null
+          message?: string
+          notification_type?: string
+          title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_permissions: {
         Row: {
