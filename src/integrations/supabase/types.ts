@@ -435,6 +435,7 @@ export type Database = {
           rep_commission: number
           sales_rep: string
           sales_rep_id: string | null
+          scheduled_pay_date: string | null
           starting_claim_amount: number | null
           status: string
           supplement_fee: number | null
@@ -472,6 +473,7 @@ export type Database = {
           rep_commission?: number
           sales_rep: string
           sales_rep_id?: string | null
+          scheduled_pay_date?: string | null
           starting_claim_amount?: number | null
           status?: string
           supplement_fee?: number | null
@@ -509,6 +511,7 @@ export type Database = {
           rep_commission?: number
           sales_rep?: string
           sales_rep_id?: string | null
+          scheduled_pay_date?: string | null
           starting_claim_amount?: number | null
           status?: string
           supplement_fee?: number | null

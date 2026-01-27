@@ -18,15 +18,15 @@ export interface CommissionDocument {
   neg_exp_1: number;
   neg_exp_2: number;
   neg_exp_3: number;
-  neg_exp_4: number; // Supplement fees (new field)
+  neg_exp_4?: number; // Supplement fees (new field) - optional for DB compat
   supplement_fees_expense: number; // Legacy field for backward compat
   pos_exp_1: number;
   pos_exp_2: number;
   pos_exp_3: number;
   pos_exp_4: number;
-  profit_split_label: string | null;
-  rep_profit_percent: number;
-  company_profit_percent: number;
+  profit_split_label?: string | null; // Optional for DB compat
+  rep_profit_percent?: number; // Optional for DB compat
+  company_profit_percent?: number; // Optional for DB compat
   commission_rate: number; // Legacy field
   net_profit: number;
   rep_commission: number;
@@ -37,16 +37,17 @@ export interface CommissionDocument {
   dollars_increased: number | null;
   supplement_fee: number | null;
   notes: string | null;
-  status: 'draft' | 'submitted' | 'approved' | 'rejected';
+  status: 'draft' | 'submitted' | 'approved' | 'rejected' | 'manager_approved' | 'accounting_approved' | 'paid';
   created_by: string;
   created_at: string;
   updated_at: string;
   approved_by: string | null;
   approved_at: string | null;
   approval_comment: string | null;
+  scheduled_pay_date: string | null;
 }
 
-export type CommissionDocumentInsert = Omit<CommissionDocument, 'id' | 'created_at' | 'updated_at' | 'contract_total_net' | 'net_profit' | 'rep_commission' | 'company_profit' | 'dollars_increased' | 'supplement_fee'>;
+export type CommissionDocumentInsert = Omit<CommissionDocument, 'id' | 'created_at' | 'updated_at' | 'contract_total_net' | 'net_profit' | 'rep_commission' | 'company_profit' | 'dollars_increased' | 'supplement_fee' | 'scheduled_pay_date'>;
 
 export function useCommissionDocuments(statusFilter?: string) {
   const { user } = useAuth();
@@ -222,15 +223,28 @@ export function useUpdateCommissionDocumentStatus() {
   const { user } = useAuth();
 
   return useMutation({
-    mutationFn: async ({ id, status, approval_comment }: { id: string; status: 'draft' | 'submitted' | 'approved' | 'rejected'; approval_comment?: string }) => {
+    mutationFn: async ({ id, status, approval_comment }: { id: string; status: 'draft' | 'submitted' | 'approved' | 'rejected' | 'manager_approved' | 'accounting_approved' | 'paid'; approval_comment?: string }) => {
       const updateData: Partial<CommissionDocument> = { status };
       
-      if (status === 'approved' || status === 'rejected') {
+      if (status === 'approved' || status === 'rejected' || status === 'manager_approved') {
         updateData.approved_by = user?.id || null;
         updateData.approved_at = new Date().toISOString();
         if (approval_comment) {
           updateData.approval_comment = approval_comment;
         }
+      }
+
+      // Calculate scheduled pay date when accounting approves
+      if (status === 'accounting_approved') {
+        updateData.approved_by = user?.id || null;
+        updateData.approved_at = new Date().toISOString();
+        if (approval_comment) {
+          updateData.approval_comment = approval_comment;
+        }
+        // Calculate the Friday pay date based on Wed 4 PM MST rule
+        const { calculateScheduledPayDate } = await import('@/lib/commissionPayDateCalculations');
+        const payDate = calculateScheduledPayDate(new Date());
+        updateData.scheduled_pay_date = payDate.toISOString().split('T')[0]; // YYYY-MM-DD format
       }
 
       const { data, error } = await supabase
@@ -246,7 +260,7 @@ export function useUpdateCommissionDocumentStatus() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['commission-documents'] });
       queryClient.invalidateQueries({ queryKey: ['commission-document', variables.id] });
-      toast.success(`Commission document ${variables.status}`);
+      toast.success(`Commission document ${variables.status.replace(/_/g, ' ')}`);
     },
     onError: (error) => {
       console.error('Error updating status:', error);

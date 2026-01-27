@@ -26,6 +26,7 @@ interface CommissionNotification {
   previous_status?: string;
   notes?: string;
   changed_by_name?: string;
+  scheduled_pay_date?: string; // ISO date string of Friday pay date
 }
 
 // Dynamic recipient resolution using notification_routing and role_assignments
@@ -102,6 +103,17 @@ const handler = async (req: Request): Promise<Response> => {
       }).format(value);
     };
 
+    const formatPayDateFn = (dateStr: string | undefined): string => {
+      if (!dateStr) return "this Friday";
+      const date = new Date(dateStr);
+      return date.toLocaleDateString('en-US', {
+        weekday: 'long',
+        month: 'long',
+        day: 'numeric',
+        year: 'numeric'
+      });
+    };
+
     const repName = payload.submission_type === "subcontractor" 
       ? `Subcontractor: ${payload.subcontractor_name}` 
       : payload.sales_rep_name;
@@ -149,18 +161,25 @@ const handler = async (req: Request): Promise<Response> => {
         break;
 
       case "accounting_approved":
-        subject = `💰 Commission Approved for Payment: ${payload.job_name}`;
-        heading = "Commission Approved for Payment!";
-        introText = `Great news! The commission for ${payload.job_name} has been fully approved and is ready for payout.`;
+        // Celebratory email with scheduled pay date
+        const payDateFormatted = formatPayDateFn(payload.scheduled_pay_date);
+        subject = `🎉 Commission Approved - Payment Scheduled for ${payDateFormatted}!`;
+        heading = "Congratulations! Your Commission is Approved! 🎉";
+        introText = `Great news! Your commission for ${payload.job_name} has been fully approved by accounting and is scheduled to be paid!`;
         headerColor = "#059669";
         recipientEmails = payload.submitter_email ? [payload.submitter_email] : [];
         const accountingRecipients = await resolveRecipients(supabaseClient, "commission_accounting");
         recipientEmails.push(...accountingRecipients);
-        additionalPlainText = `Job: ${payload.job_name}\nCommission Amount: ${formatCurrency(payload.net_commission_owed)}\n\n✅ Fully Approved - This commission is now ready for payout processing.`;
+        additionalPlainText = `Job: ${payload.job_name}\nCommission Amount: ${formatCurrency(payload.net_commission_owed)}\nPayment Date: ${payDateFormatted}\n\n🎉 Your hard work is paying off! This commission will be deposited on ${payDateFormatted}.`;
         additionalContent = `
           <tr><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;"><strong>Job:</strong></td><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">${payload.job_name}</td></tr>
-          <tr><td style="padding: 10px 0;"><strong>Commission Amount:</strong></td><td style="padding: 10px 0; color: #16a34a; font-weight: bold; font-size: 20px;">${formatCurrency(payload.net_commission_owed)}</td></tr>
-          <tr><td colspan="2" style="padding: 15px; background: #dcfce7; border-radius: 8px; margin-top: 10px;">✅ <strong>Fully Approved</strong> - This commission is now ready for payout processing.</td></tr>
+          <tr><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;"><strong>Commission Amount:</strong></td><td style="padding: 10px 0; color: #16a34a; font-weight: bold; font-size: 24px;">${formatCurrency(payload.net_commission_owed)}</td></tr>
+          <tr><td style="padding: 10px 0;"><strong>Payment Date:</strong></td><td style="padding: 10px 0; color: #1e40af; font-weight: bold; font-size: 20px;">📅 ${payDateFormatted}</td></tr>
+          <tr><td colspan="2" style="padding: 25px; background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%); border-radius: 12px; margin-top: 15px; text-align: center;">
+            <div style="font-size: 40px; margin-bottom: 10px;">🎉💰🎉</div>
+            <div style="font-size: 18px; font-weight: bold; color: #166534;">Your hard work is paying off!</div>
+            <div style="font-size: 14px; color: #15803d; margin-top: 5px;">Payment will be deposited on ${payDateFormatted}</div>
+          </td></tr>
         `;
         break;
 
