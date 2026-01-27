@@ -79,8 +79,9 @@ export function PendingApprovals() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, email, full_name, requested_role, requested_department, company_name, created_at, employee_status")
+        .select("id, email, full_name, requested_role, requested_department, company_name, created_at, employee_status, last_login_at")
         .eq("is_approved", false)
+        .not("last_login_at", "is", null) // Only users who have logged in (exclude pending invites)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
