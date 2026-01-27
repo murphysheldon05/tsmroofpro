@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,6 +22,10 @@ interface CommissionWorksheetProps {
 }
 
 export function CommissionWorksheet({ data, onChange, readOnly = false }: CommissionWorksheetProps) {
+  // Keep raw typing value while an input is focused to prevent focus/caret loss
+  const [editingField, setEditingField] = useState<keyof WorksheetData | null>(null);
+  const [editingValue, setEditingValue] = useState<string>("");
+
   // Calculate derived values in real-time
   const calculations = useMemo(() => {
     const totalJobRevenue = (data.contract_amount || 0) + (data.supplements_approved || 0);
@@ -44,9 +48,33 @@ export function CommissionWorksheet({ data, onChange, readOnly = false }: Commis
     }).format(value);
   };
 
+  const parseNumericInput = (value: string): number => {
+    // Allow transient states like "", ".", "10." while typing; on blur we normalize.
+    const cleaned = value.replace(/[^0-9.\-]/g, "");
+    const parsed = parseFloat(cleaned);
+    return Number.isFinite(parsed) ? parsed : 0;
+  };
+
+  const handleNumberFocus = (field: keyof WorksheetData, currentValue: number | undefined) => {
+    setEditingField(field);
+    setEditingValue(currentValue ? String(currentValue) : "");
+  };
+
   const handleNumberChange = (field: keyof WorksheetData, value: string) => {
-    const numValue = parseFloat(value) || 0;
-    onChange({ [field]: numValue });
+    setEditingField(field);
+    setEditingValue(value);
+    // Update calculations live using parsed value, but keep raw typing string in the input
+    onChange({ [field]: parseNumericInput(value) });
+  };
+
+  const handleNumberBlur = () => {
+    setEditingField(null);
+    setEditingValue("");
+  };
+
+  const getInputValue = (field: keyof WorksheetData, value: number | undefined) => {
+    if (editingField === field) return editingValue;
+    return value ? String(value) : "";
   };
 
   return (
@@ -77,10 +105,11 @@ export function CommissionWorksheet({ data, onChange, readOnly = false }: Commis
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
                   <Input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={data.contract_amount || ""}
+                    type="text"
+                    inputMode="decimal"
+                    value={getInputValue("contract_amount", data.contract_amount)}
+                    onFocus={() => handleNumberFocus("contract_amount", data.contract_amount)}
+                    onBlur={handleNumberBlur}
                     onChange={(e) => handleNumberChange("contract_amount", e.target.value)}
                     disabled={readOnly}
                     className="pl-7"
@@ -100,10 +129,11 @@ export function CommissionWorksheet({ data, onChange, readOnly = false }: Commis
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
                   <Input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={data.supplements_approved || ""}
+                    type="text"
+                    inputMode="decimal"
+                    value={getInputValue("supplements_approved", data.supplements_approved)}
+                    onFocus={() => handleNumberFocus("supplements_approved", data.supplements_approved)}
+                    onBlur={handleNumberBlur}
                     onChange={(e) => handleNumberChange("supplements_approved", e.target.value)}
                     disabled={readOnly}
                     className="pl-7"
@@ -144,11 +174,11 @@ export function CommissionWorksheet({ data, onChange, readOnly = false }: Commis
               <TableCell>
                 <div className="relative">
                   <Input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    max="100"
-                    value={data.commission_percentage || ""}
+                    type="text"
+                    inputMode="decimal"
+                    value={getInputValue("commission_percentage", data.commission_percentage)}
+                    onFocus={() => handleNumberFocus("commission_percentage", data.commission_percentage)}
+                    onBlur={handleNumberBlur}
                     onChange={(e) => handleNumberChange("commission_percentage", e.target.value)}
                     disabled={readOnly}
                     className="pr-7"
@@ -191,10 +221,11 @@ export function CommissionWorksheet({ data, onChange, readOnly = false }: Commis
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
                   <Input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={data.advances_paid || ""}
+                    type="text"
+                    inputMode="decimal"
+                    value={getInputValue("advances_paid", data.advances_paid)}
+                    onFocus={() => handleNumberFocus("advances_paid", data.advances_paid)}
+                    onBlur={handleNumberBlur}
                     onChange={(e) => handleNumberChange("advances_paid", e.target.value)}
                     disabled={readOnly}
                     className="pl-7"
