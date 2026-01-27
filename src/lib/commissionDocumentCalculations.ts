@@ -35,19 +35,66 @@ export interface CalculatedFields {
   company_profit: number;
 }
 
-// Profit Split options as defined in the worksheet
+// Profit Split options as defined in the worksheet (default fallback)
 export const PROFIT_SPLIT_OPTIONS = [
+  { label: "15/35/65", op: 0.15, rep: 0.35, company: 0.65 },
   { label: "15/40/60", op: 0.15, rep: 0.40, company: 0.60 },
   { label: "15/45/55", op: 0.15, rep: 0.45, company: 0.55 },
   { label: "15/50/50", op: 0.15, rep: 0.50, company: 0.50 },
+  { label: "15/55/45", op: 0.15, rep: 0.55, company: 0.45 },
+  { label: "15/60/40", op: 0.15, rep: 0.60, company: 0.40 },
+  { label: "12.5/35/65", op: 0.125, rep: 0.35, company: 0.65 },
+  { label: "12.5/40/60", op: 0.125, rep: 0.40, company: 0.60 },
+  { label: "12.5/45/55", op: 0.125, rep: 0.45, company: 0.55 },
+  { label: "12.5/50/50", op: 0.125, rep: 0.50, company: 0.50 },
+  { label: "10/35/65", op: 0.10, rep: 0.35, company: 0.65 },
+  { label: "10/40/60", op: 0.10, rep: 0.40, company: 0.60 },
+  { label: "10/45/55", op: 0.10, rep: 0.45, company: 0.55 },
+  { label: "10/50/50", op: 0.10, rep: 0.50, company: 0.50 },
 ] as const;
 
-// O&P Percentage options
+// O&P Percentage options (default fallback)
 export const OP_PERCENT_OPTIONS = [
   { value: 0.10, label: "10.00%" },
   { value: 0.125, label: "12.50%" },
   { value: 0.15, label: "15.00%" },
 ] as const;
+
+/**
+ * Generate profit split options based on user's tier
+ * @param allowedOpPercentages - array of allowed O&P percentages (e.g., [0.10, 0.15])
+ * @param allowedProfitSplits - array of allowed rep profit splits (e.g., [0.35, 0.40])
+ */
+export function generateProfitSplitOptions(
+  allowedOpPercentages: number[],
+  allowedProfitSplits: number[]
+): Array<{ label: string; op: number; rep: number; company: number }> {
+  const options: Array<{ label: string; op: number; rep: number; company: number }> = [];
+  
+  for (const op of allowedOpPercentages) {
+    for (const rep of allowedProfitSplits) {
+      const company = 1 - rep;
+      const opLabel = op === 0.125 ? "12.5" : (op * 100).toString();
+      const repLabel = (rep * 100).toFixed(0);
+      const companyLabel = (company * 100).toFixed(0);
+      options.push({
+        label: `${opLabel}/${repLabel}/${companyLabel}`,
+        op,
+        rep,
+        company,
+      });
+    }
+  }
+  
+  return options;
+}
+
+/**
+ * Filter O&P options based on user's tier
+ */
+export function filterOpPercentOptions(allowedOpPercentages: number[]) {
+  return OP_PERCENT_OPTIONS.filter(opt => allowedOpPercentages.includes(opt.value));
+}
 
 /**
  * Calculate O&P $ Amount

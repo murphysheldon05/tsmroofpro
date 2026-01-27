@@ -10,6 +10,8 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Lock, Save, Send, ArrowLeft, AlertTriangle, Printer } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
 import { 
   calculateAllFields, 
   formatCurrency, 
@@ -17,6 +19,8 @@ import {
   PROFIT_SPLIT_OPTIONS,
   OP_PERCENT_OPTIONS,
   getProfitSplitFromLabel,
+  generateProfitSplitOptions,
+  filterOpPercentOptions,
   type CommissionDocumentData 
 } from "@/lib/commissionDocumentCalculations";
 import { 
@@ -24,6 +28,7 @@ import {
   useUpdateCommissionDocument,
   type CommissionDocument 
 } from "@/hooks/useCommissionDocuments";
+import { useUserCommissionTier } from "@/hooks/useCommissionTiers";
 import { toast } from "sonner";
 
 interface CommissionDocumentFormProps {
@@ -42,12 +47,66 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
   const createMutation = useCreateCommissionDocument();
   const updateMutation = useUpdateCommissionDocument();
   
+  // Fetch user profile for auto-populating sales rep name
+  const { data: userProfile } = useQuery({
+    queryKey: ['user-profile', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', user.id)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id,
+  });
+  
+  // Fetch the current user's commission tier
+  const { data: userTier, isLoading: tierLoading } = useUserCommissionTier(user?.id);
+  
   const isPrivileged = isAdmin || isManager;
+
+  // Get allowed options based on user's tier (admins/managers see all options)
+  const { availableOpOptions, availableProfitSplitOptions, defaultProfitSplit } = useMemo(() => {
+    if (isPrivileged) {
+      // Privileged users see all options
+      return {
+        availableOpOptions: OP_PERCENT_OPTIONS,
+        availableProfitSplitOptions: PROFIT_SPLIT_OPTIONS,
+        defaultProfitSplit: PROFIT_SPLIT_OPTIONS[1], // 15/40/60
+      };
+    }
+    
+    if (userTier?.tier) {
+      const tier = userTier.tier;
+      const opOptions = filterOpPercentOptions(tier.allowed_op_percentages);
+      const profitSplitOptions = generateProfitSplitOptions(
+        tier.allowed_op_percentages,
+        tier.allowed_profit_splits
+      );
+      
+      return {
+        availableOpOptions: opOptions,
+        availableProfitSplitOptions: profitSplitOptions,
+        defaultProfitSplit: profitSplitOptions[0] || PROFIT_SPLIT_OPTIONS[1],
+      };
+    }
+    
+    // Fallback if no tier assigned
+    return {
+      availableOpOptions: OP_PERCENT_OPTIONS,
+      availableProfitSplitOptions: PROFIT_SPLIT_OPTIONS,
+      defaultProfitSplit: PROFIT_SPLIT_OPTIONS[1],
+    };
+  }, [userTier, isPrivileged]);
 
   const [formData, setFormData] = useState(() => ({
     job_name_id: document?.job_name_id ?? "",
     job_date: document?.job_date ?? "",
     sales_rep: document?.sales_rep ?? "",
+    sales_rep_id: document?.sales_rep_id ?? user?.id ?? null,
     gross_contract_total: document?.gross_contract_total ?? 0,
     op_percent: document?.op_percent ?? 0.15,
     material_cost: document?.material_cost ?? 0,
@@ -67,16 +126,54 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
     notes: document?.notes ?? "",
   }));
 
+  // Auto-populate sales rep name when profile loads (only for new documents)
+  useEffect(() => {
+    if (!document && userProfile?.full_name && !formData.sales_rep) {
+      setFormData(prev => ({
+        ...prev,
+        sales_rep: userProfile.full_name,
+        sales_rep_id: user?.id ?? null,
+      }));
+    }
+  }, [userProfile, document, user]);
+
+  // Set default profit split based on tier (only for new documents)
+  useEffect(() => {
+    if (!document && !tierLoading && defaultProfitSplit) {
+      setFormData(prev => ({
+        ...prev,
+        profit_split_label: defaultProfitSplit.label,
+        op_percent: defaultProfitSplit.op,
+        rep_profit_percent: defaultProfitSplit.rep,
+        company_profit_percent: defaultProfitSplit.company,
+      }));
+    }
+  }, [defaultProfitSplit, tierLoading, document]);
+
   // When profit split changes, update the related percentages
   const handleProfitSplitChange = (label: string) => {
-    const split = getProfitSplitFromLabel(label);
-    if (split) {
+    // First try to find in the available (tier-based) options
+    const dynamicSplit = availableProfitSplitOptions.find(opt => opt.label === label);
+    if (dynamicSplit) {
       setFormData(prev => ({
         ...prev,
         profit_split_label: label,
-        op_percent: split.op,
-        rep_profit_percent: split.rep,
-        company_profit_percent: split.company,
+        op_percent: dynamicSplit.op,
+        rep_profit_percent: dynamicSplit.rep,
+        company_profit_percent: dynamicSplit.company,
+      }));
+      return;
+    }
+    
+    // Fallback to static options (for privileged users)
+    const staticSplit = getProfitSplitFromLabel(label);
+    if (staticSplit) {
+      setFormData(prev => ({
+        ...prev,
+        profit_split_label: label,
+        op_percent: staticSplit.op,
+        rep_profit_percent: staticSplit.rep,
+        company_profit_percent: staticSplit.company,
       }));
     }
   };
@@ -245,6 +342,27 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
         )}
       </div>
 
+      {/* Missing tier warning */}
+      {!isPrivileged && !tierLoading && !userTier?.tier && (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>No Commission Tier Assigned</AlertTitle>
+          <AlertDescription>
+            You do not have a commission tier assigned. Please contact your manager or admin to have your tier set up before submitting commissions.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Tier info banner */}
+      {userTier?.tier && (
+        <Alert>
+          <AlertTitle>Commission Tier: {userTier.tier.name}</AlertTitle>
+          <AlertDescription>
+            {userTier.tier.description || 'Your available O&P and profit split options are based on your assigned tier.'}
+          </AlertDescription>
+        </Alert>
+      )}
+
       <Card className="overflow-hidden">
         <CardHeader className="bg-muted/50 py-4">
           <CardTitle className="text-lg sm:text-xl text-center font-semibold">
@@ -288,12 +406,12 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
                 />
               </FormRow>
               
-              <FormRow label="Sales Rep">
+              <FormRow label="Sales Rep" hint={isPrivileged ? "Managers can edit" : "Auto-populated from your profile"}>
                 <Input
                   value={formData.sales_rep}
                   onChange={(e) => setFormData(prev => ({ ...prev, sales_rep: e.target.value }))}
-                  disabled={!canEdit}
-                  className={inputBaseClasses}
+                  disabled={!canEdit || !isPrivileged}
+                  className={`${inputBaseClasses} ${!isPrivileged ? 'bg-muted' : ''}`}
                   placeholder="Enter sales rep name"
                   required
                 />
@@ -322,17 +440,17 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
                 />
               </FormRow>
 
-              <FormRow label="O&P %" hint="Select O&P %, options: 10%, 12.5%, 15%">
+              <FormRow label="O&P %" hint={`Based on your tier: ${userTier?.tier?.name || 'Loading...'}`}>
                 <Select
                   value={formData.op_percent.toString()}
                   onValueChange={handleOpPercentChange}
-                  disabled={!canEdit}
+                  disabled={!canEdit || tierLoading}
                 >
                   <SelectTrigger className={`${inputBaseClasses} font-mono`}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {OP_PERCENT_OPTIONS.map((opt) => (
+                    {availableOpOptions.map((opt) => (
                       <SelectItem key={opt.value} value={opt.value.toString()}>
                         {opt.label}
                       </SelectItem>
@@ -537,17 +655,17 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
                 Profit Split
               </h3>
               
-              <FormRow label="Profit Split" hint="Selecting a split sets O&P%, Rep%, and Company%">
+              <FormRow label="Profit Split" hint={`Available splits based on your ${userTier?.tier?.name || 'tier'}`}>
                 <Select
                   value={formData.profit_split_label}
                   onValueChange={handleProfitSplitChange}
-                  disabled={!canEdit}
+                  disabled={!canEdit || tierLoading}
                 >
                   <SelectTrigger className={`${inputBaseClasses} font-mono`}>
                     <SelectValue placeholder="Select profit split" />
                   </SelectTrigger>
                   <SelectContent>
-                    {PROFIT_SPLIT_OPTIONS.map((opt) => (
+                    {availableProfitSplitOptions.map((opt) => (
                       <SelectItem key={opt.label} value={opt.label}>
                         {opt.label}
                       </SelectItem>
