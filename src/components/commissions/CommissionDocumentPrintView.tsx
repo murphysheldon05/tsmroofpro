@@ -88,8 +88,8 @@ export function CommissionDocumentPrintView({ document, isAdmin = false }: Commi
                 <td className="py-1 text-right font-mono">-{formatCurrency(document.neg_exp_3)}</td>
               </tr>
               <tr className="border-b">
-                <td className="py-1">Supplement Fees</td>
-                <td className="py-1 text-right font-mono">-{formatCurrency(document.supplement_fees_expense)}</td>
+                <td className="py-1">#4 (Supplement Fees)</td>
+                <td className="py-1 text-right font-mono">-{formatCurrency(document.neg_exp_4 ?? document.supplement_fees_expense)}</td>
               </tr>
             </tbody>
           </table>
@@ -129,8 +129,8 @@ export function CommissionDocumentPrintView({ document, isAdmin = false }: Commi
               <td className="py-2 text-right font-mono text-lg">{formatCurrency(document.net_profit)}</td>
             </tr>
             <tr className="border-b">
-              <td className="py-2 font-semibold">Commission Rate</td>
-              <td className="py-2 text-right font-mono">{(document.commission_rate * 100).toFixed(2)}%</td>
+              <td className="py-2 font-semibold">Profit Split</td>
+              <td className="py-2 text-right font-mono">{document.profit_split_label || `${(document.rep_profit_percent * 100).toFixed(0)}%`}</td>
             </tr>
             <tr className="border-b bg-green-100">
               <td className="py-2 font-bold text-lg">Rep Commission</td>

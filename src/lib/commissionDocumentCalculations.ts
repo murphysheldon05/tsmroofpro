@@ -1,6 +1,13 @@
 /**
- * Shared calculation module for TSM Commission Documents
+ * TSM Roofing LLC Official Commission Document - Shared Calculation Module
  * Used on both client and server to ensure consistency
+ * 
+ * FORMULAS (from official worksheet):
+ * A) O&P $ Amount = gross_contract_total * op_percent
+ * B) Contract Total (Net) = gross_contract_total - op_amount
+ * C) Net Profit = contract_total_net - material - labor - neg_expenses + pos_expenses
+ * D) Rep Commission = net_profit * rep_profit_percent
+ * E) Company Profit = op_amount + (net_profit - rep_commission)
  */
 
 export interface CommissionDocumentData {
@@ -11,20 +18,43 @@ export interface CommissionDocumentData {
   neg_exp_1: number;
   neg_exp_2: number;
   neg_exp_3: number;
-  supplement_fees_expense: number;
+  neg_exp_4: number; // Supplement fees
   pos_exp_1: number;
   pos_exp_2: number;
   pos_exp_3: number;
   pos_exp_4: number;
-  commission_rate: number;
+  rep_profit_percent: number; // From profit split (e.g., 0.40)
   advance_total: number;
 }
 
 export interface CalculatedFields {
+  op_amount: number;
   contract_total_net: number;
   net_profit: number;
   rep_commission: number;
   company_profit: number;
+}
+
+// Profit Split options as defined in the worksheet
+export const PROFIT_SPLIT_OPTIONS = [
+  { label: "15/40/60", op: 0.15, rep: 0.40, company: 0.60 },
+  { label: "15/45/55", op: 0.15, rep: 0.45, company: 0.55 },
+  { label: "15/50/50", op: 0.15, rep: 0.50, company: 0.50 },
+] as const;
+
+// O&P Percentage options
+export const OP_PERCENT_OPTIONS = [
+  { value: 0.10, label: "10.00%" },
+  { value: 0.125, label: "12.50%" },
+  { value: 0.15, label: "15.00%" },
+] as const;
+
+/**
+ * Calculate O&P $ Amount
+ * Formula: gross_contract_total * op_percent
+ */
+export function calculateOpAmount(grossContractTotal: number, opPercent: number): number {
+  return grossContractTotal * opPercent;
 }
 
 /**
@@ -46,7 +76,7 @@ export function calculateNetProfit(
   negExp1: number,
   negExp2: number,
   negExp3: number,
-  supplementFeesExpense: number,
+  negExp4: number,
   posExp1: number,
   posExp2: number,
   posExp3: number,
@@ -59,7 +89,7 @@ export function calculateNetProfit(
     negExp1 -
     negExp2 -
     negExp3 -
-    supplementFeesExpense +
+    negExp4 +
     posExp1 +
     posExp2 +
     posExp3 +
@@ -69,24 +99,28 @@ export function calculateNetProfit(
 
 /**
  * Calculate Rep Commission
- * Formula: net_profit * commission_rate
+ * Formula: net_profit * rep_profit_percent
  */
-export function calculateRepCommission(netProfit: number, commissionRate: number): number {
-  return netProfit * commissionRate;
+export function calculateRepCommission(netProfit: number, repProfitPercent: number): number {
+  return netProfit * repProfitPercent;
 }
 
 /**
  * Calculate Company Profit
- * Formula: net_profit - rep_commission + (gross_contract_total * op_percent)
+ * Formula: op_amount + (net_profit - rep_commission)
+ * Includes BOTH the O&P amount AND the company's share of net profit
  */
-export function calculateCompanyProfit(netProfit: number, repCommission: number, grossContractTotal: number, opPercent: number): number {
-  return netProfit - repCommission + (grossContractTotal * opPercent);
+export function calculateCompanyProfit(opAmount: number, netProfit: number, repCommission: number): number {
+  return opAmount + (netProfit - repCommission);
 }
 
 /**
  * Calculate all computed fields from input data
  */
 export function calculateAllFields(data: CommissionDocumentData): CalculatedFields {
+  // O&P $ Amount
+  const op_amount = calculateOpAmount(data.gross_contract_total, data.op_percent);
+  
   // Contract Total (Net)
   const contract_total_net = calculateContractTotalNet(data.gross_contract_total, data.op_percent);
 
@@ -98,7 +132,7 @@ export function calculateAllFields(data: CommissionDocumentData): CalculatedFiel
     data.neg_exp_1,
     data.neg_exp_2,
     data.neg_exp_3,
-    data.supplement_fees_expense,
+    data.neg_exp_4,
     data.pos_exp_1,
     data.pos_exp_2,
     data.pos_exp_3,
@@ -106,12 +140,13 @@ export function calculateAllFields(data: CommissionDocumentData): CalculatedFiel
   );
 
   // Rep Commission
-  const rep_commission = calculateRepCommission(net_profit, data.commission_rate);
+  const rep_commission = calculateRepCommission(net_profit, data.rep_profit_percent);
 
   // Company Profit
-  const company_profit = calculateCompanyProfit(net_profit, rep_commission, data.gross_contract_total, data.op_percent);
+  const company_profit = calculateCompanyProfit(op_amount, net_profit, rep_commission);
 
   return {
+    op_amount,
     contract_total_net,
     net_profit,
     rep_commission,
@@ -120,7 +155,7 @@ export function calculateAllFields(data: CommissionDocumentData): CalculatedFiel
 }
 
 /**
- * Format currency for display - modern, clean format
+ * Format currency for display - clean format
  */
 export function formatCurrency(value: number): string {
   const absValue = Math.abs(value);
@@ -152,19 +187,35 @@ export function parseCurrencyInput(value: string): number {
 }
 
 /**
+ * Get profit split from label
+ */
+export function getProfitSplitFromLabel(label: string): { op: number; rep: number; company: number } | null {
+  const split = PROFIT_SPLIT_OPTIONS.find(s => s.label === label);
+  return split ? { op: split.op, rep: split.rep, company: split.company } : null;
+}
+
+/**
  * Validate required fields
  */
-export function validateCommissionDocument(data: Partial<CommissionDocumentData> & { job_name_id?: string; job_date?: string; sales_rep?: string }): { valid: boolean; errors: string[] } {
+export function validateCommissionDocument(data: Partial<CommissionDocumentData> & { 
+  job_name_id?: string; 
+  job_date?: string; 
+  sales_rep?: string;
+  profit_split_label?: string;
+}): { valid: boolean; errors: string[] } {
   const errors: string[] = [];
 
   if (!data.job_name_id?.trim()) errors.push('Job Name & ID is required');
   if (!data.job_date) errors.push('Job Date is required');
   if (!data.sales_rep?.trim()) errors.push('Sales Rep is required');
-  if (data.gross_contract_total === undefined || data.gross_contract_total < 0) errors.push('Gross Contract Total must be >= 0');
-  if (data.op_percent === undefined || data.op_percent < 0 || data.op_percent > 1) errors.push('O&P must be between 0 and 1');
+  if (data.gross_contract_total === undefined || data.gross_contract_total < 0) errors.push('Contract Total (Gross) must be >= 0');
+  if (data.op_percent === undefined || data.op_percent < 0 || data.op_percent > 1) errors.push('O&P % must be between 0 and 100%');
   if (data.material_cost === undefined || data.material_cost < 0) errors.push('Material cost must be >= 0');
   if (data.labor_cost === undefined || data.labor_cost < 0) errors.push('Labor cost must be >= 0');
-  if (data.commission_rate === undefined || data.commission_rate < 0 || data.commission_rate > 1) errors.push('Commission Rate must be between 0 and 1');
+  if (!data.profit_split_label) errors.push('Profit Split is required');
+  if (data.rep_profit_percent === undefined || data.rep_profit_percent < 0 || data.rep_profit_percent > 1) {
+    errors.push('Rep Profit % must be between 0 and 100%');
+  }
 
   return { valid: errors.length === 0, errors };
 }

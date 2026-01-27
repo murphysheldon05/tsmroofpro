@@ -18,12 +18,16 @@ export interface CommissionDocument {
   neg_exp_1: number;
   neg_exp_2: number;
   neg_exp_3: number;
-  supplement_fees_expense: number;
+  neg_exp_4: number; // Supplement fees (new field)
+  supplement_fees_expense: number; // Legacy field for backward compat
   pos_exp_1: number;
   pos_exp_2: number;
   pos_exp_3: number;
   pos_exp_4: number;
-  commission_rate: number;
+  profit_split_label: string | null;
+  rep_profit_percent: number;
+  company_profit_percent: number;
+  commission_rate: number; // Legacy field
   net_profit: number;
   rep_commission: number;
   advance_total: number;
@@ -97,6 +101,10 @@ export function useCreateCommissionDocument() {
     mutationFn: async (data: Omit<CommissionDocumentInsert, 'created_by'>) => {
       if (!user) throw new Error('Not authenticated');
 
+      // Use neg_exp_4 if available, otherwise fall back to supplement_fees_expense
+      const negExp4 = data.neg_exp_4 ?? data.supplement_fees_expense ?? 0;
+      const repProfitPercent = data.rep_profit_percent ?? data.commission_rate ?? 0;
+
       // Server-side calculation
       const inputData: CommissionDocumentData = {
         gross_contract_total: data.gross_contract_total,
@@ -106,12 +114,12 @@ export function useCreateCommissionDocument() {
         neg_exp_1: data.neg_exp_1,
         neg_exp_2: data.neg_exp_2,
         neg_exp_3: data.neg_exp_3,
-        supplement_fees_expense: data.supplement_fees_expense,
+        neg_exp_4: negExp4,
         pos_exp_1: data.pos_exp_1,
         pos_exp_2: data.pos_exp_2,
         pos_exp_3: data.pos_exp_3,
         pos_exp_4: data.pos_exp_4,
-        commission_rate: data.commission_rate,
+        rep_profit_percent: repProfitPercent,
         advance_total: data.advance_total,
       };
 
@@ -122,6 +130,10 @@ export function useCreateCommissionDocument() {
         .insert({
           ...data,
           created_by: user.id,
+          neg_exp_4: negExp4,
+          supplement_fees_expense: negExp4, // Keep both in sync
+          rep_profit_percent: repProfitPercent,
+          commission_rate: repProfitPercent, // Keep legacy field in sync
           contract_total_net: calculated.contract_total_net,
           net_profit: calculated.net_profit,
           rep_commission: calculated.rep_commission,
@@ -149,6 +161,10 @@ export function useUpdateCommissionDocument() {
 
   return useMutation({
     mutationFn: async ({ id, ...data }: Partial<CommissionDocument> & { id: string }) => {
+      // Use neg_exp_4 if available, otherwise fall back to supplement_fees_expense
+      const negExp4 = data.neg_exp_4 ?? data.supplement_fees_expense ?? 0;
+      const repProfitPercent = data.rep_profit_percent ?? data.commission_rate ?? 0;
+
       // Server-side calculation
       const inputData: CommissionDocumentData = {
         gross_contract_total: data.gross_contract_total ?? 0,
@@ -158,12 +174,12 @@ export function useUpdateCommissionDocument() {
         neg_exp_1: data.neg_exp_1 ?? 0,
         neg_exp_2: data.neg_exp_2 ?? 0,
         neg_exp_3: data.neg_exp_3 ?? 0,
-        supplement_fees_expense: data.supplement_fees_expense ?? 0,
+        neg_exp_4: negExp4,
         pos_exp_1: data.pos_exp_1 ?? 0,
         pos_exp_2: data.pos_exp_2 ?? 0,
         pos_exp_3: data.pos_exp_3 ?? 0,
         pos_exp_4: data.pos_exp_4 ?? 0,
-        commission_rate: data.commission_rate ?? 0,
+        rep_profit_percent: repProfitPercent,
         advance_total: data.advance_total ?? 0,
       };
 
@@ -173,6 +189,10 @@ export function useUpdateCommissionDocument() {
         .from('commission_documents')
         .update({
           ...data,
+          neg_exp_4: negExp4,
+          supplement_fees_expense: negExp4, // Keep both in sync
+          rep_profit_percent: repProfitPercent,
+          commission_rate: repProfitPercent, // Keep legacy field in sync
           contract_total_net: calculated.contract_total_net,
           net_profit: calculated.net_profit,
           rep_commission: calculated.rep_commission,
