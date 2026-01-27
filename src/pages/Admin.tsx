@@ -41,6 +41,7 @@ import {
 } from "lucide-react";
 import { UserPermissionsEditor } from "@/components/admin/UserPermissionsEditor";
 import { PendingApprovals } from "@/components/admin/PendingApprovals";
+import { PendingInvites } from "@/components/admin/PendingInvites";
 import { useDepartments } from "@/hooks/useDepartments";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
@@ -446,6 +447,12 @@ export default function Admin() {
 
           {/* Users Tab */}
           <TabsContent value="users" className="space-y-6">
+            {/* Pending Invites Section - Users invited but haven't logged in */}
+            <div>
+              <h2 className="text-lg font-semibold text-foreground mb-4">Pending Invites</h2>
+              <PendingInvites />
+            </div>
+
             {/* Pending Approvals Section */}
             <div>
               <h2 className="text-lg font-semibold text-foreground mb-4">Pending Approvals</h2>
