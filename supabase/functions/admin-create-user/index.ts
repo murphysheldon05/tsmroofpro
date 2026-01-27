@@ -208,8 +208,8 @@ serve(async (req: Request): Promise<Response> => {
 
     const userId = created.user.id;
 
-    // Ensure profile exists with must_reset_password flag and pre-approved status
-    // GOVERNANCE: Set employee_status='active' for admin-created users (pre-approved)
+    // Ensure profile exists - invited users still need approval after logging in
+    // GOVERNANCE: Set employee_status='pending' - they need admin approval after login
     const { error: profileError } = await admin
       .from("profiles")
       .upsert(
@@ -218,10 +218,8 @@ serve(async (req: Request): Promise<Response> => {
           email,
           full_name: fullName,
           must_reset_password: true,
-          is_approved: true,
-          employee_status: "active",
-          approved_at: new Date().toISOString(),
-          approved_by: caller.id,
+          is_approved: false,
+          employee_status: "pending",
           department_id: departmentId,
         },
         { onConflict: "id" }

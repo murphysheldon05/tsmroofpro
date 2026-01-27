@@ -32,15 +32,15 @@ export function PendingInvites() {
   const [resendingTo, setResendingTo] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  // Fetch users who were invited (active/approved) but never logged in
+  // Fetch users who were invited but haven't logged in yet (pending status, no login)
   const { data: pendingInvites, isLoading, refetch } = useQuery({
     queryKey: ["pending-invites"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, email, full_name, created_at, employee_status, last_login_at, is_approved")
+        .select("id, email, full_name, created_at, employee_status, last_login_at")
         .is("last_login_at", null)
-        .eq("employee_status", "active")
+        .eq("employee_status", "pending")
         .order("created_at", { ascending: false });
 
       if (error) throw error;
