@@ -78,6 +78,38 @@ async function resolveRecipients(
   return [...new Set(recipients.filter(e => e && e.trim()))];
 }
 
+// Create in-app notification for a user
+async function createInAppNotification(
+  supabaseClient: any,
+  userId: string,
+  notificationType: string,
+  title: string,
+  message: string,
+  entityType: string,
+  entityId: string
+): Promise<void> {
+  try {
+    const { error } = await supabaseClient
+      .from("user_notifications")
+      .insert({
+        user_id: userId,
+        notification_type: notificationType,
+        title,
+        message,
+        entity_type: entityType,
+        entity_id: entityId,
+      });
+
+    if (error) {
+      console.error("Failed to create in-app notification:", error);
+    } else {
+      console.log("In-app notification created for user:", userId);
+    }
+  } catch (err) {
+    console.error("Error creating in-app notification:", err);
+  }
+}
+
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -314,6 +346,49 @@ If you have questions, please contact your supervisor or the accounting team.
     });
 
     console.log("Commission notification sent successfully:", emailResponse);
+
+    // Create in-app notifications for relevant users
+    // For revision_required, accounting_approved, paid - notify submitter
+    if (payload.notification_type === "revision_required" || 
+        payload.notification_type === "accounting_approved" ||
+        payload.notification_type === "paid" ||
+        payload.notification_type === "manager_approved") {
+      
+      // Get the submitter's user ID from the commission document
+      const { data: commission } = await supabaseClient
+        .from("commission_documents")
+        .select("created_by, sales_rep")
+        .eq("id", payload.commission_id)
+        .single();
+
+      if (commission?.created_by) {
+        const notificationTitle = payload.notification_type === "revision_required"
+          ? `Revision Required: ${payload.job_name}`
+          : payload.notification_type === "accounting_approved"
+          ? `🎉 Commission Approved: ${payload.job_name}`
+          : payload.notification_type === "paid"
+          ? `💰 Commission Paid: ${payload.job_name}`
+          : `✅ Manager Approved: ${payload.job_name}`;
+
+        const notificationMessage = payload.notification_type === "revision_required"
+          ? payload.notes || "Your commission needs revision before it can be approved."
+          : payload.notification_type === "accounting_approved"
+          ? `Your commission has been approved! Payment scheduled for ${formatPayDateFn(payload.scheduled_pay_date)}.`
+          : payload.notification_type === "paid"
+          ? `Your commission of ${formatCurrency(payload.net_commission_owed)} has been paid!`
+          : "Your commission has been approved by your manager and is awaiting accounting review.";
+
+        await createInAppNotification(
+          supabaseClient,
+          commission.created_by,
+          payload.notification_type,
+          notificationTitle,
+          notificationMessage,
+          "commission",
+          payload.commission_id
+        );
+      }
+    }
 
     return new Response(
       JSON.stringify({ success: true, data: emailResponse }),
