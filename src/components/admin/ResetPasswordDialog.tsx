@@ -28,16 +28,48 @@ export function ResetPasswordDialog({ userId, userName, userEmail }: ResetPasswo
   const [copied, setCopied] = useState(false);
   const { logAction } = useAdminAuditLog();
 
-  const generatePassword = () => {
-    // Generate a secure password: 8 chars + special chars
-    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
-    const specials = "!@#$%&*";
-    let pwd = "";
-    for (let i = 0; i < 10; i++) {
-      pwd += chars.charAt(Math.floor(Math.random() * chars.length));
+  const validatePassword = (pwd: string) => {
+    const PASSWORD_MIN_LENGTH = 12;
+    const errors: string[] = [];
+
+    if (pwd.length < PASSWORD_MIN_LENGTH) {
+      errors.push(`Password must be at least ${PASSWORD_MIN_LENGTH} characters`);
     }
-    pwd += specials.charAt(Math.floor(Math.random() * specials.length));
-    pwd += specials.charAt(Math.floor(Math.random() * specials.length));
+    if (!/[A-Z]/.test(pwd)) {
+      errors.push("Password must contain at least one uppercase letter");
+    }
+    if (!/[a-z]/.test(pwd)) {
+      errors.push("Password must contain at least one lowercase letter");
+    }
+    if (!/[0-9]/.test(pwd)) {
+      errors.push("Password must contain at least one number");
+    }
+    if (!/[^A-Za-z0-9]/.test(pwd)) {
+      errors.push("Password must contain at least one special character");
+    }
+
+    return errors;
+  };
+
+  const generatePassword = () => {
+    // Generate a strong temp password (12+ chars, includes upper/lower/number/special)
+    const upper = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+    const lower = "abcdefghijkmnpqrstuvwxyz";
+    const nums = "23456789";
+    const specials = "!@#$%&*";
+    const all = upper + lower + nums + specials;
+
+    const pick = (s: string) => s.charAt(Math.floor(Math.random() * s.length));
+    const chars: string[] = [pick(upper), pick(lower), pick(nums), pick(specials)];
+    while (chars.length < 14) chars.push(pick(all));
+
+    // shuffle
+    for (let i = chars.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [chars[i], chars[j]] = [chars[j], chars[i]];
+    }
+
+    const pwd = chars.join("");
     setPassword(pwd);
     setShowPassword(true);
   };
@@ -50,14 +82,20 @@ export function ResetPasswordDialog({ userId, userName, userEmail }: ResetPasswo
   };
 
   const handleSubmit = async () => {
-    if (!password || password.length < 6) {
-      toast.error("Password must be at least 6 characters");
+    if (!password) {
+      toast.error("Please enter a password");
+      return;
+    }
+
+    const pwErrors = validatePassword(password);
+    if (pwErrors.length) {
+      toast.error(pwErrors[0]);
       return;
     }
 
     setIsSubmitting(true);
     try {
-      const { error } = await supabase.functions.invoke("resend-invite", {
+      const { data, error } = await supabase.functions.invoke("resend-invite", {
         body: { 
           user_id: userId, 
           new_password: password 
@@ -75,7 +113,9 @@ export function ResetPasswordDialog({ userId, userName, userEmail }: ResetPasswo
         notes: `Password reset for ${userName || userEmail}`,
       });
 
-      toast.success(`Password reset for ${userName || userEmail}. User will be prompted to change it on next login.`);
+      toast.success(
+        `Temporary password set for ${userName || userEmail}. ${data?.email_sent ? "Email sent." : "Email not sent—check notification settings."}`
+      );
       setOpen(false);
       setPassword("");
     } catch (error: any) {
@@ -100,7 +140,7 @@ export function ResetPasswordDialog({ userId, userName, userEmail }: ResetPasswo
       </DialogTrigger>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Reset Password</DialogTitle>
+          <DialogTitle>Set Temporary Password</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 mt-4">
           <div className="p-3 bg-secondary/50 rounded-lg">
@@ -153,7 +193,7 @@ export function ResetPasswordDialog({ userId, userName, userEmail }: ResetPasswo
           </Button>
 
           <p className="text-xs text-muted-foreground">
-            The user will be required to change their password on their next login.
+            This sets a temporary password and emails it to the user.
           </p>
 
           <div className="flex gap-2 pt-2">
