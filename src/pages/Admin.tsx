@@ -54,6 +54,7 @@ import { CategoryManager } from "@/components/admin/CategoryManager";
 import { SOPManager } from "@/components/admin/SOPManager";
 import { ToolsManager } from "@/components/admin/ToolsManager";
 import { AuditLogViewer } from "@/components/admin/AuditLogViewer";
+import { ResetPasswordDialog } from "@/components/admin/ResetPasswordDialog";
 import { useCommissionTiers } from "@/hooks/useCommissionTiers";
 import { useAdminAuditLog, AUDIT_ACTIONS, OBJECT_TYPES } from "@/hooks/useAdminAuditLog";
 
@@ -671,6 +672,12 @@ export default function Admin() {
                                 </DialogContent>
                               </Dialog>
                             )}
+                            {/* Reset Password */}
+                            <ResetPasswordDialog
+                              userId={user.id}
+                              userName={user.full_name || ""}
+                              userEmail={user.email || ""}
+                            />
                             {/* Edit User - Full configuration */}
                             <Dialog
                               open={editingUser?.id === user.id}
