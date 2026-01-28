@@ -27,8 +27,8 @@ const handler = async (req: Request): Promise<Response> => {
 
     // HARD LOCK: Always use tsmroofpro.com for ALL auth emails
     // Never use lovable.dev, lovable.app, or any other domain
-    // The app route is /auth - user will create their own account
-    const signupUrl = "https://tsmroofpro.com/auth";
+    // The app route is /auth - user will SIGN IN (account already created by admin)
+    const signInUrl = "https://tsmroofpro.com/auth";
 
     // Plain text version for deliverability
     const plainText = `You're Invited to Join TSM Hub
@@ -37,15 +37,14 @@ Hello!
 
 ${inviter_name ? `${inviter_name} has invited you` : "You've been invited"} to join TSM Hub, the central platform for TSM Roofing LLC.
 
-Getting Started:
-1. Click the link below to create your account
-2. Fill out the signup form with your information
-3. Wait for an admin to approve your account
-4. Once approved, you'll receive an email to log in!
+Your account has been created! Here's what to do next:
+1. Click the link below to sign in
+2. Use your email (${email}) and the temporary password provided by your admin
+3. You'll be prompted to set a new password on first login
 
-Create your account: ${signupUrl}
+Sign in here: ${signInUrl}
 
-If you have any questions, please reach out to your manager or administrator.
+If you haven't received your temporary password, contact your manager or email sheldonmurphy@tsmroofs.com.
 
 © ${new Date().getFullYear()} TSM Roofing. All rights reserved.`;
 
@@ -77,12 +76,11 @@ If you have any questions, please reach out to your manager or administrator.
             </p>
             
             <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin: 20px 0;">
-              <p style="font-size: 14px; font-weight: 600; color: #1e40af; margin: 0 0 8px 0;">Getting Started:</p>
+              <p style="font-size: 14px; font-weight: 600; color: #1e40af; margin: 0 0 8px 0;">Your account is ready!</p>
               <ol style="margin: 0; padding-left: 20px; font-size: 14px; color: #374151;">
-                <li>Click the button below to create your account</li>
-                <li>Fill out the signup form with your information</li>
-                <li>Wait for an admin to approve your account</li>
-                <li>Once approved, you'll receive an email to log in!</li>
+                <li>Click the button below to sign in</li>
+                <li>Use your email (<strong>${email}</strong>) and the temporary password from your admin</li>
+                <li>You'll be prompted to set a new password on first login</li>
               </ol>
             </div>
             
@@ -91,8 +89,8 @@ If you have any questions, please reach out to your manager or administrator.
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center">
                 <tr>
                   <td style="background-color: #111827; border: 2px solid #111827; border-radius: 8px;">
-                    <a href="${signupUrl}" target="_blank" style="display: inline-block; padding: 14px 28px; font-size: 16px; font-weight: 600; color: #ffffff !important; text-decoration: none;">
-                      Create My Account
+                    <a href="${signInUrl}" target="_blank" style="display: inline-block; padding: 14px 28px; font-size: 16px; font-weight: 600; color: #ffffff !important; text-decoration: none;">
+                      Sign In to TSM Hub
                     </a>
                   </td>
                 </tr>
@@ -100,7 +98,11 @@ If you have any questions, please reach out to your manager or administrator.
             </div>
             
             <p style="font-size: 14px; color: #6b7280; text-align: center;">
-              Or copy this link: <a href="${signupUrl}" style="color: #3b82f6;">${signupUrl}</a>
+              Or copy this link: <a href="${signInUrl}" style="color: #3b82f6;">${signInUrl}</a>
+            </p>
+            
+            <p style="font-size: 13px; color: #9ca3af; text-align: center; margin-top: 16px;">
+              <strong>Don't have your password?</strong> Contact your manager or email sheldonmurphy@tsmroofs.com
             </p>
             
             <p style="font-size: 14px; color: #6b7280; margin-top: 30px;">
