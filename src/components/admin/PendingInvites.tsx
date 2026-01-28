@@ -13,10 +13,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Mail, Clock, RefreshCw, Loader2, Send, Trash2 } from "lucide-react";
-import { formatDistanceToNow, format } from "date-fns";
+import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
 import { useState } from "react";
 import { useAdminAuditLog, AUDIT_ACTIONS, OBJECT_TYPES } from "@/hooks/useAdminAuditLog";
+import { ResetPasswordDialog } from "./ResetPasswordDialog";
 
 interface PendingInvite {
   id: string;
@@ -191,6 +192,11 @@ export function PendingInvites() {
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex items-center justify-end gap-1">
+                    <ResetPasswordDialog
+                      userId={invite.id}
+                      userName={invite.full_name || ""}
+                      userEmail={invite.email!}
+                    />
                     <Button
                       variant="ghost"
                       size="sm"
