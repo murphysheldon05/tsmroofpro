@@ -93,6 +93,7 @@ export const AUDIT_ACTIONS = {
   TEAM_CHANGED: "team_changed",
   MANAGER_CHANGED: "manager_changed",
   INVITE_SENT: "invite_sent",
+  PASSWORD_RESET: "password_reset",
   
   // Commission actions
   COMMISSION_TIER_CHANGED: "commission_tier_changed",
@@ -152,6 +153,7 @@ export const getActionLabel = (action: string): string => {
     team_changed: "Team Changed",
     manager_changed: "Manager Changed",
     invite_sent: "Invite Sent",
+    password_reset: "Password Reset",
     commission_tier_changed: "Commission Tier Changed",
     commission_submitted: "Commission Submitted",
     commission_approved: "Commission Approved",
