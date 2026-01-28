@@ -72,6 +72,8 @@ serve(async (req: Request): Promise<Response> => {
     const payload: ResendInvitePayload = await req.json();
     const { email, user_id, new_password } = payload;
 
+    const isPasswordResetMode = !!(user_id && new_password);
+
     // Validate: must have either email OR (user_id + new_password)
     if (!email && (!user_id || !new_password)) {
       return new Response(JSON.stringify({ error: "Missing email or (user_id + new_password)" }), {
@@ -106,9 +108,19 @@ serve(async (req: Request): Promise<Response> => {
     }
 
     // Mode 2: Reset password by user_id
-    if (user_id && new_password) {
-      if (new_password.length < 6) {
-        return new Response(JSON.stringify({ error: "Password must be at least 6 characters" }), {
+    if (isPasswordResetMode) {
+      const PASSWORD_MIN_LENGTH = 12;
+      const passwordErrors: string[] = [];
+      if ((new_password ?? "").length < PASSWORD_MIN_LENGTH) {
+        passwordErrors.push(`Password must be at least ${PASSWORD_MIN_LENGTH} characters`);
+      }
+      if (!/[A-Z]/.test(new_password!)) passwordErrors.push("Password must contain at least one uppercase letter");
+      if (!/[a-z]/.test(new_password!)) passwordErrors.push("Password must contain at least one lowercase letter");
+      if (!/[0-9]/.test(new_password!)) passwordErrors.push("Password must contain at least one number");
+      if (!/[^A-Za-z0-9]/.test(new_password!)) passwordErrors.push("Password must contain at least one special character");
+
+      if (passwordErrors.length) {
+        return new Response(JSON.stringify({ error: passwordErrors[0], errors: passwordErrors, code: "weak_password" }), {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
@@ -169,6 +181,10 @@ serve(async (req: Request): Promise<Response> => {
       // Extract first name from full name
       const firstName = profile.full_name?.split(' ')[0] || 'there';
 
+      const pwBlockText = isPasswordResetMode
+        ? `\nTemporary password (change after login): ${new_password}\n`
+        : "";
+
       // Plain text version for deliverability
       const plainText = `TSM Roofing Hub - You've Been Invited
 
@@ -182,6 +198,7 @@ What to expect:
 - Access is role-based. If your access is still pending, you'll see a brief "Pending Approval" message until an admin approves your account.
 
 Open the TSM Roofing Hub: ${loginUrl}
+${pwBlockText}
 
 If you have any trouble getting in, reply to this email and we'll fix it fast.
 
@@ -189,11 +206,15 @@ If you have any trouble getting in, reply to this email and we'll fix it fast.
 
 © ${new Date().getFullYear()} TSM Roofing. All rights reserved.`;
 
+      const subject = isPasswordResetMode
+        ? "Your TSM Roofing Hub temporary password"
+        : "You've been invited to the TSM Roofing Hub — Activate your access";
+
       const emailResponse = await resend.emails.send({
         from: "TSM Roofing <notifications@tsmroofpro.com>",
         reply_to: "sheldonmurphy@tsmroofs.com",
         to: [profile.email],
-        subject: "You've been invited to the TSM Roofing Hub — Activate your access",
+        subject,
         text: plainText,
         html: `
           <!DOCTYPE html>
@@ -215,6 +236,14 @@ If you have any trouble getting in, reply to this email and we'll fix it fast.
               <p style="font-size: 16px; margin-bottom: 20px;">
                 You've been invited to join the <strong>TSM Roofing Hub</strong> — our internal portal for SOPs, forms, trackers, and team resources.
               </p>
+
+              ${isPasswordResetMode ? `
+              <div style="background: #fff7ed; border: 1px solid #fed7aa; border-radius: 8px; padding: 16px; margin: 18px 0;">
+                <p style="margin: 0 0 8px 0; font-size: 14px; font-weight: 700; color: #9a3412;">Temporary password</p>
+                <p style="margin: 0; font-size: 14px; color: #7c2d12;">${new_password}</p>
+                <p style="margin: 10px 0 0 0; font-size: 12px; color: #7c2d12;">Change this after you log in.</p>
+              </div>
+              ` : ""}
               
               <!-- Outlook-compatible table-based button -->
               <div style="text-align: center; margin: 30px 0;">
@@ -265,7 +294,7 @@ If you have any trouble getting in, reply to this email and we'll fix it fast.
       console.error("Failed to send invite email:", emailError);
     }
 
-    return new Response(JSON.stringify({ success: true, email_sent: emailSent }), {
+    return new Response(JSON.stringify({ success: true, email_sent: emailSent, mode: isPasswordResetMode ? "reset" : "invite" }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
