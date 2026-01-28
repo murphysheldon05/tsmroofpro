@@ -181,24 +181,18 @@ export default function Admin() {
 
     setIsSendingInvite(true);
     try {
-      // Generate a secure temporary password (user will reset on first login)
-      const tempPassword = crypto.randomUUID().slice(0, 8) + "Aa1!@#$%";
-      
-      // Create user via admin-create-user (creates auth user + profile + sends invite)
-      const { data, error } = await supabase.functions.invoke("admin-create-user", {
+      // Use new send-invite function that stores in pending_invites table
+      const { data, error } = await supabase.functions.invoke("send-invite", {
         body: {
           email: inviteData.email.trim(),
-          password: tempPassword,
           full_name: inviteData.email.split("@")[0], // Use email prefix as temp name
-          role: "employee",
-          send_invite_email: true,
         },
       });
 
       if (error) {
         const errorData = error.message ? JSON.parse(error.message) : error;
-        if (errorData?.code === "email_exists") {
-          toast.error("A user with this email already exists. Use 'Resend Invite' if they haven't logged in.");
+        if (errorData?.code === "already_registered") {
+          toast.error("This user already has an active account. They can sign in directly.");
         } else {
           throw new Error(errorData?.error || error.message);
         }
@@ -209,12 +203,12 @@ export default function Admin() {
       logAction.mutate({
         action_type: AUDIT_ACTIONS.INVITE_SENT,
         object_type: OBJECT_TYPES.USER,
-        object_id: data?.user_id || inviteData.email,
+        object_id: inviteData.email,
         new_value: { email: inviteData.email.trim() },
         notes: `Invite sent to ${inviteData.email.trim()}`,
       });
 
-      toast.success("Invite sent! User will appear in Pending Invites until they log in.");
+      toast.success("Invite sent! User will appear in Pending Invites.");
       setIsInvitingUser(false);
       setInviteData({ email: "" });
       queryClient.invalidateQueries({ queryKey: ["pending-invites"] });
@@ -500,7 +494,7 @@ export default function Admin() {
                     </DialogHeader>
                     <div className="space-y-4 mt-4">
                       <p className="text-sm text-muted-foreground">
-                        Send an invite email. The user will create their own account at /auth and appear in Pending Approvals.
+                        Send an invite email. The user will create their own account at the signup page and appear in Pending Approvals once they register.
                       </p>
                       <div className="space-y-2">
                         <Label>Email Address *</Label>
