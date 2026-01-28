@@ -1469,6 +1469,36 @@ export type Database = {
         }
         Relationships: []
       }
+      pending_invites: {
+        Row: {
+          created_at: string
+          email: string
+          full_name: string | null
+          id: string
+          invited_at: string
+          invited_by: string | null
+          link_accessed_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          full_name?: string | null
+          id?: string
+          invited_at?: string
+          invited_by?: string | null
+          link_accessed_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          full_name?: string | null
+          id?: string
+          invited_at?: string
+          invited_by?: string | null
+          link_accessed_at?: string | null
+        }
+        Relationships: []
+      }
       policies: {
         Row: {
           created_at: string
@@ -1560,6 +1590,7 @@ export type Database = {
           approved_at: string | null
           approved_by: string | null
           avatar_url: string | null
+          commission_tier_id: string | null
           company_name: string | null
           created_at: string
           data_consent_given: boolean | null
@@ -1588,6 +1619,7 @@ export type Database = {
           approved_at?: string | null
           approved_by?: string | null
           avatar_url?: string | null
+          commission_tier_id?: string | null
           company_name?: string | null
           created_at?: string
           data_consent_given?: boolean | null
@@ -1616,6 +1648,7 @@ export type Database = {
           approved_at?: string | null
           approved_by?: string | null
           avatar_url?: string | null
+          commission_tier_id?: string | null
           company_name?: string | null
           created_at?: string
           data_consent_given?: boolean | null
@@ -1641,6 +1674,13 @@ export type Database = {
           weather_location_name?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "profiles_commission_tier_id_fkey"
+            columns: ["commission_tier_id"]
+            isOneToOne: false
+            referencedRelation: "commission_tiers"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "profiles_department_id_fkey"
             columns: ["department_id"]

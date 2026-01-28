@@ -17,14 +17,13 @@ import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
 import { useState } from "react";
 import { useAdminAuditLog, AUDIT_ACTIONS, OBJECT_TYPES } from "@/hooks/useAdminAuditLog";
-import { ResetPasswordDialog } from "./ResetPasswordDialog";
 
 interface PendingInvite {
   id: string;
   email: string;
   full_name: string | null;
-  created_at: string;
-  employee_status: string | null;
+  invited_at: string;
+  link_accessed_at: string | null;
 }
 
 export function PendingInvites() {
@@ -33,16 +32,16 @@ export function PendingInvites() {
   const [resendingTo, setResendingTo] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  // Fetch users who were invited but haven't logged in yet (pending status, no login)
+  // Fetch pending invites from the pending_invites table
+  // Only show invites where the link has NOT been accessed (user hasn't signed up yet)
   const { data: pendingInvites, isLoading, refetch } = useQuery({
     queryKey: ["pending-invites"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("profiles")
-        .select("id, email, full_name, created_at, employee_status, last_login_at")
-        .is("last_login_at", null)
-        .eq("employee_status", "pending")
-        .order("created_at", { ascending: false });
+        .from("pending_invites")
+        .select("id, email, full_name, invited_at, link_accessed_at")
+        .is("link_accessed_at", null) // Only show invites that haven't been used
+        .order("invited_at", { ascending: false });
 
       if (error) throw error;
       return (data || []) as PendingInvite[];
@@ -51,16 +50,16 @@ export function PendingInvites() {
     staleTime: 15000,
   });
 
-  const handleResendInvite = async (email: string) => {
+  const handleResendInvite = async (email: string, fullName: string | null) => {
     setResendingTo(email);
     try {
-      const { error } = await supabase.functions.invoke("resend-invite", {
-        body: { email },
+      const { error } = await supabase.functions.invoke("send-invite", {
+        body: { email, full_name: fullName },
       });
 
       if (error) throw error;
 
-      // Audit log - use INVITE_SENT for resent invites too
+      // Audit log
       logAction.mutate({
         action_type: AUDIT_ACTIONS.INVITE_SENT,
         object_type: OBJECT_TYPES.USER,
@@ -70,6 +69,7 @@ export function PendingInvites() {
       });
 
       toast.success(`Invite resent to ${email}`);
+      refetch();
     } catch (error: any) {
       toast.error("Failed to resend invite: " + error.message);
     } finally {
@@ -77,16 +77,17 @@ export function PendingInvites() {
     }
   };
 
-  const handleDeleteInvite = async (userId: string, email: string) => {
-    if (!confirm(`Are you sure you want to delete the pending invite for ${email}? This will remove the user account.`)) {
+  const handleDeleteInvite = async (inviteId: string, email: string) => {
+    if (!confirm(`Are you sure you want to delete the pending invite for ${email}?`)) {
       return;
     }
 
-    setDeletingId(userId);
+    setDeletingId(inviteId);
     try {
-      const { error } = await supabase.functions.invoke("admin-delete-user", {
-        body: { user_id: userId },
-      });
+      const { error } = await supabase
+        .from("pending_invites")
+        .delete()
+        .eq("id", inviteId);
 
       if (error) throw error;
 
@@ -94,12 +95,12 @@ export function PendingInvites() {
       logAction.mutate({
         action_type: AUDIT_ACTIONS.USER_DELETED,
         object_type: OBJECT_TYPES.USER,
-        object_id: userId,
+        object_id: email,
         previous_value: { email },
         notes: `Pending invite deleted for ${email}`,
       });
 
-      toast.success("Pending invite deleted");
+      toast.success("Invite deleted");
       queryClient.invalidateQueries({ queryKey: ["pending-invites"] });
     } catch (error: any) {
       toast.error("Failed to delete invite: " + error.message);
@@ -134,9 +135,9 @@ export function PendingInvites() {
     return (
       <Card className="border-dashed">
         <CardContent className="py-6">
-        <div className="flex items-center justify-center gap-2 text-muted-foreground">
+          <div className="flex items-center justify-center gap-2 text-muted-foreground">
             <Mail className="w-4 h-4" />
-            <span className="text-sm">No sent invites</span>
+            <span className="text-sm">No pending invites</span>
           </div>
         </CardContent>
       </Card>
@@ -164,7 +165,7 @@ export function PendingInvites() {
           </Button>
         </div>
         <p className="text-xs text-muted-foreground">
-          Users who received an invite but haven't logged in yet
+          Users who received an invite but haven't created an account yet
         </p>
       </CardHeader>
       <CardContent>
@@ -187,20 +188,15 @@ export function PendingInvites() {
                 <TableCell>
                   <div className="flex items-center gap-1 text-xs text-muted-foreground">
                     <Clock className="w-3 h-3" />
-                    {formatDistanceToNow(new Date(invite.created_at), { addSuffix: true })}
+                    {formatDistanceToNow(new Date(invite.invited_at), { addSuffix: true })}
                   </div>
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex items-center justify-end gap-1">
-                    <ResetPasswordDialog
-                      userId={invite.id}
-                      userName={invite.full_name || ""}
-                      userEmail={invite.email!}
-                    />
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => handleResendInvite(invite.email!)}
+                      onClick={() => handleResendInvite(invite.email, invite.full_name)}
                       disabled={resendingTo === invite.email}
                       title="Resend invite"
                     >
@@ -213,7 +209,7 @@ export function PendingInvites() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => handleDeleteInvite(invite.id, invite.email!)}
+                      onClick={() => handleDeleteInvite(invite.id, invite.email)}
                       disabled={deletingId === invite.id}
                       className="text-destructive hover:text-destructive"
                       title="Delete invite"

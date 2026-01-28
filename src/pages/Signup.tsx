@@ -8,8 +8,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Logo } from "@/components/Logo";
 import { PasswordStrengthIndicator } from "@/components/ui/password-strength-indicator";
 import { toast } from "sonner";
-import { Eye, EyeOff, ArrowLeft, CheckCircle } from "lucide-react";
+import { Eye, EyeOff, ArrowLeft, CheckCircle, AlertTriangle, Loader2 } from "lucide-react";
 import { z } from "zod";
+import { supabase } from "@/integrations/supabase/client";
 
 const signupSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -27,6 +28,11 @@ export default function Signup() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [signupComplete, setSignupComplete] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  
+  // Invite validation state
+  const [isCheckingInvite, setIsCheckingInvite] = useState(false);
+  const [inviteValid, setInviteValid] = useState<boolean | null>(null);
+  const [inviteData, setInviteData] = useState<{ full_name?: string } | null>(null);
 
   const { signUp, user, loading, isActive } = useAuth();
   const navigate = useNavigate();
@@ -37,6 +43,52 @@ export default function Signup() {
       navigate("/command-center", { replace: true });
     }
   }, [user, loading, isActive, navigate]);
+
+  // Check if email has a valid invite when email changes
+  useEffect(() => {
+    const checkInvite = async () => {
+      const trimmedEmail = email.trim().toLowerCase();
+      
+      if (!trimmedEmail || !trimmedEmail.includes("@")) {
+        setInviteValid(null);
+        setInviteData(null);
+        return;
+      }
+
+      setIsCheckingInvite(true);
+      try {
+        const { data, error } = await supabase
+          .from("pending_invites")
+          .select("id, email, full_name")
+          .eq("email", trimmedEmail)
+          .maybeSingle();
+
+        if (error) {
+          console.error("Error checking invite:", error);
+          setInviteValid(false);
+          setInviteData(null);
+        } else if (data) {
+          setInviteValid(true);
+          setInviteData({ full_name: data.full_name || undefined });
+          // Pre-fill name if provided in invite
+          if (data.full_name && !fullName) {
+            setFullName(data.full_name);
+          }
+        } else {
+          setInviteValid(false);
+          setInviteData(null);
+        }
+      } catch (err) {
+        console.error("Invite check failed:", err);
+        setInviteValid(false);
+      } finally {
+        setIsCheckingInvite(false);
+      }
+    };
+
+    const debounce = setTimeout(checkInvite, 500);
+    return () => clearTimeout(debounce);
+  }, [email]);
 
   const validateForm = () => {
     try {
@@ -60,12 +112,20 @@ export default function Signup() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Check for valid invite first
+    if (!inviteValid) {
+      toast.error("You need a valid invite to create an account. Contact your administrator.");
+      return;
+    }
+
     if (!validateForm()) return;
 
     setIsSubmitting(true);
 
     try {
-      const { error } = await signUp(email, password, fullName);
+      const trimmedEmail = email.trim().toLowerCase();
+      
+      const { error } = await signUp(trimmedEmail, password, fullName);
       if (error) {
         if (error.message.includes("already registered")) {
           toast.error("This email is already registered. Please sign in instead.");
@@ -73,6 +133,13 @@ export default function Signup() {
           toast.error(error.message);
         }
       } else {
+        // Remove from pending_invites after successful signup
+        // This is done server-side via trigger, but we also update link_accessed_at
+        await supabase
+          .from("pending_invites")
+          .update({ link_accessed_at: new Date().toISOString() })
+          .eq("email", trimmedEmail);
+
         setSignupComplete(true);
         toast.success("Account created! Awaiting approval.");
       }
@@ -165,6 +232,42 @@ export default function Signup() {
           <div className="glass-card rounded-2xl p-8">
             <form onSubmit={handleSubmit} className="space-y-5">
               <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <div className="relative">
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="you@tsmroofing.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className={`${errors.email ? "border-destructive" : ""} ${inviteValid === true ? "border-green-500 pr-10" : ""} ${inviteValid === false ? "border-amber-500 pr-10" : ""}`}
+                  />
+                  {isCheckingInvite && (
+                    <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-muted-foreground" />
+                  )}
+                  {!isCheckingInvite && inviteValid === true && (
+                    <CheckCircle className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-green-500" />
+                  )}
+                  {!isCheckingInvite && inviteValid === false && email.includes("@") && (
+                    <AlertTriangle className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-amber-500" />
+                  )}
+                </div>
+                {errors.email && (
+                  <p className="text-sm text-destructive">{errors.email}</p>
+                )}
+                {inviteValid === false && email.includes("@") && (
+                  <p className="text-sm text-amber-600 dark:text-amber-400">
+                    No invite found for this email. Contact your administrator to request access.
+                  </p>
+                )}
+                {inviteValid === true && (
+                  <p className="text-sm text-green-600 dark:text-green-400">
+                    ✓ Valid invite found
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="fullName">Full Name</Label>
                 <Input
                   id="fullName"
@@ -176,21 +279,6 @@ export default function Signup() {
                 />
                 {errors.fullName && (
                   <p className="text-sm text-destructive">{errors.fullName}</p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="you@tsmroofing.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className={errors.email ? "border-destructive" : ""}
-                />
-                {errors.email && (
-                  <p className="text-sm text-destructive">{errors.email}</p>
                 )}
               </div>
 
@@ -246,7 +334,7 @@ export default function Signup() {
                 variant="neon"
                 className="w-full"
                 size="lg"
-                disabled={isSubmitting}
+                disabled={isSubmitting || inviteValid !== true}
               >
                 {isSubmitting ? (
                   <div className="w-5 h-5 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
@@ -265,6 +353,18 @@ export default function Signup() {
                 Sign in
               </button>
             </p>
+
+            <div className="mt-4 pt-4 border-t border-border/50">
+              <p className="text-center text-xs text-muted-foreground">
+                Don't have an invite?{" "}
+                <a
+                  href="mailto:sheldonmurphy@tsmroofs.com?subject=TSM Hub Access Request"
+                  className="text-primary hover:underline"
+                >
+                  Request access
+                </a>
+              </p>
+            </div>
           </div>
         </div>
       </main>
