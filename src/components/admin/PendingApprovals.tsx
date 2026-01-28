@@ -72,27 +72,51 @@ export function PendingApprovals() {
   const [approvalDialog, setApprovalDialog] = useState<{ open: boolean; user: PendingUser | null }>({ open: false, user: null });
   const [customMessage, setCustomMessage] = useState("");
 
-  // CRITICAL: Fetch users where is_approved = false AND employee_status is pending/null
-  // This ensures we only show truly pending users, not those with mismatched data
+  // CANONICAL: Query pending_approvals table as the SINGLE SOURCE OF TRUTH
+  // for users awaiting approval. This ensures consistency with the approval lifecycle.
   const { data: pendingUsers, isLoading, refetch: refetchPending } = useQuery({
     queryKey: ["pending-approvals"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("id, email, full_name, requested_role, requested_department, company_name, created_at, employee_status, last_login_at")
-        .eq("is_approved", false)
-        .not("last_login_at", "is", null) // Only users who have logged in (exclude pending invites)
-        .order("created_at", { ascending: false });
+      // STEP 1: Get pending user approvals from canonical pending_approvals table
+      const { data: pendingApprovals, error: paError } = await supabase
+        .from("pending_approvals")
+        .select("entity_id, submitted_at, notes")
+        .eq("entity_type", "user")
+        .eq("status", "pending")
+        .order("submitted_at", { ascending: false });
 
-      if (error) throw error;
+      if (paError) throw paError;
+      if (!pendingApprovals || pendingApprovals.length === 0) return [];
+
+      // STEP 2: Get profile details for these pending users
+      const userIds = pendingApprovals.map(pa => pa.entity_id);
+      const { data: profiles, error: profileError } = await supabase
+        .from("profiles")
+        .select("id, email, full_name, requested_role, requested_department, company_name, created_at")
+        .in("id", userIds);
+
+      if (profileError) throw profileError;
+
+      // Merge data - use pending_approval submission time for ordering
+      const profileMap = new Map((profiles || []).map(p => [p.id, p]));
       
-      // Filter to only truly pending users (exclude those with active employee_status but is_approved=false)
-      // This handles edge cases where data got out of sync
-      return (data || []).filter(u => 
-        u.employee_status === 'pending' || u.employee_status === null || u.employee_status === undefined
-      ) as PendingUser[];
+      return pendingApprovals
+        .map(pa => {
+          const profile = profileMap.get(pa.entity_id);
+          if (!profile) return null;
+          return {
+            id: profile.id,
+            email: profile.email,
+            full_name: profile.full_name,
+            requested_role: profile.requested_role,
+            requested_department: profile.requested_department,
+            company_name: profile.company_name,
+            created_at: profile.created_at,
+          } as PendingUser;
+        })
+        .filter(Boolean) as PendingUser[];
     },
-    refetchInterval: 10000, // More frequent refresh
+    refetchInterval: 10000,
     staleTime: 5000,
   });
 
@@ -164,119 +188,31 @@ export function PendingApprovals() {
     setApprovingId(pendingUser.id);
     try {
       // ========================================================================
-      // GOVERNED ATOMIC APPROVAL COMMIT
-      // All database updates must succeed before sending email notification
+      // GOVERNED ATOMIC APPROVAL COMMIT (Server-Side Edge Function)
+      // All database updates happen atomically on the server.
+      // Email is only sent AFTER all DB changes succeed.
       // ========================================================================
-      
-      // STEP 1: Update profile to ACTIVE status (canonical access field)
-      // GOVERNANCE: employee_status='active' is the SINGLE SOURCE OF TRUTH for access
-      const { error: profileError } = await supabase
-        .from("profiles")
-        .update({
-          is_approved: true,               // Keep for backward compat
-          employee_status: "active",       // CANONICAL: This grants access
-          approved_at: new Date().toISOString(),
-          approved_by: user?.id,
-          department_id: assignedDepartmentId,
-          manager_id: assignedManagerId,
-        })
-        .eq("id", pendingUser.id);
+      const { data, error } = await supabase.functions.invoke("approve-user", {
+        body: {
+          user_id: pendingUser.id,
+          assigned_role: assignedRole,
+          assigned_department_id: assignedDepartmentId,
+          assigned_tier_id: assignedTierId,
+          assigned_manager_id: assignedManagerId,
+          custom_message: customMessage.trim() || undefined,
+        },
+      });
 
-      if (profileError) throw profileError;
+      if (error) throw new Error(error.message);
+      if (!data?.success) throw new Error(data?.error || "Approval failed");
 
-      // STEP 2: Update pending_approvals table to 'approved' status
-      // GOVERNANCE: This removes user from Pending Approvals UI immediately
-      const { error: pendingApprovalError } = await supabase
-        .from("pending_approvals")
-        .update({
-          status: "approved",
-          approved_by: user?.id,
-          approved_at: new Date().toISOString(),
-          notes: `Approved as ${assignedRole}`,
-        })
-        .eq("entity_type", "user")
-        .eq("entity_id", pendingUser.id);
-
-      if (pendingApprovalError) {
-        console.warn("Failed to update pending_approvals:", pendingApprovalError);
-        // Non-blocking - profile update is canonical
-      }
-
-      // STEP 3: Ensure user role exists and is updated
-      const { error: roleError } = await supabase
-        .from("user_roles")
-        .update({ role: assignedRole as "admin" | "manager" | "employee" })
-        .eq("user_id", pendingUser.id);
-
-      if (roleError) throw roleError;
-
-      // STEP 4: Assign commission tier if selected
-      if (assignedTierId) {
-        await supabase
-          .from("user_commission_tiers")
-          .delete()
-          .eq("user_id", pendingUser.id);
-
-        const { error: tierError } = await supabase
-          .from("user_commission_tiers")
-          .insert({
-            user_id: pendingUser.id,
-            tier_id: assignedTierId,
-            assigned_by: user?.id,
-          });
-
-        if (tierError) {
-          console.error("Failed to assign commission tier:", tierError);
-        }
-      }
-
-      // STEP 5: Assign manager (team assignment) if selected
-      if (assignedManagerId) {
-        await supabase
-          .from("team_assignments")
-          .delete()
-          .eq("employee_id", pendingUser.id);
-
-        const { error: teamError } = await supabase
-          .from("team_assignments")
-          .insert({
-            employee_id: pendingUser.id,
-            manager_id: assignedManagerId,
-          });
-
-        if (teamError) {
-          console.error("Failed to assign team manager:", teamError);
-        }
-      }
-
-      // Get department name for notification
+      // Get department name for toast message
       const assignedDeptName = departments?.find(d => d.id === assignedDepartmentId)?.name || null;
-
-      // STEP 6: Send approval notification email ONLY AFTER all DB commits succeed
-      // GOVERNANCE: No cosmetic emails - DB state must be correct first
-      if (pendingUser.email) {
-        try {
-          await supabase.functions.invoke("send-approval-notification", {
-            body: {
-              user_email: pendingUser.email,
-              user_name: pendingUser.full_name || "",
-              custom_message: customMessage.trim() || undefined,
-              assigned_role: assignedRole,
-              assigned_department: assignedDeptName,
-            },
-          });
-        } catch (emailError) {
-          console.error("Failed to send approval email:", emailError);
-          // Email failure is non-blocking - user is already approved in DB
-        }
-      }
 
       toast.success(`User approved as ${assignedRole}${assignedDeptName ? ` in ${assignedDeptName}` : ''}!`);
       
-      // STEP 7: UI reconciliation - close dialog and invalidate queries
+      // Close dialog and clear selections
       setApprovalDialog({ open: false, user: null });
-      
-      // Clear cached selections for this user
       setSelectedRoles(prev => {
         const next = { ...prev };
         delete next[pendingUser.id];
