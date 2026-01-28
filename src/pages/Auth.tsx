@@ -177,13 +177,13 @@ export default function Auth() {
             </form>
 
             <p className="mt-6 text-center text-sm text-muted-foreground">
-              Need access?{" "}
-              <a
-                href="mailto:sheldonmurphy@tsmroofs.com"
+              Don't have an account?{" "}
+              <button
+                onClick={() => navigate("/signup")}
                 className="text-primary hover:underline font-medium"
               >
-                Request an invite
-              </a>
+                Create one
+              </button>
             </p>
           </div>
         </div>
