@@ -145,44 +145,59 @@ serve(async (req: Request): Promise<Response> => {
       user_metadata: { full_name: fullName },
     });
 
-    // Handle orphaned auth users (exist in auth but not in profiles)
+    // Handle existing auth users - check if they can be re-invited
     if (createError?.message?.includes("already been registered") || 
         (createError as any)?.code === "email_exists") {
-      console.log("User exists in auth, checking if orphaned...");
+      console.log("User exists in auth, checking status...");
       
-      // Check if user exists in profiles
+      // Check if user exists in profiles and their login status
       const { data: existingProfile } = await admin
         .from("profiles")
-        .select("id")
+        .select("id, last_login_at, employee_status")
         .eq("email", email)
-        .single();
+        .maybeSingle();
       
-      if (!existingProfile) {
-        // User is orphaned - exists in auth but not in profiles
-        // Find and delete the orphaned auth user, then recreate
-        console.log("Orphaned user detected, cleaning up...");
+      // Find the existing auth user
+      const { data: authUsers } = await admin.auth.admin.listUsers();
+      const existingAuthUser = authUsers?.users?.find(u => u.email?.toLowerCase() === email);
+      
+      // Allow re-invite if:
+      // 1. No profile exists (orphaned auth user), OR
+      // 2. Profile exists but user never logged in (pending invite)
+      const canReinvite = !existingProfile || 
+                          (existingProfile && !existingProfile.last_login_at);
+      
+      if (canReinvite && existingAuthUser) {
+        console.log("User can be re-invited, cleaning up and recreating...");
         
-        const { data: authUsers } = await admin.auth.admin.listUsers();
-        const orphanedUser = authUsers?.users?.find(u => u.email?.toLowerCase() === email);
+        const oldUserId = existingAuthUser.id;
         
-        if (orphanedUser) {
-          console.log("Deleting orphaned auth user:", orphanedUser.id);
-          
-          // Clean up any related data
-          await admin.from("user_roles").delete().eq("user_id", orphanedUser.id);
-          await admin.from("user_permissions").delete().eq("user_id", orphanedUser.id);
-          await admin.auth.admin.deleteUser(orphanedUser.id);
-          
-          // Retry creating the user
-          const retryResult = await admin.auth.admin.createUser({
-            email,
-            password,
-            email_confirm: true,
-            user_metadata: { full_name: fullName },
-          });
-          
-          created = retryResult.data;
-          createError = retryResult.error;
+        // Clean up all related data
+        await admin.from("user_roles").delete().eq("user_id", oldUserId);
+        await admin.from("user_permissions").delete().eq("user_id", oldUserId);
+        await admin.from("user_commission_tiers").delete().eq("user_id", oldUserId);
+        await admin.from("team_assignments").delete().eq("employee_id", oldUserId);
+        await admin.from("team_assignments").delete().eq("manager_id", oldUserId);
+        await admin.from("pending_approvals").delete().eq("entity_id", oldUserId);
+        await admin.from("profiles").delete().eq("id", oldUserId);
+        
+        // Delete the old auth user
+        await admin.auth.admin.deleteUser(oldUserId);
+        console.log("Deleted old user data for:", oldUserId);
+        
+        // Retry creating the user
+        const retryResult = await admin.auth.admin.createUser({
+          email,
+          password,
+          email_confirm: true,
+          user_metadata: { full_name: fullName },
+        });
+        
+        created = retryResult.data;
+        createError = retryResult.error;
+        
+        if (!createError) {
+          console.log("Successfully recreated user after cleanup");
         }
       }
     }
@@ -196,7 +211,7 @@ serve(async (req: Request): Promise<Response> => {
       
       if (createError?.message?.includes("already been registered") || 
           (createError as any)?.code === "email_exists") {
-        errorMessage = "A user with this email address already exists. Use 'Resend Invite' to send a new invite to existing users.";
+        errorMessage = "A user with this email address already exists and has already logged in. To reset their access, use the 'Reset Password' option from the Active Users list.";
         errorCode = "email_exists";
       }
       
