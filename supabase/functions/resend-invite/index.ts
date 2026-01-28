@@ -4,27 +4,23 @@ import { Resend } from "https://esm.sh/resend@2.0.0?target=deno";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+// Supports two modes:
+// 1. { email: string } - Resend invite email (no password change)
+// 2. { user_id: string, new_password: string } - Reset password and send credentials
 interface ResendInvitePayload {
-  user_id: string;
-  new_password: string;
-}
-
-interface EmailTemplate {
-  subject: string;
-  heading: string;
-  intro_text: string;
-  button_text: string;
-  footer_text: string | null;
+  email?: string;
+  user_id?: string;
+  new_password?: string;
 }
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
 serve(async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response("ok", { headers: corsHeaders });
   }
 
   try {
@@ -74,17 +70,11 @@ serve(async (req: Request): Promise<Response> => {
     }
 
     const payload: ResendInvitePayload = await req.json();
-    const { user_id, new_password } = payload;
+    const { email, user_id, new_password } = payload;
 
-    if (!user_id || !new_password) {
-      return new Response(JSON.stringify({ error: "Missing user_id or new_password" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    if (new_password.length < 6) {
-      return new Response(JSON.stringify({ error: "Password must be at least 6 characters" }), {
+    // Validate: must have either email OR (user_id + new_password)
+    if (!email && (!user_id || !new_password)) {
+      return new Response(JSON.stringify({ error: "Missing email or (user_id + new_password)" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -95,74 +85,85 @@ serve(async (req: Request): Promise<Response> => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    // Get user profile info
-    const { data: profile, error: profileError } = await admin
-      .from("profiles")
-      .select("email, full_name")
-      .eq("id", user_id)
-      .single();
+    let profile: { id: string; email: string; full_name: string | null } | null = null;
 
-    if (profileError || !profile) {
-      console.error("Profile fetch error:", profileError);
-      return new Response(JSON.stringify({ error: "User not found" }), {
-        status: 404,
+    // Mode 1: Resend invite by email (no password change)
+    if (email && !user_id) {
+      const { data: profileData, error: profileError } = await admin
+        .from("profiles")
+        .select("id, email, full_name")
+        .eq("email", email)
+        .single();
+
+      if (profileError || !profileData) {
+        console.error("Profile fetch by email error:", profileError);
+        return new Response(JSON.stringify({ error: "User not found" }), {
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      profile = profileData;
+    }
+
+    // Mode 2: Reset password by user_id
+    if (user_id && new_password) {
+      if (new_password.length < 6) {
+        return new Response(JSON.stringify({ error: "Password must be at least 6 characters" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const { data: profileData, error: profileError } = await admin
+        .from("profiles")
+        .select("id, email, full_name")
+        .eq("id", user_id)
+        .single();
+
+      if (profileError || !profileData) {
+        console.error("Profile fetch by user_id error:", profileError);
+        return new Response(JSON.stringify({ error: "User not found" }), {
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      profile = profileData;
+
+      // Update user password
+      const { error: updateError } = await admin.auth.admin.updateUserById(user_id, {
+        password: new_password,
+      });
+
+      if (updateError) {
+        console.error("Password update error:", updateError);
+        return new Response(JSON.stringify({ error: "Failed to update password" }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Set must_reset_password flag
+      const { error: flagError } = await admin
+        .from("profiles")
+        .update({ must_reset_password: true })
+        .eq("id", user_id);
+
+      if (flagError) {
+        console.error("Flag update error:", flagError);
+      }
+    }
+
+    if (!profile || !profile.email) {
+      return new Response(JSON.stringify({ error: "Could not determine user email" }), {
+        status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-
-    // Get user role
-    const { data: roleData } = await admin
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", user_id)
-      .single();
-
-    const role = roleData?.role || "employee";
-
-    // Update user password
-    const { error: updateError } = await admin.auth.admin.updateUserById(user_id, {
-      password: new_password,
-    });
-
-    if (updateError) {
-      console.error("Password update error:", updateError);
-      return new Response(JSON.stringify({ error: "Failed to update password" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    // Reset the must_reset_password flag
-    const { error: flagError } = await admin
-      .from("profiles")
-      .update({ must_reset_password: true })
-      .eq("id", user_id);
-
-    if (flagError) {
-      console.error("Flag update error:", flagError);
-    }
-
-    // Fetch email template from database
-    const { data: templateData } = await admin
-      .from("email_templates")
-      .select("subject, heading, intro_text, button_text, footer_text")
-      .eq("template_key", "user_invite")
-      .single();
-
-    // Use template values or defaults (with slight modifications for resend context)
-    const template: EmailTemplate = templateData || {
-      subject: "TSM Roofing Portal - Your New Login Credentials",
-      heading: "New Login Credentials",
-      intro_text: "Your login credentials for the TSM Roofing Employee Portal have been updated. Here are your new details:",
-      button_text: "Login to Portal",
-      footer_text: "If you have any questions, please contact your manager or the admin team.",
-    };
 
     // Send invite email
     let emailSent = false;
     try {
-      // HARD LOCK: Always use tsmroofpro.com for all auth emails - never use any other domain
-      // NOTE: The app route is /auth (NOT /auth/login) - do not change this!
+      // HARD LOCK: Always use tsmroofpro.com for all auth emails
       const loginUrl = "https://tsmroofpro.com/auth";
       
       // Extract first name from full name
