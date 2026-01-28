@@ -1,21 +1,15 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { parseCurrencyInput } from "@/lib/commissionDocumentCalculations";
-import { CommissionDocumentFormRow as FormRow } from "@/components/commissions/CommissionDocumentFormRow";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Lock, Save, Send, ArrowLeft, AlertTriangle, Printer } from "lucide-react";
+import { ArrowLeft, AlertTriangle, Printer } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import {
   calculateAllFields,
-  formatCurrency,
   validateCommissionDocument,
   PROFIT_SPLIT_OPTIONS,
   OP_PERCENT_OPTIONS,
@@ -32,15 +26,24 @@ import {
 import { useUserCommissionTier } from "@/hooks/useCommissionTiers";
 import { toast } from "sonner";
 
+// Form sub-components
+import {
+  useCurrencyInput,
+  JobInfoSection,
+  ContractSection,
+  ExpensesSection,
+  NEGATIVE_EXPENSES,
+  POSITIVE_EXPENSES,
+  ProfitSplitSection,
+  CommissionSummarySection,
+  NotesSection,
+  FormActions,
+} from "./form";
+
 interface CommissionDocumentFormProps {
   document?: CommissionDocument;
   readOnly?: boolean;
 }
-
-// Shared input classes
-const inputBaseClasses = "transition-all duration-200 ease-out hover:border-primary/50 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:shadow-md text-base";
-const numberInputClasses = `font-mono tracking-wide tabular-nums ${inputBaseClasses}`;
-const calculatedInputClasses = "font-mono tracking-wide tabular-nums bg-muted text-base";
 
 export function CommissionDocumentForm({ document, readOnly = false }: CommissionDocumentFormProps) {
   const navigate = useNavigate();
@@ -72,11 +75,10 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
   // Get allowed options based on user's tier (admins/managers see all options)
   const { availableOpOptions, availableProfitSplitOptions, defaultProfitSplit } = useMemo(() => {
     if (isPrivileged) {
-      // Privileged users see all options
       return {
         availableOpOptions: OP_PERCENT_OPTIONS,
         availableProfitSplitOptions: PROFIT_SPLIT_OPTIONS,
-        defaultProfitSplit: PROFIT_SPLIT_OPTIONS[1], // 15/40/60
+        defaultProfitSplit: PROFIT_SPLIT_OPTIONS[1],
       };
     }
     
@@ -95,7 +97,6 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
       };
     }
     
-    // Fallback if no tier assigned
     return {
       availableOpOptions: OP_PERCENT_OPTIONS,
       availableProfitSplitOptions: PROFIT_SPLIT_OPTIONS,
@@ -103,6 +104,7 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
     };
   }, [userTier, isPrivileged]);
 
+  // Form state
   const [formData, setFormData] = useState(() => ({
     job_name_id: document?.job_name_id ?? "",
     job_date: document?.job_date ?? "",
@@ -127,6 +129,15 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
     notes: document?.notes ?? "",
   }));
 
+  // Currency input handling
+  const { handleFocus, handleChange, commitValue, getDisplayValue } = useCurrencyInput();
+
+  const handleMoneyCommit = useCallback((field: string) => {
+    commitValue(field, (f, value) => {
+      setFormData(prev => ({ ...prev, [f]: value }));
+    });
+  }, [commitValue]);
+
   // Auto-populate sales rep name when profile loads (only for new documents)
   useEffect(() => {
     if (!document && userProfile?.full_name && !formData.sales_rep) {
@@ -136,7 +147,7 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
         sales_rep_id: user?.id ?? null,
       }));
     }
-  }, [userProfile, document, user]);
+  }, [userProfile, document, user, formData.sales_rep]);
 
   // Set default profit split based on tier (only for new documents)
   useEffect(() => {
@@ -151,9 +162,8 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
     }
   }, [defaultProfitSplit, tierLoading, document]);
 
-  // When profit split changes, update the related percentages
-  const handleProfitSplitChange = (label: string) => {
-    // First try to find in the available (tier-based) options
+  // Handle profit split change
+  const handleProfitSplitChange = useCallback((label: string) => {
     const dynamicSplit = availableProfitSplitOptions.find(opt => opt.label === label);
     if (dynamicSplit) {
       setFormData(prev => ({
@@ -166,7 +176,6 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
       return;
     }
     
-    // Fallback to static options (for privileged users)
     const staticSplit = getProfitSplitFromLabel(label);
     if (staticSplit) {
       setFormData(prev => ({
@@ -177,15 +186,12 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
         company_profit_percent: staticSplit.company,
       }));
     }
-  };
+  }, [availableProfitSplitOptions]);
 
-  // When O&P changes independently, keep the profit split percentages
-  const handleOpPercentChange = (value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      op_percent: parseFloat(value),
-    }));
-  };
+  // Handle O&P change
+  const handleOpPercentChange = useCallback((value: string) => {
+    setFormData(prev => ({ ...prev, op_percent: parseFloat(value) }));
+  }, []);
 
   // Live calculations
   const calculated = useMemo(() => {
@@ -208,34 +214,8 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
     return calculateAllFields(inputData);
   }, [formData]);
 
-  // Raw-string editing state (prevents caret jumps + focus loss)
-  const [editingField, setEditingField] = useState<keyof typeof formData | null>(null);
-  const [rawValue, setRawValue] = useState<string>("");
-
-  const handleMoneyFocus = (field: keyof typeof formData, currentValue: number) => {
-    setEditingField(field);
-    // show unformatted numeric value for editing
-    setRawValue(currentValue ? String(currentValue) : "");
-  };
-
-  const handleMoneyChange = (value: string) => {
-    // RULE: onChange only updates the raw string; no parsing
-    setRawValue(value);
-  };
-
-  const commitMoneyValue = (field: keyof typeof formData) => {
-    const numValue = parseCurrencyInput(rawValue);
-    setFormData((prev) => ({ ...prev, [field]: numValue }));
-    setEditingField(null);
-    setRawValue("");
-  };
-
-  const getMoneyInputValue = (field: keyof typeof formData, numericValue: number) => {
-    if (editingField === field) return rawValue;
-    return numericValue ? formatCurrency(numericValue) : "";
-  };
-
-  const handleSave = async (submit: boolean = false) => {
+  // Save handler
+  const handleSave = useCallback(async (submit: boolean = false) => {
     const validation = validateCommissionDocument({
       ...formData,
       job_name_id: formData.job_name_id,
@@ -262,7 +242,7 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
       neg_exp_2: formData.neg_exp_2,
       neg_exp_3: formData.neg_exp_3,
       neg_exp_4: formData.neg_exp_4,
-      supplement_fees_expense: formData.neg_exp_4, // Keep in sync
+      supplement_fees_expense: formData.neg_exp_4,
       pos_exp_1: formData.pos_exp_1,
       pos_exp_2: formData.pos_exp_2,
       pos_exp_3: formData.pos_exp_3,
@@ -270,7 +250,7 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
       profit_split_label: formData.profit_split_label,
       rep_profit_percent: formData.rep_profit_percent,
       company_profit_percent: formData.company_profit_percent,
-      commission_rate: formData.rep_profit_percent, // Keep legacy field in sync
+      commission_rate: formData.rep_profit_percent,
       advance_total: formData.advance_total,
       notes: formData.notes,
       status: submit ? 'submitted' as const : 'draft' as const,
@@ -287,10 +267,22 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
       await createMutation.mutateAsync(payload);
     }
     navigate('/commission-documents');
-  };
+  }, [formData, document, createMutation, updateMutation, navigate]);
 
   const isLoading = createMutation.isPending || updateMutation.isPending;
   const canEdit = !readOnly && (!document || document.status === 'draft');
+
+  // Expense values for section components
+  const expenseValues = {
+    neg_exp_1: formData.neg_exp_1,
+    neg_exp_2: formData.neg_exp_2,
+    neg_exp_3: formData.neg_exp_3,
+    neg_exp_4: formData.neg_exp_4,
+    pos_exp_1: formData.pos_exp_1,
+    pos_exp_2: formData.pos_exp_2,
+    pos_exp_3: formData.pos_exp_3,
+    pos_exp_4: formData.pos_exp_4,
+  };
 
   return (
     <div className="space-y-4 sm:space-y-6 pb-24 sm:pb-6">
@@ -342,399 +334,99 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
             </div>
           )}
         </CardHeader>
+        
         <CardContent className="p-4 sm:p-6">
           <div className="space-y-1">
-            {/* Job Information Section */}
-            <div className="mb-6">
-              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3 border-b pb-2">
-                Job Information
-              </h3>
-              
-              <FormRow label="Job Name & ID">
-                <Input
-                  value={formData.job_name_id}
-                  onChange={(e) => setFormData(prev => ({ ...prev, job_name_id: e.target.value }))}
-                  disabled={!canEdit}
-                  className={inputBaseClasses}
-                  placeholder="Enter job name or ID"
-                  required
-                />
-              </FormRow>
-              
-              <FormRow label="Job Date">
-                <Input
-                  type="date"
-                  value={formData.job_date}
-                  onChange={(e) => setFormData(prev => ({ ...prev, job_date: e.target.value }))}
-                  disabled={!canEdit}
-                  className={inputBaseClasses}
-                  required
-                />
-              </FormRow>
-              
-              <FormRow label="Sales Rep" hint={isPrivileged ? "Managers can edit" : "Auto-populated from your profile"}>
-                <Input
-                  value={formData.sales_rep}
-                  onChange={(e) => setFormData(prev => ({ ...prev, sales_rep: e.target.value }))}
-                  disabled={!canEdit || !isPrivileged}
-                  className={`${inputBaseClasses} ${!isPrivileged ? 'bg-muted' : ''}`}
-                  placeholder="Enter sales rep name"
-                  required
-                />
-              </FormRow>
-            </div>
+            <JobInfoSection
+              jobNameId={formData.job_name_id}
+              jobDate={formData.job_date}
+              salesRep={formData.sales_rep}
+              canEdit={canEdit}
+              isPrivileged={isPrivileged}
+              onJobNameIdChange={(v) => setFormData(prev => ({ ...prev, job_name_id: v }))}
+              onJobDateChange={(v) => setFormData(prev => ({ ...prev, job_date: v }))}
+              onSalesRepChange={(v) => setFormData(prev => ({ ...prev, sales_rep: v }))}
+            />
 
-            {/* Contract Section */}
-            <div className="mb-6">
-              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3 border-b pb-2">
-                Contract & Expense Inputs
-              </h3>
-              
-              <FormRow label="Contract Total (Gross)">
-                <Input
-                  type="text"
-                  inputMode="decimal"
-                  value={getMoneyInputValue("gross_contract_total", formData.gross_contract_total)}
-                  onChange={(e) => handleMoneyChange(e.target.value)}
-                  onFocus={() => handleMoneyFocus("gross_contract_total", formData.gross_contract_total)}
-                  onBlur={() => commitMoneyValue("gross_contract_total")}
-                  onWheel={(e) => e.currentTarget.blur()}
-                  disabled={!canEdit}
-                  className={numberInputClasses}
-                  placeholder="$0.00"
-                  required
-                />
-              </FormRow>
+            <ContractSection
+              grossContractTotal={formData.gross_contract_total}
+              opPercent={formData.op_percent}
+              opAmount={calculated.op_amount}
+              contractTotalNet={calculated.contract_total_net}
+              materialCost={formData.material_cost}
+              laborCost={formData.labor_cost}
+              canEdit={canEdit}
+              tierLoading={tierLoading}
+              tierName={userTier?.tier?.name}
+              availableOpOptions={[...availableOpOptions]}
+              getDisplayValue={getDisplayValue}
+              onMoneyFocus={handleFocus}
+              onMoneyChange={handleChange}
+              onMoneyCommit={handleMoneyCommit}
+              onOpPercentChange={handleOpPercentChange}
+            />
 
-              <FormRow label="O&P %" hint={`Based on your tier: ${userTier?.tier?.name || 'Loading...'}`}>
-                <Select
-                  value={formData.op_percent.toString()}
-                  onValueChange={handleOpPercentChange}
-                  disabled={!canEdit || tierLoading}
-                >
-                  <SelectTrigger className={`${inputBaseClasses} font-mono`}>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableOpOptions.map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value.toString()}>
-                        {opt.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </FormRow>
+            <ExpensesSection
+              title="Additional Expenses (-)"
+              variant="negative"
+              expenses={NEGATIVE_EXPENSES}
+              values={expenseValues}
+              canEdit={canEdit}
+              getDisplayValue={getDisplayValue}
+              onMoneyFocus={handleFocus}
+              onMoneyChange={handleChange}
+              onMoneyCommit={handleMoneyCommit}
+            />
 
-              <FormRow label={<span className="flex items-center gap-1">O&P $ Amount <Lock className="h-3 w-3 text-muted-foreground" /></span>} variant="calculated">
-                <Input
-                  value={formatCurrency(calculated.op_amount)}
-                  disabled
-                  className={calculatedInputClasses}
-                />
-              </FormRow>
+            <ExpensesSection
+              title="Additional Expenses (+)"
+              variant="positive"
+              expenses={POSITIVE_EXPENSES}
+              values={expenseValues}
+              canEdit={canEdit}
+              getDisplayValue={getDisplayValue}
+              onMoneyFocus={handleFocus}
+              onMoneyChange={handleChange}
+              onMoneyCommit={handleMoneyCommit}
+            />
 
-              <FormRow label={<span className="flex items-center gap-1">Contract Total (Net) <Lock className="h-3 w-3 text-muted-foreground" /></span>} variant="calculated" hint="Commissions and expenses calculated off of Net contract total.">
-                <Input
-                  value={formatCurrency(calculated.contract_total_net)}
-                  disabled
-                  className={calculatedInputClasses}
-                />
-              </FormRow>
-            </div>
+            <ProfitSplitSection
+              profitSplitLabel={formData.profit_split_label}
+              repProfitPercent={formData.rep_profit_percent}
+              canEdit={canEdit}
+              tierLoading={tierLoading}
+              tierName={userTier?.tier?.name}
+              availableProfitSplitOptions={[...availableProfitSplitOptions]}
+              onProfitSplitChange={handleProfitSplitChange}
+            />
 
-            {/* Direct Costs */}
-            <div className="mb-6">
-              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3 border-b pb-2">
-                Direct Costs
-              </h3>
-              
-              <FormRow label="Material" hint="Initial Material order">
-                <Input
-                  type="text"
-                  inputMode="decimal"
-                  value={getMoneyInputValue("material_cost", formData.material_cost)}
-                  onChange={(e) => handleMoneyChange(e.target.value)}
-                  onFocus={() => handleMoneyFocus("material_cost", formData.material_cost)}
-                  onBlur={() => commitMoneyValue("material_cost")}
-                  onWheel={(e) => e.currentTarget.blur()}
-                  disabled={!canEdit}
-                  className={numberInputClasses}
-                  placeholder="$0.00"
-                  required
-                />
-              </FormRow>
+            <CommissionSummarySection
+              netProfit={calculated.net_profit}
+              repCommission={calculated.rep_commission}
+              advanceTotal={formData.advance_total}
+              companyProfit={calculated.company_profit}
+              canEdit={canEdit}
+              isPrivileged={isPrivileged}
+              getDisplayValue={getDisplayValue}
+              onMoneyFocus={handleFocus}
+              onMoneyChange={handleChange}
+              onMoneyCommit={handleMoneyCommit}
+            />
 
-              <FormRow label="Labor" hint="Initial Labor Order">
-                <Input
-                  type="text"
-                  inputMode="decimal"
-                  value={getMoneyInputValue("labor_cost", formData.labor_cost)}
-                  onChange={(e) => handleMoneyChange(e.target.value)}
-                  onFocus={() => handleMoneyFocus("labor_cost", formData.labor_cost)}
-                  onBlur={() => commitMoneyValue("labor_cost")}
-                  onWheel={(e) => e.currentTarget.blur()}
-                  disabled={!canEdit}
-                  className={numberInputClasses}
-                  placeholder="$0.00"
-                  required
-                />
-              </FormRow>
-            </div>
-
-            {/* Additional Expenses (Negative) */}
-            <div className="mb-6">
-              <h3 className="text-sm font-semibold text-destructive uppercase tracking-wider mb-3 border-b pb-2">
-                Additional Expenses (-)
-              </h3>
-              
-              <FormRow label="Additional expenses (-) #1" variant="negative" hint="Will calls, lumber, Home Depot, Misc. expenses">
-                <Input
-                  type="text"
-                  inputMode="decimal"
-                  value={getMoneyInputValue("neg_exp_1", formData.neg_exp_1)}
-                  onChange={(e) => handleMoneyChange(e.target.value)}
-                  onFocus={() => handleMoneyFocus("neg_exp_1", formData.neg_exp_1)}
-                  onBlur={() => commitMoneyValue("neg_exp_1")}
-                  onWheel={(e) => e.currentTarget.blur()}
-                  disabled={!canEdit}
-                  className={numberInputClasses}
-                  placeholder="$0.00"
-                />
-              </FormRow>
-
-              <FormRow label="Additional expenses (-) #2" variant="negative" hint="Will calls, lumber, Home Depot, Misc. expenses">
-                <Input
-                  type="text"
-                  inputMode="decimal"
-                  value={getMoneyInputValue("neg_exp_2", formData.neg_exp_2)}
-                  onChange={(e) => handleMoneyChange(e.target.value)}
-                  onFocus={() => handleMoneyFocus("neg_exp_2", formData.neg_exp_2)}
-                  onBlur={() => commitMoneyValue("neg_exp_2")}
-                  onWheel={(e) => e.currentTarget.blur()}
-                  disabled={!canEdit}
-                  className={numberInputClasses}
-                  placeholder="$0.00"
-                />
-              </FormRow>
-
-              <FormRow label="Additional expenses (-) #3" variant="negative" hint="Will calls, lumber, Home Depot, Misc. expenses">
-                <Input
-                  type="text"
-                  inputMode="decimal"
-                  value={getMoneyInputValue("neg_exp_3", formData.neg_exp_3)}
-                  onChange={(e) => handleMoneyChange(e.target.value)}
-                  onFocus={() => handleMoneyFocus("neg_exp_3", formData.neg_exp_3)}
-                  onBlur={() => commitMoneyValue("neg_exp_3")}
-                  onWheel={(e) => e.currentTarget.blur()}
-                  disabled={!canEdit}
-                  className={numberInputClasses}
-                  placeholder="$0.00"
-                />
-              </FormRow>
-
-              <FormRow label="Additional expenses (-) #4" variant="negative" hint="Supplement fees">
-                <Input
-                  type="text"
-                  inputMode="decimal"
-                  value={getMoneyInputValue("neg_exp_4", formData.neg_exp_4)}
-                  onChange={(e) => handleMoneyChange(e.target.value)}
-                  onFocus={() => handleMoneyFocus("neg_exp_4", formData.neg_exp_4)}
-                  onBlur={() => commitMoneyValue("neg_exp_4")}
-                  onWheel={(e) => e.currentTarget.blur()}
-                  disabled={!canEdit}
-                  className={numberInputClasses}
-                  placeholder="$0.00"
-                />
-              </FormRow>
-            </div>
-
-            {/* Additional Expenses (Positive) */}
-            <div className="mb-6">
-              <h3 className="text-sm font-semibold text-emerald-600 uppercase tracking-wider mb-3 border-b pb-2">
-                Additional Expenses (+)
-              </h3>
-              
-              <FormRow label="Additional expenses (+) #1" variant="positive" hint="Returns added back if rep returns materials">
-                <Input
-                  type="text"
-                  inputMode="decimal"
-                  value={getMoneyInputValue("pos_exp_1", formData.pos_exp_1)}
-                  onChange={(e) => handleMoneyChange(e.target.value)}
-                  onFocus={() => handleMoneyFocus("pos_exp_1", formData.pos_exp_1)}
-                  onBlur={() => commitMoneyValue("pos_exp_1")}
-                  onWheel={(e) => e.currentTarget.blur()}
-                  disabled={!canEdit}
-                  className={numberInputClasses}
-                  placeholder="$0.00"
-                />
-              </FormRow>
-
-              <FormRow label="Additional expenses (+) #2" variant="positive">
-                <Input
-                  type="text"
-                  inputMode="decimal"
-                  value={getMoneyInputValue("pos_exp_2", formData.pos_exp_2)}
-                  onChange={(e) => handleMoneyChange(e.target.value)}
-                  onFocus={() => handleMoneyFocus("pos_exp_2", formData.pos_exp_2)}
-                  onBlur={() => commitMoneyValue("pos_exp_2")}
-                  onWheel={(e) => e.currentTarget.blur()}
-                  disabled={!canEdit}
-                  className={numberInputClasses}
-                  placeholder="$0.00"
-                />
-              </FormRow>
-
-              <FormRow label="Additional expenses (+) #3" variant="positive">
-                <Input
-                  type="text"
-                  inputMode="decimal"
-                  value={getMoneyInputValue("pos_exp_3", formData.pos_exp_3)}
-                  onChange={(e) => handleMoneyChange(e.target.value)}
-                  onFocus={() => handleMoneyFocus("pos_exp_3", formData.pos_exp_3)}
-                  onBlur={() => commitMoneyValue("pos_exp_3")}
-                  onWheel={(e) => e.currentTarget.blur()}
-                  disabled={!canEdit}
-                  className={numberInputClasses}
-                  placeholder="$0.00"
-                />
-              </FormRow>
-
-              <FormRow label="Additional expenses (+) #4" variant="positive">
-                <Input
-                  type="text"
-                  inputMode="decimal"
-                  value={getMoneyInputValue("pos_exp_4", formData.pos_exp_4)}
-                  onChange={(e) => handleMoneyChange(e.target.value)}
-                  onFocus={() => handleMoneyFocus("pos_exp_4", formData.pos_exp_4)}
-                  onBlur={() => commitMoneyValue("pos_exp_4")}
-                  onWheel={(e) => e.currentTarget.blur()}
-                  disabled={!canEdit}
-                  className={numberInputClasses}
-                  placeholder="$0.00"
-                />
-              </FormRow>
-            </div>
-
-            {/* Profit Split */}
-            <div className="mb-6">
-              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3 border-b pb-2">
-                Profit Split
-              </h3>
-              
-              <FormRow label="Profit Split" hint={`Available splits based on your ${userTier?.tier?.name || 'tier'}`}>
-                <Select
-                  value={formData.profit_split_label}
-                  onValueChange={handleProfitSplitChange}
-                  disabled={!canEdit || tierLoading}
-                >
-                  <SelectTrigger className={`${inputBaseClasses} font-mono`}>
-                    <SelectValue placeholder="Select profit split" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableProfitSplitOptions.map((opt) => (
-                      <SelectItem key={opt.label} value={opt.label}>
-                        {opt.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </FormRow>
-
-              <FormRow label={<span className="flex items-center gap-1">Rep Profit % <Lock className="h-3 w-3 text-muted-foreground" /></span>} variant="calculated">
-                <Input
-                  value={`${(formData.rep_profit_percent * 100).toFixed(0)}%`}
-                  disabled
-                  className={calculatedInputClasses}
-                />
-              </FormRow>
-            </div>
-
-            {/* Commission Summary */}
-            <div className="mb-6">
-              <h3 className="text-sm font-semibold text-primary uppercase tracking-wider mb-3 border-b pb-2">
-                Commission Summary
-              </h3>
-              
-              <FormRow label={<span className="flex items-center gap-1">Net Profit <Lock className="h-3 w-3 text-muted-foreground" /></span>} variant="calculated" hint="This is the Commissionable profit on the job, calculated off the net contract after O&P is removed.">
-                <Input
-                  value={formatCurrency(calculated.net_profit)}
-                  disabled
-                  className={calculatedInputClasses}
-                />
-              </FormRow>
-
-              <FormRow label={<span className="flex items-center gap-1 font-semibold">Rep Commission <Lock className="h-3 w-3 text-muted-foreground" /></span>} variant="calculated" highlight hint="This is the total dollars paid to rep">
-                <Input
-                  value={formatCurrency(calculated.rep_commission)}
-                  disabled
-                  className={`${calculatedInputClasses} font-bold text-lg`}
-                />
-              </FormRow>
-
-              <FormRow label="Advance Total">
-                <Input
-                  type="text"
-                  inputMode="decimal"
-                  value={getMoneyInputValue("advance_total", formData.advance_total)}
-                  onChange={(e) => handleMoneyChange(e.target.value)}
-                  onFocus={() => handleMoneyFocus("advance_total", formData.advance_total)}
-                  onBlur={() => commitMoneyValue("advance_total")}
-                  onWheel={(e) => e.currentTarget.blur()}
-                  disabled={!canEdit}
-                  className={numberInputClasses}
-                  placeholder="$0.00"
-                />
-              </FormRow>
-
-              {isPrivileged && (
-                <FormRow label={<span className="flex items-center gap-1">Company Profit <Lock className="h-3 w-3 text-muted-foreground" /></span>} variant="calculated" hint="Total Company profit, not rep facing">
-                  <Input
-                    value={formatCurrency(calculated.company_profit)}
-                    disabled
-                    className={calculatedInputClasses}
-                  />
-                </FormRow>
-              )}
-            </div>
-
-            {/* Notes */}
-            <div className="mb-6">
-              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3 border-b pb-2">
-                Notes
-              </h3>
-              
-              <Textarea
-                value={formData.notes}
-                onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-                disabled={!canEdit}
-                className={inputBaseClasses}
-                placeholder="Optional notes..."
-                rows={3}
-              />
-            </div>
+            <NotesSection
+              notes={formData.notes}
+              canEdit={canEdit}
+              onNotesChange={(v) => setFormData(prev => ({ ...prev, notes: v }))}
+            />
           </div>
 
           {/* Action Buttons */}
           {canEdit && (
-            <div className="flex flex-col sm:flex-row gap-3 pt-6 border-t">
-              <Button
-                variant="outline"
-                onClick={() => handleSave(false)}
-                disabled={isLoading}
-                className="flex-1"
-              >
-                <Save className="h-4 w-4 mr-2" />
-                Save as Draft
-              </Button>
-              <Button
-                onClick={() => handleSave(true)}
-                disabled={isLoading}
-                className="flex-1"
-              >
-                <Send className="h-4 w-4 mr-2" />
-                Submit for Approval
-              </Button>
-            </div>
+            <FormActions
+              isLoading={isLoading}
+              onSaveDraft={() => handleSave(false)}
+              onSubmit={() => handleSave(true)}
+            />
           )}
         </CardContent>
       </Card>
