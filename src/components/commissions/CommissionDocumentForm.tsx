@@ -266,7 +266,7 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
     } else {
       await createMutation.mutateAsync(payload);
     }
-    navigate('/commission-documents');
+    navigate('/commissions');
   }, [formData, document, createMutation, updateMutation, navigate]);
 
   const isLoading = createMutation.isPending || updateMutation.isPending;
@@ -288,7 +288,7 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
     <div className="space-y-4 sm:space-y-6 pb-24 sm:pb-6">
       {/* Header */}
       <div className="flex items-center justify-between gap-2">
-        <Button variant="ghost" size="sm" onClick={() => navigate('/commission-documents')}>
+        <Button variant="ghost" size="sm" onClick={() => navigate('/commissions')}>
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to List
         </Button>
