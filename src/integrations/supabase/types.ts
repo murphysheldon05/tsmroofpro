@@ -413,6 +413,7 @@ export type Database = {
           approved_by: string | null
           commission_rate: number
           company_profit: number
+          company_profit_percent: number | null
           contract_total_net: number
           created_at: string
           created_by: string
@@ -430,6 +431,7 @@ export type Database = {
           neg_exp_1: number
           neg_exp_2: number
           neg_exp_3: number
+          neg_exp_4: number | null
           net_profit: number
           notes: string | null
           op_percent: number
@@ -439,7 +441,9 @@ export type Database = {
           pos_exp_2: number
           pos_exp_3: number
           pos_exp_4: number
+          profit_split_label: string | null
           rep_commission: number
+          rep_profit_percent: number | null
           revision_count: number | null
           revision_reason: string | null
           sales_rep: string
@@ -462,6 +466,7 @@ export type Database = {
           approved_by?: string | null
           commission_rate?: number
           company_profit?: number
+          company_profit_percent?: number | null
           contract_total_net?: number
           created_at?: string
           created_by: string
@@ -479,6 +484,7 @@ export type Database = {
           neg_exp_1?: number
           neg_exp_2?: number
           neg_exp_3?: number
+          neg_exp_4?: number | null
           net_profit?: number
           notes?: string | null
           op_percent?: number
@@ -488,7 +494,9 @@ export type Database = {
           pos_exp_2?: number
           pos_exp_3?: number
           pos_exp_4?: number
+          profit_split_label?: string | null
           rep_commission?: number
+          rep_profit_percent?: number | null
           revision_count?: number | null
           revision_reason?: string | null
           sales_rep: string
@@ -511,6 +519,7 @@ export type Database = {
           approved_by?: string | null
           commission_rate?: number
           company_profit?: number
+          company_profit_percent?: number | null
           contract_total_net?: number
           created_at?: string
           created_by?: string
@@ -528,6 +537,7 @@ export type Database = {
           neg_exp_1?: number
           neg_exp_2?: number
           neg_exp_3?: number
+          neg_exp_4?: number | null
           net_profit?: number
           notes?: string | null
           op_percent?: number
@@ -537,7 +547,9 @@ export type Database = {
           pos_exp_2?: number
           pos_exp_3?: number
           pos_exp_4?: number
+          profit_split_label?: string | null
           rep_commission?: number
+          rep_profit_percent?: number | null
           revision_count?: number | null
           revision_reason?: string | null
           sales_rep?: string

@@ -144,6 +144,9 @@ export function useCreateCommissionDocument() {
 
       const calculated = calculateAllFields(inputData);
 
+      // Extract company_profit_percent from data, default to complement of rep percent
+      const companyProfitPercent = data.company_profit_percent ?? (1 - repProfitPercent - (data.op_percent ?? 0.15));
+
       const { data: result, error } = await supabase
         .from('commission_documents')
         .insert({
@@ -152,6 +155,7 @@ export function useCreateCommissionDocument() {
           neg_exp_4: negExp4,
           supplement_fees_expense: negExp4, // Keep both in sync
           rep_profit_percent: repProfitPercent,
+          company_profit_percent: companyProfitPercent,
           commission_rate: repProfitPercent, // Keep legacy field in sync
           contract_total_net: calculated.contract_total_net,
           net_profit: calculated.net_profit,
@@ -204,6 +208,9 @@ export function useUpdateCommissionDocument() {
 
       const calculated = calculateAllFields(inputData);
 
+      // Extract company_profit_percent from data
+      const companyProfitPercent = data.company_profit_percent ?? (1 - repProfitPercent - (data.op_percent ?? 0.15));
+
       const { data: result, error } = await supabase
         .from('commission_documents')
         .update({
@@ -211,6 +218,7 @@ export function useUpdateCommissionDocument() {
           neg_exp_4: negExp4,
           supplement_fees_expense: negExp4, // Keep both in sync
           rep_profit_percent: repProfitPercent,
+          company_profit_percent: companyProfitPercent,
           commission_rate: repProfitPercent, // Keep legacy field in sync
           contract_total_net: calculated.contract_total_net,
           net_profit: calculated.net_profit,
