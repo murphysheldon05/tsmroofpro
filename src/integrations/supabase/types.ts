@@ -898,6 +898,128 @@ export type Database = {
         }
         Relationships: []
       }
+      compliance_audit_log: {
+        Row: {
+          action: string
+          actor_user_id: string | null
+          created_at: string | null
+          id: string
+          metadata: Json | null
+          target_id: string | null
+          target_type: string | null
+        }
+        Insert: {
+          action: string
+          actor_user_id?: string | null
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          target_id?: string | null
+          target_type?: string | null
+        }
+        Update: {
+          action?: string
+          actor_user_id?: string | null
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          target_id?: string | null
+          target_type?: string | null
+        }
+        Relationships: []
+      }
+      compliance_escalations: {
+        Row: {
+          created_at: string | null
+          decided_at: string | null
+          decided_by_user_id: string | null
+          escalated_by_user_id: string | null
+          escalated_to_user_id: string | null
+          final_decision_notes: string | null
+          id: string
+          reason: string | null
+          status: string | null
+          violation_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          decided_at?: string | null
+          decided_by_user_id?: string | null
+          escalated_by_user_id?: string | null
+          escalated_to_user_id?: string | null
+          final_decision_notes?: string | null
+          id?: string
+          reason?: string | null
+          status?: string | null
+          violation_id: string
+        }
+        Update: {
+          created_at?: string | null
+          decided_at?: string | null
+          decided_by_user_id?: string | null
+          escalated_by_user_id?: string | null
+          escalated_to_user_id?: string | null
+          final_decision_notes?: string | null
+          id?: string
+          reason?: string | null
+          status?: string | null
+          violation_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compliance_escalations_violation_id_fkey"
+            columns: ["violation_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_violations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      compliance_holds: {
+        Row: {
+          created_at: string | null
+          created_by_user_id: string | null
+          hold_type: string
+          id: string
+          job_id: string | null
+          reason: string
+          related_entity_id: string | null
+          related_entity_type: string | null
+          released_at: string | null
+          released_by_user_id: string | null
+          status: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by_user_id?: string | null
+          hold_type: string
+          id?: string
+          job_id?: string | null
+          reason: string
+          related_entity_id?: string | null
+          related_entity_type?: string | null
+          released_at?: string | null
+          released_by_user_id?: string | null
+          status?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by_user_id?: string | null
+          hold_type?: string
+          id?: string
+          job_id?: string | null
+          reason?: string
+          related_entity_id?: string | null
+          related_entity_type?: string | null
+          released_at?: string | null
+          released_by_user_id?: string | null
+          status?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       compliance_requests: {
         Row: {
           created_at: string
@@ -931,6 +1053,66 @@ export type Database = {
           recipient_name?: string
           recipient_type?: string
           requested_by?: string | null
+        }
+        Relationships: []
+      }
+      compliance_violations: {
+        Row: {
+          assigned_to_user_id: string | null
+          created_at: string | null
+          created_by_user_id: string | null
+          department: string | null
+          description: string
+          escalated_to_user_id: string | null
+          escalation_required: boolean | null
+          evidence: Json | null
+          id: string
+          job_id: string | null
+          resolution_notes: string | null
+          resolved_at: string | null
+          resolved_by_user_id: string | null
+          severity: string
+          sop_key: string
+          status: string | null
+          violation_type: string
+        }
+        Insert: {
+          assigned_to_user_id?: string | null
+          created_at?: string | null
+          created_by_user_id?: string | null
+          department?: string | null
+          description: string
+          escalated_to_user_id?: string | null
+          escalation_required?: boolean | null
+          evidence?: Json | null
+          id?: string
+          job_id?: string | null
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          resolved_by_user_id?: string | null
+          severity: string
+          sop_key: string
+          status?: string | null
+          violation_type: string
+        }
+        Update: {
+          assigned_to_user_id?: string | null
+          created_at?: string | null
+          created_by_user_id?: string | null
+          department?: string | null
+          description?: string
+          escalated_to_user_id?: string | null
+          escalation_required?: boolean | null
+          evidence?: Json | null
+          id?: string
+          job_id?: string | null
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          resolved_by_user_id?: string | null
+          severity?: string
+          sop_key?: string
+          status?: string | null
+          violation_type?: string
         }
         Relationships: []
       }
@@ -2023,6 +2205,39 @@ export type Database = {
           is_active?: boolean | null
           updated_at?: string
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      sop_acknowledgments: {
+        Row: {
+          acknowledged_at: string | null
+          device_info: string | null
+          id: string
+          ip_address: string | null
+          method: string | null
+          sop_key: string
+          user_id: string
+          version: string
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          device_info?: string | null
+          id?: string
+          ip_address?: string | null
+          method?: string | null
+          sop_key: string
+          user_id: string
+          version: string
+        }
+        Update: {
+          acknowledged_at?: string | null
+          device_info?: string | null
+          id?: string
+          ip_address?: string | null
+          method?: string | null
+          sop_key?: string
+          user_id?: string
+          version?: string
         }
         Relationships: []
       }
