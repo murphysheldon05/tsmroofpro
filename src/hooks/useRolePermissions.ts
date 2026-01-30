@@ -3,11 +3,12 @@ import { useAuth } from "@/contexts/AuthContext";
 /**
  * RBAC Permission Definitions
  * 
- * Three roles: Admin, Manager, Employee (Sales Rep)
+ * Four roles: Admin, Manager, Employee (Sales Rep), Ops Compliance
  * 
  * Admin: Full system control via Admin Panel
  * Manager: Review/approve workflows, view reports for scope, draft SOPs
  * Employee: Submit own data, view own data, edit personal preferences
+ * Ops Compliance: Compliance enforcement, violations, holds, escalations
  */
 
 export interface RolePermissions {
@@ -50,10 +51,21 @@ export interface RolePermissions {
   // Reporting
   canViewReports: boolean;
   canViewTeamReports: boolean;
+  
+  // Compliance (new)
+  canManageViolations: boolean;
+  canManageHolds: boolean;
+  canCreateEscalations: boolean;
+  canDecideEscalations: boolean;
+  canViewAuditLog: boolean;
+  canViewAllAcknowledgments: boolean;
+  canGrantExceptions: boolean;
+  canDeleteViolations: boolean;
 }
 
 export function useRolePermissions(): RolePermissions {
   const { role, isAdmin, isManager } = useAuth();
+  const isOpsCompliance = role === 'ops_compliance';
 
   // Sales Rep (employee) permissions
   const employeePermissions: RolePermissions = {
@@ -96,6 +108,69 @@ export function useRolePermissions(): RolePermissions {
     // Reporting
     canViewReports: false,
     canViewTeamReports: false,
+    
+    // Compliance - NONE
+    canManageViolations: false,
+    canManageHolds: false,
+    canCreateEscalations: false,
+    canDecideEscalations: false,
+    canViewAuditLog: false,
+    canViewAllAcknowledgments: false,
+    canGrantExceptions: false,
+    canDeleteViolations: false,
+  };
+
+  // Ops Compliance permissions
+  const opsCompliancePermissions: RolePermissions = {
+    // System editing - NONE
+    canEditCommissionTiers: false,
+    canEditCategories: false,
+    canEditTools: false,
+    canEditNotificationRouting: false,
+    canPublishSOPs: false,
+    canArchiveSOPs: false,
+    
+    // User management - NONE
+    canManageUsers: false,
+    canApproveUsers: false,
+    canAssignRoles: false,
+    canAssignTeams: false,
+    
+    // Commission workflow - VIEW ONLY (no approve/deny)
+    canSubmitCommissions: false,
+    canApproveCommissions: false,
+    canDenyCommissions: false,
+    canRequestRevisions: false,
+    canFinalApproveManagerCommissions: false,
+    
+    // Data access - READ ALL for compliance review
+    canViewAllCommissions: true,
+    canViewTeamCommissions: true,
+    canViewOwnCommissionsOnly: false,
+    canExportAllData: true, // For compliance reports
+    canExportTeamData: true,
+    canExportOwnData: true,
+    
+    // Requests - VIEW ONLY
+    canReviewRequests: true,
+    canApproveRequests: false,
+    
+    // SOP
+    canDraftSOPs: false,
+    
+    // Reporting
+    canViewReports: true,
+    canViewTeamReports: true,
+    
+    // Compliance - FULL (except decisions and deletions)
+    canManageViolations: true,
+    canManageHolds: true,
+    canCreateEscalations: true,
+    canDecideEscalations: false, // Only admin decides
+    canViewAuditLog: true,
+    canViewAllAcknowledgments: true,
+    canGrantExceptions: false, // Only Sheldon
+    canDeleteViolations: false, // Cannot delete
   };
 
   // Manager permissions
@@ -139,6 +214,16 @@ export function useRolePermissions(): RolePermissions {
     // Reporting
     canViewReports: true,
     canViewTeamReports: true,
+    
+    // Compliance - LIMITED
+    canManageViolations: false,
+    canManageHolds: false,
+    canCreateEscalations: false,
+    canDecideEscalations: false,
+    canViewAuditLog: false,
+    canViewAllAcknowledgments: false,
+    canGrantExceptions: false,
+    canDeleteViolations: false,
   };
 
   // Admin permissions - FULL CONTROL
@@ -182,9 +267,20 @@ export function useRolePermissions(): RolePermissions {
     // Reporting
     canViewReports: true,
     canViewTeamReports: true,
+    
+    // Compliance - FULL including decisions
+    canManageViolations: true,
+    canManageHolds: true,
+    canCreateEscalations: true,
+    canDecideEscalations: true, // Final decision authority
+    canViewAuditLog: true,
+    canViewAllAcknowledgments: true,
+    canGrantExceptions: true, // Only Sheldon
+    canDeleteViolations: true, // Admin can delete
   };
 
   if (isAdmin) return adminPermissions;
+  if (isOpsCompliance) return opsCompliancePermissions;
   if (isManager) return managerPermissions;
   return employeePermissions;
 }
@@ -203,11 +299,16 @@ export function useCanApproveCommissions() {
 }
 
 export function useCanViewAllData() {
-  const { isAdmin } = useAuth();
-  return isAdmin;
+  const { isAdmin, role } = useAuth();
+  return isAdmin || role === 'ops_compliance';
 }
 
 export function useCanViewTeamData() {
-  const { isAdmin, isManager } = useAuth();
-  return isAdmin || isManager;
+  const { isAdmin, isManager, role } = useAuth();
+  return isAdmin || isManager || role === 'ops_compliance';
+}
+
+export function useIsOpsCompliance() {
+  const { role } = useAuth();
+  return role === 'ops_compliance';
 }

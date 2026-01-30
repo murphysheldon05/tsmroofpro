@@ -2948,6 +2948,7 @@ export type Database = {
       }
       is_active_employee: { Args: { _user_id: string }; Returns: boolean }
       is_commission_reviewer: { Args: { _user_id: string }; Returns: boolean }
+      is_ops_compliance: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
       app_access_method:
