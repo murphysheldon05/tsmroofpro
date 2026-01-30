@@ -2753,7 +2753,7 @@ export type Database = {
         | "social"
         | "productivity"
         | "other"
-      app_role: "admin" | "manager" | "employee"
+      app_role: "admin" | "manager" | "employee" | "ops_compliance"
       assignment_role:
         | "business_owner"
         | "system_admin"
@@ -2966,7 +2966,7 @@ export const Constants = {
         "productivity",
         "other",
       ],
-      app_role: ["admin", "manager", "employee"],
+      app_role: ["admin", "manager", "employee", "ops_compliance"],
       assignment_role: [
         "business_owner",
         "system_admin",
