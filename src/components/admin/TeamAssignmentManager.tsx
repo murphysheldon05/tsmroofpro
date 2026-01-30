@@ -108,8 +108,8 @@ export function TeamAssignmentManager() {
 
       if (rolesError) throw rolesError;
 
-      const roleByUserId = new Map<string, "admin" | "manager" | "employee">(
-        (roles ?? []).map((r) => [r.user_id, r.role])
+      const roleByUserId = new Map<string, "admin" | "manager" | "employee" | "ops_compliance">(
+        (roles ?? []).map((r) => [r.user_id, r.role as "admin" | "manager" | "employee" | "ops_compliance"])
       );
 
       return (profiles ?? []).map((p) => ({
