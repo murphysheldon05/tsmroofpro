@@ -157,18 +157,113 @@ const MASTER_SOPS = [
   },
   {
     id: "SOP-02",
-    title: "Material Ordering & Delivery",
+    title: "Job Closeout & Final Invoice",
     hasFlowchart: true,
+    hasDualFlowchart: true, // Special flag for retail/insurance split
+    purpose: "Ensure jobs are closed correctly, invoiced by the correct role, and only closed when fully paid.",
+    systemOwner: ["Production (completion)", "Sales (retail invoicing)", "Supplements (insurance invoicing)", "Accounting (close only)"],
+    entryCriteria: [
+      "Build is complete",
+      "CompanyCam checklist is 100%",
+      "All required photos uploaded",
+      "NO punch list items",
+      "NO materials left on site",
+    ],
+    entryCriteriaNote: "If any condition fails → BLOCK invoicing.",
+    retailFlow: [
+      {
+        number: 1,
+        title: "Production Confirms Completion",
+        owner: "Production Manager",
+        tasks: [
+          "Verify build complete",
+          "Verify checklist complete",
+          "Confirm no materials / no punch list",
+        ],
+      },
+      {
+        number: 2,
+        title: "Sales Issues Final Invoice (RETAIL)",
+        owner: "Sales Owner",
+        mayDo: [
+          "Confirm final scope",
+          "Issue homeowner invoice",
+        ],
+        mayNotDo: [
+          "Modify scope",
+          "Invoice insurance carriers",
+        ],
+      },
+      {
+        number: 3,
+        title: "Accounting Applies Payment",
+        owner: "Accounting",
+        mayDo: [
+          "Apply payment",
+          "Close job ONLY when paid in full",
+        ],
+      },
+    ],
+    insuranceFlow: [
+      {
+        number: 1,
+        title: "Production Confirms Completion",
+        owner: "Production Manager",
+        tasks: [
+          "Verify build complete",
+          "Verify checklist complete",
+          "Confirm no materials / no punch list",
+        ],
+      },
+      {
+        number: 2,
+        title: "Supplements Finalize Scope",
+        owner: "Supplement Department",
+        tasks: [
+          "Confirm approved scope",
+          "Confirm no open supplement items",
+        ],
+      },
+      {
+        number: 3,
+        title: "Supplements Issue Carrier Invoice",
+        owner: "Supplement Department",
+        rule: "ONLY Supplements may move insurance job to \"Invoiced\"",
+      },
+      {
+        number: 4,
+        title: "Accounting Applies Payment",
+        owner: "Accounting",
+        tasks: [
+          "Apply carrier funds",
+          "Close job ONLY when fully paid",
+        ],
+      },
+    ],
+    accountingLimitations: [
+      "Issue invoices",
+      "Track depreciation",
+      "Modify scope",
+      "Grant exceptions",
+    ],
+    exitCriteria: [
+      "All invoices issued",
+      "All funds collected",
+      "Accounting moves job to \"Closed\"",
+    ],
     content: [
-      "Materials must be ordered within 24 hours of contract signing.",
-      "All deliveries must be confirmed and documented with photos in CompanyCam.",
-      "Delivery confirmation must include: date/time, materials received, condition verification.",
-      "Any discrepancies must be reported immediately to supplier and documented.",
-      "Material staging location must be verified with customer before delivery.",
+      "Jobs enter closeout only when build is complete, CompanyCam checklist is 100%, all photos uploaded, no punch list, no materials on site.",
+      "RETAIL: Sales issues homeowner invoice after Production confirms completion. Sales may NOT modify scope or invoice insurance carriers.",
+      "INSURANCE: Supplements finalize scope and issue carrier invoice. ONLY Supplements may move insurance job to \"Invoiced\".",
+      "Accounting applies payment and closes job ONLY when paid in full. Accounting does NOT issue invoices, track depreciation, modify scope, or grant exceptions.",
+      "Job is CLOSED only when all invoices issued, all funds collected, and Accounting moves job to \"Closed\".",
     ],
     hardStops: [
-      "No installation scheduling without confirmed material delivery.",
-      "No acceptance of damaged materials without documentation and replacement order.",
+      "BLOCK invoicing if any entry criteria fails.",
+      "Sales cannot invoice insurance carriers.",
+      "Only Supplements may move insurance job to Invoiced.",
+      "Job cannot close until fully paid.",
+      "Accounting cannot issue invoices or modify scope.",
     ],
   },
   {
@@ -394,6 +489,95 @@ function CommissionFlowchart() {
   );
 }
 
+// Job Closeout SOP-02 Dual Flowchart (Retail/Insurance)
+function JobCloseoutFlowchart() {
+  return (
+    <div className="my-4 space-y-4">
+      <p className="text-xs text-muted-foreground font-medium">Job Closeout Flows:</p>
+      
+      <div className="grid gap-4 md:grid-cols-2">
+        {/* Retail Flow */}
+        <div className="p-4 bg-blue-500/5 border border-blue-500/20 rounded-lg">
+          <h5 className="text-sm font-bold text-blue-600 mb-3 flex items-center gap-2">
+            <Badge className="bg-blue-500">RETAIL</Badge>
+          </h5>
+          <div className="space-y-2">
+            <div className="px-3 py-2 bg-blue-500/10 border border-blue-500/20 rounded text-xs font-medium text-center">
+              Production Complete
+            </div>
+            <div className="flex justify-center">
+              <ArrowRight className="w-4 h-4 text-blue-500/50 rotate-90" />
+            </div>
+            <div className="px-3 py-2 bg-blue-500/10 border border-blue-500/20 rounded text-xs text-center">
+              Checklist 100% / No Punch / No Materials
+            </div>
+            <div className="flex justify-center">
+              <ArrowRight className="w-4 h-4 text-blue-500/50 rotate-90" />
+            </div>
+            <div className="px-3 py-2 bg-amber-500/10 border border-amber-500/30 rounded text-xs font-medium text-center">
+              Sales Issues Invoice
+            </div>
+            <div className="flex justify-center">
+              <ArrowRight className="w-4 h-4 text-blue-500/50 rotate-90" />
+            </div>
+            <div className="px-3 py-2 bg-green-500/10 border border-green-500/20 rounded text-xs text-center">
+              Payment Collected
+            </div>
+            <div className="flex justify-center">
+              <ArrowRight className="w-4 h-4 text-blue-500/50 rotate-90" />
+            </div>
+            <div className="px-3 py-2 bg-primary text-primary-foreground rounded text-xs font-medium text-center">
+              Accounting Closes Job
+            </div>
+          </div>
+        </div>
+
+        {/* Insurance Flow */}
+        <div className="p-4 bg-purple-500/5 border border-purple-500/20 rounded-lg">
+          <h5 className="text-sm font-bold text-purple-600 mb-3 flex items-center gap-2">
+            <Badge className="bg-purple-500">INSURANCE</Badge>
+          </h5>
+          <div className="space-y-2">
+            <div className="px-3 py-2 bg-purple-500/10 border border-purple-500/20 rounded text-xs font-medium text-center">
+              Production Complete
+            </div>
+            <div className="flex justify-center">
+              <ArrowRight className="w-4 h-4 text-purple-500/50 rotate-90" />
+            </div>
+            <div className="px-3 py-2 bg-purple-500/10 border border-purple-500/20 rounded text-xs text-center">
+              Checklist 100% / No Punch / No Materials
+            </div>
+            <div className="flex justify-center">
+              <ArrowRight className="w-4 h-4 text-purple-500/50 rotate-90" />
+            </div>
+            <div className="px-3 py-2 bg-amber-500/10 border border-amber-500/30 rounded text-xs font-medium text-center">
+              Supplements Finalize Scope
+            </div>
+            <div className="flex justify-center">
+              <ArrowRight className="w-4 h-4 text-purple-500/50 rotate-90" />
+            </div>
+            <div className="px-3 py-2 bg-amber-500/10 border border-amber-500/30 rounded text-xs font-medium text-center">
+              Supplements Issue Carrier Invoice
+            </div>
+            <div className="flex justify-center">
+              <ArrowRight className="w-4 h-4 text-purple-500/50 rotate-90" />
+            </div>
+            <div className="px-3 py-2 bg-green-500/10 border border-green-500/20 rounded text-xs text-center">
+              Funds Collected
+            </div>
+            <div className="flex justify-center">
+              <ArrowRight className="w-4 h-4 text-purple-500/50 rotate-90" />
+            </div>
+            <div className="px-3 py-2 bg-primary text-primary-foreground rounded text-xs font-medium text-center">
+              Accounting Closes Job
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Simple flowchart component
 function SOPFlowchart({ sopId }: { sopId: string }) {
   // Special handling for SOP-01 Commission flowchart
@@ -401,17 +585,12 @@ function SOPFlowchart({ sopId }: { sopId: string }) {
     return <CommissionFlowchart />;
   }
 
+  // Special handling for SOP-02 Job Closeout dual flowchart
+  if (sopId === "SOP-02") {
+    return <JobCloseoutFlowchart />;
+  }
+
   const flowcharts: Record<string, { steps: string[]; arrows?: boolean }> = {
-    "SOP-02": {
-      steps: [
-        "Contract Signed",
-        "Order Materials (24h)",
-        "Confirm Delivery",
-        "Photo Documentation",
-        "Ready for Install",
-      ],
-      arrows: true,
-    },
     "SOP-03": {
       steps: [
         "Materials Confirmed",
@@ -912,8 +1091,172 @@ export function MasterSOPsTab() {
                       </>
                     )}
 
-                    {/* Standard SOP Rendering for non-SOP-01 */}
-                    {sop.id !== "SOP-01" && (
+                    {/* SOP-02 Special Detailed Rendering */}
+                    {sop.id === "SOP-02" && 'purpose' in sop && (
+                      <>
+                        {/* Purpose */}
+                        <div className="p-3 bg-primary/5 border border-primary/20 rounded-lg">
+                          <h4 className="font-medium text-sm mb-1">Purpose</h4>
+                          <p className="text-sm text-muted-foreground">{sop.purpose}</p>
+                        </div>
+
+                        {/* System Owner */}
+                        <div className="p-3 bg-muted/50 rounded-lg">
+                          <h4 className="font-medium text-sm mb-2">System Owner</h4>
+                          <ul className="text-sm space-y-1">
+                            {sop.systemOwner?.map((owner: string, idx: number) => (
+                              <li key={idx} className="flex items-center gap-2">
+                                <span className="text-muted-foreground">•</span>
+                                {owner}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+
+                        {/* Entry Criteria */}
+                        <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                          <h4 className="font-medium text-sm mb-2 flex items-center gap-2">
+                            <CheckCircle className="w-4 h-4 text-blue-500" />
+                            Entry Criteria (ALL REQUIRED)
+                          </h4>
+                          <ul className="text-sm space-y-1 mb-2">
+                            {sop.entryCriteria?.map((criteria: string, idx: number) => (
+                              <li key={idx} className="flex items-center gap-2">
+                                <span className="text-blue-500">✓</span>
+                                {criteria}
+                              </li>
+                            ))}
+                          </ul>
+                          <p className="text-sm font-medium text-destructive">{sop.entryCriteriaNote}</p>
+                        </div>
+
+                        {/* Dual Flowcharts */}
+                        {sop.hasFlowchart && <SOPFlowchart sopId={sop.id} />}
+
+                        {/* Retail Flow Steps */}
+                        <div>
+                          <h4 className="font-medium text-sm mb-3 flex items-center gap-2">
+                            <Badge className="bg-blue-500">RETAIL JOB FLOW</Badge>
+                          </h4>
+                          <div className="space-y-3">
+                            {sop.retailFlow?.map((step: any, idx: number) => (
+                              <div key={idx} className="p-3 bg-blue-500/5 rounded-lg border-l-4 border-blue-500/50">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <Badge variant="outline" className="border-blue-500 text-blue-600">{`Step ${step.number}`}</Badge>
+                                  <span className="font-medium text-sm">{step.title}</span>
+                                </div>
+                                <p className="text-xs text-muted-foreground mb-2">Owner: {step.owner}</p>
+                                
+                                {step.tasks && (
+                                  <ul className="text-xs space-y-0.5">
+                                    {step.tasks.map((task: string, i: number) => (
+                                      <li key={i}>• {task}</li>
+                                    ))}
+                                  </ul>
+                                )}
+                                
+                                {step.mayDo && (
+                                  <div className="grid grid-cols-2 gap-2 mt-2">
+                                    <div>
+                                      <p className="text-xs font-medium text-green-600 mb-1">May Do:</p>
+                                      <ul className="text-xs space-y-0.5">
+                                        {step.mayDo.map((item: string, i: number) => (
+                                          <li key={i} className="flex items-center gap-1">
+                                            <CheckCircle className="w-3 h-3 text-green-500" />
+                                            {item}
+                                          </li>
+                                        ))}
+                                      </ul>
+                                    </div>
+                                    {step.mayNotDo && (
+                                      <div>
+                                        <p className="text-xs font-medium text-red-600 mb-1">May NOT:</p>
+                                        <ul className="text-xs space-y-0.5">
+                                          {step.mayNotDo.map((item: string, i: number) => (
+                                            <li key={i} className="flex items-center gap-1">
+                                              <XCircle className="w-3 h-3 text-red-500" />
+                                              {item}
+                                            </li>
+                                          ))}
+                                        </ul>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Insurance Flow Steps */}
+                        <div>
+                          <h4 className="font-medium text-sm mb-3 flex items-center gap-2">
+                            <Badge className="bg-purple-500">INSURANCE JOB FLOW</Badge>
+                          </h4>
+                          <div className="space-y-3">
+                            {sop.insuranceFlow?.map((step: any, idx: number) => (
+                              <div key={idx} className="p-3 bg-purple-500/5 rounded-lg border-l-4 border-purple-500/50">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <Badge variant="outline" className="border-purple-500 text-purple-600">{`Step ${step.number}`}</Badge>
+                                  <span className="font-medium text-sm">{step.title}</span>
+                                </div>
+                                <p className="text-xs text-muted-foreground mb-2">Owner: {step.owner}</p>
+                                
+                                {step.tasks && (
+                                  <ul className="text-xs space-y-0.5">
+                                    {step.tasks.map((task: string, i: number) => (
+                                      <li key={i}>• {task}</li>
+                                    ))}
+                                  </ul>
+                                )}
+                                
+                                {step.rule && (
+                                  <div className="mt-2 p-2 bg-amber-500/10 border border-amber-500/30 rounded text-xs font-medium">
+                                    RULE: {step.rule}
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Accounting Limitations */}
+                        <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+                          <h4 className="font-medium text-sm mb-2 flex items-center gap-2 text-red-600">
+                            <XCircle className="w-4 h-4" />
+                            Accounting Limitations — Accounting does NOT:
+                          </h4>
+                          <ul className="text-sm space-y-1">
+                            {sop.accountingLimitations?.map((limit: string, idx: number) => (
+                              <li key={idx} className="flex items-center gap-2 text-red-600">
+                                <XCircle className="w-3 h-3" />
+                                {limit}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+
+                        {/* Exit Criteria */}
+                        <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
+                          <h4 className="font-medium text-sm mb-2 flex items-center gap-2">
+                            <CheckCircle className="w-4 h-4 text-green-500" />
+                            Exit Criteria
+                          </h4>
+                          <p className="text-xs text-muted-foreground mb-2">Job is CLOSED only when:</p>
+                          <ul className="text-sm space-y-1">
+                            {sop.exitCriteria?.map((criteria: string, idx: number) => (
+                              <li key={idx} className="flex items-center gap-2">
+                                <span className="text-green-500">✓</span>
+                                {criteria}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </>
+                    )}
+
+                    {/* Standard SOP Rendering for non-SOP-01/02 */}
+                    {sop.id !== "SOP-01" && sop.id !== "SOP-02" && (
                       <>
                         {/* Flowchart if applicable */}
                         {sop.hasFlowchart && <SOPFlowchart sopId={sop.id} />}
@@ -952,8 +1295,8 @@ export function MasterSOPsTab() {
                       </>
                     )}
 
-                    {/* Hard Stops for SOP-01 */}
-                    {sop.id === "SOP-01" && (
+                    {/* Hard Stops for SOP-01 and SOP-02 */}
+                    {(sop.id === "SOP-01" || sop.id === "SOP-02") && (
                       <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
                         <h4 className="font-medium text-sm mb-2 flex items-center gap-2 text-destructive">
                           <AlertTriangle className="w-4 h-4" />
