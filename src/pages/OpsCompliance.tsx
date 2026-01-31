@@ -40,6 +40,7 @@ import { HoldsTab } from "@/components/compliance/HoldsTab";
 import { EscalationsTab } from "@/components/compliance/EscalationsTab";
 import { AuditLogTab } from "@/components/compliance/AuditLogTab";
 import { AcknowledgmentsTab } from "@/components/compliance/AcknowledgmentsTab";
+import { MasterSOPsTab } from "@/components/compliance/MasterSOPsTab";
 const tabs = [
   { value: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { value: "violations", label: "Violations", icon: AlertTriangle },
@@ -272,19 +273,7 @@ export default function OpsCompliance() {
 
           {/* Master SOPs Tab */}
           <TabsContent value="sops" className="mt-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <ShieldCheck className="w-5 h-5" />
-                  Master SOPs
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-center py-12 text-muted-foreground">
-                  <p>Master SOP library coming soon...</p>
-                </div>
-              </CardContent>
-            </Card>
+            <MasterSOPsTab />
           </TabsContent>
 
           {/* Acknowledgments Tab */}
