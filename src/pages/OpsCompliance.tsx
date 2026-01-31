@@ -39,6 +39,7 @@ import { ViolationsTab } from "@/components/compliance/ViolationsTab";
 import { HoldsTab } from "@/components/compliance/HoldsTab";
 import { EscalationsTab } from "@/components/compliance/EscalationsTab";
 import { AuditLogTab } from "@/components/compliance/AuditLogTab";
+import { AcknowledgmentsTab } from "@/components/compliance/AcknowledgmentsTab";
 const tabs = [
   { value: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { value: "violations", label: "Violations", icon: AlertTriangle },
@@ -288,19 +289,7 @@ export default function OpsCompliance() {
 
           {/* Acknowledgments Tab */}
           <TabsContent value="acknowledgments" className="mt-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <CheckCircle className="w-5 h-5 text-green-500" />
-                  SOP Acknowledgments
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-center py-12 text-muted-foreground">
-                  <p>Acknowledgment tracking coming soon...</p>
-                </div>
-              </CardContent>
-            </Card>
+            <AcknowledgmentsTab />
           </TabsContent>
         </Tabs>
       </div>
