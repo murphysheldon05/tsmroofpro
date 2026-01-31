@@ -38,6 +38,7 @@ import { ApplyHoldModal } from "@/components/compliance/ApplyHoldModal";
 import { ViolationsTab } from "@/components/compliance/ViolationsTab";
 import { HoldsTab } from "@/components/compliance/HoldsTab";
 import { EscalationsTab } from "@/components/compliance/EscalationsTab";
+import { AuditLogTab } from "@/components/compliance/AuditLogTab";
 const tabs = [
   { value: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { value: "violations", label: "Violations", icon: AlertTriangle },
@@ -265,19 +266,7 @@ export default function OpsCompliance() {
 
           {/* Audit Log Tab */}
           <TabsContent value="audit-log" className="mt-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FileText className="w-5 h-5" />
-                  Compliance Audit Log
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-center py-12 text-muted-foreground">
-                  <p>Audit log viewer coming soon...</p>
-                </div>
-              </CardContent>
-            </Card>
+            <AuditLogTab />
           </TabsContent>
 
           {/* Master SOPs Tab */}
