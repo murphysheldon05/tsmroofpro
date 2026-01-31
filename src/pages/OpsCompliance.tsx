@@ -1,10 +1,13 @@
 import { useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { toast } from "sonner";
+import { format, subDays } from "date-fns";
+import { supabase } from "@/integrations/supabase/client";
 import { 
   ShieldCheck, 
   AlertTriangle, 
@@ -14,6 +17,24 @@ import {
   CheckCircle,
   LayoutDashboard
 } from "lucide-react";
+
+// Hooks
+import {
+  useOpenViolationsCount,
+  useActiveHoldsCount,
+  usePendingEscalationsCount,
+  useUnacknowledgedUsersCount,
+  useRecentViolations,
+  usePendingEscalations,
+} from "@/hooks/useCompliance";
+
+// Components
+import { ComplianceSummaryCards } from "@/components/compliance/ComplianceSummaryCards";
+import { RecentViolationsTable } from "@/components/compliance/RecentViolationsTable";
+import { AwaitingDecisionTable } from "@/components/compliance/AwaitingDecisionTable";
+import { QuickActionsBar } from "@/components/compliance/QuickActionsBar";
+import { LogViolationModal } from "@/components/compliance/LogViolationModal";
+import { ApplyHoldModal } from "@/components/compliance/ApplyHoldModal";
 
 const tabs = [
   { value: "dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -26,17 +47,110 @@ const tabs = [
 ];
 
 export default function OpsCompliance() {
-  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { isAdmin, isOpsCompliance } = useAuth();
   
   const activeTab = searchParams.get("tab") || "dashboard";
+
+  // Modal states
+  const [violationModalOpen, setViolationModalOpen] = useState(false);
+  const [holdModalOpen, setHoldModalOpen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+
+  // Data queries
+  const { data: openViolations, isLoading: loadingViolations } = useOpenViolationsCount();
+  const { data: activeHolds, isLoading: loadingHolds } = useActiveHoldsCount();
+  const { data: pendingEscalations, isLoading: loadingEscalations } = usePendingEscalationsCount();
+  const { data: unacknowledgedUsers, isLoading: loadingUnack } = useUnacknowledgedUsersCount();
+  const { data: recentViolations, isLoading: loadingRecent } = useRecentViolations(5);
+  const { data: pendingEscalationsList, isLoading: loadingPendingList } = usePendingEscalations();
+
+  const isLoadingSummary = loadingViolations || loadingHolds || loadingEscalations || loadingUnack;
 
   const handleTabChange = (value: string) => {
     if (value === "dashboard") {
       setSearchParams({});
     } else {
       setSearchParams({ tab: value });
+    }
+  };
+
+  const handleNavigate = (tab: string, params?: string) => {
+    if (params) {
+      setSearchParams({ tab, ...Object.fromEntries(new URLSearchParams(params)) });
+    } else {
+      setSearchParams({ tab });
+    }
+  };
+
+  const handleReviewEscalation = (escalationId: string) => {
+    // Navigate to escalations tab with the specific escalation highlighted
+    setSearchParams({ tab: "escalations", review: escalationId });
+    toast.info("Opening escalation for review...");
+  };
+
+  const handleExportReport = async () => {
+    setIsExporting(true);
+    try {
+      const weekAgo = subDays(new Date(), 7);
+      
+      // Fetch week's data
+      const [violationsRes, holdsRes, escalationsRes] = await Promise.all([
+        supabase
+          .from("compliance_violations")
+          .select("*")
+          .gte("created_at", weekAgo.toISOString()),
+        supabase
+          .from("compliance_holds")
+          .select("*")
+          .gte("created_at", weekAgo.toISOString()),
+        supabase
+          .from("compliance_escalations")
+          .select("*")
+          .gte("created_at", weekAgo.toISOString()),
+      ]);
+
+      const violations = violationsRes.data || [];
+      const holds = holdsRes.data || [];
+      const escalations = escalationsRes.data || [];
+
+      // Generate CSV
+      const csvLines = [
+        "WEEKLY COMPLIANCE REPORT",
+        `Generated: ${format(new Date(), "yyyy-MM-dd HH:mm")}`,
+        `Period: ${format(weekAgo, "yyyy-MM-dd")} to ${format(new Date(), "yyyy-MM-dd")}`,
+        "",
+        "SUMMARY",
+        `Total Violations: ${violations.length}`,
+        `Total Holds: ${holds.length}`,
+        `Total Escalations: ${escalations.length}`,
+        "",
+        "VIOLATIONS",
+        "Date,SOP,Severity,Status,Description",
+        ...violations.map(v => 
+          `${format(new Date(v.created_at), "yyyy-MM-dd")},${v.sop_key},${v.severity},${v.status},"${v.description.replace(/"/g, '""')}"`
+        ),
+        "",
+        "HOLDS",
+        "Date,Type,Status,Reason",
+        ...holds.map(h => 
+          `${format(new Date(h.created_at), "yyyy-MM-dd")},${h.hold_type},${h.status},"${h.reason.replace(/"/g, '""')}"`
+        ),
+      ];
+
+      const blob = new Blob([csvLines.join("\n")], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `compliance-report-${format(new Date(), "yyyy-MM-dd")}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      toast.success("Report exported successfully");
+    } catch (error: any) {
+      toast.error("Failed to export report: " + error.message);
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -95,24 +209,41 @@ export default function OpsCompliance() {
           </ScrollArea>
 
           {/* Dashboard Tab */}
-          <TabsContent value="dashboard" className="mt-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <LayoutDashboard className="w-5 h-5" />
-                  Ops Compliance Dashboard
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-center py-12 text-muted-foreground">
-                  <div className="text-center">
-                    <ShieldCheck className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                    <p className="text-lg font-medium">Ops Compliance Dashboard — Loading...</p>
-                    <p className="text-sm mt-2">Dashboard widgets will be built in the next phase.</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+          <TabsContent value="dashboard" className="mt-4 space-y-4 sm:space-y-6">
+            {/* Summary Cards */}
+            <ComplianceSummaryCards
+              openViolations={openViolations}
+              activeHolds={activeHolds}
+              pendingEscalations={pendingEscalations}
+              unacknowledgedUsers={unacknowledgedUsers}
+              isLoading={isLoadingSummary}
+              onNavigate={handleNavigate}
+            />
+
+            {/* Quick Actions */}
+            <QuickActionsBar
+              onLogViolation={() => setViolationModalOpen(true)}
+              onApplyHold={() => setHoldModalOpen(true)}
+              onViewAuditLog={() => handleNavigate("audit-log")}
+              onExportReport={handleExportReport}
+              isExporting={isExporting}
+            />
+
+            {/* Recent Violations */}
+            <RecentViolationsTable
+              violations={recentViolations}
+              isLoading={loadingRecent}
+              onViewAll={() => handleNavigate("violations")}
+            />
+
+            {/* Awaiting Decision - Admin Only */}
+            {isAdmin && (
+              <AwaitingDecisionTable
+                escalations={pendingEscalationsList}
+                isLoading={loadingPendingList}
+                onReview={handleReviewEscalation}
+              />
+            )}
           </TabsContent>
 
           {/* Violations Tab */}
@@ -126,7 +257,7 @@ export default function OpsCompliance() {
               </CardHeader>
               <CardContent>
                 <div className="flex items-center justify-center py-12 text-muted-foreground">
-                  <p>Violations management coming soon...</p>
+                  <p>Full violations management coming soon...</p>
                 </div>
               </CardContent>
             </Card>
@@ -143,7 +274,7 @@ export default function OpsCompliance() {
               </CardHeader>
               <CardContent>
                 <div className="flex items-center justify-center py-12 text-muted-foreground">
-                  <p>Holds management coming soon...</p>
+                  <p>Full holds management coming soon...</p>
                 </div>
               </CardContent>
             </Card>
@@ -160,7 +291,7 @@ export default function OpsCompliance() {
               </CardHeader>
               <CardContent>
                 <div className="flex items-center justify-center py-12 text-muted-foreground">
-                  <p>Escalations management coming soon...</p>
+                  <p>Full escalations management coming soon...</p>
                 </div>
               </CardContent>
             </Card>
@@ -218,6 +349,16 @@ export default function OpsCompliance() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Modals */}
+      <LogViolationModal 
+        open={violationModalOpen} 
+        onOpenChange={setViolationModalOpen} 
+      />
+      <ApplyHoldModal 
+        open={holdModalOpen} 
+        onOpenChange={setHoldModalOpen} 
+      />
     </AppLayout>
   );
 }
