@@ -199,14 +199,18 @@ export function AppSidebar() {
   const getRoleBadgeVariant = () => {
     if (role === 'admin') return 'destructive';
     if (role === 'manager') return 'default';
+    if (role === 'ops_compliance') return 'default';
     return 'secondary';
   };
 
   const getRoleLabel = () => {
     if (role === 'admin') return 'Admin';
     if (role === 'manager') return 'Manager';
+    if (role === 'ops_compliance') return 'Ops Compliance';
     return 'Employee';
   };
+
+  const isOpsCompliance = role === 'ops_compliance';
 
   const toggleSection = (title: string) => {
     setOpenSections((prev) =>
@@ -385,6 +389,29 @@ export function AppSidebar() {
                 Admin Panel
               </button>
             )}
+          </div>
+        )}
+
+        {/* Ops Compliance - Visible to admin and ops_compliance */}
+        {(isAdmin || isOpsCompliance) && (
+          <div className={cn("pt-2", !(isAdmin || isManager) && "border-t border-primary/10")}>
+            {!(isAdmin || isManager) && (
+              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-3 mb-1 block">
+                Compliance
+              </span>
+            )}
+            <button
+              onClick={() => handleNavClick("/ops-compliance")}
+              className={cn(
+                "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-200 relative",
+                location.pathname.startsWith("/ops-compliance")
+                  ? "nav-item-active font-medium"
+                  : "text-sidebar-foreground/70 hover:bg-primary/5 hover:text-primary/80"
+              )}
+            >
+              <Shield className={cn("w-4 h-4", location.pathname.startsWith("/ops-compliance") && "nav-icon-glow")} />
+              Ops Compliance
+            </button>
           </div>
         )}
         
