@@ -35,6 +35,7 @@ import { AwaitingDecisionTable } from "@/components/compliance/AwaitingDecisionT
 import { QuickActionsBar } from "@/components/compliance/QuickActionsBar";
 import { LogViolationModal } from "@/components/compliance/LogViolationModal";
 import { ApplyHoldModal } from "@/components/compliance/ApplyHoldModal";
+import { ViolationsTab } from "@/components/compliance/ViolationsTab";
 
 const tabs = [
   { value: "dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -248,19 +249,7 @@ export default function OpsCompliance() {
 
           {/* Violations Tab */}
           <TabsContent value="violations" className="mt-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <AlertTriangle className="w-5 h-5 text-yellow-500" />
-                  Compliance Violations
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-center py-12 text-muted-foreground">
-                  <p>Full violations management coming soon...</p>
-                </div>
-              </CardContent>
-            </Card>
+            <ViolationsTab />
           </TabsContent>
 
           {/* Holds Tab */}
