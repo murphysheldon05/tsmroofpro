@@ -11,7 +11,6 @@ import { useState, useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { ResourceDetailModal } from "@/components/resources/ResourceDetailModal";
 import { useAuth } from "@/contexts/AuthContext";
-import { MasterSOPSection } from "@/components/sop/MasterSOPSection";
 import {
   Select,
   SelectContent,
@@ -31,7 +30,6 @@ import {
   List,
   Grid,
   ArrowLeft,
-  BookOpen,
 } from "lucide-react";
 
 const categoryIcons: Record<string, React.ElementType> = {
@@ -82,7 +80,7 @@ export default function SOPLibrary() {
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [selectedResource, setSelectedResource] = useState<Resource | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
-  const [viewMode, setViewMode] = useState<"master" | "quick" | "browse">(category ? "browse" : "master");
+  const [viewMode, setViewMode] = useState<"quick" | "browse">(category ? "browse" : "quick");
   const [searchQuery, setSearchQuery] = useState("");
   const [taskType, setTaskType] = useState("all");
   const [roleFilter, setRoleFilter] = useState("all");
@@ -196,7 +194,7 @@ export default function SOPLibrary() {
                   size="icon"
                   className="h-8 w-8 flex-shrink-0"
                   onClick={() => {
-                    setViewMode("master");
+                    setViewMode("quick");
                     navigate("/sops");
                   }}
                 >
@@ -219,29 +217,19 @@ export default function SOPLibrary() {
         </header>
 
         {/* View Mode Tabs */}
-        <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "master" | "quick" | "browse")} className="w-full">
-          <TabsList className="grid w-full max-w-lg grid-cols-3">
-            <TabsTrigger value="master" className="gap-2">
-              <BookOpen className="w-4 h-4" />
-              <span className="hidden sm:inline">Master SOPs</span>
-              <span className="sm:hidden">Master</span>
-            </TabsTrigger>
+        <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "quick" | "browse")} className="w-full">
+          <TabsList className="grid w-full max-w-md grid-cols-2">
             <TabsTrigger value="quick" className="gap-2">
               <Search className="w-4 h-4" />
-              <span className="hidden sm:inline">Quick Access</span>
-              <span className="sm:hidden">Quick</span>
+              <span className="hidden sm:inline">Quick SOP Access</span>
+              <span className="sm:hidden">Quick Access</span>
             </TabsTrigger>
             <TabsTrigger value="browse" className="gap-2">
               <Grid className="w-4 h-4" />
-              <span className="hidden sm:inline">By Department</span>
-              <span className="sm:hidden">Dept</span>
+              <span className="hidden sm:inline">Browse by Department</span>
+              <span className="sm:hidden">By Dept</span>
             </TabsTrigger>
           </TabsList>
-
-          {/* Master SOPs View */}
-          <TabsContent value="master" className="mt-4">
-            <MasterSOPSection mode="view" />
-          </TabsContent>
 
           {/* Quick SOP Access View */}
           <TabsContent value="quick" className="mt-4 space-y-4">

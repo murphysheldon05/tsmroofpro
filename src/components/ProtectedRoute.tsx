@@ -6,8 +6,6 @@ import { RejectedScreen } from "@/components/auth/RejectedScreen";
 import { InactiveScreen } from "@/components/auth/InactiveScreen";
 import { AccessHoldScreen } from "@/components/compliance/AccessHoldScreen";
 import { useAccessHoldCheck } from "@/hooks/useComplianceHoldCheck";
-import { useSOPAcknowledgment } from "@/hooks/useSOPAcknowledgment";
-import { SOPAcknowledgmentGate } from "@/components/sop/SOPAcknowledgmentGate";
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -27,9 +25,6 @@ interface ProtectedRouteProps {
  * - employee_status = 'inactive' → Show "Account Inactive" screen
  * - No user                      → Redirect to /auth
  * 
- * SOP ACKNOWLEDGMENT GATE:
- * - If user has not acknowledged current SOPMASTER version → Show acknowledgment gate
- * 
  * COMPLIANCE HOLD CHECK:
  * - If user has active access_hold → Show "Access Suspended" screen
  */
@@ -40,9 +35,8 @@ export function ProtectedRoute({
 }: ProtectedRouteProps) {
   const { user, loading, isAdmin, isManager, employeeStatus } = useAuth();
   const { data: accessHold, isLoading: accessHoldLoading } = useAccessHoldCheck();
-  const { hasAcknowledged, isLoading: sopLoading } = useSOPAcknowledgment();
 
-  if (loading || accessHoldLoading || sopLoading) {
+  if (loading || accessHoldLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
@@ -80,11 +74,6 @@ export function ProtectedRoute({
 
       if (requireManager && !isManager) {
         return <Navigate to="/command-center" replace />;
-      }
-
-      // SOP ACKNOWLEDGMENT GATE: Must acknowledge SOPs before accessing protected routes
-      if (!hasAcknowledged) {
-        return <SOPAcknowledgmentGate>{children}</SOPAcknowledgmentGate>;
       }
 
       // All checks passed
