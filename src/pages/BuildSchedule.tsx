@@ -23,6 +23,8 @@ import { useCrews, useCreateCrew, Crew } from "@/hooks/useCrews";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { useUserHoldsCheck } from "@/hooks/useComplianceHoldCheck";
+import { HoldWarningBanner } from "@/components/compliance/HoldWarningBanner";
 
 export default function BuildSchedule() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -46,7 +48,12 @@ export default function BuildSchedule() {
   const [newCrew, setNewCrew] = useState({ name: "", color: "#3b82f6" });
 
   const { isManager, isAdmin } = useAuth();
+  const { data: userHolds } = useUserHoldsCheck();
   const canEdit = isManager || isAdmin;
+  
+  // Filter for scheduling-relevant holds
+  const schedulingHolds = userHolds?.filter(h => h.hold_type === "scheduling_hold") || [];
+  const hasSchedulingHold = schedulingHolds.length > 0;
 
   const { data: crews = [] } = useCrews();
   const createCrew = useCreateCrew();
@@ -246,6 +253,9 @@ export default function BuildSchedule() {
           </div>
         </div>
 
+        {/* Hold Warning Banner */}
+        <HoldWarningBanner holds={schedulingHolds} context="scheduling" />
+
         {/* Crew Management */}
         {canEdit && (
           <div className="flex items-center gap-2">
@@ -267,7 +277,13 @@ export default function BuildSchedule() {
                 <ChevronRight className="h-4 w-4" />
               </Button>
               {canEdit && (
-                <Button size="sm" onClick={() => setIsAddOpen(true)} className="ml-2">
+                <Button 
+                  size="sm" 
+                  onClick={() => setIsAddOpen(true)} 
+                  className="ml-2"
+                  disabled={hasSchedulingHold}
+                  title={hasSchedulingHold ? "Blocked by active scheduling hold" : ""}
+                >
                   <Plus className="h-4 w-4 mr-1" /> Add Event
                 </Button>
               )}

@@ -4,6 +4,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { PendingApprovalScreen } from "@/components/auth/PendingApprovalScreen";
 import { RejectedScreen } from "@/components/auth/RejectedScreen";
 import { InactiveScreen } from "@/components/auth/InactiveScreen";
+import { AccessHoldScreen } from "@/components/compliance/AccessHoldScreen";
+import { useAccessHoldCheck } from "@/hooks/useComplianceHoldCheck";
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -22,15 +24,19 @@ interface ProtectedRouteProps {
  * - employee_status = 'rejected' → Show "Access Denied" screen
  * - employee_status = 'inactive' → Show "Account Inactive" screen
  * - No user                      → Redirect to /auth
+ * 
+ * COMPLIANCE HOLD CHECK:
+ * - If user has active access_hold → Show "Access Suspended" screen
  */
 export function ProtectedRoute({
   children,
   requireAdmin = false,
   requireManager = false,
 }: ProtectedRouteProps) {
-  const { user, loading, isAdmin, isManager, employeeStatus, isActive } = useAuth();
+  const { user, loading, isAdmin, isManager, employeeStatus } = useAuth();
+  const { data: accessHold, isLoading: accessHoldLoading } = useAccessHoldCheck();
 
-  if (loading) {
+  if (loading || accessHoldLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
@@ -41,6 +47,11 @@ export function ProtectedRoute({
   // GOVERNANCE RULE: No user = redirect to auth
   if (!user) {
     return <Navigate to="/auth" replace />;
+  }
+
+  // COMPLIANCE HOLD CHECK: Block access if user has access_hold
+  if (accessHold?.blocked && accessHold.reason) {
+    return <AccessHoldScreen reason={accessHold.reason} />;
   }
 
   // CANONICAL ACCESS GATING: Based solely on employee_status
