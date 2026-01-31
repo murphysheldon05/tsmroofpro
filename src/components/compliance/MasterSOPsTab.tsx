@@ -31,20 +31,128 @@ import { SOPMASTER_VERSION } from "@/lib/sopMasterConstants";
 const MASTER_SOPS = [
   {
     id: "SOP-01",
-    title: "Lead-to-Contract Process",
+    title: "Commission Submission & Approval",
     hasFlowchart: true,
+    purpose: "Ensure commissions are calculated at assigned tiers, validated against margin gates, routed correctly, and protected from manipulation.",
+    systemOwner: ["Sales Manager (review)", "Accounting (execution only)", "Ops Compliance (enforcement)"],
+    finalAuthority: "Sheldon Murphy only.",
+    entryCriteria: [
+      "Job status is \"Completed\"",
+      "Job closeout checklist is 100% complete",
+      "No punch list items remain",
+      "No materials are left on site",
+      "Final contract value is locked",
+      "Payment data exists in AccuLynx Payments tab",
+    ],
+    entryCriteriaNote: "If any condition is false → BLOCK submission.",
+    sections: [
+      {
+        title: "Commission Basis Rules",
+        content: [
+          "Commission is calculated on the rep's ASSIGNED TIER.",
+          "Gross margin acts as a VALIDATION GATE, not the calculator.",
+        ],
+      },
+      {
+        title: "Minimum Margins",
+        content: [
+          "Retail Shingle: 30% minimum",
+          "Retail Tile: 35% minimum",
+          "Insurance: 40% minimum / 45% target / 50% stretch",
+        ],
+      },
+      {
+        title: "Tier Drop Rule",
+        content: [
+          "For every 5% below the minimum margin, drop ONE FULL TIER.",
+          "Automatic. No discretion. No manager override.",
+        ],
+      },
+    ],
+    steps: [
+      {
+        number: 1,
+        title: "Sales Rep Submits Commission",
+        owner: "Sales Rep",
+        inputs: [
+          "Job ID",
+          "Deal type (Retail / Insurance)",
+          "Assigned commission tier",
+          "Gross margin %",
+          "AccuLynx payment reference",
+          "Acknowledgment checkbox for anti-gaming policy",
+        ],
+        action: "Submit through Commission Submission form → Route to assigned Sales Manager",
+      },
+      {
+        number: 2,
+        title: "Margin Validation Gate (SYSTEM)",
+        owner: "System",
+        logic: [
+          "Validate margin against minimum",
+          "If margin meets minimum → assigned tier applies",
+          "If margin below minimum → auto tier drop",
+          "If insurance margin <40% → FLAG for GM approval",
+        ],
+      },
+      {
+        number: 3,
+        title: "Sales Manager Review",
+        owner: "Sales Manager",
+        mayDo: [
+          "Approve",
+          "Reject with reason",
+          "Apply override ONLY if deal count is 1–10",
+        ],
+        mayNotDo: [
+          "Override tier drops",
+          "Approve sub-40% insurance margin",
+          "Approve own commissions",
+        ],
+      },
+      {
+        number: 4,
+        title: "Accounting Execution",
+        owner: "Accounting",
+        mayDo: [
+          "Verify math",
+          "Queue for payroll",
+          "Apply payment",
+        ],
+        mayNotDo: [
+          "Change tier",
+          "Grant exceptions",
+          "Interpret margin intent",
+        ],
+      },
+    ],
+    antiGamingRules: [
+      "Running lower-tier jobs through higher-tier reps",
+      "Proxy deal ownership",
+      "Manager-generated commission structures",
+      "Timing manipulation",
+    ],
+    antiGamingNote: "Any of the above = SEVERE violation + immediate termination escalation.",
+    exitCriteria: [
+      "Paid via payroll",
+      "Logged as \"Paid\"",
+      "Tied to AccuLynx Payments tab entry",
+    ],
     content: [
-      "All sales representatives must follow the standardized lead intake, qualification, and contract execution workflow.",
-      "Contracts MUST be signed before any work commences — no exceptions.",
-      "All leads must be entered into AccuLynx within 24 hours of initial contact.",
-      "Customer qualification checklist must be completed before presenting pricing.",
-      "Contract must include complete scope of work, materials, timeline, and payment terms.",
-      "Customer signature required on all contracts before scheduling.",
+      "Commission is calculated on the rep's ASSIGNED TIER — gross margin is a validation gate, not the calculator.",
+      "Minimum margins: Retail Shingle 30%, Retail Tile 35%, Insurance 40% minimum / 45% target / 50% stretch.",
+      "Tier Drop Rule: For every 5% below minimum margin, drop ONE FULL TIER. Automatic. No discretion. No manager override.",
+      "Entry criteria: Job Completed, closeout 100%, no punch list, no materials on site, final contract locked, payment data in AccuLynx.",
+      "Sales Manager may approve, reject, or override (deals 1-10 only). May NOT override tier drops or approve own commissions.",
+      "Accounting executes only: verify math, queue for payroll, apply payment. May NOT change tier or grant exceptions.",
     ],
     hardStops: [
-      "No verbal agreements — all terms must be documented.",
-      "No work before signed contract.",
-      "No scope changes without written change order.",
+      "BLOCK submission if any entry criteria is false.",
+      "No tier gaming — automatic tier drop enforced by system.",
+      "No proxy deal ownership — IMMEDIATE TERMINATION.",
+      "No timing manipulation — IMMEDIATE TERMINATION.",
+      "Sales Manager cannot approve own commissions.",
+      "Accounting cannot change tiers or grant exceptions.",
     ],
   },
   {
@@ -211,20 +319,89 @@ const MASTER_SOPS = [
   },
 ];
 
+// Commission SOP-01 Detailed Flowchart
+function CommissionFlowchart() {
+  return (
+    <div className="my-4 p-4 bg-muted/30 rounded-lg space-y-4">
+      <p className="text-xs text-muted-foreground font-medium">Commission Approval Flow:</p>
+      <div className="space-y-3">
+        {/* Step 1 */}
+        <div className="flex items-center gap-2">
+          <div className="px-3 py-2 bg-primary/10 border border-primary/20 rounded-lg text-xs font-medium">
+            Sales Rep Submits
+          </div>
+        </div>
+        <div className="ml-6 border-l-2 border-primary/30 pl-4 py-1">
+          <ArrowRight className="w-4 h-4 text-primary/50 -ml-6 mb-1" />
+        </div>
+        
+        {/* Step 2 - Decision */}
+        <div className="flex items-start gap-2">
+          <div className="px-3 py-2 bg-amber-500/10 border border-amber-500/30 rounded-lg text-xs font-medium">
+            Margin Validation Gate
+          </div>
+        </div>
+        <div className="ml-6 grid grid-cols-2 gap-4 border-l-2 border-primary/30 pl-4 py-2">
+          <div className="flex items-center gap-2">
+            <CheckCircle className="w-4 h-4 text-green-500" />
+            <span className="text-xs">Meets Minimum → Assigned Tier</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <XCircle className="w-4 h-4 text-red-500" />
+            <span className="text-xs">Below Minimum → Auto Tier Drop</span>
+          </div>
+        </div>
+        
+        {/* Step 3 */}
+        <div className="flex items-start gap-2">
+          <div className="px-3 py-2 bg-blue-500/10 border border-blue-500/30 rounded-lg text-xs font-medium">
+            Sales Manager Review
+          </div>
+        </div>
+        <div className="ml-6 grid grid-cols-3 gap-2 border-l-2 border-primary/30 pl-4 py-2">
+          <div className="flex items-center gap-1 text-xs">
+            <XCircle className="w-3 h-3 text-red-500" />
+            <span>Reject → Back to Rep</span>
+          </div>
+          <div className="flex items-center gap-1 text-xs">
+            <CheckCircle className="w-3 h-3 text-green-500" />
+            <span>Approve</span>
+          </div>
+          <div className="flex items-center gap-1 text-xs">
+            <AlertTriangle className="w-3 h-3 text-amber-500" />
+            <span>Override (Deals 1–10)</span>
+          </div>
+        </div>
+        
+        {/* Step 4 */}
+        <div className="flex items-center gap-2">
+          <div className="px-3 py-2 bg-green-500/10 border border-green-500/30 rounded-lg text-xs font-medium">
+            Accounting Executes
+          </div>
+        </div>
+        <div className="ml-6 border-l-2 border-primary/30 pl-4 py-1">
+          <ArrowRight className="w-4 h-4 text-primary/50 -ml-6 mb-1" />
+        </div>
+        
+        {/* Step 5 */}
+        <div className="flex items-center gap-2">
+          <div className="px-3 py-2 bg-primary text-primary-foreground rounded-lg text-xs font-medium">
+            Payroll (per SOP 09)
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Simple flowchart component
 function SOPFlowchart({ sopId }: { sopId: string }) {
+  // Special handling for SOP-01 Commission flowchart
+  if (sopId === "SOP-01") {
+    return <CommissionFlowchart />;
+  }
+
   const flowcharts: Record<string, { steps: string[]; arrows?: boolean }> = {
-    "SOP-01": {
-      steps: [
-        "Lead Intake",
-        "Qualification",
-        "Proposal",
-        "Contract Review",
-        "Customer Signature",
-        "Schedule",
-      ],
-      arrows: true,
-    },
     "SOP-02": {
       steps: [
         "Contract Signed",
@@ -562,40 +739,236 @@ export function MasterSOPsTab() {
                 </AccordionTrigger>
                 <AccordionContent>
                   <div className="pl-4 space-y-4">
-                    {/* Flowchart if applicable */}
-                    {sop.hasFlowchart && <SOPFlowchart sopId={sop.id} />}
+                    {/* SOP-01 Special Detailed Rendering */}
+                    {sop.id === "SOP-01" && 'purpose' in sop && (
+                      <>
+                        {/* Purpose */}
+                        <div className="p-3 bg-primary/5 border border-primary/20 rounded-lg">
+                          <h4 className="font-medium text-sm mb-1">Purpose</h4>
+                          <p className="text-sm text-muted-foreground">{sop.purpose}</p>
+                        </div>
 
-                    {/* Content */}
-                    <div>
-                      <h4 className="font-medium text-sm mb-2 flex items-center gap-2">
-                        <CheckCircle className="w-4 h-4 text-green-500" />
-                        Requirements
-                      </h4>
-                      <ul className="space-y-2 text-sm">
-                        {sop.content.map((item, idx) => (
-                          <li key={idx} className="flex items-start gap-2">
-                            <span className="text-muted-foreground">•</span>
-                            <span>{item}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
+                        {/* System Owner & Authority */}
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          <div className="p-3 bg-muted/50 rounded-lg">
+                            <h4 className="font-medium text-sm mb-2">System Owner</h4>
+                            <ul className="text-sm space-y-1">
+                              {sop.systemOwner?.map((owner: string, idx: number) => (
+                                <li key={idx} className="flex items-center gap-2">
+                                  <span className="text-muted-foreground">•</span>
+                                  {owner}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                          <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+                            <h4 className="font-medium text-sm mb-2">Final Exception Authority</h4>
+                            <p className="text-sm font-medium">{sop.finalAuthority}</p>
+                          </div>
+                        </div>
 
-                    {/* Hard Stops */}
-                    <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
-                      <h4 className="font-medium text-sm mb-2 flex items-center gap-2 text-destructive">
-                        <AlertTriangle className="w-4 h-4" />
-                        Hard Stops (Non-Negotiable)
-                      </h4>
-                      <ul className="space-y-2 text-sm">
-                        {sop.hardStops.map((stop, idx) => (
-                          <li key={idx} className="flex items-start gap-2 text-destructive">
-                            <XCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                            <span>{stop}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
+                        {/* Entry Criteria */}
+                        <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                          <h4 className="font-medium text-sm mb-2 flex items-center gap-2">
+                            <CheckCircle className="w-4 h-4 text-blue-500" />
+                            Entry Criteria (ALL REQUIRED)
+                          </h4>
+                          <ul className="text-sm space-y-1 mb-2">
+                            {sop.entryCriteria?.map((criteria: string, idx: number) => (
+                              <li key={idx} className="flex items-center gap-2">
+                                <span className="text-blue-500">✓</span>
+                                {criteria}
+                              </li>
+                            ))}
+                          </ul>
+                          <p className="text-sm font-medium text-destructive">{sop.entryCriteriaNote}</p>
+                        </div>
+
+                        {/* Sections: Commission Basis, Margins, Tier Drop */}
+                        <div className="space-y-3">
+                          {sop.sections?.map((section: { title: string; content: string[] }, idx: number) => (
+                            <div key={idx} className="p-3 bg-muted/30 rounded-lg">
+                              <h4 className="font-medium text-sm mb-2">{section.title}</h4>
+                              <ul className="text-sm space-y-1">
+                                {section.content.map((item: string, i: number) => (
+                                  <li key={i} className="flex items-start gap-2">
+                                    <span className="text-muted-foreground">•</span>
+                                    {item}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Step-by-Step Flow */}
+                        <div>
+                          <h4 className="font-medium text-sm mb-3 flex items-center gap-2">
+                            <ArrowRight className="w-4 h-4 text-primary" />
+                            Step-by-Step Flow
+                          </h4>
+                          <div className="space-y-3">
+                            {sop.steps?.map((step: any, idx: number) => (
+                              <div key={idx} className="p-3 bg-muted/30 rounded-lg border-l-4 border-primary/50">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <Badge className="bg-primary">{`Step ${step.number}`}</Badge>
+                                  <span className="font-medium text-sm">{step.title}</span>
+                                </div>
+                                <p className="text-xs text-muted-foreground mb-2">Owner: {step.owner}</p>
+                                
+                                {step.inputs && (
+                                  <div className="mb-2">
+                                    <p className="text-xs font-medium mb-1">Required Inputs:</p>
+                                    <ul className="text-xs space-y-0.5 pl-4">
+                                      {step.inputs.map((input: string, i: number) => (
+                                        <li key={i}>• {input}</li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                )}
+                                
+                                {step.action && (
+                                  <p className="text-xs"><strong>Action:</strong> {step.action}</p>
+                                )}
+                                
+                                {step.logic && (
+                                  <div className="mb-2">
+                                    <p className="text-xs font-medium mb-1">Logic:</p>
+                                    <ul className="text-xs space-y-0.5 pl-4">
+                                      {step.logic.map((item: string, i: number) => (
+                                        <li key={i}>• {item}</li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                )}
+                                
+                                {step.mayDo && (
+                                  <div className="grid grid-cols-2 gap-2 mt-2">
+                                    <div>
+                                      <p className="text-xs font-medium text-green-600 mb-1">May Do:</p>
+                                      <ul className="text-xs space-y-0.5">
+                                        {step.mayDo.map((item: string, i: number) => (
+                                          <li key={i} className="flex items-center gap-1">
+                                            <CheckCircle className="w-3 h-3 text-green-500" />
+                                            {item}
+                                          </li>
+                                        ))}
+                                      </ul>
+                                    </div>
+                                    <div>
+                                      <p className="text-xs font-medium text-red-600 mb-1">May NOT:</p>
+                                      <ul className="text-xs space-y-0.5">
+                                        {step.mayNotDo?.map((item: string, i: number) => (
+                                          <li key={i} className="flex items-center gap-1">
+                                            <XCircle className="w-3 h-3 text-red-500" />
+                                            {item}
+                                          </li>
+                                        ))}
+                                      </ul>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Flowchart */}
+                        {sop.hasFlowchart && <SOPFlowchart sopId={sop.id} />}
+
+                        {/* Anti-Gaming Rules */}
+                        <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-lg">
+                          <h4 className="font-medium text-sm mb-2 flex items-center gap-2 text-destructive">
+                            <Skull className="w-4 h-4" />
+                            Anti-Gaming / Integrity Rules — ZERO TOLERANCE
+                          </h4>
+                          <ul className="text-sm space-y-1 mb-2">
+                            {sop.antiGamingRules?.map((rule: string, idx: number) => (
+                              <li key={idx} className="flex items-start gap-2 text-destructive">
+                                <XCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                                {rule}
+                              </li>
+                            ))}
+                          </ul>
+                          <p className="text-sm font-bold text-destructive">{sop.antiGamingNote}</p>
+                        </div>
+
+                        {/* Exit Criteria */}
+                        <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
+                          <h4 className="font-medium text-sm mb-2 flex items-center gap-2">
+                            <CheckCircle className="w-4 h-4 text-green-500" />
+                            Exit Criteria
+                          </h4>
+                          <p className="text-xs text-muted-foreground mb-2">Commission is complete ONLY when:</p>
+                          <ul className="text-sm space-y-1">
+                            {sop.exitCriteria?.map((criteria: string, idx: number) => (
+                              <li key={idx} className="flex items-center gap-2">
+                                <span className="text-green-500">✓</span>
+                                {criteria}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </>
+                    )}
+
+                    {/* Standard SOP Rendering for non-SOP-01 */}
+                    {sop.id !== "SOP-01" && (
+                      <>
+                        {/* Flowchart if applicable */}
+                        {sop.hasFlowchart && <SOPFlowchart sopId={sop.id} />}
+
+                        {/* Content */}
+                        <div>
+                          <h4 className="font-medium text-sm mb-2 flex items-center gap-2">
+                            <CheckCircle className="w-4 h-4 text-green-500" />
+                            Requirements
+                          </h4>
+                          <ul className="space-y-2 text-sm">
+                            {sop.content.map((item, idx) => (
+                              <li key={idx} className="flex items-start gap-2">
+                                <span className="text-muted-foreground">•</span>
+                                <span>{item}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+
+                        {/* Hard Stops */}
+                        <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+                          <h4 className="font-medium text-sm mb-2 flex items-center gap-2 text-destructive">
+                            <AlertTriangle className="w-4 h-4" />
+                            Hard Stops (Non-Negotiable)
+                          </h4>
+                          <ul className="space-y-2 text-sm">
+                            {sop.hardStops.map((stop, idx) => (
+                              <li key={idx} className="flex items-start gap-2 text-destructive">
+                                <XCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                                <span>{stop}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </>
+                    )}
+
+                    {/* Hard Stops for SOP-01 */}
+                    {sop.id === "SOP-01" && (
+                      <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+                        <h4 className="font-medium text-sm mb-2 flex items-center gap-2 text-destructive">
+                          <AlertTriangle className="w-4 h-4" />
+                          Hard Stops (Non-Negotiable)
+                        </h4>
+                        <ul className="space-y-2 text-sm">
+                          {sop.hardStops.map((stop, idx) => (
+                            <li key={idx} className="flex items-start gap-2 text-destructive">
+                              <XCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                              <span>{stop}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                   </div>
                 </AccordionContent>
               </AccordionItem>
