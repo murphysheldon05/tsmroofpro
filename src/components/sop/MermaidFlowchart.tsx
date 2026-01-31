@@ -6,6 +6,33 @@ interface MermaidFlowchartProps {
   id: string;
 }
 
+// Initialize mermaid with dark/light mode support
+mermaid.initialize({
+  startOnLoad: false,
+  theme: "base",
+  themeVariables: {
+    primaryColor: "hsl(var(--primary))",
+    primaryTextColor: "hsl(var(--primary-foreground))",
+    primaryBorderColor: "hsl(var(--border))",
+    lineColor: "hsl(var(--muted-foreground))",
+    secondaryColor: "hsl(var(--secondary))",
+    tertiaryColor: "hsl(var(--muted))",
+    background: "hsl(var(--background))",
+    mainBkg: "hsl(var(--card))",
+    nodeBorder: "hsl(var(--border))",
+    clusterBkg: "hsl(var(--muted))",
+    titleColor: "hsl(var(--foreground))",
+    edgeLabelBackground: "hsl(var(--background))",
+    textColor: "hsl(var(--foreground))",
+  },
+  flowchart: {
+    htmlLabels: true,
+    curve: "basis",
+    padding: 15,
+  },
+  securityLevel: "loose",
+});
+
 export function MermaidFlowchart({ chart, id }: MermaidFlowchartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [svg, setSvg] = useState<string>("");
@@ -19,34 +46,6 @@ export function MermaidFlowchart({ chart, id }: MermaidFlowchartProps) {
         // Clear any previous content
         setSvg("");
         setError(null);
-
-        // Initialize mermaid with concrete colors (CSS variables not supported)
-        mermaid.initialize({
-          startOnLoad: false,
-          theme: "base",
-          themeVariables: {
-            primaryColor: "#3b82f6",
-            primaryTextColor: "#ffffff",
-            primaryBorderColor: "#2563eb",
-            lineColor: "#6b7280",
-            secondaryColor: "#e5e7eb",
-            tertiaryColor: "#f3f4f6",
-            background: "#ffffff",
-            mainBkg: "#f9fafb",
-            nodeBorder: "#d1d5db",
-            clusterBkg: "#f3f4f6",
-            titleColor: "#111827",
-            edgeLabelBackground: "#ffffff",
-            textColor: "#374151",
-            nodeTextColor: "#374151",
-          },
-          flowchart: {
-            htmlLabels: true,
-            curve: "basis",
-            padding: 15,
-          },
-          securityLevel: "loose",
-        });
 
         // Generate unique ID for this render
         const uniqueId = `mermaid-${id}-${Date.now()}`;
