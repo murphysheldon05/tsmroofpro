@@ -11,7 +11,6 @@ export interface MasterSOP {
   title: string;
   summary: string[];
   hardStops?: string[];
-  flowchart?: string;
 }
 
 export const MASTER_SOP_CONTENT: MasterSOP[] = [
@@ -33,23 +32,6 @@ export const MASTER_SOP_CONTENT: MasterSOP[] = [
       "No timing manipulation — IMMEDIATE TERMINATION.",
       "Sales Manager cannot approve own commissions.",
     ],
-    flowchart: `graph TD
-    A[Job Completed] --> B{Entry Criteria Met?}
-    B -->|No| C[BLOCKED - Fix Issues]
-    B -->|Yes| D[Submit Commission]
-    D --> E{Margin Check}
-    E -->|Below Min| F[Auto Tier Drop]
-    E -->|At/Above Min| G[Keep Current Tier]
-    F --> H[Sales Manager Review]
-    G --> H
-    H -->|Approve| I[Accounting Verification]
-    H -->|Reject| J[Return to Rep]
-    I --> K[Queue for Payroll]
-    K --> L[Payment Applied]
-    
-    style C fill:#ef4444,color:#fff
-    style F fill:#f59e0b,color:#fff
-    style L fill:#22c55e,color:#fff`,
   },
   {
     id: "SOP-02",
@@ -69,22 +51,6 @@ export const MASTER_SOP_CONTENT: MasterSOP[] = [
       "Job cannot close until fully paid.",
       "Accounting cannot issue invoices or modify scope.",
     ],
-    flowchart: `graph TD
-    A[Build Complete] --> B{CompanyCam 100%?}
-    B -->|No| C[Complete Checklist]
-    B -->|Yes| D{Job Type?}
-    D -->|Retail| E[Sales Issues Invoice]
-    D -->|Insurance| F[Supplements Finalizes Scope]
-    F --> G[Supplements Issues Carrier Invoice]
-    E --> H[Customer Payment]
-    G --> H
-    H --> I{Paid in Full?}
-    I -->|No| J[Collections Follow-up]
-    J --> H
-    I -->|Yes| K[Accounting Closes Job]
-    
-    style C fill:#f59e0b,color:#fff
-    style K fill:#22c55e,color:#fff`,
   },
   {
     id: "SOP-03",
@@ -102,21 +68,6 @@ export const MASTER_SOP_CONTENT: MasterSOP[] = [
       "No crew assignment without verified certifications for job type.",
       "No same-day scheduling changes without manager approval.",
     ],
-    flowchart: `graph TD
-    A[Materials Delivered] --> B[Confirm Delivery in AccuLynx]
-    B --> C{Within 48hrs?}
-    C -->|Yes| D[Schedule Job in AccuLynx]
-    C -->|No| E[VIOLATION - Escalate]
-    D --> F[Assign Crew]
-    F --> G{Crew Certified?}
-    G -->|No| H[Reassign Crew]
-    G -->|Yes| I[Document Weather Plan]
-    I --> J[Notify Customer 48hrs Prior]
-    J --> K[Email Labor Order]
-    K --> L[CC billing@tsmroofs.com]
-    
-    style E fill:#ef4444,color:#fff
-    style L fill:#22c55e,color:#fff`,
   },
   {
     id: "SOP-04",
@@ -134,23 +85,6 @@ export const MASTER_SOP_CONTENT: MasterSOP[] = [
       "No crew member on roof without proper fall protection.",
       "No power tools without proper safety certification.",
     ],
-    flowchart: `graph TD
-    A[Crew Arrives On-Site] --> B[Daily Safety Briefing]
-    B --> C{All PPE Present?}
-    C -->|No| D[STOP - Get PPE]
-    C -->|Yes| E{Fall Protection Ready?}
-    E -->|No| F[STOP - Setup Protection]
-    E -->|Yes| G[Verify First Aid Kit]
-    G --> H[Confirm Emergency Contacts]
-    H --> I[Begin Work]
-    I --> J{Violation Observed?}
-    J -->|Yes| K[IMMEDIATE WORK STOP]
-    J -->|No| L[Continue Work Safely]
-    
-    style D fill:#ef4444,color:#fff
-    style F fill:#ef4444,color:#fff
-    style K fill:#ef4444,color:#fff
-    style L fill:#22c55e,color:#fff`,
   },
   {
     id: "SOP-05",
@@ -168,24 +102,6 @@ export const MASTER_SOP_CONTENT: MasterSOP[] = [
       "No job close without customer sign-off.",
       "No final invoice without QC approval.",
     ],
-    flowchart: `graph TD
-    A[Work Complete] --> B[Upload Before/During/After Photos]
-    B --> C[Crew Lead Completes QC Checklist]
-    C --> D[Internal QC Inspection]
-    D --> E{Pass Inspection?}
-    E -->|No| F[Correct Deficiencies]
-    F --> D
-    E -->|Yes| G[Schedule Customer Walkthrough]
-    G --> H[Customer Inspection]
-    H --> I{Customer Approves?}
-    I -->|No| J[Address Concerns]
-    J --> H
-    I -->|Yes| K[Customer Signs Off]
-    K --> L[Proceed to Closeout]
-    
-    style F fill:#f59e0b,color:#fff
-    style J fill:#f59e0b,color:#fff
-    style L fill:#22c55e,color:#fff`,
   },
   {
     id: "SOP-06",
@@ -203,23 +119,6 @@ export const MASTER_SOP_CONTENT: MasterSOP[] = [
       "No scope changes without documented supplement approval.",
       "5-day submission deadline is firm — missed deadlines require manager escalation.",
     ],
-    flowchart: `graph TD
-    A[Additional Damage Discovered] --> B{Within 5 Days?}
-    B -->|No| C[Manager Escalation Required]
-    B -->|Yes| D[Document in CompanyCam]
-    C --> D
-    D --> E[Prepare Itemized Scope]
-    E --> F[Reference Claim Number]
-    F --> G[Submit Supplement]
-    G --> H[Log Adjuster Communication]
-    H --> I{Approved?}
-    I -->|No| J[Negotiate/Resubmit]
-    J --> I
-    I -->|Yes| K[Document Approval in AccuLynx]
-    K --> L[Proceed with Work]
-    
-    style C fill:#f59e0b,color:#fff
-    style L fill:#22c55e,color:#fff`,
   },
   {
     id: "SOP-07",
@@ -237,24 +136,6 @@ export const MASTER_SOP_CONTENT: MasterSOP[] = [
       "No write-offs without executive approval.",
       "No deviation from collection timeline without documented approval.",
     ],
-    flowchart: `graph TD
-    A[Job Complete] --> B[Issue Invoice Day 1]
-    B --> C{Payment Received?}
-    C -->|Yes| D[Apply Payment - Close Job]
-    C -->|No| E[Day 7 Reminder]
-    E --> F{Payment Received?}
-    F -->|Yes| D
-    F -->|No| G[Day 14 Final Notice]
-    G --> H{Payment Received?}
-    H -->|Yes| D
-    H -->|No| I[Day 21 Escalation]
-    I --> J{Payment Plan?}
-    J -->|Yes| K[Manager Approval Required]
-    J -->|No| L[Day 30 Legal Review]
-    K --> M[Document Agreement]
-    
-    style D fill:#22c55e,color:#fff
-    style L fill:#ef4444,color:#fff`,
   },
   {
     id: "SOP-08",
@@ -272,22 +153,6 @@ export const MASTER_SOP_CONTENT: MasterSOP[] = [
       "No work before signed contract.",
       "No scope changes without written change order.",
     ],
-    flowchart: `graph TD
-    A[Lead Received] --> B[Enter in AccuLynx within 24hrs]
-    B --> C[Initial Contact & Qualification]
-    C --> D[Complete Qualification Checklist]
-    D --> E[Site Inspection]
-    E --> F[Prepare Proposal]
-    F --> G[Present Pricing]
-    G --> H{Customer Agrees?}
-    H -->|No| I[Negotiate/Follow-up]
-    I --> H
-    H -->|Yes| J[Draft Contract]
-    J --> K[Include Scope, Materials, Timeline]
-    K --> L[Customer Signs Contract]
-    L --> M[Schedule Job]
-    
-    style L fill:#22c55e,color:#fff`,
   },
   {
     id: "SOP-09",
@@ -305,26 +170,6 @@ export const MASTER_SOP_CONTENT: MasterSOP[] = [
       "No warranty claim closed without documented resolution.",
       "No warranty denial without manager review.",
     ],
-    flowchart: `graph TD
-    A[Warranty Claim Received] --> B{Within 24hrs?}
-    B -->|No| C[VIOLATION - Escalate]
-    B -->|Yes| D[Acknowledge & Set Timeline]
-    C --> D
-    D --> E[Schedule Inspection within 5 Days]
-    E --> F[Perform Inspection]
-    F --> G{Valid Claim?}
-    G -->|No| H[Manager Review Required]
-    G -->|Yes| I[Approve Warranty Work]
-    H --> J{Deny or Approve?}
-    J -->|Deny| K[Document Denial Reason]
-    J -->|Approve| I
-    I --> L[Schedule Repair]
-    L --> M[Complete Work]
-    M --> N[Document Resolution]
-    N --> O[Customer Confirmation]
-    
-    style C fill:#ef4444,color:#fff
-    style O fill:#22c55e,color:#fff`,
   },
   {
     id: "SOP-10",
@@ -342,21 +187,5 @@ export const MASTER_SOP_CONTENT: MasterSOP[] = [
       "All complaints escalated same-day.",
       "No unauthorized external communications.",
     ],
-    flowchart: `graph TD
-    A[Contract Signed] --> B[Confirm in AccuLynx]
-    B --> C[Schedule Notification]
-    C --> D[Day Before Reminder]
-    D --> E[Work Begins]
-    E --> F{Complaint Received?}
-    F -->|Yes| G[Escalate within 4hrs]
-    G --> H[Manager Response]
-    F -->|No| I[Completion Notification]
-    H --> I
-    I --> J[Send Satisfaction Survey 48hrs]
-    J --> K[Follow-up Communication]
-    K --> L[Document All in AccuLynx]
-    
-    style G fill:#f59e0b,color:#fff
-    style L fill:#22c55e,color:#fff`,
   },
 ];
