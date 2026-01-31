@@ -25,6 +25,8 @@ import { useCommissionSubmissions, useIsCommissionReviewer } from "@/hooks/useCo
 import { CommissionTracker } from "@/components/commissions/CommissionTracker";
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
+import { useUserHoldsCheck } from "@/hooks/useComplianceHoldCheck";
+import { HoldWarningBanner } from "@/components/compliance/HoldWarningBanner";
 
 const STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; icon: React.ReactNode }> = {
   pending_review: { label: "Pending Review", variant: "secondary", icon: <Clock className="h-3 w-3" /> },
@@ -39,12 +41,16 @@ export default function Commissions() {
   const { user, role } = useAuth();
   const { data: submissions, isLoading } = useCommissionSubmissions();
   const { data: isReviewer } = useIsCommissionReviewer();
+  const { data: userHolds } = useUserHoldsCheck();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
   const isAdmin = role === "admin";
   const isManager = role === "manager";
   const canSubmit = isAdmin || isManager; // Sales reps, sales managers, production managers
+  
+  // Filter for commission-relevant holds
+  const commissionHolds = userHolds?.filter(h => h.hold_type === "commission_hold") || [];
 
   const filteredSubmissions = submissions?.filter((submission) => {
     const matchesSearch = 
@@ -81,6 +87,9 @@ export default function Commissions() {
   return (
     <AppLayout>
       <div className="space-y-6">
+        {/* Hold Warning Banner */}
+        <HoldWarningBanner holds={commissionHolds} context="commission" />
+
         {/* Header */}
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
@@ -92,7 +101,12 @@ export default function Commissions() {
           
           {canSubmit && (
             <div className="flex gap-2">
-              <Button onClick={() => navigate("/commissions/new")} className="gap-2">
+              <Button 
+                onClick={() => navigate("/commissions/new")} 
+                className="gap-2"
+                disabled={commissionHolds.length > 0}
+                title={commissionHolds.length > 0 ? "Blocked by active commission hold" : ""}
+              >
                 <Plus className="h-4 w-4" />
                 New Commission
               </Button>
@@ -100,6 +114,8 @@ export default function Commissions() {
                 variant="outline" 
                 onClick={() => navigate("/commissions/new?type=subcontractor")}
                 className="gap-2"
+                disabled={commissionHolds.length > 0}
+                title={commissionHolds.length > 0 ? "Blocked by active commission hold" : ""}
               >
                 <Users className="h-4 w-4" />
                 Subcontractor
