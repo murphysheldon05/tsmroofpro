@@ -2212,9 +2212,12 @@ export type Database = {
         Row: {
           acknowledged_at: string | null
           device_info: string | null
+          document_url: string | null
           id: string
           ip_address: string | null
           method: string | null
+          signature_data: string | null
+          signed_name: string | null
           sop_key: string
           user_id: string
           version: string
@@ -2222,9 +2225,12 @@ export type Database = {
         Insert: {
           acknowledged_at?: string | null
           device_info?: string | null
+          document_url?: string | null
           id?: string
           ip_address?: string | null
           method?: string | null
+          signature_data?: string | null
+          signed_name?: string | null
           sop_key: string
           user_id: string
           version: string
@@ -2232,9 +2238,12 @@ export type Database = {
         Update: {
           acknowledged_at?: string | null
           device_info?: string | null
+          document_url?: string | null
           id?: string
           ip_address?: string | null
           method?: string | null
+          signature_data?: string | null
+          signed_name?: string | null
           sop_key?: string
           user_id?: string
           version?: string
@@ -2558,6 +2567,7 @@ export type Database = {
       user_files: {
         Row: {
           created_at: string
+          document_type: string | null
           file_name: string
           file_path: string
           file_size: number | null
@@ -2567,6 +2577,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          document_type?: string | null
           file_name: string
           file_path: string
           file_size?: number | null
@@ -2576,6 +2587,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          document_type?: string | null
           file_name?: string
           file_path?: string
           file_size?: number | null

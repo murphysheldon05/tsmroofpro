@@ -14,6 +14,7 @@ interface UserFile {
   file_size: number | null;
   file_type: string | null;
   created_at: string;
+  document_type?: string;
 }
 
 export function ProfileFilesTab() {
@@ -30,6 +31,7 @@ export function ProfileFilesTab() {
         .from("user_files")
         .select("*")
         .eq("user_id", user.id)
+        .order("document_type", { ascending: true })
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -40,6 +42,10 @@ export function ProfileFilesTab() {
       setLoading(false);
     }
   };
+
+  // Group files by type
+  const acknowledgmentFiles = files.filter(f => f.document_type === "sop_acknowledgment");
+  const personalFiles = files.filter(f => f.document_type !== "sop_acknowledgment");
 
   useEffect(() => {
     fetchFiles();
