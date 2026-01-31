@@ -25,12 +25,14 @@ import {
   Skull,
   Loader2,
   Download,
+  GitBranch,
 } from "lucide-react";
 import { SOPMASTER_VERSION } from "@/lib/sopMasterConstants";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useSOPAcknowledgment } from "@/hooks/useSOPAcknowledgment";
 import { MASTER_SOP_CONTENT } from "@/lib/masterSOPContent";
+import { MermaidFlowchart } from "./MermaidFlowchart";
 
 interface MasterSOPSectionProps {
   mode: "view" | "acknowledge";
@@ -315,16 +317,30 @@ export function MasterSOPSection({ mode, onAcknowledged }: MasterSOPSectionProps
               </div>
             </AccordionTrigger>
             <AccordionContent className="pb-4">
-              <div className="space-y-3 text-sm">
+              <div className="space-y-4 text-sm">
+                {/* Flowchart */}
+                {sop.flowchart && (
+                  <div className="space-y-2">
+                    <h5 className="font-medium text-xs flex items-center gap-1.5 text-muted-foreground">
+                      <GitBranch className="w-3.5 h-3.5" />
+                      Process Flow
+                    </h5>
+                    <MermaidFlowchart chart={sop.flowchart} id={sop.id} />
+                  </div>
+                )}
+
                 {/* Summary points */}
-                <ul className="space-y-1.5">
-                  {sop.summary.map((point, idx) => (
-                    <li key={idx} className="flex items-start gap-2">
-                      <CheckCircle className="w-3.5 h-3.5 text-green-500 mt-0.5 shrink-0" />
-                      <span>{point}</span>
-                    </li>
-                  ))}
-                </ul>
+                <div className="space-y-2">
+                  <h5 className="font-medium text-xs text-muted-foreground">Key Points</h5>
+                  <ul className="space-y-1.5">
+                    {sop.summary.map((point, idx) => (
+                      <li key={idx} className="flex items-start gap-2">
+                        <CheckCircle className="w-3.5 h-3.5 text-green-500 mt-0.5 shrink-0" />
+                        <span>{point}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
 
                 {/* Hard Stops */}
                 {sop.hardStops && sop.hardStops.length > 0 && (
