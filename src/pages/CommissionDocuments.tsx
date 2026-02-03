@@ -11,14 +11,15 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Plus, Search, FileText, Eye, Download, FileSpreadsheet, 
   Filter, Calendar, DollarSign, TrendingUp, 
-  CheckCircle, Clock, XCircle, X
+  CheckCircle, Clock, XCircle, X, Wallet, CalendarCheck
 } from "lucide-react";
 import { useCommissionDocuments, type CommissionDocument } from "@/hooks/useCommissionDocuments";
 import { formatCurrency } from "@/lib/commissionDocumentCalculations";
-import { format, parseISO, isWithinInterval, startOfDay, endOfDay } from "date-fns";
+import { format, parseISO, isWithinInterval, startOfDay, endOfDay, startOfYear } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -34,6 +35,8 @@ export default function CommissionDocuments() {
   const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
   const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("all");
+  const [paidSearchQuery, setPaidSearchQuery] = useState("");
 
   const { data: documents, isLoading } = useCommissionDocuments(statusFilter);
 
@@ -116,6 +119,35 @@ export default function CommissionDocuments() {
     });
   }, [roleFilteredDocuments, searchQuery, salesRepFilter, dateFrom, dateTo]);
 
+  // Paid documents (accounting_approved or paid status)
+  const paidDocuments = useMemo(() => {
+    return roleFilteredDocuments.filter(doc => 
+      doc.status === 'paid' || doc.status === 'accounting_approved'
+    ).filter(doc => 
+      !paidSearchQuery || 
+      doc.job_name_id.toLowerCase().includes(paidSearchQuery.toLowerCase()) ||
+      doc.sales_rep.toLowerCase().includes(paidSearchQuery.toLowerCase())
+    );
+  }, [roleFilteredDocuments, paidSearchQuery]);
+
+  // Paid documents statistics
+  const paidStats = useMemo(() => {
+    const now = new Date();
+    const yearStart = startOfYear(now);
+    
+    const totalCount = paidDocuments.length;
+    const totalCommission = paidDocuments.reduce((sum, d) => sum + (d.rep_commission || 0), 0);
+    
+    const ytdDocs = paidDocuments.filter(doc => {
+      const paidDate = doc.paid_at || doc.accounting_approved_at;
+      if (!paidDate) return false;
+      return parseISO(paidDate) >= yearStart;
+    });
+    const ytdEarnings = ytdDocs.reduce((sum, d) => sum + (d.rep_commission || 0), 0);
+    
+    return { totalCount, totalCommission, ytdEarnings };
+  }, [paidDocuments]);
+
   // Summary statistics
   const stats = useMemo(() => {
     const total = filteredDocuments.length;
@@ -137,26 +169,38 @@ export default function CommissionDocuments() {
       submitted: "default",
       approved: "outline",
       rejected: "destructive",
+      paid: "outline",
+      accounting_approved: "outline",
+      manager_approved: "default",
     };
     const icons: Record<string, React.ReactNode> = {
       draft: <FileText className="h-3 w-3" />,
       submitted: <Clock className="h-3 w-3" />,
       approved: <CheckCircle className="h-3 w-3" />,
       rejected: <XCircle className="h-3 w-3" />,
+      paid: <Wallet className="h-3 w-3" />,
+      accounting_approved: <CheckCircle className="h-3 w-3" />,
+      manager_approved: <CheckCircle className="h-3 w-3" />,
+    };
+    const colors: Record<string, string> = {
+      approved: 'bg-green-100 text-green-800 border-green-300',
+      paid: 'bg-emerald-100 text-emerald-800 border-emerald-300',
+      accounting_approved: 'bg-green-100 text-green-800 border-green-300',
+      manager_approved: 'bg-blue-100 text-blue-800 border-blue-300',
     };
     return (
       <Badge 
         variant={variants[status] || "secondary"} 
-        className={`gap-1 ${status === 'approved' ? 'bg-green-100 text-green-800 border-green-300' : ''}`}
+        className={`gap-1 ${colors[status] || ''}`}
       >
         {icons[status]}
-        <span className="hidden sm:inline">{status.charAt(0).toUpperCase() + status.slice(1)}</span>
+        <span className="hidden sm:inline">{status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</span>
       </Badge>
     );
   };
 
   // Export to CSV
-  const exportToCSV = () => {
+  const exportToCSV = (docs: CommissionDocument[], filename: string) => {
     try {
       const headers = [
         "Job Name / ID",
@@ -169,9 +213,10 @@ export default function CommissionDocuments() {
         "Rep Commission",
         "Date Submitted",
         "Date Approved",
+        "Paid Date",
       ];
       
-      const rows = filteredDocuments.map(doc => [
+      const rows = docs.map(doc => [
         `"${doc.job_name_id.replace(/"/g, '""')}"`,
         doc.job_date ? format(parseISO(doc.job_date), "yyyy-MM-dd") : "",
         `"${doc.sales_rep.replace(/"/g, '""')}"`,
@@ -182,21 +227,22 @@ export default function CommissionDocuments() {
         doc.rep_commission.toFixed(2),
         format(parseISO(doc.created_at), "yyyy-MM-dd"),
         doc.approved_at ? format(parseISO(doc.approved_at), "yyyy-MM-dd") : "",
+        doc.paid_at ? format(parseISO(doc.paid_at), "yyyy-MM-dd") : "",
       ]);
 
       // Add summary
+      const totalCommission = docs.reduce((sum, d) => sum + (d.rep_commission || 0), 0);
       rows.push([]);
       rows.push(["SUMMARY"]);
-      rows.push(["Total Records", stats.total.toString()]);
-      rows.push(["Total Commission (Approved)", stats.totalCommission.toFixed(2)]);
-      rows.push(["Total Net Profit (Approved)", stats.totalProfit.toFixed(2)]);
+      rows.push(["Total Records", docs.length.toString()]);
+      rows.push(["Total Commission", totalCommission.toFixed(2)]);
 
       const csvContent = [headers.join(","), ...rows.map(row => row.join(","))].join("\n");
       const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `commission-documents-${format(new Date(), "yyyy-MM-dd")}.csv`;
+      link.download = `${filename}-${format(new Date(), "yyyy-MM-dd")}.csv`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -209,7 +255,7 @@ export default function CommissionDocuments() {
   };
 
   // Export to PDF
-  const exportToPDF = () => {
+  const exportToPDF = (docs: CommissionDocument[], title: string, filename: string) => {
     try {
       const doc = new jsPDF();
       const pageWidth = doc.internal.pageSize.getWidth();
@@ -218,7 +264,7 @@ export default function CommissionDocuments() {
       // Title
       doc.setFontSize(18);
       doc.setFont("helvetica", "bold");
-      doc.text("Commission Documents Report", pageWidth / 2, yPosition, { align: "center" });
+      doc.text(title, pageWidth / 2, yPosition, { align: "center" });
       yPosition += 8;
 
       // Subtitle with date
@@ -228,6 +274,7 @@ export default function CommissionDocuments() {
       yPosition += 15;
 
       // Summary
+      const totalCommission = docs.reduce((sum, d) => sum + (d.rep_commission || 0), 0);
       doc.setFontSize(12);
       doc.setFont("helvetica", "bold");
       doc.text("Summary", 14, yPosition);
@@ -236,11 +283,8 @@ export default function CommissionDocuments() {
       doc.setFontSize(10);
       doc.setFont("helvetica", "normal");
       const summaryLines = [
-        `Total Records: ${stats.total}`,
-        `Pending: ${stats.pending}`,
-        `Approved: ${stats.approved}`,
-        `Total Commission (Approved): ${formatCurrency(stats.totalCommission)}`,
-        `Total Net Profit (Approved): ${formatCurrency(stats.totalProfit)}`,
+        `Total Records: ${docs.length}`,
+        `Total Commission: ${formatCurrency(totalCommission)}`,
       ];
       
       summaryLines.forEach(line => {
@@ -252,7 +296,7 @@ export default function CommissionDocuments() {
       // Table header
       doc.setFontSize(9);
       doc.setFont("helvetica", "bold");
-      const headers = ["Job Name", "Sales Rep", "Status", "Net Profit", "Commission"];
+      const headers = ["Job Name", "Sales Rep", "Status", "Commission", "Date"];
       const colWidths = [50, 40, 30, 30, 30];
       let xPos = 14;
       
@@ -264,19 +308,20 @@ export default function CommissionDocuments() {
 
       // Table rows
       doc.setFont("helvetica", "normal");
-      filteredDocuments.slice(0, 30).forEach((item) => {
+      docs.slice(0, 30).forEach((item) => {
         if (yPosition > 270) {
           doc.addPage();
           yPosition = 20;
         }
         
         xPos = 14;
+        const paidDate = item.paid_at || item.accounting_approved_at;
         const rowData = [
           item.job_name_id.substring(0, 25),
           item.sales_rep.substring(0, 20),
-          item.status,
-          formatCurrency(item.net_profit),
+          item.status.replace(/_/g, ' '),
           formatCurrency(item.rep_commission),
+          paidDate ? format(parseISO(paidDate), 'MM/dd/yy') : '-',
         ];
         
         rowData.forEach((cell, i) => {
@@ -286,12 +331,12 @@ export default function CommissionDocuments() {
         yPosition += 5;
       });
 
-      if (filteredDocuments.length > 30) {
+      if (docs.length > 30) {
         yPosition += 5;
-        doc.text(`... and ${filteredDocuments.length - 30} more records`, 14, yPosition);
+        doc.text(`... and ${docs.length - 30} more records`, 14, yPosition);
       }
 
-      doc.save(`commission-documents-${format(new Date(), "yyyy-MM-dd")}.pdf`);
+      doc.save(`${filename}-${format(new Date(), "yyyy-MM-dd")}.pdf`);
       toast.success("PDF exported successfully");
     } catch (error) {
       console.error("Export error:", error);
@@ -343,6 +388,35 @@ export default function CommissionDocuments() {
       )}
     </button>
   );
+
+  // Paid document card for mobile
+  const PaidDocumentCard = ({ doc }: { doc: CommissionDocument }) => {
+    const paidDate = doc.paid_at || doc.accounting_approved_at;
+    return (
+      <button
+        onClick={() => navigate(`/commission-documents/${doc.id}`)}
+        className="w-full text-left p-4 bg-card border border-border rounded-lg hover:border-primary/30 hover:bg-muted/30 transition-all"
+      >
+        <div className="flex items-start justify-between gap-2 mb-2">
+          <div className="font-medium text-foreground truncate flex-1">{doc.job_name_id}</div>
+          {getStatusBadge(doc.status)}
+        </div>
+        <div className="text-sm text-muted-foreground mb-2">{doc.sales_rep}</div>
+        <div className="flex items-center justify-between text-sm">
+          <div>
+            <span className="text-muted-foreground">Commission:</span>
+            <span className="ml-1 font-mono font-semibold text-emerald-600">{formatCurrency(doc.rep_commission)}</span>
+          </div>
+          {paidDate && (
+            <div className="text-xs text-muted-foreground flex items-center gap-1">
+              <CalendarCheck className="h-3 w-3" />
+              {format(parseISO(paidDate), 'MMM d, yyyy')}
+            </div>
+          )}
+        </div>
+      </button>
+    );
+  };
 
   // Filter content for both mobile sheet and desktop
   const FilterContent = ({ isMobile = false }: { isMobile?: boolean }) => (
@@ -450,24 +524,6 @@ export default function CommissionDocuments() {
             </p>
           </div>
           <div className="flex gap-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-2">
-                  <Download className="h-4 w-4" />
-                  <span className="hidden sm:inline">Export</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={exportToCSV} className="gap-2 cursor-pointer">
-                  <FileSpreadsheet className="h-4 w-4" />
-                  Export as CSV
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={exportToPDF} className="gap-2 cursor-pointer">
-                  <FileText className="h-4 w-4" />
-                  Export as PDF
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
             <Button size="sm" onClick={() => navigate('/commissions/new')}>
               <Plus className="h-4 w-4 sm:mr-2" />
               <span className="hidden sm:inline">New Document</span>
@@ -475,179 +531,362 @@ export default function CommissionDocuments() {
           </div>
         </div>
 
-        {/* Summary Cards - Mobile: 2x2 grid, Desktop: 4 columns */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <Card>
-            <CardHeader className="pb-1 pt-3 px-3 sm:pb-2 sm:pt-4 sm:px-6">
-              <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-1 sm:gap-2">
-                <FileText className="h-3 w-3 sm:h-4 sm:w-4" />
-                <span className="truncate">Total Docs</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="px-3 pb-3 sm:px-6 sm:pb-4">
-              <div className="text-xl sm:text-2xl font-bold">{stats.total}</div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="pb-1 pt-3 px-3 sm:pb-2 sm:pt-4 sm:px-6">
-              <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-1 sm:gap-2">
-                <Clock className="h-3 w-3 sm:h-4 sm:w-4" />
-                <span className="truncate">Pending</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="px-3 pb-3 sm:px-6 sm:pb-4">
-              <div className="text-xl sm:text-2xl font-bold text-amber-600">{stats.pending}</div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="pb-1 pt-3 px-3 sm:pb-2 sm:pt-4 sm:px-6">
-              <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-1 sm:gap-2">
-                <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4" />
-                <span className="truncate">Net Profit</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="px-3 pb-3 sm:px-6 sm:pb-4">
-              <div className="text-lg sm:text-2xl font-bold text-green-600">{formatCurrency(stats.totalProfit)}</div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="pb-1 pt-3 px-3 sm:pb-2 sm:pt-4 sm:px-6">
-              <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-1 sm:gap-2">
-                <DollarSign className="h-3 w-3 sm:h-4 sm:w-4" />
-                <span className="truncate">Commission</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="px-3 pb-3 sm:px-6 sm:pb-4">
-              <div className="text-lg sm:text-2xl font-bold text-primary">{formatCurrency(stats.totalCommission)}</div>
-            </CardContent>
-          </Card>
-        </div>
+        {/* Tabs */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-2 mb-4">
+            <TabsTrigger value="all" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              All Documents
+            </TabsTrigger>
+            <TabsTrigger value="paid" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              Paid Commissions
+            </TabsTrigger>
+          </TabsList>
 
-        {/* Search and Filters */}
-        <Card>
-          <CardHeader className="pb-3 sm:pb-4">
-            <div className="flex flex-col gap-3">
-              {/* Search + Filter Button (Mobile) */}
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-                
-                {/* Mobile Filter Button */}
-                <Sheet open={filterSheetOpen} onOpenChange={setFilterSheetOpen}>
-                  <SheetTrigger asChild>
-                    <Button variant="outline" size="icon" className="sm:hidden relative">
-                      <Filter className="h-4 w-4" />
-                      {activeFilterCount > 0 && (
-                        <span className="absolute -top-1 -right-1 h-4 w-4 bg-primary text-primary-foreground text-xs rounded-full flex items-center justify-center">
-                          {activeFilterCount}
-                        </span>
-                      )}
-                    </Button>
-                  </SheetTrigger>
-                  <SheetContent side="bottom" className="h-auto max-h-[80vh]">
-                    <SheetHeader className="mb-4">
-                      <SheetTitle>Filters</SheetTitle>
-                    </SheetHeader>
-                    <FilterContent isMobile />
-                  </SheetContent>
-                </Sheet>
-              </div>
+          {/* All Documents Tab */}
+          <TabsContent value="all" className="space-y-4">
+            {/* Summary Cards - Mobile: 2x2 grid, Desktop: 4 columns */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <Card>
+                <CardHeader className="pb-1 pt-3 px-3 sm:pb-2 sm:pt-4 sm:px-6">
+                  <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-1 sm:gap-2">
+                    <FileText className="h-3 w-3 sm:h-4 sm:w-4" />
+                    <span className="truncate">Total Docs</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="px-3 pb-3 sm:px-6 sm:pb-4">
+                  <div className="text-xl sm:text-2xl font-bold">{stats.total}</div>
+                </CardContent>
+              </Card>
               
-              {/* Desktop Filters - Hidden on Mobile */}
-              <div className="hidden sm:block">
-                <FilterContent />
-              </div>
+              <Card>
+                <CardHeader className="pb-1 pt-3 px-3 sm:pb-2 sm:pt-4 sm:px-6">
+                  <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-1 sm:gap-2">
+                    <Clock className="h-3 w-3 sm:h-4 sm:w-4" />
+                    <span className="truncate">Pending</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="px-3 pb-3 sm:px-6 sm:pb-4">
+                  <div className="text-xl sm:text-2xl font-bold text-amber-600">{stats.pending}</div>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardHeader className="pb-1 pt-3 px-3 sm:pb-2 sm:pt-4 sm:px-6">
+                  <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-1 sm:gap-2">
+                    <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4" />
+                    <span className="truncate">Net Profit</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="px-3 pb-3 sm:px-6 sm:pb-4">
+                  <div className="text-lg sm:text-2xl font-bold text-green-600">{formatCurrency(stats.totalProfit)}</div>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardHeader className="pb-1 pt-3 px-3 sm:pb-2 sm:pt-4 sm:px-6">
+                  <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-1 sm:gap-2">
+                    <DollarSign className="h-3 w-3 sm:h-4 sm:w-4" />
+                    <span className="truncate">Commission</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="px-3 pb-3 sm:px-6 sm:pb-4">
+                  <div className="text-lg sm:text-2xl font-bold text-primary">{formatCurrency(stats.totalCommission)}</div>
+                </CardContent>
+              </Card>
             </div>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="text-center py-8 text-muted-foreground">Loading...</div>
-            ) : filteredDocuments?.length === 0 ? (
-              <div className="text-center py-8">
-                <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">No commission documents found</p>
-                {hasActiveFilters && (
-                  <Button variant="link" onClick={clearFilters} className="mt-2">
-                    Clear filters
-                  </Button>
-                )}
-                {!hasActiveFilters && (
-                  <Button variant="outline" className="mt-4" onClick={() => navigate('/commissions/new')}>
-                    Create your first document
-                  </Button>
-                )}
-              </div>
-            ) : (
-              <>
-                {/* Mobile Card View */}
-                <div className="sm:hidden space-y-3">
-                  {filteredDocuments?.map((doc) => (
-                    <DocumentCard key={doc.id} doc={doc} />
-                  ))}
-                </div>
 
-                {/* Desktop Table View */}
-                <div className="hidden sm:block overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Job Name & ID</TableHead>
-                        <TableHead>Job Date</TableHead>
-                        <TableHead>Sales Rep</TableHead>
-                        <TableHead className="text-right">Gross Contract</TableHead>
-                        <TableHead className="text-right">Net Profit</TableHead>
-                        <TableHead className="text-right">Rep Commission</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredDocuments?.map((doc) => (
-                        <TableRow 
-                          key={doc.id} 
-                          className="cursor-pointer hover:bg-muted/50" 
-                          onClick={() => navigate(`/commission-documents/${doc.id}`)}
-                        >
-                          <TableCell className="font-medium">{doc.job_name_id}</TableCell>
-                          <TableCell>{doc.job_date ? format(parseISO(doc.job_date), 'MM/dd/yyyy') : '-'}</TableCell>
-                          <TableCell>{doc.sales_rep}</TableCell>
-                          <TableCell className="text-right font-mono">{formatCurrency(doc.gross_contract_total)}</TableCell>
-                          <TableCell className="text-right font-mono">{formatCurrency(doc.net_profit)}</TableCell>
-                          <TableCell className="text-right font-mono font-semibold text-green-600">
-                            {formatCurrency(doc.rep_commission)}
-                          </TableCell>
-                          <TableCell>{getStatusBadge(doc.status)}</TableCell>
-                          <TableCell className="text-right">
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              onClick={(e) => { 
-                                e.stopPropagation(); 
-                                navigate(`/commission-documents/${doc.id}`); 
-                              }}
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+            {/* Search and Filters */}
+            <Card>
+              <CardHeader className="pb-3 sm:pb-4">
+                <div className="flex flex-col gap-3">
+                  {/* Search + Filter Button (Mobile) */}
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Search..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="pl-10"
+                      />
+                    </div>
+                    
+                    {/* Mobile Filter Button */}
+                    <Sheet open={filterSheetOpen} onOpenChange={setFilterSheetOpen}>
+                      <SheetTrigger asChild>
+                        <Button variant="outline" size="icon" className="sm:hidden relative">
+                          <Filter className="h-4 w-4" />
+                          {activeFilterCount > 0 && (
+                            <span className="absolute -top-1 -right-1 h-4 w-4 bg-primary text-primary-foreground text-xs rounded-full flex items-center justify-center">
+                              {activeFilterCount}
+                            </span>
+                          )}
+                        </Button>
+                      </SheetTrigger>
+                      <SheetContent side="bottom" className="h-auto max-h-[80vh]">
+                        <SheetHeader className="mb-4">
+                          <SheetTitle>Filters</SheetTitle>
+                        </SheetHeader>
+                        <FilterContent isMobile />
+                      </SheetContent>
+                    </Sheet>
+
+                    {/* Export dropdown */}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="icon">
+                          <Download className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => exportToCSV(filteredDocuments, 'commission-documents')} className="gap-2 cursor-pointer">
+                          <FileSpreadsheet className="h-4 w-4" />
+                          Export as CSV
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => exportToPDF(filteredDocuments, 'Commission Documents Report', 'commission-documents')} className="gap-2 cursor-pointer">
+                          <FileText className="h-4 w-4" />
+                          Export as PDF
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                  
+                  {/* Desktop Filters - Hidden on Mobile */}
+                  <div className="hidden sm:block">
+                    <FilterContent />
+                  </div>
                 </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
+              </CardHeader>
+              <CardContent>
+                {isLoading ? (
+                  <div className="text-center py-8 text-muted-foreground">Loading...</div>
+                ) : filteredDocuments?.length === 0 ? (
+                  <div className="text-center py-8">
+                    <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                    <p className="text-muted-foreground">No commission documents found</p>
+                    {hasActiveFilters && (
+                      <Button variant="link" onClick={clearFilters} className="mt-2">
+                        Clear filters
+                      </Button>
+                    )}
+                    {!hasActiveFilters && (
+                      <Button variant="outline" className="mt-4" onClick={() => navigate('/commissions/new')}>
+                        Create your first document
+                      </Button>
+                    )}
+                  </div>
+                ) : (
+                  <>
+                    {/* Mobile Card View */}
+                    <div className="sm:hidden space-y-3">
+                      {filteredDocuments?.map((doc) => (
+                        <DocumentCard key={doc.id} doc={doc} />
+                      ))}
+                    </div>
+
+                    {/* Desktop Table View */}
+                    <div className="hidden sm:block overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Job Name & ID</TableHead>
+                            <TableHead>Job Date</TableHead>
+                            <TableHead>Sales Rep</TableHead>
+                            <TableHead className="text-right">Gross Contract</TableHead>
+                            <TableHead className="text-right">Net Profit</TableHead>
+                            <TableHead className="text-right">Rep Commission</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {filteredDocuments?.map((doc) => (
+                            <TableRow 
+                              key={doc.id} 
+                              className="cursor-pointer hover:bg-muted/50" 
+                              onClick={() => navigate(`/commission-documents/${doc.id}`)}
+                            >
+                              <TableCell className="font-medium">{doc.job_name_id}</TableCell>
+                              <TableCell>{doc.job_date ? format(parseISO(doc.job_date), 'MM/dd/yyyy') : '-'}</TableCell>
+                              <TableCell>{doc.sales_rep}</TableCell>
+                              <TableCell className="text-right font-mono">{formatCurrency(doc.gross_contract_total)}</TableCell>
+                              <TableCell className="text-right font-mono">{formatCurrency(doc.net_profit)}</TableCell>
+                              <TableCell className="text-right font-mono font-semibold text-green-600">
+                                {formatCurrency(doc.rep_commission)}
+                              </TableCell>
+                              <TableCell>{getStatusBadge(doc.status)}</TableCell>
+                              <TableCell className="text-right">
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  onClick={(e) => { 
+                                    e.stopPropagation(); 
+                                    navigate(`/commission-documents/${doc.id}`); 
+                                  }}
+                                >
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Paid Commissions Tab */}
+          <TabsContent value="paid" className="space-y-4">
+            {/* Paid Summary Cards */}
+            <div className="grid grid-cols-3 gap-3">
+              <Card>
+                <CardHeader className="pb-1 pt-3 px-3 sm:pb-2 sm:pt-4 sm:px-6">
+                  <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-1 sm:gap-2">
+                    <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4" />
+                    <span className="truncate">Total Paid</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="px-3 pb-3 sm:px-6 sm:pb-4">
+                  <div className="text-xl sm:text-2xl font-bold">{paidStats.totalCount}</div>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardHeader className="pb-1 pt-3 px-3 sm:pb-2 sm:pt-4 sm:px-6">
+                  <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-1 sm:gap-2">
+                    <Wallet className="h-3 w-3 sm:h-4 sm:w-4" />
+                    <span className="truncate">Total Earned</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="px-3 pb-3 sm:px-6 sm:pb-4">
+                  <div className="text-lg sm:text-2xl font-bold text-emerald-600">{formatCurrency(paidStats.totalCommission)}</div>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardHeader className="pb-1 pt-3 px-3 sm:pb-2 sm:pt-4 sm:px-6">
+                  <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-1 sm:gap-2">
+                    <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4" />
+                    <span className="truncate">YTD Earnings</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="px-3 pb-3 sm:px-6 sm:pb-4">
+                  <div className="text-lg sm:text-2xl font-bold text-primary">{formatCurrency(paidStats.ytdEarnings)}</div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Search and Export for Paid Tab */}
+            <Card>
+              <CardHeader className="pb-3 sm:pb-4">
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search paid commissions..."
+                      value={paidSearchQuery}
+                      onChange={(e) => setPaidSearchQuery(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                  
+                  {/* Export dropdown */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="icon">
+                        <Download className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => exportToCSV(paidDocuments, 'paid-commissions')} className="gap-2 cursor-pointer">
+                        <FileSpreadsheet className="h-4 w-4" />
+                        Export as CSV
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => exportToPDF(paidDocuments, 'Paid Commissions Report', 'paid-commissions')} className="gap-2 cursor-pointer">
+                        <FileText className="h-4 w-4" />
+                        Export as PDF
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {isLoading ? (
+                  <div className="text-center py-8 text-muted-foreground">Loading...</div>
+                ) : paidDocuments.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Wallet className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                    <p className="text-muted-foreground">No paid commissions found</p>
+                  </div>
+                ) : (
+                  <>
+                    {/* Mobile Card View */}
+                    <div className="sm:hidden space-y-3">
+                      {paidDocuments.map((doc) => (
+                        <PaidDocumentCard key={doc.id} doc={doc} />
+                      ))}
+                    </div>
+
+                    {/* Desktop Table View */}
+                    <div className="hidden sm:block overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Job Name & ID</TableHead>
+                            <TableHead>Job Date</TableHead>
+                            <TableHead>Sales Rep</TableHead>
+                            <TableHead className="text-right">Rep Commission</TableHead>
+                            <TableHead>Paid Date</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {paidDocuments.map((doc) => {
+                            const paidDate = doc.paid_at || doc.accounting_approved_at;
+                            return (
+                              <TableRow 
+                                key={doc.id} 
+                                className="cursor-pointer hover:bg-muted/50" 
+                                onClick={() => navigate(`/commission-documents/${doc.id}`)}
+                              >
+                                <TableCell className="font-medium">{doc.job_name_id}</TableCell>
+                                <TableCell>{doc.job_date ? format(parseISO(doc.job_date), 'MM/dd/yyyy') : '-'}</TableCell>
+                                <TableCell>{doc.sales_rep}</TableCell>
+                                <TableCell className="text-right font-mono font-semibold text-emerald-600">
+                                  {formatCurrency(doc.rep_commission)}
+                                </TableCell>
+                                <TableCell>
+                                  {paidDate ? format(parseISO(paidDate), 'MMM d, yyyy') : '-'}
+                                </TableCell>
+                                <TableCell>{getStatusBadge(doc.status)}</TableCell>
+                                <TableCell className="text-right">
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    onClick={(e) => { 
+                                      e.stopPropagation(); 
+                                      navigate(`/commission-documents/${doc.id}`); 
+                                    }}
+                                  >
+                                    <Eye className="h-4 w-4" />
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
     </AppLayout>
   );

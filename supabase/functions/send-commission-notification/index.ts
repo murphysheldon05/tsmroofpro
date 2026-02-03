@@ -197,20 +197,24 @@ const handler = async (req: Request): Promise<Response> => {
         const payDateFormatted = formatPayDateFn(payload.scheduled_pay_date);
         subject = `🎉 Commission Approved - Payment Scheduled for ${payDateFormatted}!`;
         heading = "Congratulations! Your Commission is Approved! 🎉";
-        introText = `Great news! Your commission for ${payload.job_name} has been fully approved by accounting and is scheduled to be paid!`;
+        introText = `Great news! Your commission for <strong>${payload.job_name}</strong> has been fully approved and is scheduled for payment!`;
         headerColor = "#059669";
         recipientEmails = payload.submitter_email ? [payload.submitter_email] : [];
         const accountingRecipients = await resolveRecipients(supabaseClient, "commission_accounting");
         recipientEmails.push(...accountingRecipients);
-        additionalPlainText = `Job: ${payload.job_name}\nCommission Amount: ${formatCurrency(payload.net_commission_owed)}\nPayment Date: ${payDateFormatted}\n\n🎉 Your hard work is paying off! This commission will be deposited on ${payDateFormatted}.`;
+        additionalPlainText = `Job: ${payload.job_name}\nCommission Amount: ${formatCurrency(payload.net_commission_owed)}\nPayment Date: ${payDateFormatted}\n\n🎉 Your hard work is paying off!`;
         additionalContent = `
-          <tr><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;"><strong>Job:</strong></td><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">${payload.job_name}</td></tr>
-          <tr><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;"><strong>Commission Amount:</strong></td><td style="padding: 10px 0; color: #16a34a; font-weight: bold; font-size: 24px;">${formatCurrency(payload.net_commission_owed)}</td></tr>
-          <tr><td style="padding: 10px 0;"><strong>Payment Date:</strong></td><td style="padding: 10px 0; color: #1e40af; font-weight: bold; font-size: 20px;">📅 ${payDateFormatted}</td></tr>
-          <tr><td colspan="2" style="padding: 25px; background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%); border-radius: 12px; margin-top: 15px; text-align: center;">
-            <div style="font-size: 40px; margin-bottom: 10px;">🎉💰🎉</div>
-            <div style="font-size: 18px; font-weight: bold; color: #166534;">Your hard work is paying off!</div>
-            <div style="font-size: 14px; color: #15803d; margin-top: 5px;">Payment will be deposited on ${payDateFormatted}</div>
+          <tr><td colspan="2" style="padding: 30px; background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 50%, #d1fae5 100%); border-radius: 16px; text-align: center; margin-bottom: 15px;">
+            <div style="font-size: 48px; margin-bottom: 12px;">🎉💰🏠</div>
+            <div style="font-size: 14px; text-transform: uppercase; letter-spacing: 2px; color: #166534; font-weight: 600; margin-bottom: 8px;">Your Commission</div>
+            <div style="font-size: 36px; font-weight: 800; color: #15803d; margin-bottom: 4px;">${formatCurrency(payload.net_commission_owed)}</div>
+            <div style="font-size: 16px; color: #166534; font-weight: 600;">Has been approved! 🎊</div>
+          </td></tr>
+          <tr><td style="padding: 12px 0; border-bottom: 1px solid #e5e7eb;"><strong>Job:</strong></td><td style="padding: 12px 0; border-bottom: 1px solid #e5e7eb;">${payload.job_name}</td></tr>
+          <tr><td style="padding: 12px 0; border-bottom: 1px solid #e5e7eb;"><strong>Payment Date:</strong></td><td style="padding: 12px 0; border-bottom: 1px solid #e5e7eb; color: #1e40af; font-weight: bold; font-size: 18px;">📅 ${payDateFormatted}</td></tr>
+          <tr><td colspan="2" style="padding: 20px; background: #eff6ff; border-radius: 12px; margin-top: 10px; text-align: center;">
+            <div style="font-size: 15px; font-weight: 600; color: #1e40af;">Payment will be deposited on ${payDateFormatted}</div>
+            <div style="font-size: 13px; color: #6b7280; margin-top: 6px;">Your hard work is paying off — keep closing those deals! 💪</div>
           </td></tr>
         `;
         break;
@@ -231,14 +235,21 @@ const handler = async (req: Request): Promise<Response> => {
       case "revision_required":
         subject = `⚠️ Commission Needs Revision: ${payload.job_name}`;
         heading = "Commission Revision Required";
-        introText = `The commission submission for ${payload.job_name} requires revisions before it can be approved.`;
+        introText = `The commission submission for <strong>${payload.job_name}</strong> requires revisions before it can be approved. Please review the notes below and resubmit.`;
         headerColor = "#dc2626";
         recipientEmails = payload.submitter_email ? [payload.submitter_email] : [];
         additionalPlainText = `Job: ${payload.job_name}${payload.notes ? `\nRevision Reason: ${payload.notes}` : ""}`;
-        additionalContent = `<tr><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;"><strong>Job:</strong></td><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">${payload.job_name}</td></tr>`;
-        if (payload.notes) {
-          additionalContent += `<tr><td colspan="2" style="padding: 15px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; margin-top: 10px;"><strong>Revision Reason:</strong><br><span style="color: #dc2626;">${payload.notes}</span></td></tr>`;
-        }
+        additionalContent = `
+          <tr><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;"><strong>Job:</strong></td><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">${payload.job_name}</td></tr>
+          <tr><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;"><strong>Rep:</strong></td><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">${repName}</td></tr>
+          <tr><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;"><strong>Commission Amount:</strong></td><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">${formatCurrency(payload.net_commission_owed)}</td></tr>
+          ${payload.notes ? `
+          <tr><td colspan="2" style="padding: 20px; background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); border: 1px solid #fecaca; border-radius: 12px; margin-top: 15px;">
+            <div style="font-size: 16px; font-weight: bold; color: #991b1b; margin-bottom: 8px;">📝 Revision Notes:</div>
+            <div style="font-size: 14px; color: #dc2626; line-height: 1.6;">${payload.notes}</div>
+            <div style="font-size: 13px; color: #9ca3af; margin-top: 12px;">Please make the requested changes and resubmit your commission document.</div>
+          </td></tr>` : ""}
+        `;
         buttonText = "View & Revise";
         break;
 
