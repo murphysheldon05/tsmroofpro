@@ -1,15 +1,25 @@
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { parseCurrencyInput } from "@/lib/commissionDocumentCalculations";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { ArrowLeft, AlertTriangle, Printer } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { 
+  Lock, Save, Send, ArrowLeft, AlertTriangle, Printer, Plus, Trash2, 
+  DollarSign, Calculator, FileText, ChevronDown, Info, Sparkles 
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import {
   calculateAllFields,
+  formatCurrency,
   validateCommissionDocument,
   PROFIT_SPLIT_OPTIONS,
   OP_PERCENT_OPTIONS,
@@ -25,27 +35,114 @@ import {
 } from "@/hooks/useCommissionDocuments";
 import { useUserCommissionTier } from "@/hooks/useCommissionTiers";
 import { toast } from "sonner";
-
-// Form sub-components
-import {
-  useCurrencyInput,
-  JobInfoSection,
-  ContractSection,
-  ExpensesSection,
-  NEGATIVE_EXPENSES,
-  POSITIVE_EXPENSES,
-  ProfitSplitSection,
-  CommissionSummarySection,
-  NotesSection,
-  FormActions,
-} from "./form";
+import { cn } from "@/lib/utils";
 
 interface CommissionDocumentFormProps {
   document?: CommissionDocument;
   readOnly?: boolean;
 }
 
-export function CommissionDocumentForm({ document, readOnly = false }: CommissionDocumentFormProps) {
+// Shared input classes — h-12 = 48px touch targets on all devices
+const inputBaseClasses = "h-12 text-base transition-all duration-200 ease-out bg-background/50 border-border/50 hover:border-primary/50 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:shadow-md focus:shadow-primary/10";
+const numberInputClasses = `font-mono tracking-wide tabular-nums ${inputBaseClasses}`;
+const calculatedInputClasses = "h-12 font-mono tracking-wide tabular-nums bg-primary/5 border-primary/20 text-primary text-base";
+
+// ─── Section Header ──────────────────────────────────────────
+interface SectionHeaderProps {
+  title: string;
+  icon: React.ElementType;
+  color?: "default" | "destructive" | "success";
+  isOpen: boolean;
+  onToggle: () => void;
+  badge?: number;
+}
+
+function SectionHeader({ title, icon: Icon, color = "default", isOpen, onToggle, badge }: SectionHeaderProps) {
+  return (
+    <CollapsibleTrigger asChild>
+      <button
+        onClick={onToggle}
+        className={cn(
+          "w-full flex items-center justify-between p-4 transition-all duration-200",
+          "hover:bg-muted/30 border-b border-border/50",
+          isOpen && "bg-muted/20"
+        )}
+      >
+        <div className="flex items-center gap-3">
+          <div className={cn(
+            "w-8 h-8 rounded-lg flex items-center justify-center",
+            color === "destructive" && "bg-destructive/10",
+            color === "success" && "bg-emerald-500/10",
+            color === "default" && "bg-primary/10"
+          )}>
+            <Icon className={cn(
+              "w-4 h-4",
+              color === "destructive" && "text-destructive",
+              color === "success" && "text-emerald-500",
+              color === "default" && "text-primary"
+            )} />
+          </div>
+          <span className="font-semibold text-sm uppercase tracking-wider">{title}</span>
+          {badge !== undefined && badge > 0 && (
+            <Badge variant="secondary" className={cn(
+              "text-xs",
+              color === "destructive" && "bg-destructive/10 text-destructive",
+              color === "success" && "bg-emerald-500/10 text-emerald-500",
+              color === "default" && "bg-primary/10 text-primary"
+            )}>
+              {badge}
+            </Badge>
+          )}
+        </div>
+        <ChevronDown className={cn(
+          "w-5 h-5 text-muted-foreground transition-transform duration-200",
+          isOpen && "rotate-180"
+        )} />
+      </button>
+    </CollapsibleTrigger>
+  );
+}
+
+// ─── Form Row ──────────────────────────────────────────────
+interface FormRowProps {
+  label: React.ReactNode;
+  children: React.ReactNode;
+  hint?: string;
+  variant?: "default" | "negative" | "positive" | "calculated";
+  highlight?: boolean;
+}
+
+function EnhancedFormRow({ label, children, hint, variant = "default", highlight }: FormRowProps) {
+  return (
+    <div className={cn(
+      "py-4 border-b border-border/30 transition-colors",
+      variant === "negative" && "hover:bg-destructive/5",
+      variant === "positive" && "hover:bg-emerald-500/5",
+      variant === "calculated" && "bg-primary/5 rounded-lg my-2 border-none px-4",
+      highlight && "bg-primary/10 rounded-xl my-3 border-none p-4 ring-1 ring-primary/20"
+    )}>
+      <Label className={cn(
+        "text-sm font-medium mb-2 flex items-center gap-2",
+        variant === "negative" && "text-destructive",
+        variant === "positive" && "text-emerald-500",
+        variant === "calculated" && "text-primary"
+      )}>
+        {label}
+        {variant === "calculated" && <Lock className="w-3 h-3 text-muted-foreground" />}
+      </Label>
+      <div className="mt-2">{children}</div>
+      {hint && (
+        <p className="mt-2 text-xs text-muted-foreground flex items-center gap-1">
+          <Info className="w-3 h-3 shrink-0" />
+          {hint}
+        </p>
+      )}
+    </div>
+  );
+}
+
+// ─── Main Component ──────────────────────────────────────────
+export function CommissionDocumentForm({ document: existingDoc, readOnly = false }: CommissionDocumentFormProps) {
   const navigate = useNavigate();
   const { user, isAdmin, isManager } = useAuth();
   const createMutation = useCreateCommissionDocument();
@@ -69,7 +166,6 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
   
   // Fetch the current user's commission tier
   const { data: userTier, isLoading: tierLoading } = useUserCommissionTier(user?.id);
-  
   const isPrivileged = isAdmin || isManager;
 
   // Get allowed options based on user's tier (admins/managers see all options)
@@ -81,7 +177,6 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
         defaultProfitSplit: PROFIT_SPLIT_OPTIONS[1],
       };
     }
-    
     if (userTier?.tier) {
       const tier = userTier.tier;
       const opOptions = filterOpPercentOptions(tier.allowed_op_percentages);
@@ -89,14 +184,12 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
         tier.allowed_op_percentages,
         tier.allowed_profit_splits
       );
-      
       return {
         availableOpOptions: opOptions,
         availableProfitSplitOptions: profitSplitOptions,
         defaultProfitSplit: profitSplitOptions[0] || PROFIT_SPLIT_OPTIONS[1],
       };
     }
-    
     return {
       availableOpOptions: OP_PERCENT_OPTIONS,
       availableProfitSplitOptions: PROFIT_SPLIT_OPTIONS,
@@ -104,54 +197,62 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
     };
   }, [userTier, isPrivileged]);
 
-  // Form state
+  // ── Form state (identical field set to current) ──
   const [formData, setFormData] = useState(() => ({
-    job_name_id: document?.job_name_id ?? "",
-    job_date: document?.job_date ?? "",
-    sales_rep: document?.sales_rep ?? "",
-    sales_rep_id: document?.sales_rep_id ?? user?.id ?? null,
-    gross_contract_total: document?.gross_contract_total ?? 0,
-    op_percent: document?.op_percent ?? 0.15,
-    material_cost: document?.material_cost ?? 0,
-    labor_cost: document?.labor_cost ?? 0,
-    neg_exp_1: document?.neg_exp_1 ?? 0,
-    neg_exp_2: document?.neg_exp_2 ?? 0,
-    neg_exp_3: document?.neg_exp_3 ?? 0,
-    neg_exp_4: document?.neg_exp_4 ?? document?.supplement_fees_expense ?? 0,
-    pos_exp_1: document?.pos_exp_1 ?? 0,
-    pos_exp_2: document?.pos_exp_2 ?? 0,
-    pos_exp_3: document?.pos_exp_3 ?? 0,
-    pos_exp_4: document?.pos_exp_4 ?? 0,
-    profit_split_label: document?.profit_split_label ?? "15/40/60",
-    rep_profit_percent: document?.rep_profit_percent ?? 0.40,
-    company_profit_percent: document?.company_profit_percent ?? 0.60,
-    advance_total: document?.advance_total ?? 0,
-    notes: document?.notes ?? "",
+    job_name_id: existingDoc?.job_name_id ?? "",
+    job_date: existingDoc?.job_date ?? "",
+    sales_rep: existingDoc?.sales_rep ?? "",
+    sales_rep_id: existingDoc?.sales_rep_id ?? user?.id ?? null,
+    gross_contract_total: existingDoc?.gross_contract_total ?? 0,
+    op_percent: existingDoc?.op_percent ?? 0.15,
+    material_cost: existingDoc?.material_cost ?? 0,
+    labor_cost: existingDoc?.labor_cost ?? 0,
+    neg_exp_1: existingDoc?.neg_exp_1 ?? 0,
+    neg_exp_2: existingDoc?.neg_exp_2 ?? 0,
+    neg_exp_3: existingDoc?.neg_exp_3 ?? 0,
+    neg_exp_4: existingDoc?.neg_exp_4 ?? existingDoc?.supplement_fees_expense ?? 0,
+    pos_exp_1: existingDoc?.pos_exp_1 ?? 0,
+    pos_exp_2: existingDoc?.pos_exp_2 ?? 0,
+    pos_exp_3: existingDoc?.pos_exp_3 ?? 0,
+    pos_exp_4: existingDoc?.pos_exp_4 ?? 0,
+    profit_split_label: existingDoc?.profit_split_label ?? "15/40/60",
+    rep_profit_percent: existingDoc?.rep_profit_percent ?? 0.40,
+    company_profit_percent: existingDoc?.company_profit_percent ?? 0.60,
+    advance_total: existingDoc?.advance_total ?? 0,
+    notes: existingDoc?.notes ?? "",
   }));
 
-  // Currency input handling
-  const { handleFocus, handleChange, commitValue, getDisplayValue } = useCurrencyInput();
+  // ── NEW: Dynamic additional negative expenses ──
+  const [additionalNegExpenses, setAdditionalNegExpenses] = useState<number[]>([]);
 
-  const handleMoneyCommit = useCallback((field: string) => {
-    commitValue(field, (f, value) => {
-      setFormData(prev => ({ ...prev, [f]: value }));
-    });
-  }, [commitValue]);
+  // ── Collapsible section state ──
+  const [openSections, setOpenSections] = useState({
+    job: true,
+    contract: true,
+    negExpenses: true,
+    posExpenses: false,
+    profitSplit: true,
+    summary: true,
+    notes: false,
+  });
+  const toggleSection = (key: keyof typeof openSections) => {
+    setOpenSections(prev => ({ ...prev, [key]: !prev[key] }));
+  };
 
-  // Auto-populate sales rep name when profile loads (only for new documents)
+  // ── Auto-populate sales rep name (only for new documents) ──
   useEffect(() => {
-    if (!document && userProfile?.full_name && !formData.sales_rep) {
+    if (!existingDoc && userProfile?.full_name && !formData.sales_rep) {
       setFormData(prev => ({
         ...prev,
         sales_rep: userProfile.full_name,
         sales_rep_id: user?.id ?? null,
       }));
     }
-  }, [userProfile, document, user, formData.sales_rep]);
+  }, [userProfile, existingDoc, user]);
 
-  // Set default profit split based on tier (only for new documents)
+  // ── Set default profit split from tier (only for new documents) ──
   useEffect(() => {
-    if (!document && !tierLoading && defaultProfitSplit) {
+    if (!existingDoc && !tierLoading && defaultProfitSplit) {
       setFormData(prev => ({
         ...prev,
         profit_split_label: defaultProfitSplit.label,
@@ -160,10 +261,10 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
         company_profit_percent: defaultProfitSplit.company,
       }));
     }
-  }, [defaultProfitSplit, tierLoading, document]);
+  }, [defaultProfitSplit, tierLoading, existingDoc]);
 
-  // Handle profit split change
-  const handleProfitSplitChange = useCallback((label: string) => {
+  // ── Profit split change handler ──
+  const handleProfitSplitChange = (label: string) => {
     const dynamicSplit = availableProfitSplitOptions.find(opt => opt.label === label);
     if (dynamicSplit) {
       setFormData(prev => ({
@@ -175,7 +276,6 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
       }));
       return;
     }
-    
     const staticSplit = getProfitSplitFromLabel(label);
     if (staticSplit) {
       setFormData(prev => ({
@@ -186,14 +286,15 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
         company_profit_percent: staticSplit.company,
       }));
     }
-  }, [availableProfitSplitOptions]);
+  };
 
-  // Handle O&P change
-  const handleOpPercentChange = useCallback((value: string) => {
+  const handleOpPercentChange = (value: string) => {
     setFormData(prev => ({ ...prev, op_percent: parseFloat(value) }));
-  }, []);
+  };
 
-  // Live calculations
+  // ── Calculations (exact same formulas + additional neg expenses) ──
+  const additionalNegTotal = additionalNegExpenses.reduce((sum, exp) => sum + (exp || 0), 0);
+
   const calculated = useMemo(() => {
     const inputData: CommissionDocumentData = {
       gross_contract_total: formData.gross_contract_total,
@@ -203,7 +304,7 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
       neg_exp_1: formData.neg_exp_1,
       neg_exp_2: formData.neg_exp_2,
       neg_exp_3: formData.neg_exp_3,
-      neg_exp_4: formData.neg_exp_4,
+      neg_exp_4: formData.neg_exp_4 + additionalNegTotal,
       pos_exp_1: formData.pos_exp_1,
       pos_exp_2: formData.pos_exp_2,
       pos_exp_3: formData.pos_exp_3,
@@ -212,10 +313,30 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
       advance_total: formData.advance_total,
     };
     return calculateAllFields(inputData);
-  }, [formData]);
+  }, [formData, additionalNegTotal]);
 
-  // Save handler
-  const handleSave = useCallback(async (submit: boolean = false) => {
+  // ── Money input editing (prevents caret jumps) ──
+  const [editingField, setEditingField] = useState<keyof typeof formData | null>(null);
+  const [rawValue, setRawValue] = useState<string>("");
+
+  const handleMoneyFocus = (field: keyof typeof formData, currentValue: number) => {
+    setEditingField(field);
+    setRawValue(currentValue ? String(currentValue) : "");
+  };
+  const handleMoneyChange = (value: string) => { setRawValue(value); };
+  const commitMoneyValue = (field: keyof typeof formData) => {
+    const numValue = parseCurrencyInput(rawValue);
+    setFormData(prev => ({ ...prev, [field]: numValue }));
+    setEditingField(null);
+    setRawValue("");
+  };
+  const getMoneyInputValue = (field: keyof typeof formData, numericValue: number) => {
+    if (editingField === field) return rawValue;
+    return numericValue ? formatCurrency(numericValue) : "";
+  };
+
+  // ── Save / Submit (identical payload to current) ──
+  const handleSave = async (submit: boolean = false) => {
     const validation = validateCommissionDocument({
       ...formData,
       job_name_id: formData.job_name_id,
@@ -223,7 +344,6 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
       sales_rep: formData.sales_rep,
       profit_split_label: formData.profit_split_label,
     });
-
     if (!validation.valid) {
       validation.errors.forEach(error => toast.error(error));
       return;
@@ -241,8 +361,8 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
       neg_exp_1: formData.neg_exp_1,
       neg_exp_2: formData.neg_exp_2,
       neg_exp_3: formData.neg_exp_3,
-      neg_exp_4: formData.neg_exp_4,
-      supplement_fees_expense: formData.neg_exp_4,
+      neg_exp_4: formData.neg_exp_4 + additionalNegTotal,
+      supplement_fees_expense: formData.neg_exp_4 + additionalNegTotal,
       pos_exp_1: formData.pos_exp_1,
       pos_exp_2: formData.pos_exp_2,
       pos_exp_3: formData.pos_exp_3,
@@ -261,44 +381,67 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
       final_claim_amount: null,
     };
 
-    if (document?.id) {
-      await updateMutation.mutateAsync({ id: document.id, ...payload });
+    if (existingDoc?.id) {
+      await updateMutation.mutateAsync({ id: existingDoc.id, ...payload });
     } else {
       await createMutation.mutateAsync(payload);
     }
     navigate('/commission-documents');
-  }, [formData, document, createMutation, updateMutation, navigate]);
-
-  const isLoading = createMutation.isPending || updateMutation.isPending;
-  const canEdit = !readOnly && (!document || document.status === 'draft');
-
-  // Expense values for section components
-  const expenseValues = {
-    neg_exp_1: formData.neg_exp_1,
-    neg_exp_2: formData.neg_exp_2,
-    neg_exp_3: formData.neg_exp_3,
-    neg_exp_4: formData.neg_exp_4,
-    pos_exp_1: formData.pos_exp_1,
-    pos_exp_2: formData.pos_exp_2,
-    pos_exp_3: formData.pos_exp_3,
-    pos_exp_4: formData.pos_exp_4,
   };
 
+  const isLoading = createMutation.isPending || updateMutation.isPending;
+  const canEdit = !readOnly && (!existingDoc || existingDoc.status === 'draft');
+  const negExpenseCount = [formData.neg_exp_1, formData.neg_exp_2, formData.neg_exp_3, formData.neg_exp_4, ...additionalNegExpenses].filter(e => e > 0).length;
+
+  // ── Money input helper component ──
+  const MoneyField = ({ field, disabled }: { field: keyof typeof formData; disabled?: boolean }) => (
+    <Input
+      type="text"
+      inputMode="decimal"
+      value={getMoneyInputValue(field, formData[field] as number)}
+      onChange={(e) => handleMoneyChange(e.target.value)}
+      onFocus={() => handleMoneyFocus(field, formData[field] as number)}
+      onBlur={() => commitMoneyValue(field)}
+      onWheel={(e) => e.currentTarget.blur()}
+      disabled={disabled ?? !canEdit}
+      className={numberInputClasses}
+      placeholder="$0.00"
+    />
+  );
+
+  // ═══════════════════════ RENDER ═══════════════════════
   return (
-    <div className="space-y-4 sm:space-y-6 pb-24 sm:pb-6">
+    <div className="space-y-4 pb-48 sm:pb-6 px-4 sm:px-0">
       {/* Header */}
       <div className="flex items-center justify-between gap-2">
-        <Button variant="ghost" size="sm" onClick={() => navigate('/commission-documents')}>
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to List
+        <Button variant="ghost" size="sm" onClick={() => navigate('/commission-documents')} className="gap-2">
+          <ArrowLeft className="h-4 w-4" /> Back
         </Button>
-        {document?.id && (
-          <Button variant="outline" size="sm" onClick={() => navigate(`/commission-documents/${document.id}/print`)}>
-            <Printer className="h-4 w-4 mr-2" />
-            Print View
+        {existingDoc?.id && (
+          <Button variant="outline" size="sm" onClick={() => navigate(`/commission-documents/${existingDoc.id}/print`)}>
+            <Printer className="h-4 w-4 mr-2" /> Print
           </Button>
         )}
       </div>
+
+      {/* Tier Banner */}
+      {userTier?.tier && (
+        <div className="glass-card rounded-xl p-4 border-primary/20">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+              <Sparkles className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20 mb-1">
+                {userTier.tier.name}
+              </Badge>
+              <p className="text-sm text-muted-foreground">
+                {userTier.tier.description || 'Your profit split options are based on your assigned tier.'}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Missing tier warning */}
       {!isPrivileged && !tierLoading && !userTier?.tier && (
@@ -306,130 +449,220 @@ export function CommissionDocumentForm({ document, readOnly = false }: Commissio
           <AlertTriangle className="h-4 w-4" />
           <AlertTitle>No Commission Tier Assigned</AlertTitle>
           <AlertDescription>
-            You do not have a commission tier assigned. Please contact your manager or admin to have your tier set up before submitting commissions.
+            Please contact your manager to have your tier set up before submitting commissions.
           </AlertDescription>
         </Alert>
       )}
 
-      {/* Tier info banner */}
-      {userTier?.tier && (
-        <Alert>
-          <AlertTitle>Commission Tier: {userTier.tier.name}</AlertTitle>
-          <AlertDescription>
-            {userTier.tier.description || 'Your available O&P and profit split options are based on your assigned tier.'}
-          </AlertDescription>
-        </Alert>
-      )}
-
-      <Card className="overflow-hidden">
-        <CardHeader className="bg-muted/50 py-4">
-          <CardTitle className="text-lg sm:text-xl text-center font-semibold">
-            TSM Roofing LLC Official Commission Document
-          </CardTitle>
-          {document?.status && (
-            <div className="text-center">
-              <Badge variant={document.status === 'approved' ? 'default' : document.status === 'rejected' ? 'destructive' : 'secondary'}>
-                {document.status.charAt(0).toUpperCase() + document.status.slice(1)}
-              </Badge>
-            </div>
+      {/* ── Main Card ── */}
+      <Card className="overflow-hidden border-border/50">
+        <div className="bg-gradient-to-r from-primary/10 via-background to-primary/5 p-6 text-center border-b border-border/50">
+          <h1 className="text-xl font-bold gradient-text mb-1">TSM Roofing LLC</h1>
+          <p className="text-sm text-muted-foreground">Official Commission Document</p>
+          {existingDoc?.status && (
+            <Badge
+              variant={existingDoc.status === 'approved' || existingDoc.status === 'paid' ? 'default' : existingDoc.status === 'rejected' ? 'destructive' : 'secondary'}
+              className="mt-3"
+            >
+              {existingDoc.status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+            </Badge>
           )}
-        </CardHeader>
-        
-        <CardContent className="p-4 sm:p-6">
-          <div className="space-y-1">
-            <JobInfoSection
-              jobNameId={formData.job_name_id}
-              jobDate={formData.job_date}
-              salesRep={formData.sales_rep}
-              canEdit={canEdit}
-              isPrivileged={isPrivileged}
-              onJobNameIdChange={(v) => setFormData(prev => ({ ...prev, job_name_id: v }))}
-              onJobDateChange={(v) => setFormData(prev => ({ ...prev, job_date: v }))}
-              onSalesRepChange={(v) => setFormData(prev => ({ ...prev, sales_rep: v }))}
-            />
+        </div>
 
-            <ContractSection
-              grossContractTotal={formData.gross_contract_total}
-              opPercent={formData.op_percent}
-              opAmount={calculated.op_amount}
-              contractTotalNet={calculated.contract_total_net}
-              materialCost={formData.material_cost}
-              laborCost={formData.labor_cost}
-              canEdit={canEdit}
-              tierLoading={tierLoading}
-              tierName={userTier?.tier?.name}
-              availableOpOptions={[...availableOpOptions]}
-              getDisplayValue={getDisplayValue}
-              onMoneyFocus={handleFocus}
-              onMoneyChange={handleChange}
-              onMoneyCommit={handleMoneyCommit}
-              onOpPercentChange={handleOpPercentChange}
-            />
+        <CardContent className="p-0">
 
-            <ExpensesSection
-              title="Additional Expenses (-)"
-              variant="negative"
-              expenses={NEGATIVE_EXPENSES}
-              values={expenseValues}
-              canEdit={canEdit}
-              getDisplayValue={getDisplayValue}
-              onMoneyFocus={handleFocus}
-              onMoneyChange={handleChange}
-              onMoneyCommit={handleMoneyCommit}
-            />
+          {/* ── Job Information ── */}
+          <Collapsible open={openSections.job} onOpenChange={() => toggleSection('job')}>
+            <SectionHeader title="Job Information" icon={FileText} isOpen={openSections.job} onToggle={() => toggleSection('job')} />
+            <CollapsibleContent>
+              <div className="p-4 space-y-1">
+                <EnhancedFormRow label="Job Name & ID">
+                  <Input value={formData.job_name_id} onChange={(e) => setFormData(prev => ({ ...prev, job_name_id: e.target.value }))} disabled={!canEdit} className={inputBaseClasses} placeholder="e.g., Smith Residence - 4521" />
+                </EnhancedFormRow>
+                <EnhancedFormRow label="Job Date">
+                  <Input type="date" value={formData.job_date} onChange={(e) => setFormData(prev => ({ ...prev, job_date: e.target.value }))} disabled={!canEdit} className={inputBaseClasses} />
+                </EnhancedFormRow>
+                <EnhancedFormRow label="Sales Rep" hint={isPrivileged ? "Managers can edit" : "Auto-populated from your profile"}>
+                  <Input value={formData.sales_rep} onChange={(e) => setFormData(prev => ({ ...prev, sales_rep: e.target.value }))} disabled={!canEdit || !isPrivileged} className={cn(inputBaseClasses, !isPrivileged && "bg-muted/50")} />
+                </EnhancedFormRow>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
 
-            <ExpensesSection
-              title="Additional Expenses (+)"
-              variant="positive"
-              expenses={POSITIVE_EXPENSES}
-              values={expenseValues}
-              canEdit={canEdit}
-              getDisplayValue={getDisplayValue}
-              onMoneyFocus={handleFocus}
-              onMoneyChange={handleChange}
-              onMoneyCommit={handleMoneyCommit}
-            />
+          {/* ── Contract & Costs ── */}
+          <Collapsible open={openSections.contract} onOpenChange={() => toggleSection('contract')}>
+            <SectionHeader title="Contract & Costs" icon={Calculator} isOpen={openSections.contract} onToggle={() => toggleSection('contract')} />
+            <CollapsibleContent>
+              <div className="p-4 space-y-1">
+                <EnhancedFormRow label="Contract Total (Gross)"><MoneyField field="gross_contract_total" /></EnhancedFormRow>
+                <EnhancedFormRow label="O&P %" hint="Based on your tier">
+                  <Select value={formData.op_percent.toString()} onValueChange={handleOpPercentChange} disabled={!canEdit || tierLoading}>
+                    <SelectTrigger className={cn(inputBaseClasses, "font-mono")}><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {availableOpOptions.map((opt) => (<SelectItem key={opt.value} value={opt.value.toString()}>{opt.label}</SelectItem>))}
+                    </SelectContent>
+                  </Select>
+                </EnhancedFormRow>
+                <EnhancedFormRow label="O&P $ Amount" variant="calculated"><Input value={formatCurrency(calculated.op_amount)} disabled className={calculatedInputClasses} /></EnhancedFormRow>
+                <EnhancedFormRow label="Contract Total (Net)" variant="calculated"><Input value={formatCurrency(calculated.contract_total_net)} disabled className={calculatedInputClasses} /></EnhancedFormRow>
+                <EnhancedFormRow label="Material Cost"><MoneyField field="material_cost" /></EnhancedFormRow>
+                <EnhancedFormRow label="Labor Cost"><MoneyField field="labor_cost" /></EnhancedFormRow>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
 
-            <ProfitSplitSection
-              profitSplitLabel={formData.profit_split_label}
-              repProfitPercent={formData.rep_profit_percent}
-              canEdit={canEdit}
-              tierLoading={tierLoading}
-              tierName={userTier?.tier?.name}
-              availableProfitSplitOptions={[...availableProfitSplitOptions]}
-              onProfitSplitChange={handleProfitSplitChange}
-            />
+          {/* ── Negative Expenses ── */}
+          <Collapsible open={openSections.negExpenses} onOpenChange={() => toggleSection('negExpenses')}>
+            <SectionHeader title="Additional Expenses (−)" icon={DollarSign} color="destructive" isOpen={openSections.negExpenses} onToggle={() => toggleSection('negExpenses')} badge={negExpenseCount} />
+            <CollapsibleContent>
+              <div className="p-4 space-y-1">
+                <EnhancedFormRow label="Expense #1" variant="negative" hint="Will calls, lumber, Home Depot, misc."><MoneyField field="neg_exp_1" /></EnhancedFormRow>
+                <EnhancedFormRow label="Expense #2" variant="negative"><MoneyField field="neg_exp_2" /></EnhancedFormRow>
+                <EnhancedFormRow label="Expense #3" variant="negative"><MoneyField field="neg_exp_3" /></EnhancedFormRow>
+                <EnhancedFormRow label="Expense #4 (Supplement Fees)" variant="negative"><MoneyField field="neg_exp_4" /></EnhancedFormRow>
 
-            <CommissionSummarySection
-              netProfit={calculated.net_profit}
-              repCommission={calculated.rep_commission}
-              advanceTotal={formData.advance_total}
-              companyProfit={calculated.company_profit}
-              canEdit={canEdit}
-              isPrivileged={isPrivileged}
-              getDisplayValue={getDisplayValue}
-              onMoneyFocus={handleFocus}
-              onMoneyChange={handleChange}
-              onMoneyCommit={handleMoneyCommit}
-            />
+                {/* Dynamic additional negative expenses */}
+                {additionalNegExpenses.map((expense, index) => (
+                  <EnhancedFormRow key={`addl-neg-${index}`} label={`Expense #${index + 5}`} variant="negative">
+                    <div className="flex gap-2">
+                      <Input
+                        type="text"
+                        inputMode="decimal"
+                        value={expense ? formatCurrency(expense) : ""}
+                        onChange={(e) => {
+                          const newExpenses = [...additionalNegExpenses];
+                          newExpenses[index] = parseCurrencyInput(e.target.value);
+                          setAdditionalNegExpenses(newExpenses);
+                        }}
+                        onWheel={(e) => e.currentTarget.blur()}
+                        disabled={!canEdit}
+                        className={numberInputClasses}
+                        placeholder="$0.00"
+                      />
+                      {canEdit && (
+                        <Button type="button" variant="ghost" size="icon"
+                          onClick={() => setAdditionalNegExpenses(prev => prev.filter((_, i) => i !== index))}
+                          className="shrink-0 h-12 w-12 text-destructive hover:text-destructive hover:bg-destructive/10">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  </EnhancedFormRow>
+                ))}
 
-            <NotesSection
-              notes={formData.notes}
-              canEdit={canEdit}
-              onNotesChange={(v) => setFormData(prev => ({ ...prev, notes: v }))}
-            />
-          </div>
+                {canEdit && (
+                  <Button type="button" variant="outline"
+                    onClick={() => setAdditionalNegExpenses(prev => [...prev, 0])}
+                    className="w-full mt-4 h-12 border-dashed border-destructive/30 text-destructive hover:bg-destructive/5 hover:border-destructive/50">
+                    <Plus className="h-4 w-4 mr-2" /> Add Expense
+                  </Button>
+                )}
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
 
-          {/* Action Buttons */}
-          {canEdit && (
-            <FormActions
-              isLoading={isLoading}
-              onSaveDraft={() => handleSave(false)}
-              onSubmit={() => handleSave(true)}
-            />
-          )}
+          {/* ── Positive Expenses ── */}
+          <Collapsible open={openSections.posExpenses} onOpenChange={() => toggleSection('posExpenses')}>
+            <SectionHeader title="Additional Expenses (+)" icon={DollarSign} color="success" isOpen={openSections.posExpenses} onToggle={() => toggleSection('posExpenses')} />
+            <CollapsibleContent>
+              <div className="p-4 space-y-1">
+                <EnhancedFormRow label="Expense #1" variant="positive" hint="Returns added back if rep returns materials"><MoneyField field="pos_exp_1" /></EnhancedFormRow>
+                <EnhancedFormRow label="Expense #2" variant="positive"><MoneyField field="pos_exp_2" /></EnhancedFormRow>
+                <EnhancedFormRow label="Expense #3" variant="positive"><MoneyField field="pos_exp_3" /></EnhancedFormRow>
+                <EnhancedFormRow label="Expense #4" variant="positive"><MoneyField field="pos_exp_4" /></EnhancedFormRow>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+
+          {/* ── Profit Split ── */}
+          <Collapsible open={openSections.profitSplit} onOpenChange={() => toggleSection('profitSplit')}>
+            <SectionHeader title="Profit Split" icon={Calculator} isOpen={openSections.profitSplit} onToggle={() => toggleSection('profitSplit')} />
+            <CollapsibleContent>
+              <div className="p-4 space-y-1">
+                <EnhancedFormRow label="Profit Split" hint={`Based on your ${userTier?.tier?.name || 'tier'}`}>
+                  <Select value={formData.profit_split_label} onValueChange={handleProfitSplitChange} disabled={!canEdit || tierLoading}>
+                    <SelectTrigger className={cn(inputBaseClasses, "font-mono")}><SelectValue placeholder="Select profit split" /></SelectTrigger>
+                    <SelectContent>
+                      {availableProfitSplitOptions.map((opt) => (<SelectItem key={opt.label} value={opt.label}>{opt.label}</SelectItem>))}
+                    </SelectContent>
+                  </Select>
+                </EnhancedFormRow>
+                <EnhancedFormRow label="Rep Profit %" variant="calculated">
+                  <Input value={`${(formData.rep_profit_percent * 100).toFixed(0)}%`} disabled className={calculatedInputClasses} />
+                </EnhancedFormRow>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+
+          {/* ── Commission Summary ── */}
+          <Collapsible open={openSections.summary} onOpenChange={() => toggleSection('summary')}>
+            <SectionHeader title="Commission Summary" icon={DollarSign} isOpen={openSections.summary} onToggle={() => toggleSection('summary')} />
+            <CollapsibleContent>
+              <div className="p-4 space-y-1">
+                <EnhancedFormRow label="Net Profit" variant="calculated" hint="Commissionable profit after O&P is removed">
+                  <Input value={formatCurrency(calculated.net_profit)} disabled className={calculatedInputClasses} />
+                </EnhancedFormRow>
+                <EnhancedFormRow label="Rep Commission" variant="calculated" highlight hint="Total dollars paid to you">
+                  <Input value={formatCurrency(calculated.rep_commission)} disabled className={cn(calculatedInputClasses, "text-xl font-bold")} />
+                </EnhancedFormRow>
+                <EnhancedFormRow label="Advance Total"><MoneyField field="advance_total" /></EnhancedFormRow>
+                {isPrivileged && (
+                  <EnhancedFormRow label="Company Profit" variant="calculated" hint="Total company profit (manager view only)">
+                    <Input value={formatCurrency(calculated.company_profit)} disabled className={calculatedInputClasses} />
+                  </EnhancedFormRow>
+                )}
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+
+          {/* ── Notes ── */}
+          <Collapsible open={openSections.notes} onOpenChange={() => toggleSection('notes')}>
+            <SectionHeader title="Notes" icon={FileText} isOpen={openSections.notes} onToggle={() => toggleSection('notes')} />
+            <CollapsibleContent>
+              <div className="p-4">
+                <Textarea value={formData.notes} onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))} disabled={!canEdit} className={cn(inputBaseClasses, "min-h-[100px]")} placeholder="Optional notes..." />
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+
         </CardContent>
       </Card>
+
+      {/* ── Mobile Floating Commission Summary ── */}
+      <div className="fixed bottom-20 left-4 right-4 sm:hidden z-10">
+        <Card className="glass-card border-primary/30 shadow-lg shadow-primary/20">
+          <CardContent className="py-4 px-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Your Commission</p>
+                <p className="text-2xl font-bold text-primary neon-text font-mono">
+                  {formatCurrency(calculated.rep_commission)}
+                </p>
+              </div>
+              {formData.advance_total > 0 && (
+                <div className="text-right">
+                  <p className="text-xs text-muted-foreground">After Advance</p>
+                  <p className="text-lg font-semibold font-mono">
+                    {formatCurrency(calculated.rep_commission - formData.advance_total)}
+                  </p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* ── Bottom Action Buttons ── */}
+      {canEdit && (
+        <div className="fixed bottom-0 left-0 right-0 sm:relative sm:mt-6 bg-background/95 backdrop-blur sm:bg-transparent border-t sm:border-0 border-border/50 p-4 sm:p-0 flex gap-3 z-20">
+          <Button variant="outline" onClick={() => handleSave(false)} disabled={isLoading} className="flex-1 h-12 sm:h-10">
+            <Save className="h-4 w-4 mr-2" /> Save Draft
+          </Button>
+          <Button onClick={() => handleSave(true)} disabled={isLoading} className="flex-1 h-12 sm:h-10">
+            <Send className="h-4 w-4 mr-2" /> Submit
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
