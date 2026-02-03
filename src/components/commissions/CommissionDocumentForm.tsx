@@ -315,23 +315,27 @@ export function CommissionDocumentForm({ document: existingDoc, readOnly = false
     return calculateAllFields(inputData);
   }, [formData, additionalNegTotal]);
 
-  // ── Money input editing (prevents caret jumps) ──
-  const [editingField, setEditingField] = useState<keyof typeof formData | null>(null);
-  const [rawValue, setRawValue] = useState<string>("");
+  // ── Money input editing (per-field tracking for continuous entry) ──
+  const [rawValues, setRawValues] = useState<Record<string, string>>({});
 
-  const handleMoneyFocus = (field: keyof typeof formData, currentValue: number) => {
-    setEditingField(field);
-    setRawValue(currentValue ? String(currentValue) : "");
+  const handleMoneyFocus = (field: string, currentValue: number) => {
+    setRawValues(prev => ({ ...prev, [field]: currentValue ? String(currentValue) : "" }));
   };
-  const handleMoneyChange = (value: string) => { setRawValue(value); };
+  const handleMoneyChange = (field: string, value: string) => {
+    setRawValues(prev => ({ ...prev, [field]: value }));
+  };
   const commitMoneyValue = (field: keyof typeof formData) => {
-    const numValue = parseCurrencyInput(rawValue);
+    const raw = rawValues[field] ?? "";
+    const numValue = parseCurrencyInput(raw);
     setFormData(prev => ({ ...prev, [field]: numValue }));
-    setEditingField(null);
-    setRawValue("");
+    setRawValues(prev => {
+      const updated = { ...prev };
+      delete updated[field];
+      return updated;
+    });
   };
-  const getMoneyInputValue = (field: keyof typeof formData, numericValue: number) => {
-    if (editingField === field) return rawValue;
+  const getMoneyInputValue = (field: string, numericValue: number) => {
+    if (field in rawValues) return rawValues[field];
     return numericValue ? formatCurrency(numericValue) : "";
   };
 
@@ -399,7 +403,7 @@ export function CommissionDocumentForm({ document: existingDoc, readOnly = false
       type="text"
       inputMode="decimal"
       value={getMoneyInputValue(field, formData[field] as number)}
-      onChange={(e) => handleMoneyChange(e.target.value)}
+      onChange={(e) => handleMoneyChange(field, e.target.value)}
       onFocus={() => handleMoneyFocus(field, formData[field] as number)}
       onBlur={() => commitMoneyValue(field)}
       onWheel={(e) => e.currentTarget.blur()}
