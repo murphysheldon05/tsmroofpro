@@ -397,9 +397,10 @@ export function CommissionDocumentForm({ document: existingDoc, readOnly = false
   const canEdit = !readOnly && (!existingDoc || existingDoc.status === 'draft');
   const negExpenseCount = [formData.neg_exp_1, formData.neg_exp_2, formData.neg_exp_3, formData.neg_exp_4, ...additionalNegExpenses].filter(e => e > 0).length;
 
-  // ── Money input helper component ──
-  const MoneyField = ({ field, disabled }: { field: keyof typeof formData; disabled?: boolean }) => (
+  // ── Render helper for money inputs (inline, not a component) ──
+  const renderMoneyInput = (field: keyof typeof formData, disabled?: boolean) => (
     <Input
+      key={field}
       type="text"
       inputMode="decimal"
       value={getMoneyInputValue(field, formData[field] as number)}
@@ -498,7 +499,7 @@ export function CommissionDocumentForm({ document: existingDoc, readOnly = false
             <SectionHeader title="Contract & Costs" icon={Calculator} isOpen={openSections.contract} onToggle={() => toggleSection('contract')} />
             <CollapsibleContent>
               <div className="p-4 space-y-1">
-                <EnhancedFormRow label="Contract Total (Gross)"><MoneyField field="gross_contract_total" /></EnhancedFormRow>
+                <EnhancedFormRow label="Contract Total (Gross)">{renderMoneyInput("gross_contract_total")}</EnhancedFormRow>
                 <EnhancedFormRow label="O&P %" hint="Based on your tier">
                   <Select value={formData.op_percent.toString()} onValueChange={handleOpPercentChange} disabled={!canEdit || tierLoading}>
                     <SelectTrigger className={cn(inputBaseClasses, "font-mono")}><SelectValue /></SelectTrigger>
@@ -509,8 +510,8 @@ export function CommissionDocumentForm({ document: existingDoc, readOnly = false
                 </EnhancedFormRow>
                 <EnhancedFormRow label="O&P $ Amount" variant="calculated"><Input value={formatCurrency(calculated.op_amount)} disabled className={calculatedInputClasses} /></EnhancedFormRow>
                 <EnhancedFormRow label="Contract Total (Net)" variant="calculated"><Input value={formatCurrency(calculated.contract_total_net)} disabled className={calculatedInputClasses} /></EnhancedFormRow>
-                <EnhancedFormRow label="Material Cost"><MoneyField field="material_cost" /></EnhancedFormRow>
-                <EnhancedFormRow label="Labor Cost"><MoneyField field="labor_cost" /></EnhancedFormRow>
+                <EnhancedFormRow label="Material Cost">{renderMoneyInput("material_cost")}</EnhancedFormRow>
+                <EnhancedFormRow label="Labor Cost">{renderMoneyInput("labor_cost")}</EnhancedFormRow>
               </div>
             </CollapsibleContent>
           </Collapsible>
@@ -520,10 +521,10 @@ export function CommissionDocumentForm({ document: existingDoc, readOnly = false
             <SectionHeader title="Additional Expenses (−)" icon={DollarSign} color="destructive" isOpen={openSections.negExpenses} onToggle={() => toggleSection('negExpenses')} badge={negExpenseCount} />
             <CollapsibleContent>
               <div className="p-4 space-y-1">
-                <EnhancedFormRow label="Expense #1" variant="negative" hint="Will calls, lumber, Home Depot, misc."><MoneyField field="neg_exp_1" /></EnhancedFormRow>
-                <EnhancedFormRow label="Expense #2" variant="negative"><MoneyField field="neg_exp_2" /></EnhancedFormRow>
-                <EnhancedFormRow label="Expense #3" variant="negative"><MoneyField field="neg_exp_3" /></EnhancedFormRow>
-                <EnhancedFormRow label="Expense #4 (Supplement Fees)" variant="negative"><MoneyField field="neg_exp_4" /></EnhancedFormRow>
+                <EnhancedFormRow label="Expense #1" variant="negative" hint="Will calls, lumber, Home Depot, misc.">{renderMoneyInput("neg_exp_1")}</EnhancedFormRow>
+                <EnhancedFormRow label="Expense #2" variant="negative">{renderMoneyInput("neg_exp_2")}</EnhancedFormRow>
+                <EnhancedFormRow label="Expense #3" variant="negative">{renderMoneyInput("neg_exp_3")}</EnhancedFormRow>
+                <EnhancedFormRow label="Expense #4 (Supplement Fees)" variant="negative">{renderMoneyInput("neg_exp_4")}</EnhancedFormRow>
 
                 {/* Dynamic additional negative expenses */}
                 {additionalNegExpenses.map((expense, index) => (
@@ -570,10 +571,10 @@ export function CommissionDocumentForm({ document: existingDoc, readOnly = false
             <SectionHeader title="Additional Expenses (+)" icon={DollarSign} color="success" isOpen={openSections.posExpenses} onToggle={() => toggleSection('posExpenses')} />
             <CollapsibleContent>
               <div className="p-4 space-y-1">
-                <EnhancedFormRow label="Expense #1" variant="positive" hint="Returns added back if rep returns materials"><MoneyField field="pos_exp_1" /></EnhancedFormRow>
-                <EnhancedFormRow label="Expense #2" variant="positive"><MoneyField field="pos_exp_2" /></EnhancedFormRow>
-                <EnhancedFormRow label="Expense #3" variant="positive"><MoneyField field="pos_exp_3" /></EnhancedFormRow>
-                <EnhancedFormRow label="Expense #4" variant="positive"><MoneyField field="pos_exp_4" /></EnhancedFormRow>
+                <EnhancedFormRow label="Expense #1" variant="positive" hint="Returns added back if rep returns materials">{renderMoneyInput("pos_exp_1")}</EnhancedFormRow>
+                <EnhancedFormRow label="Expense #2" variant="positive">{renderMoneyInput("pos_exp_2")}</EnhancedFormRow>
+                <EnhancedFormRow label="Expense #3" variant="positive">{renderMoneyInput("pos_exp_3")}</EnhancedFormRow>
+                <EnhancedFormRow label="Expense #4" variant="positive">{renderMoneyInput("pos_exp_4")}</EnhancedFormRow>
               </div>
             </CollapsibleContent>
           </Collapsible>
@@ -609,7 +610,7 @@ export function CommissionDocumentForm({ document: existingDoc, readOnly = false
                 <EnhancedFormRow label="Rep Commission" variant="calculated" highlight hint="Total dollars paid to you">
                   <Input value={formatCurrency(calculated.rep_commission)} disabled className={cn(calculatedInputClasses, "text-xl font-bold")} />
                 </EnhancedFormRow>
-                <EnhancedFormRow label="Advance Total"><MoneyField field="advance_total" /></EnhancedFormRow>
+                <EnhancedFormRow label="Advance Total">{renderMoneyInput("advance_total")}</EnhancedFormRow>
                 {isPrivileged && (
                   <EnhancedFormRow label="Company Profit" variant="calculated" hint="Total company profit (manager view only)">
                     <Input value={formatCurrency(calculated.company_profit)} disabled className={calculatedInputClasses} />
