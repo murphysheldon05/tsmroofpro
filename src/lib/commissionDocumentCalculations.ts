@@ -51,6 +51,8 @@ export const PROFIT_SPLIT_OPTIONS = [
   { label: "10/40/60", op: 0.10, rep: 0.40, company: 0.60 },
   { label: "10/45/55", op: 0.10, rep: 0.45, company: 0.55 },
   { label: "10/50/50", op: 0.10, rep: 0.50, company: 0.50 },
+  { label: "10/55/45", op: 0.10, rep: 0.55, company: 0.45 },
+  { label: "10/60/40", op: 0.10, rep: 0.60, company: 0.40 },
 ] as const;
 
 // O&P Percentage options (default fallback)
