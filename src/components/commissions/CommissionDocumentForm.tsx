@@ -334,6 +334,21 @@ export function CommissionDocumentForm({ document: existingDoc, readOnly = false
       return updated;
     });
   };
+  const commitAdditionalExpenseValue = (index: number) => {
+    const fieldKey = `addl_neg_${index}`;
+    const raw = rawValues[fieldKey] ?? "";
+    const numValue = parseCurrencyInput(raw);
+    setAdditionalNegExpenses(prev => {
+      const updated = [...prev];
+      updated[index] = numValue;
+      return updated;
+    });
+    setRawValues(prev => {
+      const updated = { ...prev };
+      delete updated[fieldKey];
+      return updated;
+    });
+  };
   const getMoneyInputValue = (field: string, numericValue: number) => {
     if (field in rawValues) return rawValues[field];
     return numericValue ? formatCurrency(numericValue) : "";
@@ -527,33 +542,34 @@ export function CommissionDocumentForm({ document: existingDoc, readOnly = false
                 <EnhancedFormRow label="Expense #4 (Supplement Fees)" variant="negative">{renderMoneyInput("neg_exp_4")}</EnhancedFormRow>
 
                 {/* Dynamic additional negative expenses */}
-                {additionalNegExpenses.map((expense, index) => (
-                  <EnhancedFormRow key={`addl-neg-${index}`} label={`Expense #${index + 5}`} variant="negative">
-                    <div className="flex gap-2">
-                      <Input
-                        type="text"
-                        inputMode="decimal"
-                        value={expense ? formatCurrency(expense) : ""}
-                        onChange={(e) => {
-                          const newExpenses = [...additionalNegExpenses];
-                          newExpenses[index] = parseCurrencyInput(e.target.value);
-                          setAdditionalNegExpenses(newExpenses);
-                        }}
-                        onWheel={(e) => e.currentTarget.blur()}
-                        disabled={!canEdit}
-                        className={numberInputClasses}
-                        placeholder="$0.00"
-                      />
-                      {canEdit && (
-                        <Button type="button" variant="ghost" size="icon"
-                          onClick={() => setAdditionalNegExpenses(prev => prev.filter((_, i) => i !== index))}
-                          className="shrink-0 h-12 w-12 text-destructive hover:text-destructive hover:bg-destructive/10">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </div>
-                  </EnhancedFormRow>
-                ))}
+                {additionalNegExpenses.map((expense, index) => {
+                  const fieldKey = `addl_neg_${index}`;
+                  return (
+                    <EnhancedFormRow key={fieldKey} label={`Expense #${index + 5}`} variant="negative">
+                      <div className="flex gap-2">
+                        <Input
+                          type="text"
+                          inputMode="decimal"
+                          value={getMoneyInputValue(fieldKey, expense)}
+                          onChange={(e) => handleMoneyChange(fieldKey, e.target.value)}
+                          onFocus={() => handleMoneyFocus(fieldKey, expense)}
+                          onBlur={() => commitAdditionalExpenseValue(index)}
+                          onWheel={(e) => e.currentTarget.blur()}
+                          disabled={!canEdit}
+                          className={numberInputClasses}
+                          placeholder="$0.00"
+                        />
+                        {canEdit && (
+                          <Button type="button" variant="ghost" size="icon"
+                            onClick={() => setAdditionalNegExpenses(prev => prev.filter((_, i) => i !== index))}
+                            className="shrink-0 h-12 w-12 text-destructive hover:text-destructive hover:bg-destructive/10">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </EnhancedFormRow>
+                  );
+                })}
 
                 {canEdit && (
                   <Button type="button" variant="outline"
