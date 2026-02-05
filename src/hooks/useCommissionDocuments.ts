@@ -246,7 +246,7 @@ export function useUpdateCommissionDocument() {
 
 export function useUpdateCommissionDocumentStatus() {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
+  const { user, isManager, isAdmin } = useAuth();
 
   return useMutation({
     mutationFn: async ({ 
@@ -274,7 +274,23 @@ export function useUpdateCommissionDocumentStatus() {
             .eq('id', user.id)
             .single();
           
-          if (profile?.manager_id) {
+          // Check if submitter is a manager - if so, route directly to accounting (no manager_id)
+          const { data: roleData } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', user.id)
+            .single();
+          
+          const isSubmitterManager = roleData?.role === 'manager' || roleData?.role === 'admin';
+          
+          if (isSubmitterManager) {
+            // Manager submission - skip manager approval, go straight to accounting
+            updateData.manager_id = null;
+            updateData.manager_approved_by = user.id; // Self-approved manager step
+            updateData.manager_approved_at = new Date().toISOString();
+            // DON'T change status to manager_approved here - it will still be 'submitted' 
+            // and accounting will see it
+          } else if (profile?.manager_id) {
             updateData.manager_id = profile.manager_id;
           }
           updateData.submitter_email = profile?.email || null;
@@ -334,6 +350,10 @@ export function useUpdateCommissionDocumentStatus() {
         .single();
 
       if (error) throw error;
+      
+      // Send notification after successful status update
+      await sendCommissionDocumentNotification(data as CommissionDocument, status, revision_reason);
+      
       return data;
     },
     onSuccess: (_, variables) => {
@@ -349,4 +369,69 @@ export function useUpdateCommissionDocumentStatus() {
       toast.error('Failed to update status');
     },
   });
+}
+
+// Helper function to send notifications based on status
+async function sendCommissionDocumentNotification(
+  doc: CommissionDocument,
+  status: string,
+  revisionReason?: string
+) {
+  try {
+    // Get the creator's profile for the submitter info
+    const { data: creatorProfile } = await supabase
+      .from('profiles')
+      .select('email, full_name')
+      .eq('id', doc.created_by)
+      .single();
+
+    // Map statuses to notification types
+    const notificationTypeMap: Record<string, string> = {
+      'submitted': 'submitted',
+      'manager_approved': 'manager_approved',
+      'accounting_approved': 'accounting_approved',
+      'paid': 'paid',
+      'revision_required': 'revision_required',
+    };
+
+    const notificationType = notificationTypeMap[status];
+    if (!notificationType) return; // No notification for this status
+
+    // Get current user's name for "changed_by"
+    const { data: { user } } = await supabase.auth.getUser();
+    let changedByName = 'System';
+    if (user) {
+      const { data: currentUserProfile } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', user.id)
+        .single();
+      changedByName = currentUserProfile?.full_name || 'Unknown';
+    }
+
+    const payload = {
+      notification_type: notificationType,
+      commission_id: doc.id,
+      job_name: doc.job_name_id,
+      job_address: doc.job_name_id, // Using job_name_id as we don't have separate address
+      sales_rep_name: doc.sales_rep,
+      subcontractor_name: null,
+      submission_type: 'employee',
+      contract_amount: doc.gross_contract_total,
+      net_commission_owed: doc.rep_commission,
+      submitter_email: creatorProfile?.email || doc.submitter_email,
+      submitter_name: creatorProfile?.full_name || doc.sales_rep,
+      status: status,
+      notes: revisionReason || null,
+      changed_by_name: changedByName,
+      scheduled_pay_date: doc.scheduled_pay_date,
+    };
+
+    await supabase.functions.invoke('send-commission-notification', {
+      body: payload,
+    });
+  } catch (error) {
+    console.error('Failed to send commission notification:', error);
+    // Don't throw - notification failure shouldn't block the main operation
+  }
 }

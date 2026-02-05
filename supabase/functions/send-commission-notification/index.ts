@@ -359,45 +359,122 @@ If you have questions, please contact your supervisor or the accounting team.
     console.log("Commission notification sent successfully:", emailResponse);
 
     // Create in-app notifications for relevant users
-    // For revision_required, accounting_approved, paid - notify submitter
-    if (payload.notification_type === "revision_required" || 
-        payload.notification_type === "accounting_approved" ||
-        payload.notification_type === "paid" ||
-        payload.notification_type === "manager_approved") {
-      
-      // Get the submitter's user ID from the commission document
-      const { data: commission } = await supabaseClient
-        .from("commission_documents")
-        .select("created_by, sales_rep")
-        .eq("id", payload.commission_id)
-        .single();
+    // Get the commission document details
+    const { data: commission } = await supabaseClient
+      .from("commission_documents")
+      .select("created_by, sales_rep, manager_id")
+      .eq("id", payload.commission_id)
+      .single();
 
-      if (commission?.created_by) {
-        const notificationTitle = payload.notification_type === "revision_required"
-          ? `Revision Required: ${payload.job_name}`
-          : payload.notification_type === "accounting_approved"
-          ? `🎉 Commission Approved: ${payload.job_name}`
-          : payload.notification_type === "paid"
-          ? `💰 Commission Paid: ${payload.job_name}`
-          : `✅ Manager Approved: ${payload.job_name}`;
+    if (commission) {
+      // For submitted notifications - notify the manager or accounting users
+      if (payload.notification_type === "submitted") {
+        if (commission.manager_id) {
+          // Notify assigned manager
+          await createInAppNotification(
+            supabaseClient,
+            commission.manager_id,
+            "commission_submitted",
+            `📋 New Commission: ${payload.job_name}`,
+            `A commission has been submitted by ${payload.submitter_name || payload.sales_rep_name} for your review.`,
+            "commission",
+            payload.commission_id
+          );
+        } else {
+          // No manager - notify all accounting users (manager submission)
+          const { data: accountingUsers } = await supabaseClient
+            .from("commission_reviewers")
+            .select("user_email")
+            .eq("is_active", true);
 
-        const notificationMessage = payload.notification_type === "revision_required"
-          ? payload.notes || "Your commission needs revision before it can be approved."
-          : payload.notification_type === "accounting_approved"
-          ? `Your commission has been approved! Payment scheduled for ${formatPayDateFn(payload.scheduled_pay_date)}.`
-          : payload.notification_type === "paid"
-          ? `Your commission of ${formatCurrency(payload.net_commission_owed)} has been paid!`
-          : "Your commission has been approved by your manager and is awaiting accounting review.";
+          if (accountingUsers) {
+            for (const reviewer of accountingUsers) {
+              // Get user ID from email
+              const { data: profile } = await supabaseClient
+                .from("profiles")
+                .select("id")
+                .eq("email", reviewer.user_email)
+                .single();
 
-        await createInAppNotification(
-          supabaseClient,
-          commission.created_by,
-          payload.notification_type,
-          notificationTitle,
-          notificationMessage,
-          "commission",
-          payload.commission_id
-        );
+              if (profile?.id) {
+                await createInAppNotification(
+                  supabaseClient,
+                  profile.id,
+                  "commission_submitted",
+                  `📋 Manager Commission: ${payload.job_name}`,
+                  `A manager has submitted a commission for ${payload.job_name}. Ready for accounting review.`,
+                  "commission",
+                  payload.commission_id
+                );
+              }
+            }
+          }
+        }
+      }
+
+      // For manager_approved - notify accounting users
+      if (payload.notification_type === "manager_approved") {
+        const { data: accountingUsers } = await supabaseClient
+          .from("commission_reviewers")
+          .select("user_email")
+          .eq("is_active", true);
+
+        if (accountingUsers) {
+          for (const reviewer of accountingUsers) {
+            const { data: profile } = await supabaseClient
+              .from("profiles")
+              .select("id")
+              .eq("email", reviewer.user_email)
+              .single();
+
+            if (profile?.id) {
+              await createInAppNotification(
+                supabaseClient,
+                profile.id,
+                "commission_approved_for_accounting",
+                `✅ Ready for Payment: ${payload.job_name}`,
+                `Commission for ${payload.job_name} has been manager approved and is ready for accounting review.`,
+                "commission",
+                payload.commission_id
+              );
+            }
+          }
+        }
+      }
+
+      // For revision_required, accounting_approved, paid - notify submitter
+      if (payload.notification_type === "revision_required" || 
+          payload.notification_type === "accounting_approved" ||
+          payload.notification_type === "paid" ||
+          payload.notification_type === "manager_approved") {
+        
+        if (commission.created_by) {
+          const notificationTitle = payload.notification_type === "revision_required"
+            ? `⚠️ Revision Required: ${payload.job_name}`
+            : payload.notification_type === "accounting_approved"
+            ? `🎉 Commission Approved: ${payload.job_name}`
+            : payload.notification_type === "paid"
+            ? `💰 Commission Paid: ${payload.job_name}`
+            : `✅ Manager Approved: ${payload.job_name}`;
+
+          const notificationMessage = payload.notification_type === "revision_required"
+            ? payload.notes || "Your commission needs revision before it can be approved."
+            : payload.notification_type === "accounting_approved"
+            ? `Your commission has been approved! Payment scheduled for ${formatPayDateFn(payload.scheduled_pay_date)}.`
+            : payload.notification_type === "paid"
+            ? `Your commission of ${formatCurrency(payload.net_commission_owed)} has been paid!`
+            : "Your commission has been approved by your manager and is awaiting accounting review.";
+
+          await createInAppNotification(
+            supabaseClient,
+            commission.created_by,
+            payload.notification_type,
+            notificationTitle,
+            notificationMessage,
+            "commission",
+            payload.commission_id
+          );
+        }
       }
     }
 
