@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { 
   Lock, Save, Send, ArrowLeft, AlertTriangle, Printer, Plus, Trash2, 
-  DollarSign, Calculator, FileText, ChevronDown, Info, Sparkles 
+  DollarSign, Calculator, FileText, ChevronDown, Info, Sparkles, CheckCircle2, Loader2
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
@@ -34,6 +34,8 @@ import {
   type CommissionDocument 
 } from "@/hooks/useCommissionDocuments";
 import { useUserCommissionTier } from "@/hooks/useCommissionTiers";
+import { useAutoSave } from "@/hooks/useAutoSave";
+import { CommissionPreviewModal } from "./CommissionPreviewModal";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -225,6 +227,9 @@ export function CommissionDocumentForm({ document: existingDoc, readOnly = false
   // ── NEW: Dynamic additional negative expenses ──
   const [additionalNegExpenses, setAdditionalNegExpenses] = useState<number[]>([]);
 
+  // ── Preview modal state ──
+  const [showPreview, setShowPreview] = useState(false);
+
   // ── Collapsible section state ──
   const [openSections, setOpenSections] = useState({
     job: true,
@@ -354,7 +359,75 @@ export function CommissionDocumentForm({ document: existingDoc, readOnly = false
     return numericValue ? formatCurrency(numericValue) : "";
   };
 
-  // ── Save / Submit (identical payload to current) ──
+  // ── Build payload helper ──
+  const buildPayload = useCallback((submit: boolean = false) => ({
+    job_name_id: formData.job_name_id,
+    job_date: formData.job_date,
+    sales_rep: formData.sales_rep,
+    sales_rep_id: null,
+    gross_contract_total: formData.gross_contract_total,
+    op_percent: formData.op_percent,
+    material_cost: formData.material_cost,
+    labor_cost: formData.labor_cost,
+    neg_exp_1: formData.neg_exp_1,
+    neg_exp_2: formData.neg_exp_2,
+    neg_exp_3: formData.neg_exp_3,
+    neg_exp_4: formData.neg_exp_4 + additionalNegTotal,
+    supplement_fees_expense: formData.neg_exp_4 + additionalNegTotal,
+    pos_exp_1: formData.pos_exp_1,
+    pos_exp_2: formData.pos_exp_2,
+    pos_exp_3: formData.pos_exp_3,
+    pos_exp_4: formData.pos_exp_4,
+    profit_split_label: formData.profit_split_label,
+    rep_profit_percent: formData.rep_profit_percent,
+    company_profit_percent: formData.company_profit_percent,
+    commission_rate: formData.rep_profit_percent,
+    advance_total: formData.advance_total,
+    notes: formData.notes,
+    status: submit ? 'submitted' as const : 'draft' as const,
+    approved_by: null,
+    approved_at: null,
+    approval_comment: null,
+    starting_claim_amount: null,
+    final_claim_amount: null,
+  }), [formData, additionalNegTotal]);
+
+  // ── Determine editability first (needed for auto-save) ──
+  const canEdit = !readOnly && (!existingDoc || existingDoc.status === 'draft' || existingDoc.status === 'revision_required');
+
+  // ── Auto-save for drafts ──
+  const [autoSaveDocId, setAutoSaveDocId] = useState<string | null>(existingDoc?.id ?? null);
+
+  const handleAutoSave = useCallback(async () => {
+    // Only auto-save if we have a document ID (already saved once) or minimal required fields
+    if (!formData.job_name_id && !autoSaveDocId) return;
+
+    const payload = buildPayload(false);
+    
+    try {
+      if (autoSaveDocId) {
+        await updateMutation.mutateAsync({ id: autoSaveDocId, ...payload });
+      } else if (formData.job_name_id) {
+        // Create new draft on first auto-save if job name exists
+        const result = await createMutation.mutateAsync(payload);
+        if (result?.id) {
+          setAutoSaveDocId(result.id);
+        }
+      }
+    } catch (error) {
+      console.error("Auto-save failed:", error);
+    }
+  }, [formData, additionalNegTotal, autoSaveDocId, buildPayload, updateMutation, createMutation]);
+
+  const { lastSavedAt, isSaving: isAutoSaving, hasUnsavedChanges } = useAutoSave({
+    data: { formData, additionalNegExpenses },
+    onSave: handleAutoSave,
+    interval: 30000, // 30 seconds
+    enabled: canEdit && (!!autoSaveDocId || !!formData.job_name_id),
+    debounceMs: 3000, // 3 seconds after changes
+  });
+
+  // ── Save / Submit handlers ──
   const handleSave = async (submit: boolean = false) => {
     const validation = validateCommissionDocument({
       ...formData,
@@ -368,48 +441,37 @@ export function CommissionDocumentForm({ document: existingDoc, readOnly = false
       return;
     }
 
-    const payload = {
-      job_name_id: formData.job_name_id,
-      job_date: formData.job_date,
-      sales_rep: formData.sales_rep,
-      sales_rep_id: null,
-      gross_contract_total: formData.gross_contract_total,
-      op_percent: formData.op_percent,
-      material_cost: formData.material_cost,
-      labor_cost: formData.labor_cost,
-      neg_exp_1: formData.neg_exp_1,
-      neg_exp_2: formData.neg_exp_2,
-      neg_exp_3: formData.neg_exp_3,
-      neg_exp_4: formData.neg_exp_4 + additionalNegTotal,
-      supplement_fees_expense: formData.neg_exp_4 + additionalNegTotal,
-      pos_exp_1: formData.pos_exp_1,
-      pos_exp_2: formData.pos_exp_2,
-      pos_exp_3: formData.pos_exp_3,
-      pos_exp_4: formData.pos_exp_4,
-      profit_split_label: formData.profit_split_label,
-      rep_profit_percent: formData.rep_profit_percent,
-      company_profit_percent: formData.company_profit_percent,
-      commission_rate: formData.rep_profit_percent,
-      advance_total: formData.advance_total,
-      notes: formData.notes,
-      status: submit ? 'submitted' as const : 'draft' as const,
-      approved_by: null,
-      approved_at: null,
-      approval_comment: null,
-      starting_claim_amount: null,
-      final_claim_amount: null,
-    };
+    const payload = buildPayload(submit);
 
-    if (existingDoc?.id) {
-      await updateMutation.mutateAsync({ id: existingDoc.id, ...payload });
+    if (autoSaveDocId || existingDoc?.id) {
+      await updateMutation.mutateAsync({ id: autoSaveDocId || existingDoc!.id, ...payload });
     } else {
       await createMutation.mutateAsync(payload);
     }
     navigate('/commission-documents');
   };
 
+  const handleSubmitClick = () => {
+    const validation = validateCommissionDocument({
+      ...formData,
+      job_name_id: formData.job_name_id,
+      job_date: formData.job_date,
+      sales_rep: formData.sales_rep,
+      profit_split_label: formData.profit_split_label,
+    });
+    if (!validation.valid) {
+      validation.errors.forEach(error => toast.error(error));
+      return;
+    }
+    setShowPreview(true);
+  };
+
+  const handleConfirmSubmit = async () => {
+    await handleSave(true);
+    setShowPreview(false);
+  };
+
   const isLoading = createMutation.isPending || updateMutation.isPending;
-  const canEdit = !readOnly && (!existingDoc || existingDoc.status === 'draft');
   const negExpenseCount = [formData.neg_exp_1, formData.neg_exp_2, formData.neg_exp_3, formData.neg_exp_4, ...additionalNegExpenses].filter(e => e > 0).length;
 
   // ── Render helper for money inputs (inline, not a component) ──
@@ -432,16 +494,36 @@ export function CommissionDocumentForm({ document: existingDoc, readOnly = false
   // ═══════════════════════ RENDER ═══════════════════════
   return (
     <div className="space-y-4 pb-48 sm:pb-6 px-4 sm:px-0">
-      {/* Header */}
+      {/* Header with auto-save status */}
       <div className="flex items-center justify-between gap-2">
         <Button variant="ghost" size="sm" onClick={() => navigate('/commission-documents')} className="gap-2">
           <ArrowLeft className="h-4 w-4" /> Back
         </Button>
-        {existingDoc?.id && (
-          <Button variant="outline" size="sm" onClick={() => navigate(`/commission-documents/${existingDoc.id}/print`)}>
-            <Printer className="h-4 w-4 mr-2" /> Print
-          </Button>
-        )}
+        <div className="flex items-center gap-3">
+          {/* Auto-save status indicator */}
+          {canEdit && (
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              {isAutoSaving ? (
+                <>
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  <span>Saving...</span>
+                </>
+              ) : lastSavedAt ? (
+                <>
+                  <CheckCircle2 className="h-3 w-3 text-emerald-500" />
+                  <span>Saved {lastSavedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                </>
+              ) : hasUnsavedChanges ? (
+                <span className="text-amber-500">Unsaved changes</span>
+              ) : null}
+            </div>
+          )}
+          {existingDoc?.id && (
+            <Button variant="outline" size="sm" onClick={() => navigate(`/commission-documents/${existingDoc.id}/print`)}>
+              <Printer className="h-4 w-4 mr-2" /> Print
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Tier Banner */}
@@ -676,14 +758,26 @@ export function CommissionDocumentForm({ document: existingDoc, readOnly = false
       {/* ── Bottom Action Buttons ── */}
       {canEdit && (
         <div className="fixed bottom-0 left-0 right-0 sm:relative sm:mt-6 bg-background/95 backdrop-blur sm:bg-transparent border-t sm:border-0 border-border/50 p-4 sm:p-0 flex gap-3 z-20">
-          <Button variant="outline" onClick={() => handleSave(false)} disabled={isLoading} className="flex-1 h-12 sm:h-10">
+          <Button variant="outline" onClick={() => handleSave(false)} disabled={isLoading || isAutoSaving} className="flex-1 h-12 sm:h-10">
             <Save className="h-4 w-4 mr-2" /> Save Draft
           </Button>
-          <Button onClick={() => handleSave(true)} disabled={isLoading} className="flex-1 h-12 sm:h-10">
-            <Send className="h-4 w-4 mr-2" /> Submit
+          <Button onClick={handleSubmitClick} disabled={isLoading} className="flex-1 h-12 sm:h-10">
+            <Send className="h-4 w-4 mr-2" /> Review & Submit
           </Button>
         </div>
       )}
+
+      {/* ── Preview Modal ── */}
+      <CommissionPreviewModal
+        open={showPreview}
+        onClose={() => setShowPreview(false)}
+        onConfirmSubmit={handleConfirmSubmit}
+        isSubmitting={isLoading}
+        formData={formData}
+        additionalNegExpenses={additionalNegExpenses}
+        calculated={calculated}
+        tierName={userTier?.tier?.name}
+      />
     </div>
   );
 }
