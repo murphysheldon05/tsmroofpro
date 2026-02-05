@@ -18,6 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Search,
   TrendingUp,
@@ -30,6 +31,7 @@ import {
   List,
   Grid,
   ArrowLeft,
+  BookOpen,
 } from "lucide-react";
 
 const categoryIcons: Record<string, React.ElementType> = {
@@ -215,6 +217,19 @@ export default function SOPLibrary() {
             </div>
           </div>
         </header>
+
+        {/* Master Playbook Banner */}
+        <Link to="/master-playbook">
+          <Alert className="border-primary/30 bg-primary/5 hover:bg-primary/10 transition-colors cursor-pointer">
+            <BookOpen className="h-4 w-4 text-primary" />
+            <AlertDescription className="flex items-center justify-between">
+              <span className="font-medium text-primary">
+                Master Operating Playbook — 10 Required SOPs
+              </span>
+              <span className="text-xs text-muted-foreground">View &rarr;</span>
+            </AlertDescription>
+          </Alert>
+        </Link>
 
         {/* View Mode Tabs */}
         <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "quick" | "browse")} className="w-full">
