@@ -1,5 +1,5 @@
 import { CheckCircle2, Play, Square, Diamond } from "lucide-react";
-import { FlowStep, NEON_GREEN } from "@/lib/masterPlaybookSOPs";
+import { FlowStep } from "@/lib/masterPlaybookSOPs";
 
 interface PlaybookFlowStepProps {
   step: FlowStep;
@@ -10,13 +10,29 @@ export function PlaybookFlowStep({ step, isLast }: PlaybookFlowStepProps) {
   const getStepStyle = (type: FlowStep['type']) => {
     switch (type) {
       case 'start':
-        return { bg: `${NEON_GREEN}20`, border: NEON_GREEN, Icon: Play, iconColor: NEON_GREEN };
+        return { 
+          className: 'bg-primary/20 border-primary', 
+          Icon: Play, 
+          iconClassName: 'text-primary' 
+        };
       case 'end':
-        return { bg: `${NEON_GREEN}20`, border: NEON_GREEN, Icon: CheckCircle2, iconColor: NEON_GREEN };
+        return { 
+          className: 'bg-primary/20 border-primary', 
+          Icon: CheckCircle2, 
+          iconClassName: 'text-primary' 
+        };
       case 'decision':
-        return { bg: '#F59E0B20', border: '#F59E0B', Icon: Diamond, iconColor: '#F59E0B' };
+        return { 
+          className: 'bg-amber-500/20 border-amber-500', 
+          Icon: Diamond, 
+          iconClassName: 'text-amber-500' 
+        };
       default:
-        return { bg: '#374151', border: '#4B5563', Icon: Square, iconColor: '#9CA3AF' };
+        return { 
+          className: 'bg-muted border-border', 
+          Icon: Square, 
+          iconClassName: 'text-muted-foreground' 
+        };
     }
   };
 
@@ -26,17 +42,16 @@ export function PlaybookFlowStep({ step, isLast }: PlaybookFlowStepProps) {
   return (
     <div className="flex flex-col items-center w-full max-w-md">
       <div
-        className="w-full rounded-lg p-4 border-2 transition-all"
-        style={{ backgroundColor: style.bg, borderColor: style.border }}
+        className={`w-full rounded-lg p-4 border-2 transition-all ${style.className}`}
       >
         <div className="flex items-center gap-2 mb-2">
-          <Icon size={16} style={{ color: style.iconColor }} />
-          <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+          <Icon size={16} className={style.iconClassName} />
+          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
             {step.owner}
           </span>
         </div>
-        <p className="text-white font-medium">{step.label}</p>
-        {step.note && <p className="text-sm text-gray-400 mt-1">{step.note}</p>}
+        <p className="text-foreground font-medium">{step.label}</p>
+        {step.note && <p className="text-sm text-muted-foreground mt-1">{step.note}</p>}
       </div>
 
       {step.branches && step.branches.length > 0 && (
@@ -44,12 +59,7 @@ export function PlaybookFlowStep({ step, isLast }: PlaybookFlowStepProps) {
           {step.branches.map((branch, idx) => (
             <span
               key={idx}
-              className="text-xs px-3 py-1.5 rounded-full border"
-              style={{
-                backgroundColor: '#F59E0B10',
-                borderColor: '#F59E0B50',
-                color: '#F59E0B',
-              }}
+              className="text-xs px-3 py-1.5 rounded-full border bg-amber-500/10 border-amber-500/50 text-amber-500"
             >
               {branch}
             </span>
@@ -59,14 +69,9 @@ export function PlaybookFlowStep({ step, isLast }: PlaybookFlowStepProps) {
 
       {!isLast && (
         <div className="flex flex-col items-center my-2">
-          <div className="w-0.5 h-6" style={{ backgroundColor: '#4B5563' }} />
+          <div className="w-0.5 h-6 bg-border" />
           <div
-            className="w-0 h-0 border-l-[6px] border-r-[6px] border-t-[8px]"
-            style={{
-              borderLeftColor: 'transparent',
-              borderRightColor: 'transparent',
-              borderTopColor: '#4B5563',
-            }}
+            className="w-0 h-0 border-l-[6px] border-r-[6px] border-t-[8px] border-l-transparent border-r-transparent border-t-border"
           />
         </div>
       )}
