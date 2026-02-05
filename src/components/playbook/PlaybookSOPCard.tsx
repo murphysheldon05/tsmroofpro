@@ -20,7 +20,7 @@ import {
   Truck,
   ArrowLeft,
 } from "lucide-react";
-import { MasterSOP, NEON_GREEN } from "@/lib/masterPlaybookSOPs";
+import { MasterSOP } from "@/lib/masterPlaybookSOPs";
 import { PlaybookFlowStep } from "./PlaybookFlowStep";
 import { ViolationBadge } from "./ViolationBadge";
 
@@ -61,71 +61,56 @@ export function PlaybookSOPCard({
 
   return (
     <div
-      className="rounded-xl border-2 overflow-hidden transition-all duration-300"
-      style={{
-        borderColor: isAcknowledged ? NEON_GREEN : '#374151',
-        backgroundColor: isAcknowledged ? `${NEON_GREEN}08` : '#1F2937',
-      }}
+      className={`rounded-xl border-2 overflow-hidden transition-all duration-300 ${
+        isAcknowledged 
+          ? 'border-primary bg-primary/5' 
+          : 'border-border bg-card'
+      }`}
     >
       {/* Header */}
       <div
-        className="p-4 cursor-pointer flex items-center justify-between hover:bg-gray-800/50 transition-colors"
+        className="p-4 cursor-pointer flex items-center justify-between hover:bg-muted/50 transition-colors"
         onClick={onToggle}
       >
         <div className="flex items-center gap-4">
           <div
-            className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
-            style={{
-              backgroundColor: isAcknowledged ? `${NEON_GREEN}20` : '#374151',
-            }}
+            className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${
+              isAcknowledged ? 'bg-primary/20' : 'bg-muted'
+            }`}
           >
             <IconComponent
               size={24}
-              style={{ color: isAcknowledged ? NEON_GREEN : '#9CA3AF' }}
+              className={isAcknowledged ? 'text-primary' : 'text-muted-foreground'}
             />
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <span
-                className="text-xs font-bold px-2 py-0.5 rounded"
-                style={{
-                  backgroundColor: `${NEON_GREEN}20`,
-                  color: NEON_GREEN,
-                }}
-              >
+              <span className="text-xs font-bold px-2 py-0.5 rounded bg-primary/20 text-primary">
                 SOP {sop.number}
               </span>
-              <span className="text-xs text-gray-500">{sop.phase}</span>
+              <span className="text-xs text-muted-foreground">{sop.phase}</span>
               {isAcknowledged && (
-                <span
-                  className="text-xs font-semibold px-2 py-0.5 rounded flex items-center gap-1"
-                  style={{
-                    backgroundColor: `${NEON_GREEN}20`,
-                    color: NEON_GREEN,
-                  }}
-                >
+                <span className="text-xs font-semibold px-2 py-0.5 rounded flex items-center gap-1 bg-primary/20 text-primary">
                   <CheckCircle2 size={12} />
                   Acknowledged
                 </span>
               )}
             </div>
-            <h3 className="text-lg font-bold text-white mt-1">{sop.title}</h3>
+            <h3 className="text-lg font-bold text-foreground mt-1">{sop.title}</h3>
             {!isExpanded && (
-              <p className="text-sm text-gray-400 mt-1 line-clamp-2">{sop.description}</p>
+              <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{sop.description}</p>
             )}
           </div>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           <div
-            className="w-8 h-8 rounded-full flex items-center justify-center transition-transform"
-            style={{
-              backgroundColor: isExpanded ? `${NEON_GREEN}20` : '#374151',
-              transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
-            }}
+            className={`w-8 h-8 rounded-full flex items-center justify-center transition-transform ${
+              isExpanded ? 'bg-primary/20 rotate-180' : 'bg-muted rotate-0'
+            }`}
           >
             <ChevronDown
               size={20}
-              style={{ color: isExpanded ? NEON_GREEN : '#9CA3AF' }}
+              className={isExpanded ? 'text-primary' : 'text-muted-foreground'}
             />
           </div>
         </div>
@@ -139,15 +124,15 @@ export function PlaybookSOPCard({
           opacity: isExpanded ? 1 : 0,
         }}
       >
-        <div className="border-t border-gray-800">
+        <div className="border-t border-border">
           {/* Close Button Bar */}
-          <div className="flex justify-between items-center px-4 py-2 bg-gray-800/30">
+          <div className="flex justify-between items-center px-4 py-2 bg-muted/30">
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 onClose();
               }}
-              className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-400 hover:text-white bg-gray-800 rounded-lg transition-colors"
+              className="flex items-center gap-2 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground bg-muted rounded-lg transition-colors"
             >
               <ArrowLeft size={14} />
               Close
@@ -159,12 +144,11 @@ export function PlaybookSOPCard({
                   onAcknowledge();
                 }}
                 disabled={isAcknowledging}
-                className="flex items-center gap-2 px-4 py-2 text-sm font-bold text-black rounded-lg transition-transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
-                style={{ backgroundColor: NEON_GREEN }}
+                className="flex items-center gap-2 px-4 py-2 text-sm font-bold text-primary-foreground bg-primary rounded-lg transition-transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
               >
                 {isAcknowledging ? (
                   <>
-                    <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                    <div className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
                     Acknowledging...
                   </>
                 ) : (
@@ -178,19 +162,16 @@ export function PlaybookSOPCard({
           </div>
 
           {/* Tab Navigation */}
-          <div className="flex border-b border-gray-800 overflow-x-auto">
+          <div className="flex border-b border-border overflow-x-auto">
             {(['flow', 'criteria', 'rules', 'enforcement'] as const).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
                 className={`px-6 py-3 text-sm font-semibold capitalize whitespace-nowrap transition-all ${
-                  activeTab === tab ? 'border-b-2' : 'text-gray-500 hover:text-gray-300'
+                  activeTab === tab 
+                    ? 'border-b-2 border-primary text-primary bg-primary/5' 
+                    : 'text-muted-foreground hover:text-foreground'
                 }`}
-                style={{
-                  color: activeTab === tab ? NEON_GREEN : undefined,
-                  borderColor: activeTab === tab ? NEON_GREEN : 'transparent',
-                  backgroundColor: activeTab === tab ? `${NEON_GREEN}08` : 'transparent',
-                }}
               >
                 {tab === 'flow' ? 'Visual Flow' : tab === 'criteria' ? 'Entry/Exit' : tab}
               </button>
@@ -203,15 +184,12 @@ export function PlaybookSOPCard({
             {activeTab === 'flow' && (
               <div>
                 <div className="flex items-center gap-2 mb-4">
-                  <Zap size={18} style={{ color: NEON_GREEN }} />
-                  <h4
-                    className="text-sm font-bold uppercase tracking-wider"
-                    style={{ color: NEON_GREEN }}
-                  >
+                  <Zap size={18} className="text-primary" />
+                  <h4 className="text-sm font-bold uppercase tracking-wider text-primary">
                     Authoritative Process Flow
                   </h4>
                 </div>
-                <div className="flex flex-col items-center py-6 bg-gray-800/50 rounded-xl border border-gray-700">
+                <div className="flex flex-col items-center py-6 bg-muted/50 rounded-xl border border-border">
                   {sop.flowSteps.map((step, idx) => (
                     <PlaybookFlowStep
                       key={idx}
@@ -233,34 +211,30 @@ export function PlaybookSOPCard({
                       Entry Criteria
                     </h4>
                   </div>
-                  <div className="bg-gray-800 rounded-xl p-4 border border-gray-700 space-y-2">
+                  <div className="bg-muted rounded-xl p-4 border border-border space-y-2">
                     {sop.entryCriteria.map((item, idx) => (
                       <div key={idx} className="flex items-start gap-3">
                         <Circle size={10} className="text-amber-400 mt-1.5 flex-shrink-0" />
-                        <span className="text-sm text-gray-300">{item}</span>
+                        <span className="text-sm text-foreground/80">{item}</span>
                       </div>
                     ))}
                   </div>
                 </div>
                 <div>
                   <div className="flex items-center gap-2 mb-4">
-                    <Unlock size={18} style={{ color: NEON_GREEN }} />
-                    <h4
-                      className="text-sm font-bold uppercase tracking-wider"
-                      style={{ color: NEON_GREEN }}
-                    >
+                    <Unlock size={18} className="text-primary" />
+                    <h4 className="text-sm font-bold uppercase tracking-wider text-primary">
                       Exit Criteria
                     </h4>
                   </div>
-                  <div className="bg-gray-800 rounded-xl p-4 border border-gray-700 space-y-2">
+                  <div className="bg-muted rounded-xl p-4 border border-border space-y-2">
                     {sop.exitCriteria.map((item, idx) => (
                       <div key={idx} className="flex items-start gap-3">
                         <CheckCircle2
                           size={10}
-                          style={{ color: NEON_GREEN }}
-                          className="mt-1.5 flex-shrink-0"
+                          className="text-primary mt-1.5 flex-shrink-0"
                         />
-                        <span className="text-sm text-gray-300">{item}</span>
+                        <span className="text-sm text-foreground/80">{item}</span>
                       </div>
                     ))}
                   </div>
@@ -273,23 +247,19 @@ export function PlaybookSOPCard({
               <div className="space-y-6">
                 <div>
                   <div className="flex items-center gap-2 mb-4">
-                    <FileText size={18} style={{ color: NEON_GREEN }} />
-                    <h4
-                      className="text-sm font-bold uppercase tracking-wider"
-                      style={{ color: NEON_GREEN }}
-                    >
+                    <FileText size={18} className="text-primary" />
+                    <h4 className="text-sm font-bold uppercase tracking-wider text-primary">
                       Governing Rules
                     </h4>
                   </div>
-                  <div className="bg-gray-800 rounded-xl p-4 border border-gray-700 space-y-3">
+                  <div className="bg-muted rounded-xl p-4 border border-border space-y-3">
                     {sop.rules.map((rule, idx) => (
                       <div key={idx} className="flex items-start gap-3">
                         <ChevronRight
                           size={16}
-                          style={{ color: NEON_GREEN }}
-                          className="mt-0.5 flex-shrink-0"
+                          className="text-primary mt-0.5 flex-shrink-0"
                         />
-                        <span className="text-sm text-gray-300">{rule}</span>
+                        <span className="text-sm text-foreground/80">{rule}</span>
                       </div>
                     ))}
                   </div>
@@ -298,19 +268,19 @@ export function PlaybookSOPCard({
                 {sop.zeroTolerance.length > 0 && (
                   <div>
                     <div className="flex items-center gap-2 mb-4">
-                      <AlertTriangle size={18} className="text-red-400" />
-                      <h4 className="text-sm font-bold text-red-400 uppercase tracking-wider">
+                      <AlertTriangle size={18} className="text-destructive" />
+                      <h4 className="text-sm font-bold text-destructive uppercase tracking-wider">
                         Zero Tolerance Violations
                       </h4>
                     </div>
-                    <div className="bg-red-950/30 rounded-xl p-4 border border-red-900/50 space-y-3">
+                    <div className="bg-destructive/10 rounded-xl p-4 border border-destructive/30 space-y-3">
                       {sop.zeroTolerance.map((item, idx) => (
                         <div key={idx} className="flex items-center justify-between gap-4 flex-wrap">
                           <div className="flex items-center gap-3">
                             <ViolationBadge type={item.severity} />
-                            <span className="text-sm text-gray-300">{item.violation}</span>
+                            <span className="text-sm text-foreground/80">{item.violation}</span>
                           </div>
-                          <span className="text-xs text-red-400 font-medium">
+                          <span className="text-xs text-destructive font-medium">
                             → {item.consequence}
                           </span>
                         </div>
@@ -325,24 +295,18 @@ export function PlaybookSOPCard({
             {activeTab === 'enforcement' && (
               <div>
                 <div className="flex items-center gap-2 mb-4">
-                  <Shield size={18} style={{ color: NEON_GREEN }} />
-                  <h4
-                    className="text-sm font-bold uppercase tracking-wider"
-                    style={{ color: NEON_GREEN }}
-                  >
+                  <Shield size={18} className="text-primary" />
+                  <h4 className="text-sm font-bold uppercase tracking-wider text-primary">
                     System Enforcement
                   </h4>
                 </div>
-                <div className="bg-gray-800 rounded-xl p-4 border border-gray-700 space-y-3">
+                <div className="bg-muted rounded-xl p-4 border border-border space-y-3">
                   {sop.systemEnforcement.map((item, idx) => (
                     <div key={idx} className="flex items-start gap-3">
-                      <div
-                        className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
-                        style={{ backgroundColor: `${NEON_GREEN}20` }}
-                      >
-                        <CheckCircle2 size={12} style={{ color: NEON_GREEN }} />
+                      <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 bg-primary/20">
+                        <CheckCircle2 size={12} className="text-primary" />
                       </div>
-                      <span className="text-sm text-gray-300">{item}</span>
+                      <span className="text-sm text-foreground/80">{item}</span>
                     </div>
                   ))}
                 </div>
@@ -352,15 +316,14 @@ export function PlaybookSOPCard({
 
           {/* Bottom Acknowledge Button */}
           {!isAcknowledged && (
-            <div className="p-4 border-t border-gray-800 bg-gray-800/30">
+            <div className="p-4 border-t border-border bg-muted/30">
               <button
                 onClick={(e) => {
                   e.stopPropagation();
                   onAcknowledge();
                 }}
                 disabled={isAcknowledging}
-                className="w-full py-3 text-sm font-bold text-black rounded-lg transition-transform hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50"
-                style={{ backgroundColor: NEON_GREEN }}
+                className="w-full py-3 text-sm font-bold text-primary-foreground bg-primary rounded-lg transition-transform hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50"
               >
                 {isAcknowledging ? 'Acknowledging...' : `I Acknowledge SOP ${sop.number}: ${sop.title}`}
               </button>
