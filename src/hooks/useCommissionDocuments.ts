@@ -37,7 +37,7 @@ export interface CommissionDocument {
   dollars_increased: number | null;
   supplement_fee: number | null;
   notes: string | null;
-  status: 'draft' | 'submitted' | 'approved' | 'rejected' | 'manager_approved' | 'accounting_approved' | 'paid' | 'revision_required';
+  status: 'draft' | 'submitted' | 'approved' | 'rejected' | 'manager_approved' | 'accounting_approved' | 'paid' | 'revision_required' | 'review_requested' | 'review_completed';
   created_by: string;
   created_at: string;
   updated_at: string;
@@ -256,7 +256,7 @@ export function useUpdateCommissionDocumentStatus() {
       revision_reason 
     }: { 
       id: string; 
-      status: 'draft' | 'submitted' | 'approved' | 'rejected' | 'manager_approved' | 'accounting_approved' | 'paid' | 'revision_required'; 
+      status: 'draft' | 'submitted' | 'approved' | 'rejected' | 'manager_approved' | 'accounting_approved' | 'paid' | 'revision_required' | 'review_requested' | 'review_completed'; 
       approval_comment?: string;
       revision_reason?: string;
     }) => {
@@ -356,13 +356,62 @@ export function useUpdateCommissionDocumentStatus() {
       
       return data;
     },
-    onSuccess: (_, variables) => {
+    onSuccess: async (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['commission-documents'] });
       queryClient.invalidateQueries({ queryKey: ['commission-document', variables.id] });
       const statusLabel = variables.status === 'revision_required' 
         ? 'returned for revision' 
         : variables.status.replace(/_/g, ' ');
       toast.success(`Commission document ${statusLabel}`);
+
+      // Send email notification when a commission is SUBMITTED
+      // This notifies the assigned manager that a commission is ready for review
+      if (variables.status === 'submitted' && data) {
+        try {
+          // Get the manager's email from the profile
+          let managerEmail: string | null = null;
+          if (data.manager_id) {
+            const { data: managerProfile } = await supabase
+              .from('profiles')
+              .select('email')
+              .eq('id', data.manager_id)
+              .single();
+            managerEmail = managerProfile?.email || null;
+          }
+
+          if (managerEmail) {
+            await supabase.functions.invoke("send-commission-notification", {
+              body: {
+                notification_type: "submitted",
+                commission_id: data.id,
+                job_name: data.job_name_id,
+                job_address: "",
+                sales_rep_name: data.sales_rep,
+                subcontractor_name: null,
+                submission_type: "employee",
+                contract_amount: data.gross_contract_total,
+                net_commission_owed: data.rep_commission,
+                submitter_email: managerEmail,
+              },
+            });
+          }
+
+          // Create in-app notification for manager
+          if (data.manager_id) {
+            await supabase.from('user_notifications').insert({
+              user_id: data.manager_id,
+              notification_type: 'commission_submitted',
+              title: 'New Commission Submitted',
+              message: `${data.sales_rep} submitted a commission for ${data.job_name_id}`,
+              entity_type: 'commission_document',
+              entity_id: data.id,
+            });
+          }
+        } catch (notifyError) {
+          console.error("Failed to send submission notification:", notifyError);
+          // Don't show error to user — the submission itself succeeded
+        }
+      }
     },
     onError: (error) => {
       console.error('Error updating status:', error);

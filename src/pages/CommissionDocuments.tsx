@@ -56,6 +56,20 @@ export default function CommissionDocuments() {
     enabled: !!user && isManager && !isAdmin,
   });
 
+  // Fetch which users have admin-only commission visibility
+  const { data: adminOnlyUserIds } = useQuery({
+    queryKey: ["admin-only-commission-users"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("commission_admin_only", true);
+      if (error) throw error;
+      return new Set((data || []).map(p => p.id));
+    },
+    enabled: !!user && isManager && !isAdmin,
+  });
+
   // Get unique sales reps from documents for filter dropdown
   const uniqueSalesReps = useMemo(() => {
     if (!documents) return [];
@@ -72,21 +86,28 @@ export default function CommissionDocuments() {
   const roleFilteredDocuments = useMemo(() => {
     if (!documents) return [];
     
-    // Admin/Accounting: Full visibility
+    // Admin/Accounting: Full visibility — always see everything
     if (isAdmin) return documents;
     
-    // Manager: Only see their assigned reps
+    // Manager: See their assigned reps EXCEPT those flagged as admin-only
     if (isManager && teamAssignments) {
       const assignedRepIds = new Set(teamAssignments.map(t => t.id));
-      return documents.filter(doc => 
-        doc.created_by === user?.id || 
-        (doc.sales_rep_id && assignedRepIds.has(doc.sales_rep_id))
-      );
+      return documents.filter(doc => {
+        // Always see own docs
+        if (doc.created_by === user?.id) return true;
+        // Check if this rep is assigned to this manager
+        if (doc.sales_rep_id && assignedRepIds.has(doc.sales_rep_id)) {
+          // But hide if the rep is flagged as admin-only
+          if (adminOnlyUserIds?.has(doc.sales_rep_id)) return false;
+          return true;
+        }
+        return false;
+      });
     }
     
     // Sales Rep: Only see their own records
     return documents.filter(doc => doc.created_by === user?.id);
-  }, [documents, isAdmin, isManager, teamAssignments, user?.id]);
+  }, [documents, isAdmin, isManager, teamAssignments, adminOnlyUserIds, user?.id]);
 
   // Apply additional filters
   const filteredDocuments = useMemo(() => {
