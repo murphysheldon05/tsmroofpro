@@ -444,14 +444,6 @@ export type Database = {
           profit_split_label: string | null
           rep_commission: number
           rep_profit_percent: number | null
-          review_completed_at: string | null
-          review_completed_by: string | null
-          review_completed_notes: string | null
-          review_notes: string | null
-          review_requested_at: string | null
-          review_requested_by: string | null
-          review_requested_to: string | null
-          review_requested_to_name: string | null
           revision_count: number | null
           revision_reason: string | null
           sales_rep: string
@@ -505,14 +497,6 @@ export type Database = {
           profit_split_label?: string | null
           rep_commission?: number
           rep_profit_percent?: number | null
-          review_completed_at?: string | null
-          review_completed_by?: string | null
-          review_completed_notes?: string | null
-          review_notes?: string | null
-          review_requested_at?: string | null
-          review_requested_by?: string | null
-          review_requested_to?: string | null
-          review_requested_to_name?: string | null
           revision_count?: number | null
           revision_reason?: string | null
           sales_rep: string
@@ -566,14 +550,6 @@ export type Database = {
           profit_split_label?: string | null
           rep_commission?: number
           rep_profit_percent?: number | null
-          review_completed_at?: string | null
-          review_completed_by?: string | null
-          review_completed_notes?: string | null
-          review_notes?: string | null
-          review_requested_at?: string | null
-          review_requested_by?: string | null
-          review_requested_to?: string | null
-          review_requested_to_name?: string | null
           revision_count?: number | null
           revision_reason?: string | null
           sales_rep?: string
@@ -1808,7 +1784,6 @@ export type Database = {
           approved_at: string | null
           approved_by: string | null
           avatar_url: string | null
-          commission_admin_only: boolean
           commission_tier_id: string | null
           company_name: string | null
           created_at: string
@@ -1838,7 +1813,6 @@ export type Database = {
           approved_at?: string | null
           approved_by?: string | null
           avatar_url?: string | null
-          commission_admin_only?: boolean
           commission_tier_id?: string | null
           company_name?: string | null
           created_at?: string
@@ -1868,7 +1842,6 @@ export type Database = {
           approved_at?: string | null
           approved_by?: string | null
           avatar_url?: string | null
-          commission_admin_only?: boolean
           commission_tier_id?: string | null
           company_name?: string | null
           created_at?: string

@@ -8,9 +8,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Users, UserMinus, Loader2, Award, Shield } from "lucide-react";
+import { Users, UserMinus, Loader2, Award } from "lucide-react";
 import {
   useTeamAssignments,
   useAssignEmployee,
@@ -22,10 +20,9 @@ import {
   useAssignUserTier,
   useRemoveUserTier,
 } from "@/hooks/useCommissionTiers";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { toast } from "sonner";
 
 interface User {
   id: string;
@@ -82,78 +79,6 @@ function TeamMemberTierSelect({
         ))}
       </SelectContent>
     </Select>
-  );
-}
-
-// Admin-Only Visibility Toggle Component
-function AdminOnlyToggle({ 
-  employeeId, 
-  employeeName 
-}: { 
-  employeeId: string; 
-  employeeName: string;
-}) {
-  const queryClient = useQueryClient();
-  
-  const { data: isAdminOnly, isLoading } = useQuery({
-    queryKey: ["commission-admin-only", employeeId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("commission_admin_only")
-        .eq("id", employeeId)
-        .single();
-      if (error) throw error;
-      return data?.commission_admin_only ?? false;
-    },
-  });
-
-  const toggleMutation = useMutation({
-    mutationFn: async (newValue: boolean) => {
-      const { error } = await supabase
-        .from("profiles")
-        .update({ commission_admin_only: newValue })
-        .eq("id", employeeId);
-      if (error) throw error;
-    },
-    onSuccess: (_, newValue) => {
-      queryClient.invalidateQueries({ queryKey: ["commission-admin-only", employeeId] });
-      toast.success(
-        newValue 
-          ? `${employeeName}'s commissions are now admin/accounting-only` 
-          : `${employeeName}'s commissions are now visible to their manager`
-      );
-    },
-    onError: () => {
-      toast.error("Failed to update visibility setting");
-    },
-  });
-
-  if (isLoading) return <Loader2 className="w-3 h-3 animate-spin" />;
-
-  return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <div className="flex items-center gap-1.5">
-            <Shield className={`w-3 h-3 ${isAdminOnly ? 'text-amber-500' : 'text-muted-foreground/40'}`} />
-            <Switch
-              checked={isAdminOnly || false}
-              onCheckedChange={(checked) => toggleMutation.mutate(checked)}
-              disabled={toggleMutation.isPending}
-              className="scale-75"
-            />
-          </div>
-        </TooltipTrigger>
-        <TooltipContent side="top">
-          <p className="text-xs max-w-[200px]">
-            {isAdminOnly 
-              ? "Admin/Accounting only — managers cannot see this user's commissions" 
-              : "Click to restrict this user's commissions to admin/accounting only"}
-          </p>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
   );
 }
 
@@ -308,10 +233,6 @@ export function TeamAssignmentManager() {
             <Award className="w-3 h-3" />
             Assign commission tiers to control which O&P and Profit Split options each team member can select.
           </p>
-          <p className="text-sm text-muted-foreground flex items-center gap-1">
-            <Shield className="w-3 h-3 text-amber-500" />
-            The shield toggle restricts a user's commissions to admin/accounting visibility only (hidden from managers).
-          </p>
           
           {managers.map((manager) => {
             const teamMembers = assignmentsByManager.get(manager.id) || [];
@@ -350,12 +271,6 @@ export function TeamAssignmentManager() {
                               employeeId={assignment.employee_id}
                               employeeName={employeeName}
                               currentUserId={user?.id || ""}
-                            />
-                            
-                            {/* Admin-Only Visibility Toggle */}
-                            <AdminOnlyToggle 
-                              employeeId={assignment.employee_id} 
-                              employeeName={employeeName} 
                             />
                             
                             <Button
