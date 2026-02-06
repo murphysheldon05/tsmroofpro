@@ -1,3 +1,5 @@
+import { NEON_GREEN, NEON_GREEN_LIGHT } from "@/lib/masterPlaybookSOPs";
+
 interface PlaybookConfettiProps {
   active: boolean;
 }
@@ -5,21 +7,14 @@ interface PlaybookConfettiProps {
 export function PlaybookConfetti({ active }: PlaybookConfettiProps) {
   if (!active) return null;
 
-  // Using CSS custom property colors for the confetti
-  const confettiColors = [
-    'hsl(120, 100%, 62%)', // primary green
-    'hsl(150, 100%, 50%)', // lighter green
-    '#FFD700', // gold
-    '#FF6B6B', // coral
-    '#4ECDC4', // teal
-  ];
-
   const confettiPieces = Array.from({ length: 50 }, (_, i) => ({
     id: i,
     left: Math.random() * 100,
     delay: Math.random() * 0.5,
     duration: 1 + Math.random() * 2,
-    color: confettiColors[Math.floor(Math.random() * confettiColors.length)],
+    color: [NEON_GREEN, NEON_GREEN_LIGHT, '#FFD700', '#FF6B6B', '#4ECDC4'][
+      Math.floor(Math.random() * 5)
+    ],
   }));
 
   return (
