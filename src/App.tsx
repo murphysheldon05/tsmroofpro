@@ -31,7 +31,6 @@ import DeliverySchedule from "./pages/DeliverySchedule";
 import CommandCenter from "./pages/CommandCenter";
 import PendingReview from "./pages/PendingReview";
 import OpsCompliance from "./pages/OpsCompliance";
-import MasterPlaybook from "./pages/MasterPlaybook";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -79,14 +78,6 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <SOPLibrary />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/master-playbook"
-              element={
-                <ProtectedRoute>
-                  <MasterPlaybook />
                 </ProtectedRoute>
               }
             />

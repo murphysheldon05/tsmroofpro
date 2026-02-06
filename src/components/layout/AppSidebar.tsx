@@ -30,7 +30,6 @@ import {
   DollarSign,
   Calendar,
   ClipboardCheck,
-  BookOpen,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -95,7 +94,6 @@ const navigation: NavItem[] = [
     icon: FileText,
     sectionKey: "sops",
     children: [
-      { title: "Master Playbook", href: "/master-playbook", icon: BookOpen, sectionKey: "sops/master" },
       { title: "Sales", href: "/sops/sales", icon: TrendingUp, sectionKey: "sops/sales" },
       { title: "Production", href: "/sops/production", icon: Hammer, sectionKey: "sops/production" },
       { title: "Supplements", href: "/sops/supplements", icon: FileCode, sectionKey: "sops/supplements" },
