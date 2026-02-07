@@ -44,3 +44,6 @@ verify_jwt = false
 
 [functions.send-invite]
 verify_jwt = false
+
+[functions.notify-playbook-completion]
+verify_jwt = false
