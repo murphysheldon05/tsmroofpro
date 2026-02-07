@@ -11,6 +11,7 @@ import Auth from "./pages/Auth";
 import Signup from "./pages/Signup";
 import Dashboard from "./pages/Dashboard";
 import SOPLibrary from "./pages/SOPLibrary";
+import MasterPlaybook from "./pages/MasterPlaybook";
 import ResourceDetail from "./pages/ResourceDetail";
 import Training from "./pages/Training";
 import Tools from "./pages/Tools";
@@ -78,6 +79,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <SOPLibrary />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/sops/master-playbook"
+              element={
+                <ProtectedRoute>
+                  <MasterPlaybook />
                 </ProtectedRoute>
               }
             />

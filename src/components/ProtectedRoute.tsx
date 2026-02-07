@@ -1,12 +1,12 @@
 import { ReactNode } from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { PendingApprovalScreen } from "@/components/auth/PendingApprovalScreen";
 import { RejectedScreen } from "@/components/auth/RejectedScreen";
 import { InactiveScreen } from "@/components/auth/InactiveScreen";
 import { AccessHoldScreen } from "@/components/compliance/AccessHoldScreen";
+import { MasterPlaybookGate } from "@/components/compliance/MasterPlaybookGate";
 import { useAccessHoldCheck } from "@/hooks/useComplianceHoldCheck";
-
 interface ProtectedRouteProps {
   children: ReactNode;
   requireAdmin?: boolean;
@@ -35,7 +35,12 @@ export function ProtectedRoute({
 }: ProtectedRouteProps) {
   const { user, loading, isAdmin, isManager, employeeStatus } = useAuth();
   const { data: accessHold, isLoading: accessHoldLoading } = useAccessHoldCheck();
-
+  const location = useLocation();
+  
+  // Routes that are exempt from the Master Playbook gate
+  // (the playbook page itself, and the profile page for reference)
+  const isExemptRoute = location.pathname.startsWith("/sops/master-playbook") ||
+    location.pathname === "/profile";
   if (loading || accessHoldLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -76,7 +81,12 @@ export function ProtectedRoute({
         return <Navigate to="/command-center" replace />;
       }
 
-      // All checks passed
+      // If not on exempt route, wrap with Master Playbook gate
+      if (!isExemptRoute) {
+        return <MasterPlaybookGate>{children}</MasterPlaybookGate>;
+      }
+
+      // Exempt routes pass through directly
       return <>{children}</>;
     
     default:

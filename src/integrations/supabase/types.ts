@@ -1420,6 +1420,30 @@ export type Database = {
           },
         ]
       }
+      master_sop_acknowledgments: {
+        Row: {
+          acknowledged_at: string
+          id: string
+          sop_number: number
+          sop_version: string
+          user_id: string
+        }
+        Insert: {
+          acknowledged_at?: string
+          id?: string
+          sop_number: number
+          sop_version: string
+          user_id: string
+        }
+        Update: {
+          acknowledged_at?: string
+          id?: string
+          sop_number?: number
+          sop_version?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       new_hire_access_credentials: {
         Row: {
           access_type: string
