@@ -30,9 +30,11 @@ import {
   List,
   Grid,
   ArrowLeft,
+  BookOpen,
 } from "lucide-react";
 
 const categoryIcons: Record<string, React.ElementType> = {
+  "master-playbook": BookOpen,
   sales: TrendingUp,
   production: Hammer,
   supplements: FileCode,
@@ -335,7 +337,21 @@ export default function SOPLibrary() {
           <TabsContent value="browse" className="mt-4 space-y-4">
             {/* Department Selection */}
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
-              {categories?.map((cat) => {
+              {/* Master Playbook - Always first, special styling */}
+              <Link
+                to="/sops/master-playbook"
+                className="p-3 sm:p-4 rounded-lg border text-center transition-all bg-primary/5 border-primary/30 hover:border-primary/50 hover:shadow-glow-sm"
+              >
+                <BookOpen className="w-5 h-5 sm:w-6 sm:h-6 mx-auto mb-1.5 text-primary" />
+                <p className="text-xs sm:text-sm font-medium text-primary">
+                  Master Playbook
+                </p>
+                <p className="text-[10px] text-muted-foreground mt-0.5">
+                  Core SOPs 1-10
+                </p>
+              </Link>
+              
+              {categories?.filter(cat => cat.slug !== 'master-playbook').map((cat) => {
                 const CatIcon = categoryIcons[cat.slug] || FileText;
                 const isActive = category === cat.slug;
                 return (
