@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
@@ -5,14 +6,15 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { MasterSOPCard } from "@/components/sop/MasterSOPCard";
+import { CongratulationsModal } from "@/components/sop/CongratulationsModal";
 import { useMasterSOPAcknowledgments } from "@/hooks/useMasterSOPAcknowledgments";
 import { SOPMASTER_CONTENT, SOPMASTER_VERSION } from "@/lib/sopMasterConstants";
-import { 
-  ArrowLeft, 
-  BookOpen, 
-  CheckCircle2, 
+import {
+  ArrowLeft,
+  BookOpen,
+  CheckCircle2,
   Shield,
-  Trophy
+  Trophy,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -28,12 +30,28 @@ export default function MasterPlaybook() {
     isAcknowledging,
   } = useMasterSOPAcknowledgments();
 
-  const progressPercent = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
+  const [showCongrats, setShowCongrats] = useState(false);
+  const [justCompletedAll, setJustCompletedAll] = useState(false);
 
-  const handleAcknowledge = async (sopNumber: number) => {
+  const progressPercent =
+    totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
+
+  const handleAcknowledge = async (sopId: string) => {
     try {
-      await acknowledgeSOP(sopNumber);
-      toast.success(`SOP-${String(sopNumber).padStart(2, "0")} acknowledged!`);
+      // Find the SOP number from the ID
+      const sop = SOPMASTER_CONTENT.find((s) => s.id === sopId);
+      if (!sop) return;
+
+      await acknowledgeSOP(parseInt(sop.number));
+      toast.success(`SOP ${sop.number} acknowledged!`);
+
+      // Check if this was the last one
+      if (completedCount + 1 === totalCount) {
+        setJustCompletedAll(true);
+        setTimeout(() => {
+          setShowCongrats(true);
+        }, 500);
+      }
     } catch (e: any) {
       toast.error("Failed to acknowledge: " + e.message);
     }
@@ -72,7 +90,9 @@ export default function MasterPlaybook() {
                   <BookOpen className="w-5 h-5 text-primary" />
                 </div>
                 <div>
-                  <h1 className="text-xl sm:text-2xl font-bold">Master Playbook</h1>
+                  <h1 className="text-xl sm:text-2xl font-bold">
+                    Master Playbook
+                  </h1>
                   <p className="text-muted-foreground text-xs sm:text-sm">
                     Core operational SOPs — Required reading
                   </p>
@@ -98,13 +118,15 @@ export default function MasterPlaybook() {
                 <span className="text-muted-foreground">
                   {completedCount} of {totalCount} SOPs acknowledged
                 </span>
-                <span className="font-medium">{Math.round(progressPercent)}%</span>
+                <span className="font-medium">
+                  {Math.round(progressPercent)}%
+                </span>
               </div>
               <Progress value={progressPercent} className="h-2" />
             </div>
 
             {allCompleted && (
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-green-500/10 text-green-700 dark:text-green-400">
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-green-500/10 text-green-700 dark:text-green-400 border border-green-500/20">
                 <Trophy className="h-5 w-5" />
                 <div>
                   <p className="font-medium">All SOPs Acknowledged!</p>
@@ -127,15 +149,13 @@ export default function MasterPlaybook() {
         {/* SOP Cards */}
         <div className="space-y-3">
           {SOPMASTER_CONTENT.map((sop) => {
-            const status = sopStatuses.find((s) => s.sopNumber === sop.number);
+            const status = sopStatuses.find(
+              (s) => s.sopNumber === parseInt(sop.number)
+            );
             return (
               <MasterSOPCard
-                key={sop.number}
-                number={sop.number}
-                id={sop.id}
-                title={sop.title}
-                summary={sop.summary}
-                fullContent={sop.fullContent}
+                key={sop.id}
+                sop={sop}
                 isAcknowledged={status?.acknowledged || false}
                 onAcknowledge={handleAcknowledge}
                 isAcknowledging={isAcknowledging}
@@ -144,6 +164,12 @@ export default function MasterPlaybook() {
           })}
         </div>
       </div>
+
+      {/* Congratulations Modal */}
+      <CongratulationsModal
+        open={showCongrats}
+        onClose={() => setShowCongrats(false)}
+      />
     </AppLayout>
   );
 }

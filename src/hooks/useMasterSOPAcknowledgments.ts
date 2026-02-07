@@ -33,9 +33,10 @@ export function useMasterSOPAcknowledgments() {
 
   // Get status for each SOP (1-10)
   const sopStatuses: SOPAcknowledgmentStatus[] = SOPMASTER_CONTENT.map((sop) => {
-    const ack = acknowledgments?.find((a) => a.sop_number === sop.number);
+    const sopNum = parseInt(sop.number, 10);
+    const ack = acknowledgments?.find((a) => a.sop_number === sopNum);
     return {
-      sopNumber: sop.number,
+      sopNumber: sopNum,
       acknowledged: !!ack,
       acknowledgedAt: ack?.acknowledged_at || null,
     };
