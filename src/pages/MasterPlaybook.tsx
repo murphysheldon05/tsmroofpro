@@ -1,3 +1,4 @@
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
@@ -5,8 +6,11 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { MasterSOPCard } from "@/components/sop/MasterSOPCard";
+import { PlaybookCompletionModal } from "@/components/compliance/PlaybookCompletionModal";
 import { useMasterSOPAcknowledgments } from "@/hooks/useMasterSOPAcknowledgments";
 import { SOPMASTER_CONTENT, SOPMASTER_VERSION } from "@/lib/sopMasterConstants";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import { 
   ArrowLeft, 
   BookOpen, 
@@ -18,6 +22,10 @@ import { toast } from "sonner";
 
 export default function MasterPlaybook() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const [showCompletionModal, setShowCompletionModal] = useState(false);
+  const hasTriggeredCompletion = useRef(false);
+  
   const {
     sopStatuses,
     completedCount,
@@ -29,14 +37,45 @@ export default function MasterPlaybook() {
   } = useMasterSOPAcknowledgments();
 
   const progressPercent = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
+  const userName = user?.user_metadata?.full_name?.split(" ")[0] || "Team Member";
+
+  // Trigger celebration when user completes all playbooks
+  useEffect(() => {
+    if (allCompleted && !hasTriggeredCompletion.current && completedCount === totalCount) {
+      // Only trigger once per session and only if just completed
+      hasTriggeredCompletion.current = true;
+      setShowCompletionModal(true);
+      
+      // Send email notification to manager
+      sendCompletionNotification();
+    }
+  }, [allCompleted, completedCount, totalCount]);
+
+  const sendCompletionNotification = async () => {
+    try {
+      const { error } = await supabase.functions.invoke("notify-playbook-completion", {
+        body: { userId: user?.id },
+      });
+      if (error) {
+        console.error("Failed to send completion notification:", error);
+      }
+    } catch (e) {
+      console.error("Error sending completion notification:", e);
+    }
+  };
 
   const handleAcknowledge = async (sopNumber: number) => {
     try {
       await acknowledgeSOP(sopNumber);
-      toast.success(`SOP-${String(sopNumber).padStart(2, "0")} acknowledged!`);
+      toast.success(`Playbook ${String(sopNumber).padStart(2, "0")} acknowledged!`);
     } catch (e: any) {
       toast.error("Failed to acknowledge: " + e.message);
     }
+  };
+
+  const handleCloseModal = () => {
+    setShowCompletionModal(false);
+    navigate("/command-center");
   };
 
   if (isLoading) {
@@ -55,6 +94,13 @@ export default function MasterPlaybook() {
   return (
     <AppLayout>
       <div className="max-w-4xl mx-auto space-y-6">
+        {/* Completion Modal with Confetti */}
+        <PlaybookCompletionModal 
+          open={showCompletionModal} 
+          onClose={handleCloseModal}
+          userName={userName}
+        />
+
         {/* Header */}
         <header className="pt-4 lg:pt-0">
           <div className="flex items-center gap-3 mb-4">
@@ -74,7 +120,7 @@ export default function MasterPlaybook() {
                 <div>
                   <h1 className="text-xl sm:text-2xl font-bold">Master Playbook</h1>
                   <p className="text-muted-foreground text-xs sm:text-sm">
-                    Core operational SOPs — Required reading
+                    Core operational playbooks — Required reading
                   </p>
                 </div>
               </div>
@@ -96,7 +142,7 @@ export default function MasterPlaybook() {
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">
-                  {completedCount} of {totalCount} SOPs acknowledged
+                  {completedCount} of {totalCount} playbooks acknowledged
                 </span>
                 <span className="font-medium">{Math.round(progressPercent)}%</span>
               </div>
@@ -107,7 +153,7 @@ export default function MasterPlaybook() {
               <div className="flex items-center gap-3 p-3 rounded-lg bg-green-500/10 text-green-700 dark:text-green-400">
                 <Trophy className="h-5 w-5" />
                 <div>
-                  <p className="font-medium">All SOPs Acknowledged!</p>
+                  <p className="font-medium">All Playbooks Acknowledged!</p>
                   <p className="text-sm opacity-80">
                     You now have full access to the TSM Roof Pro Hub
                   </p>
@@ -118,13 +164,13 @@ export default function MasterPlaybook() {
             {!allCompleted && (
               <div className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400">
                 <CheckCircle2 className="h-4 w-4" />
-                <span>Complete all 10 SOPs to unlock full hub access</span>
+                <span>Complete all 10 playbooks to unlock full hub access</span>
               </div>
             )}
           </div>
         </header>
 
-        {/* SOP Cards */}
+        {/* Playbook Cards */}
         <div className="space-y-3">
           {SOPMASTER_CONTENT.map((sop) => {
             const status = sopStatuses.find((s) => s.sopNumber === sop.number);
