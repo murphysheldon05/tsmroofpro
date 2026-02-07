@@ -114,7 +114,8 @@ export function MasterPlaybookGate({ children }: MasterPlaybookGateProps) {
               </h3>
               <div className="grid grid-cols-2 gap-2">
                 {SOPMASTER_CONTENT.map((sop) => {
-                  const status = sopStatuses.find((s) => s.sopNumber === sop.number);
+                  const sopNum = parseInt(sop.number, 10);
+                  const status = sopStatuses.find((s) => s.sopNumber === sopNum);
                   const isComplete = status?.acknowledged || false;
                   return (
                     <div
