@@ -102,6 +102,24 @@ export function ApplyHoldModalEnhanced({ open, onOpenChange }: ApplyHoldModalEnh
         },
       });
 
+      // Send email notification for the hold if user_id is present
+      if (formData.user_id) {
+        try {
+          await supabase.functions.invoke("send-hold-notification", {
+            body: {
+              hold_id: data.id,
+              hold_type: formData.hold_type.replace(/_/g, " ").replace(/\b\w/g, (l: string) => l.toUpperCase()),
+              reason: formData.reason,
+              user_id: formData.user_id,
+              job_id: formData.job_id || undefined,
+              action: "applied",
+            },
+          });
+        } catch (notifyError) {
+          console.error("Failed to send hold notification:", notifyError);
+        }
+      }
+
       return data;
     },
     onSuccess: () => {

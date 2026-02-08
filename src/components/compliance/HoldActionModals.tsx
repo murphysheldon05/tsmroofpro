@@ -66,6 +66,13 @@ export function HoldActionModals({ hold, action, onClose }: HoldActionModalsProp
     mutationFn: async () => {
       if (!hold) return;
       
+      // Get current user's name for the notification
+      const { data: currentUserProfile } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("id", user?.id)
+        .single();
+
       const { error } = await supabase
         .from("compliance_holds")
         .update({
@@ -85,6 +92,25 @@ export function HoldActionModals({ hold, action, onClose }: HoldActionModalsProp
         target_id: hold.id,
         metadata: { hold_type: hold.hold_type, job_id: hold.job_id },
       });
+
+      // Send release notification if the hold has a user_id
+      if (hold.user_id) {
+        try {
+          await supabase.functions.invoke("send-hold-notification", {
+            body: {
+              hold_id: hold.id,
+              hold_type: hold.hold_type.replace(/_/g, " ").replace(/\b\w/g, (l: string) => l.toUpperCase()),
+              reason: hold.reason,
+              user_id: hold.user_id,
+              job_id: hold.job_id || undefined,
+              action: "released",
+              released_by_name: currentUserProfile?.full_name || "Admin",
+            },
+          });
+        } catch (notifyError) {
+          console.error("Failed to send hold release notification:", notifyError);
+        }
+      }
     },
     onSuccess: () => {
       toast.success("Hold released successfully");
