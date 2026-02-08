@@ -66,13 +66,10 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+            {/* Redirect old dashboard route to command center */}
             <Route
               path="/dashboard"
-              element={
-                <ProtectedRoute>
-                  <Dashboard />
-                </ProtectedRoute>
-              }
+              element={<Navigate to="/command-center" replace />}
             />
             <Route
               path="/sops"
