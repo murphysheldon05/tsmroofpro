@@ -1,4 +1,4 @@
-import { ReactNode, useMemo } from "react";
+import React, { ReactNode, useMemo, forwardRef } from "react";
 import { useLocation, Link, useNavigate } from "react-router-dom";
 import { AppSidebar } from "./AppSidebar";
 import { Home, ChevronRight, ArrowLeft } from "lucide-react";
@@ -93,7 +93,8 @@ interface AppLayoutProps {
   children: ReactNode;
 }
 
-export function AppLayout({ children }: AppLayoutProps) {
+export const AppLayout = forwardRef<HTMLDivElement, AppLayoutProps>(
+  ({ children }, ref) => {
   const location = useLocation();
   const navigate = useNavigate();
   const isHome = location.pathname === "/command-center";
@@ -108,7 +109,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div ref={ref} className="min-h-screen bg-background">
       <AppSidebar />
       <main className="lg:pl-64 min-h-screen">
         {/* Header with notification bell */}
@@ -174,4 +175,6 @@ export function AppLayout({ children }: AppLayoutProps) {
       </main>
     </div>
   );
-}
+});
+
+AppLayout.displayName = "AppLayout";

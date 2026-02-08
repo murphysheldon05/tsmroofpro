@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, forwardRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
@@ -26,7 +26,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-export default function MasterPlaybook() {
+const MasterPlaybook = forwardRef<HTMLDivElement>((_, ref) => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [showCompletionModal, setShowCompletionModal] = useState(false);
@@ -105,7 +105,7 @@ export default function MasterPlaybook() {
 
   return (
     <AppLayout>
-      <div className="max-w-4xl mx-auto space-y-6 px-4 pb-8">
+      <div ref={ref} className="max-w-4xl mx-auto space-y-6 px-4 pb-8">
         {/* Completion Modal with Confetti */}
         <PlaybookCompletionModal 
           open={showCompletionModal} 
@@ -280,4 +280,8 @@ export default function MasterPlaybook() {
       </div>
     </AppLayout>
   );
-}
+});
+
+MasterPlaybook.displayName = "MasterPlaybook";
+
+export default MasterPlaybook;
