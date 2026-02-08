@@ -208,7 +208,7 @@ export default function SOPLibrary() {
               </div>
               <div className="min-w-0">
                 <h1 className="text-xl sm:text-2xl font-bold text-foreground truncate">
-                  {currentCategory?.name || "SOP Library"}
+                  {currentCategory?.name || "Playbook Library"}
                 </h1>
                 <p className="text-muted-foreground text-xs sm:text-sm truncate">
                   {currentCategory?.description || "Find what you need, fast"}
@@ -223,7 +223,7 @@ export default function SOPLibrary() {
           <TabsList className="grid w-full max-w-md grid-cols-2">
             <TabsTrigger value="quick" className="gap-2">
               <Search className="w-4 h-4" />
-              <span className="hidden sm:inline">Quick SOP Access</span>
+              <span className="hidden sm:inline">Quick Playbook Access</span>
               <span className="sm:hidden">Quick Access</span>
             </TabsTrigger>
             <TabsTrigger value="browse" className="gap-2">
@@ -239,7 +239,7 @@ export default function SOPLibrary() {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
-                placeholder="Search SOPs by title or content..."
+                placeholder="Search playbooks by title or content..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10 w-full"
@@ -347,7 +347,7 @@ export default function SOPLibrary() {
                   Master Playbook
                 </p>
                 <p className="text-[10px] text-muted-foreground mt-0.5">
-                  Core SOPs 1-10
+                  Core Playbooks 1-10
                 </p>
               </Link>
               
@@ -426,15 +426,15 @@ export default function SOPLibrary() {
         ) : (
           <div className="text-center py-12 sm:py-16">
             <FileText className="w-10 h-10 sm:w-12 sm:h-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-base sm:text-lg font-medium text-foreground mb-2">No SOPs found</h3>
+            <h3 className="text-base sm:text-lg font-medium text-foreground mb-2">No playbooks found</h3>
             <p className="text-muted-foreground text-sm max-w-md mx-auto">
               {searchQuery
                 ? `No results for "${searchQuery}"`
                 : selectedTag
-                ? `No SOPs match the tag "${selectedTag}"`
+                ? `No playbooks match the tag "${selectedTag}"`
                 : viewMode === "browse" && !category
-                ? "Select a department to view SOPs"
-                : "No SOPs in this category yet"}
+                ? "Select a department to view playbooks"
+                : "No playbooks in this category yet"}
             </p>
             {(searchQuery || selectedTag || taskType !== "all" || roleFilter !== "all" || urgencyFilter !== "all") && (
               <Button

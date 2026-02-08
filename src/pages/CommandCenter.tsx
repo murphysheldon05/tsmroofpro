@@ -3,6 +3,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { CommandCenterSettings } from "@/components/command-center/CommandCenterSettings";
 import { WidgetRenderer } from "@/components/command-center/WidgetRenderer";
 import { CoreIdentityWidget } from "@/components/command-center/CoreIdentityWidget";
+import { PlaybookCompletionBanner } from "@/components/command-center/PlaybookCompletionBanner";
 import { useCommandCenterPreferences } from "@/hooks/useCommandCenterPreferences";
 import { LayoutGrid } from "lucide-react";
 
@@ -41,6 +42,9 @@ export default function CommandCenter() {
             />
           </div>
         </header>
+
+        {/* Master Playbook Completion Banner - Shows if incomplete */}
+        <PlaybookCompletionBanner />
 
         {/* LOCKED: Core Identity Widget - Always at top, cannot be removed or reordered */}
         <section>
