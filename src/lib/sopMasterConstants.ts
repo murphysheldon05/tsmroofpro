@@ -1,477 +1,525 @@
-// Master SOP Version - Update this when SOPs change to require re-acknowledgment
+// Master Playbook Version - Update this when playbooks change to require re-acknowledgment
 export const SOPMASTER_VERSION = "2025-01-30-v1";
 
-// Full Master SOP content for individual acknowledgment
-export const SOPMASTER_CONTENT = [
+// Playbook flow step types
+export type FlowStepType = 'start' | 'end' | 'decision' | 'process';
+
+export interface FlowStep {
+  label: string;
+  type: FlowStepType;
+  owner: string;
+  note?: string;
+  branches?: string[];
+}
+
+export interface ZeroToleranceViolation {
+  violation: string;
+  severity: 'MINOR' | 'MAJOR' | 'SEVERE';
+  consequence: string;
+}
+
+export interface MasterPlaybookContent {
+  number: number;
+  id: string;
+  title: string;
+  phase: string;
+  icon: string;
+  description: string;
+  entryCriteria: string[];
+  exitCriteria: string[];
+  flowSteps: FlowStep[];
+  rules: string[];
+  zeroTolerance: ZeroToleranceViolation[];
+  systemEnforcement: string[];
+  // Legacy fields for backwards compatibility
+  summary: string;
+  fullContent: string;
+}
+
+// Full Master Playbook content for individual acknowledgment
+export const SOPMASTER_CONTENT: MasterPlaybookContent[] = [
   {
     number: 1,
     id: "SOP-01",
-    title: "Lead-to-Contract Process",
-    summary: "All sales reps must follow the standardized lead intake, qualification, and contract execution workflow. Contracts must be signed before any work commences.",
+    title: "Commission Submission & Approval",
+    phase: "Revenue Validation & Rep Compensation",
+    icon: "DollarSign",
+    description: "Tier-based calculation with margin as validation gate. Ensures proper routing and prevents unauthorized commission processing.",
+    summary: "Tier-based calculation with margin as validation gate. Ensures proper routing and prevents unauthorized commission processing.",
+    entryCriteria: [
+      "Job status = Completed",
+      "100% closeout checklist verified",
+      "No punch list items remaining",
+      "No materials left on site",
+      "AccuLynx Payments tab contains payment record"
+    ],
+    exitCriteria: [
+      "Commission approved by Sales Manager",
+      "Accounting has executed payment",
+      "Audit log entry created"
+    ],
+    flowSteps: [
+      { label: "Sales Rep Submits Commission", type: "start", owner: "Sales Rep", note: "At assigned tier" },
+      { label: "Margin Validation Gate", type: "decision", owner: "System", branches: ["Meets Minimum → Continue", "Below Minimum → Auto Tier Drop"] },
+      { label: "Sales Manager Review", type: "decision", owner: "Sales Manager", branches: ["Reject → Back to Rep", "Approve → Continue", "Override (Deals 1–10 Only)"] },
+      { label: "Accounting Executes", type: "process", owner: "Accounting" },
+      { label: "Commission Processed", type: "end", owner: "System" }
+    ],
+    rules: [
+      "Commission paid at assigned tier — margin is a gate, not the calculator",
+      "Tier drop: every 5% below minimum = drop one full tier (automatic)",
+      "Overrides allowed ONLY on deals 1–10; beyond requires executive approval",
+      "Routing MUST go: Sales Rep → Sales Manager → Accounting (never direct)",
+      "Accounting executes only — cannot approve or modify"
+    ],
+    zeroTolerance: [
+      { violation: "Tier gaming", severity: "SEVERE", consequence: "Termination escalation" },
+      { violation: "Proxy ownership", severity: "SEVERE", consequence: "Termination escalation" },
+      { violation: "Manager-generated commissions", severity: "SEVERE", consequence: "Termination escalation" }
+    ],
+    systemEnforcement: [
+      "Auto-calculate tier drop when margin below minimum",
+      "Block submission if routing bypasses Sales Manager",
+      "Create MAJOR violation if insurance margin < 40%",
+      "Auto-hold commission pending approval for margin exceptions"
+    ],
     fullContent: `
 ## Purpose
-Establish a consistent, compliant process for converting leads into signed contracts.
+Ensure proper commission routing and calculation based on tier assignment and margin validation.
 
 ## When to Use
-Every new lead from any source (referral, door knock, storm chase, marketing).
+After job completion and payment collection, when submitting for commission payment.
 
 ## Quick Steps (Field Summary)
-1. Qualify the lead within 24 hours
-2. Complete roof inspection with photos
-3. Create estimate in AccuLynx
-4. Present contract and secure signature
-5. Collect down payment (if applicable)
+1. Verify job status = Completed
+2. Confirm 100% closeout checklist
+3. Submit commission at assigned tier
+4. Route to Sales Manager for approval
+5. Accounting executes payment
 
-## Step-by-Step Procedure
-1. **Lead Intake**: Log lead in AccuLynx with complete contact information and source
-2. **Initial Contact**: Call within 2 hours during business hours, 24 hours max
-3. **Qualification**: Confirm property ownership, insurance status, and decision-maker availability
-4. **Inspection**: Complete full roof inspection with CompanyCam documentation
-5. **Estimate Creation**: Build detailed estimate in AccuLynx using current pricing
-6. **Contract Presentation**: Review scope, timeline, and payment terms with homeowner
-7. **Signature Collection**: Obtain wet signature or digital signature via DocuSign
-8. **Down Payment**: Collect any required upfront payment
-9. **Handoff**: Submit to Production within 24 hours of signing
+## Entry Criteria
+- Job status = Completed
+- 100% closeout checklist verified
+- No punch list items remaining
+- No materials left on site
+- AccuLynx Payments tab contains payment record
 
-## Hard Stops
-- NO work begins without a signed contract
-- NO verbal agreements without written follow-up
-- STOP if property ownership cannot be verified
-
-## Common Mistakes
-- Rushing inspection to close faster
-- Not documenting all damage areas
-- Skipping insurance verification
-
-## Deliverables
-- Signed contract in AccuLynx
-- Complete photo set in CompanyCam
-- Down payment receipt (if applicable)
-    `,
+## Exit Criteria
+- Commission approved by Sales Manager
+- Accounting has executed payment
+- Audit log entry created
+`
   },
   {
     number: 2,
     id: "SOP-02",
-    title: "Material Ordering & Delivery",
-    summary: "Materials must be ordered within 24 hours of contract signing. All deliveries must be confirmed and documented with photos.",
+    title: "Job Closeout & Final Invoice",
+    phase: "Completion → Billing Control",
+    icon: "ClipboardCheck",
+    description: "Ensures all exit criteria are met before billing. Separates retail and insurance invoice ownership.",
+    summary: "Ensures all exit criteria are met before billing. Separates retail and insurance invoice ownership.",
+    entryCriteria: [
+      "Production marked complete in system",
+      "All work physically finished on site"
+    ],
+    exitCriteria: [
+      "CompanyCam checklist at 100%",
+      "No punch list items remaining",
+      "No materials left on site",
+      "Invoice issued by correct role",
+      "Payment collected in full",
+      "Job marked Closed by Accounting"
+    ],
+    flowSteps: [
+      { label: "Production Complete", type: "start", owner: "Production" },
+      { label: "Exit Criteria Validation", type: "decision", owner: "System", branches: ["CompanyCam 100%", "No Punch Items", "No Materials On Site"] },
+      { label: "Job Type Check", type: "decision", owner: "System", branches: ["Retail → Sales Issues Invoice", "Insurance → Supplements Issues Invoice"] },
+      { label: "Payment Collection", type: "process", owner: "Sales/Supplements" },
+      { label: "Job Closed", type: "end", owner: "Accounting" }
+    ],
+    rules: [
+      "Retail invoice → Sales Owner ONLY",
+      "Insurance invoice → Supplements ONLY",
+      "ONLY Supplements can move insurance job to 'Invoiced' status",
+      "Accounting closes ONLY when paid in full — no exceptions",
+      "No punch list / no materials is mandatory before any invoice"
+    ],
+    zeroTolerance: [],
+    systemEnforcement: [
+      "Block status change if exit criteria not met",
+      "Block non-Supplements from invoicing insurance jobs",
+      "Block close if payment not collected in full",
+      "Log all blocked attempts to audit"
+    ],
     fullContent: `
 ## Purpose
-Ensure timely and accurate material procurement and delivery coordination.
+Ensure all exit criteria are met before billing and proper role ownership of invoices.
 
 ## When to Use
-After every signed contract, before production scheduling.
-
-## Quick Steps (Field Summary)
-1. Verify material list against scope
-2. Submit order to supplier within 24 hours
-3. Confirm delivery date
-4. Document delivery with photos
-5. Verify quantities received
-
-## Step-by-Step Procedure
-1. **Scope Review**: Verify all materials needed match the contract scope
-2. **Quantity Calculation**: Double-check squares, linear feet, and waste factor
-3. **Order Submission**: Place order with approved supplier within 24 hours
-4. **Delivery Scheduling**: Coordinate delivery 1-2 days before scheduled build
-5. **Homeowner Notification**: Inform customer of delivery date and expectations
-6. **Delivery Confirmation**: Verify delivery occurred at correct address
-7. **Photo Documentation**: Photograph all delivered materials via CompanyCam
-8. **Quantity Verification**: Count and verify all items against order
-9. **Damage Check**: Inspect for damaged or incorrect materials
-10. **Discrepancy Reporting**: Report any issues immediately to office
-
-## Hard Stops
-- NO ordering without signed contract
-- NO scheduling build without confirmed delivery
-- STOP if materials are damaged or incorrect
-
-## Common Mistakes
-- Ordering wrong color or style
-- Not accounting for waste factor
-- Missing delivery window
-
-## Deliverables
-- Order confirmation in AccuLynx
-- Delivery photos in CompanyCam
-- Signed delivery receipt
-    `,
+After production is complete and before issuing final invoice.
+`
   },
   {
     number: 3,
     id: "SOP-03",
-    title: "Production Scheduling",
-    summary: "Jobs must be scheduled in AccuLynx within 48 hours of material delivery. Crews must be assigned based on skill level and availability.",
+    title: "Supplement Identification & Submission",
+    phase: "Insurance Margin Protection",
+    icon: "FileText",
+    description: "Protects insurance job margins through proper supplement identification, documentation, and carrier communication.",
+    summary: "Protects insurance job margins through proper supplement identification, documentation, and carrier communication.",
+    entryCriteria: [
+      "Job is insurance claim type",
+      "Missed item identified during production",
+      "Evidence available for documentation"
+    ],
+    exitCriteria: [
+      "Supplement validated by Supplements team",
+      "Xactimate estimate built and submitted",
+      "Carrier response received",
+      "Invoice issued by Supplements"
+    ],
+    flowSteps: [
+      { label: "Missed Item Identified", type: "start", owner: "Sales/Production", note: "Document immediately" },
+      { label: "CompanyCam Evidence Capture", type: "process", owner: "Sales/Production", note: "Photos + notes required" },
+      { label: "Supplement Validation", type: "decision", owner: "Supplements", branches: ["Invalid → Rejected", "Valid → Continue"] },
+      { label: "Xactimate Build", type: "process", owner: "Supplements" },
+      { label: "Carrier Submission", type: "process", owner: "Supplements" },
+      { label: "Supplements Issues Invoice", type: "end", owner: "Supplements" }
+    ],
+    rules: [
+      "Sales & Production: IDENTIFY and DOCUMENT only — no carrier contact",
+      "Supplements: validate, build, submit, communicate, invoice",
+      "Sales contacts carrier ONLY if specifically requested by Supplements",
+      "All carrier communication ownership stays with Supplements"
+    ],
+    zeroTolerance: [
+      { violation: "Sales contacting carrier without authorization", severity: "MAJOR", consequence: "Escalation + retraining" }
+    ],
+    systemEnforcement: [
+      "Track supplement status through pipeline",
+      "Log all carrier communication attempts",
+      "Validate invoice issued by Supplements role only"
+    ],
     fullContent: `
 ## Purpose
-Optimize crew utilization and ensure on-time project completion.
+Protect insurance job margins through proper supplement identification and documentation.
 
 ## When to Use
-After materials are confirmed for delivery.
-
-## Quick Steps (Field Summary)
-1. Confirm material delivery date
-2. Check crew availability
-3. Schedule in AccuLynx
-4. Notify homeowner
-5. Brief crew on scope
-
-## Step-by-Step Procedure
-1. **Material Confirmation**: Verify delivery is scheduled and confirmed
-2. **Weather Check**: Review 5-day forecast for build date
-3. **Crew Assessment**: Evaluate required skill level for job type
-4. **Availability Check**: Confirm crew availability for target date
-5. **Schedule Entry**: Enter job in AccuLynx production calendar
-6. **Crew Assignment**: Assign crew with appropriate skills and capacity
-7. **Homeowner Call**: Notify customer 48 hours before scheduled date
-8. **Crew Brief**: Provide job details, scope, and special instructions
-9. **Material Staging**: Ensure materials are staged and accessible
-10. **Backup Plan**: Have contingency crew identified for emergencies
-
-## Hard Stops
-- NO scheduling without material confirmation
-- NO scheduling in severe weather forecast
-- STOP if crew capacity exceeded
-
-## Common Mistakes
-- Overbooking crews
-- Not checking weather
-- Forgetting customer notification
-
-## Deliverables
-- Job scheduled in AccuLynx
-- Crew assignment confirmed
-- Homeowner notification logged
-    `,
+When additional damage or scope is discovered during production on insurance jobs.
+`
   },
   {
     number: 4,
     id: "SOP-04",
-    title: "Job Site Safety & Compliance",
-    summary: "All crew members must follow OSHA safety standards. PPE is required on all job sites. Safety violations result in immediate work stoppage.",
+    title: "Playbook Acknowledgment & Enforcement",
+    phase: "Control & Accountability",
+    icon: "Shield",
+    description: "Ensures all users have acknowledged current playbooks before accessing governed functionality.",
+    summary: "Ensures all users have acknowledged current playbooks before accessing governed functionality.",
+    entryCriteria: [
+      "Playbook published or updated",
+      "User assigned to relevant role",
+      "User has system access"
+    ],
+    exitCriteria: [
+      "User has acknowledged current playbook version",
+      "Acknowledgment logged with timestamp and IP"
+    ],
+    flowSteps: [
+      { label: "Playbook Published/Updated", type: "start", owner: "Ops Compliance" },
+      { label: "User Notification Sent", type: "process", owner: "System" },
+      { label: "Acknowledgment Check", type: "decision", owner: "System", branches: ["Not Acknowledged → Block", "Acknowledged → Grant Access"] },
+      { label: "User Executes Actions", type: "process", owner: "User" },
+      { label: "Enforcement Action", type: "end", owner: "Ops Compliance" }
+    ],
+    rules: [
+      "No acknowledgment = no governed actions (blocked at system level)",
+      "Severe violations auto-escalate to executive review",
+      "No manager can override Ops Compliance classification",
+      "Acknowledgment required on every playbook version update"
+    ],
+    zeroTolerance: [],
+    systemEnforcement: [
+      "Block commission submission without acknowledgment",
+      "Block job status changes without acknowledgment",
+      "Block scheduling without acknowledgment",
+      "Auto-escalate SEVERE violations"
+    ],
     fullContent: `
 ## Purpose
-Maintain a zero-injury workplace and full OSHA compliance.
+Ensure all users acknowledge playbooks before accessing governed functionality.
 
 ## When to Use
-Every job site, every day, no exceptions.
-
-## Quick Steps (Field Summary)
-1. Conduct pre-job safety briefing
-2. Verify all PPE is worn
-3. Secure work area
-4. Monitor conditions continuously
-5. Document any incidents
-
-## Step-by-Step Procedure
-1. **Pre-Job Meeting**: Conduct tailgate safety meeting before work begins
-2. **PPE Verification**: Confirm all workers have proper protective equipment
-3. **Site Assessment**: Identify and mitigate hazards before starting
-4. **Perimeter Security**: Establish work zone with cones/barriers
-5. **Ladder Safety**: Ensure proper ladder placement and usage
-6. **Fall Protection**: Verify harness systems for steep roofs
-7. **Tool Check**: Inspect all tools and equipment for defects
-8. **Continuous Monitoring**: Watch for changing conditions
-9. **Incident Response**: Stop work immediately for any safety concern
-10. **End-of-Day Review**: Debrief on any issues or near-misses
-
-## Hard Stops
-- IMMEDIATE work stoppage for any safety violation
-- NO work without proper PPE
-- STOP if any worker is impaired
-
-## Common Mistakes
-- Skipping safety briefing to save time
-- Not securing tools on roof
-- Working in deteriorating weather
-
-## Deliverables
-- Completed safety checklist
-- Incident reports (if any)
-- Daily sign-in sheet
-    `,
+When a playbook is published, updated, or when a user attempts governed actions.
+`
   },
   {
     number: 5,
     id: "SOP-05",
-    title: "Quality Control & Inspections",
-    summary: "All completed work must pass internal QC inspection before customer walkthrough. Photo documentation is required at each stage.",
+    title: "Roles & Authority Boundaries",
+    phase: "Permission Control",
+    icon: "Users",
+    description: "Defines clear authority boundaries for each role. Authority comes from role assignment, not title.",
+    summary: "Defines clear authority boundaries for each role. Authority comes from role assignment, not title.",
+    entryCriteria: [
+      "User account created",
+      "Role assignment requested and approved"
+    ],
+    exitCriteria: [
+      "User assigned single, appropriate role",
+      "Permissions loaded correctly",
+      "User acknowledged role responsibilities"
+    ],
+    flowSteps: [
+      { label: "User Account Created", type: "start", owner: "HR" },
+      { label: "Role Assigned", type: "process", owner: "HR/Admin" },
+      { label: "Action Attempted", type: "decision", owner: "User", branches: ["Within Authority → Allowed", "Outside Authority → Blocked"] },
+      { label: "Violation Logged", type: "end", owner: "System", note: "If blocked" }
+    ],
+    rules: [
+      "Authority comes from ROLE, not title or tenure",
+      "No role stacking — one user, one role",
+      "No temporary permissions — if needed, formal role change required",
+      "Attempting unauthorized action = automatic violation log"
+    ],
+    zeroTolerance: [
+      { violation: "Role stacking", severity: "MAJOR", consequence: "Access review + correction" },
+      { violation: "Unauthorized elevation", severity: "SEVERE", consequence: "Immediate suspension" }
+    ],
+    systemEnforcement: [
+      "Enforce role-based action permissions",
+      "Block and log all unauthorized attempts",
+      "Prevent assignment of multiple roles"
+    ],
     fullContent: `
 ## Purpose
-Ensure every job meets TSM quality standards before handoff.
+Define clear authority boundaries based on role assignment, not title or tenure.
 
 ## When to Use
-During and after every installation.
-
-## Quick Steps (Field Summary)
-1. Document progress photos
-2. Complete QC checklist
-3. Identify punch list items
-4. Fix before customer walk
-5. Final photo documentation
-
-## Step-by-Step Procedure
-1. **Progress Photos**: Capture each phase of installation
-2. **Substrate Check**: Verify decking condition before shingle application
-3. **Flashing Inspection**: Check all penetrations and transitions
-4. **Shingle Alignment**: Verify straight lines and proper overlap
-5. **Ridge Cap Review**: Confirm proper installation and sealing
-6. **Drip Edge Check**: Verify proper installation at edges
-7. **Cleanup Inspection**: Ensure all debris removed from property
-8. **Punch List Creation**: Document any items needing correction
-9. **Correction Completion**: Fix all punch items before walkthrough
-10. **Final Documentation**: Complete photo set in CompanyCam
-
-## Hard Stops
-- NO customer walkthrough until QC passed
-- NO final invoice without completed checklist
-- STOP if structural issues discovered
-
-## Common Mistakes
-- Rushing QC to move to next job
-- Missing flashing defects
-- Incomplete cleanup
-
-## Deliverables
-- Completed QC checklist
-- Full photo documentation
-- Punch list resolution record
-    `,
+When assigning roles, evaluating permissions, or handling authority disputes.
+`
   },
   {
     number: 6,
     id: "SOP-06",
-    title: "Supplement Processing",
-    summary: "Supplements must be submitted within 5 business days of discovery. All supplement documentation must include itemized scope and photos.",
+    title: "User Onboarding & Offboarding",
+    phase: "Access Lifecycle",
+    icon: "UserPlus",
+    description: "HR-owned process for secure user access management. Same-day offboarding with no grace period.",
+    summary: "HR-owned process for secure user access management. Same-day offboarding with no grace period.",
+    entryCriteria: [
+      "New hire: documentation complete",
+      "Offboarding: termination initiated"
+    ],
+    exitCriteria: [
+      "Onboarding: Access activated after playbook acknowledgment",
+      "Offboarding: All access removed same-day"
+    ],
+    flowSteps: [
+      { label: "Access Request Submitted", type: "start", owner: "HR" },
+      { label: "Role Assigned", type: "process", owner: "HR" },
+      { label: "Playbook Acknowledgment Required", type: "decision", owner: "System", branches: ["Not Complete → Blocked", "Complete → Continue"] },
+      { label: "Access Activated", type: "process", owner: "System" },
+      { label: "Compliance Audit", type: "end", owner: "Ops Compliance" }
+    ],
+    rules: [
+      "HR owns all onboarding/offboarding",
+      "No role = no access (strictly enforced)",
+      "Playbook acknowledgment required BEFORE any system access",
+      "Offboarding is SAME-DAY — no grace period",
+      "No shared logins under any circumstances"
+    ],
+    zeroTolerance: [
+      { violation: "Shared login credentials", severity: "SEVERE", consequence: "Immediate access revocation" },
+      { violation: "Delayed offboarding", severity: "MAJOR", consequence: "Escalation + security review" }
+    ],
+    systemEnforcement: [
+      "Block access until playbook acknowledgment complete",
+      "Force logout on offboarding trigger",
+      "Audit trail for all access changes"
+    ],
     fullContent: `
 ## Purpose
-Maximize recoverable revenue through proper supplement documentation.
+Secure user access management with same-day offboarding and mandatory playbook acknowledgment.
 
 ## When to Use
-When additional damage or scope is discovered beyond original claim.
-
-## Quick Steps (Field Summary)
-1. Document additional damage
-2. Create itemized scope
-3. Submit within 5 days
-4. Follow up weekly
-5. Track in AccuLynx
-
-## Step-by-Step Procedure
-1. **Discovery Documentation**: Photo and note all additional damage
-2. **Scope Assessment**: Determine full extent of additional work needed
-3. **Xactimate Entry**: Create detailed supplement in Xactimate
-4. **Photo Attachment**: Attach all supporting photos to supplement
-5. **Review Check**: Have manager review before submission
-6. **Submission**: Submit to insurance within 5 business days
-7. **Adjuster Follow-up**: Contact adjuster within 48 hours of submission
-8. **Weekly Tracking**: Check status weekly until resolved
-9. **Approval Documentation**: Document approved amounts
-10. **Scope Update**: Update job scope in AccuLynx
-
-## Hard Stops
-- NO supplement without photo documentation
-- NO submission without manager approval
-- STOP if scope not accurately represented
-
-## Common Mistakes
-- Missing the 5-day deadline
-- Incomplete photo documentation
-- Not following up consistently
-
-## Deliverables
-- Submitted supplement in Xactimate
-- Photo documentation package
-- Tracking log in AccuLynx
-    `,
+When onboarding new employees or offboarding departing staff.
+`
   },
   {
     number: 7,
     id: "SOP-07",
-    title: "Invoice & Collections",
-    summary: "Invoices must be issued within 24 hours of job completion. Payment follow-up schedule must be adhered to strictly.",
+    title: "Communication & Approvals",
+    phase: "Decision Documentation",
+    icon: "MessageSquare",
+    description: "Flexible communication methods allowed, but all approvals MUST be documented in AccuLynx.",
+    summary: "Flexible communication methods allowed, but all approvals MUST be documented in AccuLynx.",
+    entryCriteria: [
+      "Business communication occurred",
+      "Decision or change discussed"
+    ],
+    exitCriteria: [
+      "If approval/change: documented in AccuLynx",
+      "Documentation includes date, parties, decision"
+    ],
+    flowSteps: [
+      { label: "Conversation Occurs", type: "start", owner: "Any", note: "Call / Text / In-Person OK" },
+      { label: "Approval or Change Discussed?", type: "decision", owner: "Participant", branches: ["No → Done", "Yes → Document required"] },
+      { label: "Document in AccuLynx", type: "process", owner: "Initiator" },
+      { label: "Approval Recognized", type: "end", owner: "System" }
+    ],
+    rules: [
+      "Communication method is FLEXIBLE — calls, texts, personal phones all OK",
+      "APPROVALS must be written in AccuLynx — text/verbal alone is INVALID",
+      "If it changes scope, contract, pricing, or materials — it MUST be in AccuLynx"
+    ],
+    zeroTolerance: [],
+    systemEnforcement: [
+      "Require AccuLynx note for change order processing",
+      "Block scope changes without documentation"
+    ],
     fullContent: `
 ## Purpose
-Ensure timely revenue collection and healthy cash flow.
+Allow flexible communication while ensuring all approvals are documented in AccuLynx.
 
 ## When to Use
-After every completed job passes QC inspection.
-
-## Quick Steps (Field Summary)
-1. Generate invoice within 24 hours
-2. Send to customer
-3. Follow up at 7 days
-4. Escalate at 30 days
-5. Final notice at 45 days
-
-## Step-by-Step Procedure
-1. **Completion Verification**: Confirm job passed QC inspection
-2. **Invoice Generation**: Create invoice in AccuLynx within 24 hours
-3. **Amount Verification**: Confirm all supplements and change orders included
-4. **Invoice Delivery**: Send invoice via email and mail
-5. **7-Day Follow-up**: Courtesy call if no payment received
-6. **14-Day Follow-up**: Second contact with payment request
-7. **30-Day Escalation**: Manager involvement for past-due accounts
-8. **45-Day Notice**: Formal collection notice issued
-9. **60-Day Action**: Legal collection process initiated
-10. **Payment Processing**: Record all payments in AccuLynx
-
-## Hard Stops
-- NO invoice without completed QC
-- NO skipping collection steps
-- STOP collections if dispute filed
-
-## Common Mistakes
-- Delaying invoice generation
-- Not following up consistently
-- Missing payment application
-
-## Deliverables
-- Invoice in AccuLynx
-- Collection activity log
-- Payment receipts
-    `,
+For any business communication that involves decisions, changes, or approvals.
+`
   },
   {
     number: 8,
     id: "SOP-08",
-    title: "Commission Submission",
-    summary: "Commission requests must be submitted with complete documentation. All advances must be accurately reported. False submissions result in denial.",
+    title: "Data Integrity & Status Control",
+    phase: "System Truth Protection",
+    icon: "Database",
+    description: "Status must reflect reality. No backdating, no timing manipulation, no fraudulent documentation.",
+    summary: "Status must reflect reality. No backdating, no timing manipulation, no fraudulent documentation.",
+    entryCriteria: [
+      "Status or data change requested",
+      "User has appropriate role permissions"
+    ],
+    exitCriteria: [
+      "Change logged with timestamp",
+      "Change reflects actual reality"
+    ],
+    flowSteps: [
+      { label: "Status/Data Change Requested", type: "start", owner: "User" },
+      { label: "Role Authorization Check", type: "decision", owner: "System", branches: ["Not Authorized → Blocked", "Authorized → Continue"] },
+      { label: "Documentation Verification", type: "decision", owner: "System", branches: ["No Doc → Blocked", "Documented → Continue"] },
+      { label: "Change Applied & Logged", type: "end", owner: "System" }
+    ],
+    rules: [
+      "Status = REALITY — what the system shows must match what actually happened",
+      "No backdating of any status change",
+      "No timing manipulation to game cutoffs",
+      "CompanyCam photos: no reuse from other jobs, no stock photos"
+    ],
+    zeroTolerance: [
+      { violation: "Backdating", severity: "SEVERE", consequence: "Immediate escalation" },
+      { violation: "Photo reuse/fraud", severity: "SEVERE", consequence: "Job audit + escalation" },
+      { violation: "Timing manipulation", severity: "MAJOR", consequence: "Commission hold + investigation" }
+    ],
+    systemEnforcement: [
+      "Immutable timestamps on all status changes",
+      "Block changes without supporting documentation"
+    ],
     fullContent: `
 ## Purpose
-Ensure accurate and timely commission processing for sales team.
+Protect data integrity by ensuring status reflects reality with no backdating or manipulation.
 
 ## When to Use
-After job completion and payment collection milestones.
-
-## Quick Steps (Field Summary)
-1. Verify job completion
-2. Confirm payment received
-3. Complete commission form
-4. Attach all documentation
-5. Submit for approval
-
-## Step-by-Step Procedure
-1. **Completion Check**: Verify job is fully complete and passed QC
-2. **Payment Verification**: Confirm customer payment received
-3. **Revenue Calculation**: Confirm total job revenue including supplements
-4. **Advance Review**: Document all advances already received
-5. **Commission Calculation**: Apply correct tier rate to profit
-6. **Form Completion**: Fill out commission worksheet completely
-7. **Documentation Attachment**: Attach signed contract, COC, payment proof
-8. **Accuracy Review**: Double-check all numbers before submission
-9. **Manager Submission**: Route to assigned manager for review
-10. **Tracking**: Monitor status through approval process
-
-## Hard Stops
-- NO commission without COC (Certificate of Completion)
-- NO submission with inaccurate advance reporting
-- STOP if documentation incomplete
-
-## Common Mistakes
-- Submitting before payment received
-- Forgetting to report advances
-- Missing required documentation
-
-## Deliverables
-- Completed commission form
-- Supporting documentation
-- Submission confirmation
-    `,
+For any status or data changes in the system.
+`
   },
   {
     number: 9,
     id: "SOP-09",
-    title: "Warranty Handling",
-    summary: "Warranty claims must be responded to within 24 hours. All warranty work must be documented and tracked to completion.",
+    title: "Commission Payroll Sync",
+    phase: "Payroll Execution",
+    icon: "Calendar",
+    description: "Links commission approval to payroll processing with strict cutoff enforcement.",
+    summary: "Links commission approval to payroll processing with strict cutoff enforcement.",
+    entryCriteria: [
+      "Commission submitted and approved (Playbook-01)",
+      "Job fully closed out (Playbook-02)",
+      "Payment collected in AccuLynx Payments tab"
+    ],
+    exitCriteria: [
+      "Commission included in appropriate payroll cycle",
+      "Payment executed on scheduled date"
+    ],
+    flowSteps: [
+      { label: "Commission Approved", type: "start", owner: "Sales Manager" },
+      { label: "Cutoff Check: Before Wed 4PM?", type: "decision", owner: "System", branches: ["No → Next Week", "Yes → This Week"] },
+      { label: "100% Closeout Verified?", type: "decision", owner: "System", branches: ["No → Blocked", "Yes → Continue"] },
+      { label: "Added to Friday Payroll", type: "end", owner: "Accounting" }
+    ],
+    rules: [
+      "AccuLynx Payments tab is the ONLY source of truth",
+      "No estimates or orders count — actual payment only",
+      "Wednesday 4:00 PM is a HARD cutoff — no exceptions",
+      "Departing reps: $200 flat per reassigned job"
+    ],
+    zeroTolerance: [],
+    systemEnforcement: [
+      "Automatic cutoff enforcement at Wed 4PM",
+      "Block payroll addition without payment verification"
+    ],
     fullContent: `
 ## Purpose
-Maintain customer satisfaction and company reputation through responsive warranty service.
+Link commission approval to payroll processing with strict Wednesday 4PM cutoff.
 
 ## When to Use
-For any customer warranty claim or issue reported.
-
-## Quick Steps (Field Summary)
-1. Log claim within 1 hour
-2. Contact customer within 24 hours
-3. Schedule inspection
-4. Complete repair
-5. Document resolution
-
-## Step-by-Step Procedure
-1. **Claim Receipt**: Log warranty claim in system within 1 hour of receipt
-2. **Customer Contact**: Call customer within 24 hours to acknowledge
-3. **Issue Assessment**: Gather detailed information about the problem
-4. **Inspection Schedule**: Set inspection within 3-5 business days
-5. **On-Site Inspection**: Document issue with photos in CompanyCam
-6. **Resolution Plan**: Determine repair scope and timeline
-7. **Repair Scheduling**: Schedule repair crew within 7 days of inspection
-8. **Repair Completion**: Complete all necessary repairs
-9. **Customer Sign-off**: Obtain customer confirmation of resolution
-10. **Warranty Close**: Update warranty record as resolved
-
-## Hard Stops
-- NO 24-hour response time exceeded
-- NO closing without customer confirmation
-- STOP if issue is outside warranty scope (escalate)
-
-## Common Mistakes
-- Delayed initial response
-- Not documenting the resolution
-- Closing without customer confirmation
-
-## Deliverables
-- Warranty claim record
-- Inspection photos
-- Resolution documentation
-    `,
+After commission approval, to determine which payroll cycle includes the payment.
+`
   },
   {
     number: 10,
     id: "SOP-10",
-    title: "Customer Communication",
-    summary: "Customers must be updated at each project milestone. All communication must be professional and documented in AccuLynx.",
+    title: "Production Scheduling & Readiness",
+    phase: "Execution Gate",
+    icon: "Truck",
+    description: "100% readiness required before scheduling. No soft scheduling, no bypasses.",
+    summary: "100% readiness required before scheduling. No soft scheduling, no bypasses.",
+    entryCriteria: [
+      "Job approved for production",
+      "Readiness checklist initiated"
+    ],
+    exitCriteria: [
+      "All readiness criteria met at 100%",
+      "Job scheduled with confirmed date",
+      "Build executed and completed"
+    ],
+    flowSteps: [
+      { label: "Job Approved for Production", type: "start", owner: "Sales/Manager" },
+      { label: "Readiness Checklist", type: "decision", owner: "System", branches: ["Not 100% → Blocked", "100% → Continue"] },
+      { label: "Schedule Production Date", type: "process", owner: "Production Manager" },
+      { label: "Build Executed", type: "process", owner: "Production Crew" },
+      { label: "Job Completed", type: "end", owner: "Production" }
+    ],
+    rules: [
+      "ALL readiness criteria must be 100% before scheduling",
+      "No 'soft scheduling' — either ready or not",
+      "Bypass attempts are automatic violations",
+      "Pre-build confirmation required 24-48 hours before start"
+    ],
+    zeroTolerance: [
+      { violation: "Scheduling without 100% readiness", severity: "MINOR", consequence: "Warning + reschedule" },
+      { violation: "Repeated scheduling violations", severity: "MAJOR", consequence: "Escalation" }
+    ],
+    systemEnforcement: [
+      "Block scheduling if readiness < 100%",
+      "Display readiness badge on all job cards",
+      "Create violation on bypass attempt"
+    ],
     fullContent: `
 ## Purpose
-Build trust and reduce callbacks through proactive customer communication.
+Ensure 100% readiness before production scheduling with no soft scheduling or bypasses.
 
 ## When to Use
-At every stage of the customer journey.
-
-## Quick Steps (Field Summary)
-1. Confirm contact at each milestone
-2. Document all communication
-3. Respond within 4 hours
-4. Use professional tone
-5. Log in AccuLynx
-
-## Step-by-Step Procedure
-1. **Contract Signing**: Thank customer and confirm next steps
-2. **Material Order**: Notify of order placement and expected delivery
-3. **Delivery Confirmation**: Confirm materials arrived at property
-4. **Pre-Install Call**: Reminder 24-48 hours before installation
-5. **Day-of Update**: Morning call on installation day
-6. **Progress Updates**: Mid-day text with photo of progress
-7. **Completion Notification**: Call when crew is finishing up
-8. **Walkthrough Scheduling**: Arrange final walkthrough time
-9. **Post-Install Follow-up**: Satisfaction check 3-5 days after
-10. **Review Request**: Request review at appropriate time
-
-## Hard Stops
-- NO radio silence for more than 48 hours
-- NO unprofessional language or tone
-- STOP if customer requests no contact (escalate)
-
-## Common Mistakes
-- Forgetting milestone updates
-- Not logging communication
-- Overpromising on timelines
-
-## Deliverables
-- Communication log in AccuLynx
-- Customer satisfaction confirmation
-- Review collection (when appropriate)
-    `,
-  },
+When scheduling jobs for production builds.
+`
+  }
 ];
 
 // Legacy summary format for compatibility
@@ -481,7 +529,7 @@ export const SOPMASTER_SUMMARY = SOPMASTER_CONTENT.map(sop => ({
   summary: sop.summary,
 }));
 
-// Governed actions that require SOP acknowledgment
+// Governed actions that require Playbook acknowledgment
 export const GOVERNED_ACTIONS = [
   "commission_submission",
   "commission_approval",
@@ -492,3 +540,17 @@ export const GOVERNED_ACTIONS = [
 ] as const;
 
 export type GovernedAction = (typeof GOVERNED_ACTIONS)[number];
+
+// Icon mapping for playbook display
+export const PLAYBOOK_ICONS = {
+  DollarSign: "DollarSign",
+  ClipboardCheck: "ClipboardCheck", 
+  FileText: "FileText",
+  Shield: "Shield",
+  Users: "Users",
+  UserPlus: "UserPlus",
+  MessageSquare: "MessageSquare",
+  Database: "Database",
+  Calendar: "Calendar",
+  Truck: "Truck"
+} as const;
