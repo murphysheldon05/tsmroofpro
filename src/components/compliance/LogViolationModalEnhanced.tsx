@@ -106,6 +106,26 @@ export function LogViolationModalEnhanced({ open, onOpenChange }: LogViolationMo
         },
       });
 
+      // Send email notification for the violation
+      if (opsComplianceUser) {
+        try {
+          await supabase.functions.invoke("send-violation-notification", {
+            body: {
+              violation_id: data.id,
+              violation_type: formData.violation_type,
+              severity: formData.severity.toUpperCase(),
+              sop_key: formData.sop_key,
+              description: formData.description,
+              user_id: opsComplianceUser,
+              job_id: formData.job_id || undefined,
+              department: formData.department,
+            },
+          });
+        } catch (notifyError) {
+          console.error("Failed to send violation notification:", notifyError);
+        }
+      }
+
       return data;
     },
     onSuccess: () => {
