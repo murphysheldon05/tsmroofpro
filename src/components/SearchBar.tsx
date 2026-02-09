@@ -34,7 +34,7 @@ export function SearchBar({ className }: SearchBarProps) {
     if (url) {
       window.open(url, "_blank", "noopener,noreferrer");
     } else if (categorySlug) {
-      navigate(`/sops/${categorySlug}`);
+      navigate(`/playbook-library/${categorySlug}`);
     }
   };
 

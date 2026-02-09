@@ -426,11 +426,11 @@ export default function Admin() {
             </TabsTrigger>
             <TabsTrigger value="sops" className="gap-2">
               <FolderOpen className="w-4 h-4" />
-              SOPs
+              Playbooks
             </TabsTrigger>
             <TabsTrigger value="categories" className="gap-2">
               <FolderOpen className="w-4 h-4" />
-              SOP Categories
+              Playbook Categories
             </TabsTrigger>
             <TabsTrigger value="tools" className="gap-2">
               <Wrench className="w-4 h-4" />

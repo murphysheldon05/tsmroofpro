@@ -39,7 +39,7 @@ export function ResourceDetailModal({
 
   const handleViewFullPage = () => {
     onOpenChange(false);
-    navigate(`/sops/${categorySlug || "all"}/resource/${resource.id}`);
+    navigate(`/playbook-library/${categorySlug || "all"}/resource/${resource.id}`);
   };
 
   const handleOpenUrl = () => {

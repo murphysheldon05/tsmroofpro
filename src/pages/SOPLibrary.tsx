@@ -197,7 +197,7 @@ export default function SOPLibrary() {
                   className="h-8 w-8 flex-shrink-0"
                   onClick={() => {
                     setViewMode("quick");
-                    navigate("/sops");
+                    navigate("/playbook-library");
                   }}
                 >
                   <ArrowLeft className="w-4 h-4" />
@@ -339,7 +339,7 @@ export default function SOPLibrary() {
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
               {/* Master Playbook - Always first, special styling */}
               <Link
-                to="/sops/master-playbook"
+                to="/playbook-library/master-playbook"
                 className="p-3 sm:p-4 rounded-lg border text-center transition-all bg-primary/5 border-primary/30 hover:border-primary/50 hover:shadow-glow-sm"
               >
                 <BookOpen className="w-5 h-5 sm:w-6 sm:h-6 mx-auto mb-1.5 text-primary" />
@@ -357,7 +357,7 @@ export default function SOPLibrary() {
                 return (
                   <Link
                     key={cat.id}
-                    to={`/sops/${cat.slug}`}
+                    to={`/playbook-library/${cat.slug}`}
                     className={cn(
                       "p-3 sm:p-4 rounded-lg border text-center transition-all",
                       isActive

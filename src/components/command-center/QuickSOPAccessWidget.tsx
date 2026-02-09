@@ -56,9 +56,9 @@ export function QuickSOPAccessWidget() {
 
   const handleResourceClick = (resource: Resource) => {
     if (resource.categories?.slug) {
-      navigate(`/sops/${resource.categories.slug}`);
+      navigate(`/playbook-library/${resource.categories.slug}`);
     } else {
-      navigate("/sops");
+      navigate("/playbook-library");
     }
   };
 
@@ -86,7 +86,7 @@ export function QuickSOPAccessWidget() {
           <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
             <FileText className="w-4 h-4 text-primary" />
           </div>
-          Quick SOP Access
+          Quick Playbook Access
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -94,7 +94,7 @@ export function QuickSOPAccessWidget() {
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
-            placeholder="Search SOPs by title or content..."
+            placeholder="Search playbooks by title or content..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-10 h-9 text-sm"
@@ -140,7 +140,7 @@ export function QuickSOPAccessWidget() {
               </ScrollArea>
             ) : (
               <p className="text-sm text-muted-foreground text-center py-3">
-                No SOPs found for "{searchQuery}"
+                No playbooks found for "{searchQuery}"
               </p>
             )}
           </div>
@@ -149,12 +149,12 @@ export function QuickSOPAccessWidget() {
         {/* Quick Access Sections - Only show when not searching */}
         {!isSearching && (
           <div className="space-y-3">
-            {/* SOPs for My Role */}
+            {/* Playbooks for My Role */}
             {roleBasedResources.length > 0 && (
               <div>
                 <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mb-1.5">
                   <User className="w-3 h-3" />
-                  SOPs for My Role
+                  Playbooks for My Role
                 </div>
                 <div className="space-y-1">
                   {roleBasedResources.map((resource) => (
@@ -249,9 +249,9 @@ export function QuickSOPAccessWidget() {
           variant="outline"
           size="sm"
           className="w-full mt-2 h-8 text-xs"
-          onClick={() => navigate("/sops")}
+          onClick={() => navigate("/playbook-library")}
         >
-          View Full SOP Library
+          View Full Playbook Library
           <ArrowRight className="w-3 h-3 ml-1.5" />
         </Button>
       </CardContent>

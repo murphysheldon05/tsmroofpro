@@ -53,8 +53,8 @@ const WIDGET_LABELS: Record<WidgetKey, { label: string; description: string }> =
     description: "Review queue accountability at a glance (managers only)",
   },
   quickSOPAccess: {
-    label: "Quick SOP Access",
-    description: "Search and find SOPs fast from Command Center",
+    label: "Quick Playbook Access",
+    description: "Search and find Playbooks fast from Command Center",
   },
   todaysBuilds: {
     label: "Today's Builds",

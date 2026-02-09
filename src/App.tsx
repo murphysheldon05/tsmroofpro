@@ -10,7 +10,7 @@ import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
 import Signup from "./pages/Signup";
 import Dashboard from "./pages/Dashboard";
-import SOPLibrary from "./pages/SOPLibrary";
+import SOPLibrary from "./pages/SOPLibrary"; // Playbook Library
 import MasterPlaybook from "./pages/MasterPlaybook";
 import ResourceDetail from "./pages/ResourceDetail";
 import Training from "./pages/Training";
@@ -71,8 +71,9 @@ const App = () => (
               path="/dashboard"
               element={<Navigate to="/command-center" replace />}
             />
+            {/* Playbook Library routes */}
             <Route
-              path="/sops"
+              path="/playbook-library"
               element={
                 <ProtectedRoute>
                   <SOPLibrary />
@@ -80,7 +81,7 @@ const App = () => (
               }
             />
             <Route
-              path="/sops/master-playbook"
+              path="/playbook-library/master-playbook"
               element={
                 <ProtectedRoute>
                   <MasterPlaybook />
@@ -88,7 +89,7 @@ const App = () => (
               }
             />
             <Route
-              path="/sops/:category"
+              path="/playbook-library/:category"
               element={
                 <ProtectedRoute>
                   <SOPLibrary />
@@ -96,13 +97,18 @@ const App = () => (
               }
             />
             <Route
-              path="/sops/:category/resource/:resourceId"
+              path="/playbook-library/:category/resource/:resourceId"
               element={
                 <ProtectedRoute>
                   <ResourceDetail />
                 </ProtectedRoute>
               }
             />
+            {/* Legacy SOP routes redirect to Playbook Library */}
+            <Route path="/sops" element={<Navigate to="/playbook-library" replace />} />
+            <Route path="/sops/master-playbook" element={<Navigate to="/playbook-library/master-playbook" replace />} />
+            <Route path="/sops/:category" element={<Navigate to="/playbook-library" replace />} />
+            <Route path="/sop-library" element={<Navigate to="/playbook-library" replace />} />
             <Route
               path="/training/:category"
               element={

@@ -141,7 +141,7 @@ export function MasterPlaybookGate({ children }: MasterPlaybookGateProps) {
             <Button 
               size="lg" 
               className="w-full gap-2"
-              onClick={() => navigate("/sops/master-playbook")}
+              onClick={() => navigate("/playbook-library/master-playbook")}
             >
               {completedCount === 0 ? (
                 <>

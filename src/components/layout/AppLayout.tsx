@@ -13,10 +13,10 @@ interface BreadcrumbItem {
 // Route hierarchy mapping for proper breadcrumb display
 const routeHierarchy: Record<string, BreadcrumbItem[]> = {
   "/command-center": [],
-  "/dashboard": [{ label: "Dashboard", href: "/dashboard" }],
-  "/sop-library": [{ label: "SOP Library", href: "/sop-library" }],
+  "/playbook-library": [{ label: "Playbook Library", href: "/playbook-library" }],
+  "/sop-library": [{ label: "Playbook Library", href: "/playbook-library" }],
   "/resources/:id": [
-    { label: "SOP Library", href: "/sop-library" },
+    { label: "Playbook Library", href: "/playbook-library" },
     { label: "Resource", href: "" },
   ],
   "/training": [{ label: "Training", href: "/training" }],
@@ -67,9 +67,16 @@ function getBreadcrumbs(pathname: string): BreadcrumbItem[] {
     ];
   }
 
+  if (pathname.startsWith("/playbook-library/") && pathname.includes("/resource/")) {
+    return [
+      { label: "Playbook Library", href: "/playbook-library" },
+      { label: "Resource", href: pathname },
+    ];
+  }
+
   if (pathname.startsWith("/resources/")) {
     return [
-      { label: "SOP Library", href: "/sop-library" },
+      { label: "Playbook Library", href: "/playbook-library" },
       { label: "Resource", href: pathname },
     ];
   }
