@@ -114,14 +114,14 @@ const navigationItems: NavItem[] = [
     icon: BookOpen,
     sectionKey: "sops",
     children: [
-      { title: "Master Playbook", href: "/sops/master-playbook", icon: BookOpen, sectionKey: "sops/master-playbook" },
-      { title: "Sales", href: "/sops/sales", icon: TrendingUp, sectionKey: "sops/sales", requiresPlaybook: true },
-      { title: "Production", href: "/sops/production", icon: Hammer, sectionKey: "sops/production", requiresPlaybook: true },
-      { title: "Supplements", href: "/sops/supplements", icon: FileCode, sectionKey: "sops/supplements", requiresPlaybook: true },
-      { title: "Office Admin", href: "/sops/office-admin", icon: FileText, sectionKey: "sops/office-admin", requiresPlaybook: true },
-      { title: "Accounting", href: "/sops/accounting", icon: Calculator, sectionKey: "sops/accounting", requiresPlaybook: true },
-      { title: "Human Resources", href: "/sops/safety-hr", icon: Shield, sectionKey: "sops/safety-hr", requiresPlaybook: true },
-      { title: "Templates", href: "/sops/templates-scripts", icon: FileCode, sectionKey: "sops/templates-scripts", requiresPlaybook: true },
+      { title: "Master Playbook", href: "/playbook-library/master-playbook", icon: BookOpen, sectionKey: "sops/master-playbook" },
+      { title: "Sales", href: "/playbook-library/sales", icon: TrendingUp, sectionKey: "sops/sales", requiresPlaybook: true },
+      { title: "Production", href: "/playbook-library/production", icon: Hammer, sectionKey: "sops/production", requiresPlaybook: true },
+      { title: "Supplements", href: "/playbook-library/supplements", icon: FileCode, sectionKey: "sops/supplements", requiresPlaybook: true },
+      { title: "Office Admin", href: "/playbook-library/office-admin", icon: FileText, sectionKey: "sops/office-admin", requiresPlaybook: true },
+      { title: "Accounting", href: "/playbook-library/accounting", icon: Calculator, sectionKey: "sops/accounting", requiresPlaybook: true },
+      { title: "Human Resources", href: "/playbook-library/safety-hr", icon: Shield, sectionKey: "sops/safety-hr", requiresPlaybook: true },
+      { title: "Templates", href: "/playbook-library/templates-scripts", icon: FileCode, sectionKey: "sops/templates-scripts", requiresPlaybook: true },
     ],
   },
   {
@@ -394,7 +394,7 @@ export function AppSidebar() {
         description: "Navigate to Playbook Library → Master Playbook to get started.",
         action: {
           label: "Go Now",
-          onClick: () => navigate("/sops/master-playbook"),
+          onClick: () => navigate("/playbook-library/master-playbook"),
         },
       });
       return;

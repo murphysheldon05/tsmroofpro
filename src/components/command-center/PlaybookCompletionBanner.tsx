@@ -44,7 +44,7 @@ export function PlaybookCompletionBanner() {
         </div>
         
         <Button
-          onClick={() => navigate("/sops/master-playbook")}
+          onClick={() => navigate("/playbook-library/master-playbook")}
           className="bg-amber-500 hover:bg-amber-600 text-black font-semibold w-full sm:w-auto"
         >
           Continue

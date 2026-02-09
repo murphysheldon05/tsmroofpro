@@ -44,7 +44,7 @@ export default function ResourceDetail() {
   };
 
   const handleBack = () => {
-    navigate(`/sops/${category || "sales"}`);
+    navigate(`/playbook-library/${category || "sales"}`);
   };
 
   if (isLoading) {

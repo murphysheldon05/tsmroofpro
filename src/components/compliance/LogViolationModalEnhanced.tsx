@@ -24,9 +24,9 @@ import {
 } from "@/components/ui/select";
 import { Plus, X, Link as LinkIcon, Upload } from "lucide-react";
 
-const SOP_KEYS = [
-  "SOP01", "SOP02", "SOP03", "SOP04", "SOP05",
-  "SOP06", "SOP07", "SOP08", "SOP09", "SOP10",
+const PLAYBOOK_KEYS = [
+  "Playbook-01", "Playbook-02", "Playbook-03", "Playbook-04", "Playbook-05",
+  "Playbook-06", "Playbook-07", "Playbook-08", "Playbook-09", "Playbook-10",
 ];
 
 const DEPARTMENTS = [
@@ -195,18 +195,18 @@ export function LogViolationModalEnhanced({ open, onOpenChange }: LogViolationMo
             </Select>
           </div>
 
-          {/* SOP Reference */}
+          {/* Playbook Reference */}
           <div className="space-y-2">
-            <Label>SOP Reference *</Label>
+            <Label>Playbook Reference *</Label>
             <Select
               value={formData.sop_key}
               onValueChange={(v) => setFormData({ ...formData, sop_key: v })}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Select SOP" />
+                <SelectValue placeholder="Select Playbook" />
               </SelectTrigger>
               <SelectContent>
-                {SOP_KEYS.map((key) => (
+                {PLAYBOOK_KEYS.map((key) => (
                   <SelectItem key={key} value={key}>{key}</SelectItem>
                 ))}
               </SelectContent>
