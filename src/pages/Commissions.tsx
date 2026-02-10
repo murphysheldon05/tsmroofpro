@@ -10,6 +10,7 @@ import { CommissionStatusPipeline } from "@/components/commissions/CommissionSta
 import { CommissionSummaryCards } from "@/components/commissions/CommissionSummaryCards";
 import { CommissionCard } from "@/components/commissions/CommissionCard";
 import { DrawBalanceCard } from "@/components/commissions/DrawBalanceCard";
+import { OverridePhaseIndicator } from "@/components/commissions/OverridePhaseIndicator";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserHoldsCheck } from "@/hooks/useComplianceHoldCheck";
 import { HoldWarningBanner } from "@/components/compliance/HoldWarningBanner";
@@ -139,6 +140,9 @@ export default function Commissions() {
             )}
           </div>
         </div>
+
+        {/* Override Phase Indicator */}
+        <OverridePhaseIndicator />
 
         {/* Summary Cards + Draw Balance */}
         <div className="grid gap-4 grid-cols-1 lg:grid-cols-[1fr_300px]">

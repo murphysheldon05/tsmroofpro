@@ -2376,6 +2376,105 @@ export type Database = {
         }
         Relationships: []
       }
+      sales_manager_overrides: {
+        Row: {
+          commission_id: string
+          commission_number: number
+          created_at: string
+          id: string
+          net_profit: number
+          override_amount: number
+          override_percentage: number
+          sales_manager_id: string
+          sales_rep_id: string
+        }
+        Insert: {
+          commission_id: string
+          commission_number: number
+          created_at?: string
+          id?: string
+          net_profit?: number
+          override_amount?: number
+          override_percentage?: number
+          sales_manager_id: string
+          sales_rep_id: string
+        }
+        Update: {
+          commission_id?: string
+          commission_number?: number
+          created_at?: string
+          id?: string
+          net_profit?: number
+          override_amount?: number
+          override_percentage?: number
+          sales_manager_id?: string
+          sales_rep_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_manager_overrides_sales_manager_id_fkey"
+            columns: ["sales_manager_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_manager_overrides_sales_rep_id_fkey"
+            columns: ["sales_rep_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sales_rep_override_tracking: {
+        Row: {
+          approved_commission_count: number
+          created_at: string
+          id: string
+          manually_adjusted_at: string | null
+          manually_adjusted_by: string | null
+          override_phase_complete: boolean
+          sales_rep_id: string
+          updated_at: string
+        }
+        Insert: {
+          approved_commission_count?: number
+          created_at?: string
+          id?: string
+          manually_adjusted_at?: string | null
+          manually_adjusted_by?: string | null
+          override_phase_complete?: boolean
+          sales_rep_id: string
+          updated_at?: string
+        }
+        Update: {
+          approved_commission_count?: number
+          created_at?: string
+          id?: string
+          manually_adjusted_at?: string | null
+          manually_adjusted_by?: string | null
+          override_phase_complete?: boolean
+          sales_rep_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_rep_override_tracking_manually_adjusted_by_fkey"
+            columns: ["manually_adjusted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_rep_override_tracking_sales_rep_id_fkey"
+            columns: ["sales_rep_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sales_reps: {
         Row: {
           created_at: string
