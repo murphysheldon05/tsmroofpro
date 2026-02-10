@@ -1,77 +1,53 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { 
-  Plus, 
-  FileSpreadsheet, 
-  Users, 
-  Search, 
-  Filter,
-  DollarSign,
-  Clock,
-  CheckCircle,
-  XCircle,
-  AlertCircle,
-  BarChart3
-} from "lucide-react";
+import { Plus, Users, Search, FileSpreadsheet, BarChart3 } from "lucide-react";
 import { useCommissionSubmissions, useIsCommissionReviewer } from "@/hooks/useCommissions";
 import { CommissionTracker } from "@/components/commissions/CommissionTracker";
+import { CommissionStatusPipeline } from "@/components/commissions/CommissionStatusPipeline";
+import { CommissionSummaryCards } from "@/components/commissions/CommissionSummaryCards";
+import { CommissionCard } from "@/components/commissions/CommissionCard";
 import { useAuth } from "@/contexts/AuthContext";
-import { format } from "date-fns";
 import { useUserHoldsCheck } from "@/hooks/useComplianceHoldCheck";
 import { HoldWarningBanner } from "@/components/compliance/HoldWarningBanner";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-const STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; icon: React.ReactNode }> = {
-  pending_review: { label: "Pending Review", variant: "secondary", icon: <Clock className="h-3 w-3" /> },
-  revision_required: { label: "Revision Required", variant: "destructive", icon: <AlertCircle className="h-3 w-3" /> },
-  approved: { label: "Approved", variant: "default", icon: <CheckCircle className="h-3 w-3" /> },
-  denied: { label: "Denied", variant: "destructive", icon: <XCircle className="h-3 w-3" /> },
-  paid: { label: "Paid", variant: "outline", icon: <DollarSign className="h-3 w-3" /> },
+const STATUS_ORDER = ["pending_review", "revision_required", "approved", "denied", "paid"];
+const STATUS_LABELS: Record<string, string> = {
+  pending_review: "Pending Review",
+  revision_required: "Revision Required",
+  approved: "Approved",
+  denied: "Denied",
+  paid: "Paid",
 };
 
 export default function Commissions() {
   const navigate = useNavigate();
-  const { user, role } = useAuth();
+  const { role } = useAuth();
   const { data: submissions, isLoading } = useCommissionSubmissions();
   const { data: isReviewer } = useIsCommissionReviewer();
   const { data: userHolds } = useUserHoldsCheck();
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [activeStatus, setActiveStatus] = useState("all");
 
   const isAdmin = role === "admin";
   const isManager = role === "manager";
-  const canSubmit = isAdmin || isManager; // Sales reps, sales managers, production managers
-  
-  // Filter for commission-relevant holds
+  const canSubmit = isAdmin || isManager;
   const commissionHolds = userHolds?.filter(h => h.hold_type === "commission_hold") || [];
 
-  const filteredSubmissions = submissions?.filter((submission) => {
-    const matchesSearch = 
-      submission.job_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      submission.job_address.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      submission.sales_rep_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      submission.subcontractor_name?.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesStatus = statusFilter === "all" || submission.status === statusFilter;
-    
-    return matchesSearch && matchesStatus;
-  });
+  // Status counts
+  const statusCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    submissions?.forEach((s) => {
+      counts[s.status] = (counts[s.status] || 0) + 1;
+    });
+    return counts;
+  }, [submissions]);
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-    }).format(value);
-  };
-
-  const summaryStats = {
+  // Summary stats
+  const summaryStats = useMemo(() => ({
     total: submissions?.length || 0,
     pending: submissions?.filter((s) => s.status === "pending_review").length || 0,
     approved: submissions?.filter((s) => s.status === "approved").length || 0,
@@ -82,20 +58,59 @@ export default function Commissions() {
       }
       return sum;
     }, 0) || 0,
-  };
+  }), [submissions]);
+
+  // Filtered & grouped submissions
+  const filteredSubmissions = useMemo(() => {
+    let filtered = submissions || [];
+    
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      filtered = filtered.filter((s) =>
+        s.job_name.toLowerCase().includes(q) ||
+        s.job_address.toLowerCase().includes(q) ||
+        s.sales_rep_name?.toLowerCase().includes(q) ||
+        s.subcontractor_name?.toLowerCase().includes(q)
+      );
+    }
+
+    if (activeStatus !== "all") {
+      filtered = filtered.filter((s) => s.status === activeStatus);
+    }
+
+    return filtered;
+  }, [submissions, searchQuery, activeStatus]);
+
+  // Group by status
+  const groupedSubmissions = useMemo(() => {
+    const groups: Record<string, typeof filteredSubmissions> = {};
+    
+    if (activeStatus !== "all") {
+      // Single status - just show as flat list
+      return { [activeStatus]: filteredSubmissions };
+    }
+    
+    STATUS_ORDER.forEach((status) => {
+      const items = filteredSubmissions.filter((s) => s.status === status);
+      if (items.length > 0) {
+        groups[status] = items;
+      }
+    });
+    return groups;
+  }, [filteredSubmissions, activeStatus]);
 
   return (
     <AppLayout>
-      <div className="space-y-6">
-        {/* Hold Warning Banner */}
+      <div className="space-y-5 pb-8">
+        {/* Hold Warning */}
         <HoldWarningBanner holds={commissionHolds} context="commission" />
 
         {/* Header */}
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-3xl font-bold">Commission Management</h1>
-            <p className="text-muted-foreground">
-              Submit, track, and manage sales commissions
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Commissions</h1>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              Track and manage your earnings
             </p>
           </div>
           
@@ -103,9 +118,9 @@ export default function Commissions() {
             <div className="flex gap-2">
               <Button 
                 onClick={() => navigate("/commissions/new")} 
-                className="gap-2"
+                className="gap-2 rounded-xl"
                 disabled={commissionHolds.length > 0}
-                title={commissionHolds.length > 0 ? "Blocked by active commission hold" : ""}
+                title={commissionHolds.length > 0 ? "Blocked by active hold" : ""}
               >
                 <Plus className="h-4 w-4" />
                 New Commission
@@ -113,205 +128,102 @@ export default function Commissions() {
               <Button 
                 variant="outline" 
                 onClick={() => navigate("/commissions/new?type=subcontractor")}
-                className="gap-2"
+                className="gap-2 rounded-xl"
                 disabled={commissionHolds.length > 0}
-                title={commissionHolds.length > 0 ? "Blocked by active commission hold" : ""}
               >
                 <Users className="h-4 w-4" />
-                Subcontractor
+                Sub
               </Button>
             </div>
           )}
         </div>
 
-        {/* Summary Cards */}
-        <div className="grid gap-4 md:grid-cols-4">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Total Submissions
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{summaryStats.total}</div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Pending Review
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-amber-600">{summaryStats.pending}</div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Approved for Payment
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">{summaryStats.approved}</div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Total Commission Owed
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-primary">
-                {formatCurrency(summaryStats.totalOwed)}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        {/* Summary Cards - large rounded numbers */}
+        <CommissionSummaryCards {...summaryStats} />
 
-        {/* Tabs */}
-        <Tabs defaultValue="all" className="space-y-4">
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <TabsList>
-              <TabsTrigger value="all" className="gap-2">
-                <FileSpreadsheet className="h-4 w-4" />
-                All Commissions
+        {/* Main Content Tabs */}
+        <Tabs defaultValue="pipeline" className="space-y-4">
+          <TabsList className="bg-card/60 border border-border/40 rounded-2xl p-1 h-auto">
+            <TabsTrigger value="pipeline" className="gap-2 rounded-xl data-[state=active]:bg-primary/15 data-[state=active]:text-primary">
+              <FileSpreadsheet className="h-4 w-4" />
+              Pipeline
+            </TabsTrigger>
+            {isReviewer && (
+              <TabsTrigger value="tracker" className="gap-2 rounded-xl data-[state=active]:bg-primary/15 data-[state=active]:text-primary">
+                <BarChart3 className="h-4 w-4" />
+                Analytics
               </TabsTrigger>
-              {isReviewer && (
-                <TabsTrigger value="tracker" className="gap-2">
-                  <BarChart3 className="h-4 w-4" />
-                  Commission Tracker
-                </TabsTrigger>
-              )}
-            </TabsList>
+            )}
+          </TabsList>
 
-            {/* Filters */}
-            <div className="flex gap-2">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search by job, rep..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9 w-[200px]"
-                />
-              </div>
-              
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-[160px]">
-                  <Filter className="h-4 w-4 mr-2" />
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="pending_review">Pending Review</SelectItem>
-                  <SelectItem value="revision_required">Revision Required</SelectItem>
-                  <SelectItem value="approved">Approved</SelectItem>
-                  <SelectItem value="denied">Denied</SelectItem>
-                  <SelectItem value="paid">Paid</SelectItem>
-                </SelectContent>
-              </Select>
+          <TabsContent value="pipeline" className="space-y-4 mt-0">
+            {/* Status Pipeline */}
+            <CommissionStatusPipeline
+              statusCounts={statusCounts}
+              activeStatus={activeStatus}
+              onStatusClick={setActiveStatus}
+            />
+
+            {/* Search */}
+            <div className="relative">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search jobs, reps..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 rounded-2xl bg-card/60 border-border/40 h-12 text-base"
+              />
             </div>
-          </div>
 
-          <TabsContent value="all">
-            <Card>
-              <CardHeader>
-                <CardTitle>Commission Submissions</CardTitle>
-                <CardDescription>
-                  View and manage all commission submissions
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {isLoading ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    Loading commissions...
-                  </div>
-                ) : filteredSubmissions && filteredSubmissions.length > 0 ? (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Job Name</TableHead>
-                        <TableHead>Sales Rep / Sub</TableHead>
-                        <TableHead>Job Type</TableHead>
-                        <TableHead className="text-right">Contract</TableHead>
-                        <TableHead className="text-right">Net Owed</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Submitted</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredSubmissions.map((submission) => {
-                        const statusConfig = STATUS_CONFIG[submission.status];
-                        return (
-                          <TableRow 
-                            key={submission.id}
-                            className="cursor-pointer hover:bg-muted/50"
-                            onClick={() => navigate(`/commissions/${submission.id}`)}
-                          >
-                            <TableCell>
-                              <div>
-                                <p className="font-medium">{submission.job_name}</p>
-                                <p className="text-sm text-muted-foreground truncate max-w-[200px]">
-                                  {submission.job_address}
-                                </p>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              {submission.submission_type === "subcontractor" ? (
-                                <Badge variant="outline" className="gap-1">
-                                  <Users className="h-3 w-3" />
-                                  {submission.subcontractor_name}
-                                </Badge>
-                              ) : (
-                                submission.sales_rep_name
-                              )}
-                            </TableCell>
-                            <TableCell className="capitalize">{submission.job_type}</TableCell>
-                            <TableCell className="text-right">
-                              {formatCurrency(submission.contract_amount)}
-                            </TableCell>
-                            <TableCell className="text-right font-medium">
-                              {formatCurrency(submission.net_commission_owed)}
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant={statusConfig?.variant} className="gap-1">
-                                {statusConfig?.icon}
-                                {statusConfig?.label}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-muted-foreground">
-                              {format(new Date(submission.created_at), "MMM d, yyyy")}
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
-                ) : (
-                  <div className="text-center py-12">
-                    <FileSpreadsheet className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                    <h3 className="text-lg font-medium">No commissions found</h3>
-                    <p className="text-muted-foreground mb-4">
-                      {searchQuery || statusFilter !== "all" 
-                        ? "Try adjusting your filters"
-                        : "Get started by submitting your first commission"
-                      }
-                    </p>
-                    {canSubmit && !searchQuery && statusFilter === "all" && (
-                      <Button onClick={() => navigate("/commissions/new")}>
-                        <Plus className="h-4 w-4 mr-2" />
-                        Submit Commission
-                      </Button>
+            {/* Commission Cards grouped by status */}
+            {isLoading ? (
+              <div className="space-y-3">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="h-24 rounded-2xl bg-card/40 animate-pulse" />
+                ))}
+              </div>
+            ) : Object.keys(groupedSubmissions).length > 0 ? (
+              <div className="space-y-6">
+                {Object.entries(groupedSubmissions).map(([status, items]) => (
+                  <div key={status}>
+                    {activeStatus === "all" && (
+                      <div className="flex items-center gap-2 mb-3">
+                        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+                          {STATUS_LABELS[status] || status}
+                        </h2>
+                        <span className="text-xs font-bold text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+                          {items.length}
+                        </span>
+                      </div>
                     )}
+                    <div className="space-y-2.5">
+                      {items.map((submission) => (
+                        <CommissionCard key={submission.id} submission={submission} />
+                      ))}
+                    </div>
                   </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-16">
+                <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-4">
+                  <FileSpreadsheet className="h-8 w-8 text-muted-foreground" />
+                </div>
+                <h3 className="text-lg font-semibold mb-1">No commissions found</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  {searchQuery || activeStatus !== "all" 
+                    ? "Try adjusting your filters"
+                    : "Get started by submitting your first commission"
+                  }
+                </p>
+                {canSubmit && !searchQuery && activeStatus === "all" && (
+                  <Button onClick={() => navigate("/commissions/new")} className="rounded-xl">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Submit Commission
+                  </Button>
                 )}
-              </CardContent>
-            </Card>
+              </div>
+            )}
           </TabsContent>
 
           {isReviewer && (
