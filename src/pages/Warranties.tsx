@@ -17,6 +17,12 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Plus, Shield, BarChart3, Search, Archive } from "lucide-react";
 import { differenceInDays, parseISO, format } from "date-fns";
 import { cn } from "@/lib/utils";
+import {
+  DndContext, closestCenter, DragEndEvent, DragOverlay, DragStartEvent,
+  PointerSensor, useSensor, useSensors, useDroppable,
+} from "@dnd-kit/core";
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 // Kanban columns mapping
 const KANBAN_COLUMNS: { key: string; label: string; statuses: WarrantyStatus[] }[] = [
@@ -25,6 +31,13 @@ const KANBAN_COLUMNS: { key: string; label: string; statuses: WarrantyStatus[] }
   { key: "scheduled", label: "Scheduled", statuses: ["scheduled"] },
   { key: "completed", label: "Completed", statuses: ["completed", "denied"] },
 ];
+
+const STATUS_FOR_COLUMN: Record<string, WarrantyStatus> = {
+  new: "new",
+  in_progress: "in_progress",
+  scheduled: "scheduled",
+  completed: "completed",
+};
 
 function getAgeDays(w: WarrantyRequest): number {
   return differenceInDays(new Date(), parseISO(w.date_submitted));
@@ -39,10 +52,142 @@ function getPriorityBorderColor(priority: string): string {
   }
 }
 
+// Droppable column wrapper
+function DroppableColumn({ id, children }: { id: string; children: React.ReactNode }) {
+  const { setNodeRef, isOver } = useDroppable({ id });
+  return (
+    <div
+      ref={setNodeRef}
+      className={cn(
+        "space-y-2 min-h-[200px] bg-muted/20 rounded-xl p-2 transition-all duration-200",
+        isOver && "ring-2 ring-primary bg-primary/10"
+      )}
+    >
+      {children}
+    </div>
+  );
+}
+
+// Draggable warranty card
+function DraggableWarrantyCard({
+  warranty,
+  onView,
+  isDragOverlay = false,
+}: {
+  warranty: WarrantyRequest;
+  onView: (w: WarrantyRequest) => void;
+  isDragOverlay?: boolean;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: warranty.id,
+    data: { warranty },
+  });
+
+  const age = getAgeDays(warranty);
+  const isCompleted = warranty.status === "completed" || warranty.status === "denied";
+  const statusConfig = WARRANTY_STATUSES.find(s => s.value === warranty.status);
+  const priorityConfig = PRIORITY_LEVELS.find(p => p.value === warranty.priority_level);
+
+  const cardStyle = {
+    ...(isDragOverlay ? {} : {
+      transform: CSS.Transform.toString(transform),
+      transition,
+      opacity: isDragging ? 0.3 : 1,
+    }),
+    borderLeftWidth: 4,
+    borderLeftColor: getPriorityBorderColor(warranty.priority_level),
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={cardStyle}
+      {...attributes}
+      {...listeners}
+      onClick={() => onView(warranty)}
+      className={cn(
+        "rounded-xl border p-3 cursor-pointer transition-all hover:shadow-md bg-card",
+        !isCompleted && age > 30 && "border-destructive/60",
+        !isCompleted && age > 14 && age <= 30 && "border-amber-400/60",
+        isDragOverlay && "shadow-xl ring-2 ring-primary rotate-2 scale-105",
+        isDragging && "opacity-30",
+      )}
+    >
+      <div className="flex items-start justify-between gap-2 mb-1.5">
+        <p className="font-medium text-sm truncate">{warranty.customer_name}</p>
+        {!isCompleted && age > 0 && (
+          <span className={cn("text-[10px] font-medium px-1.5 py-0.5 rounded-full whitespace-nowrap",
+            age > 30 ? "bg-destructive/10 text-destructive" :
+            age > 14 ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" :
+            "bg-muted text-muted-foreground"
+          )}>
+            {age}d
+          </span>
+        )}
+      </div>
+      <p className="text-xs text-muted-foreground truncate mb-2">{warranty.job_address}</p>
+      <p className="text-xs text-muted-foreground line-clamp-2 mb-2">{warranty.issue_description}</p>
+      <div className="flex items-center gap-1.5 flex-wrap">
+        <Badge className={cn("text-[10px]", statusConfig?.color)}>{statusConfig?.label}</Badge>
+        <Badge className={cn("text-[10px]", priorityConfig?.color)}>{priorityConfig?.label}</Badge>
+      </div>
+      {warranty.assigned_production_member && (
+        <p className="text-[10px] text-muted-foreground mt-1.5">Assigned</p>
+      )}
+      <p className="text-[10px] text-muted-foreground">{format(parseISO(warranty.date_submitted), "MMM d, yyyy")}</p>
+    </div>
+  );
+}
+
+// Simple card for mobile (no drag)
+function WarrantyCardSimple({
+  warranty,
+  onView,
+}: {
+  warranty: WarrantyRequest;
+  onView: (w: WarrantyRequest) => void;
+}) {
+  const age = getAgeDays(warranty);
+  const isCompleted = warranty.status === "completed" || warranty.status === "denied";
+  const statusConfig = WARRANTY_STATUSES.find(s => s.value === warranty.status);
+  const priorityConfig = PRIORITY_LEVELS.find(p => p.value === warranty.priority_level);
+
+  return (
+    <div
+      onClick={() => onView(warranty)}
+      className={cn(
+        "rounded-xl border p-3 cursor-pointer transition-all hover:shadow-md bg-card",
+        !isCompleted && age > 30 && "border-destructive/60",
+        !isCompleted && age > 14 && age <= 30 && "border-amber-400/60",
+      )}
+      style={{ borderLeftWidth: 4, borderLeftColor: getPriorityBorderColor(warranty.priority_level) }}
+    >
+      <div className="flex items-start justify-between gap-2 mb-1.5">
+        <p className="font-medium text-sm truncate">{warranty.customer_name}</p>
+        {!isCompleted && age > 0 && (
+          <span className={cn("text-[10px] font-medium px-1.5 py-0.5 rounded-full whitespace-nowrap",
+            age > 30 ? "bg-destructive/10 text-destructive" :
+            age > 14 ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" :
+            "bg-muted text-muted-foreground"
+          )}>
+            {age}d
+          </span>
+        )}
+      </div>
+      <p className="text-xs text-muted-foreground truncate mb-2">{warranty.job_address}</p>
+      <p className="text-xs text-muted-foreground line-clamp-2 mb-2">{warranty.issue_description}</p>
+      <div className="flex items-center gap-1.5 flex-wrap">
+        <Badge className={cn("text-[10px]", statusConfig?.color)}>{statusConfig?.label}</Badge>
+        <Badge className={cn("text-[10px]", priorityConfig?.color)}>{priorityConfig?.label}</Badge>
+      </div>
+      <p className="text-[10px] text-muted-foreground mt-1">{format(parseISO(warranty.date_submitted), "MMM d, yyyy")}</p>
+    </div>
+  );
+}
+
 export default function Warranties() {
-  const { role, isAdmin, isManager } = useAuth();
+  const { isAdmin, isManager } = useAuth();
   const canEdit = isAdmin || isManager;
-  const canCreate = true; // Anyone can submit
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
@@ -50,15 +195,19 @@ export default function Warranties() {
   const [mobileTab, setMobileTab] = useState("new");
   const [showArchive, setShowArchive] = useState(false);
   const [archiveSearch, setArchiveSearch] = useState("");
+  const [activeId, setActiveId] = useState<string | null>(null);
 
   const { data: warranties = [], isLoading } = useWarranties();
   const updateWarranty = useUpdateWarranty();
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
+  );
 
   const handleView = (w: WarrantyRequest) => { setSelectedWarranty(w); setIsDetailOpen(true); };
   const handleEdit = (w: WarrantyRequest) => { setSelectedWarranty(w); setIsFormOpen(true); };
   const handleCreate = () => { setSelectedWarranty(null); setIsFormOpen(true); };
 
-  // Column data
   const columns = useMemo(() => {
     return KANBAN_COLUMNS.map(col => {
       const items = warranties.filter(w => col.statuses.includes(w.status));
@@ -67,7 +216,6 @@ export default function Warranties() {
     });
   }, [warranties]);
 
-  // Archive (completed)
   const archivedWarranties = useMemo(() => {
     const completed = warranties.filter(w => w.status === "completed" || w.status === "denied");
     if (!archiveSearch) return completed;
@@ -79,47 +227,37 @@ export default function Warranties() {
     );
   }, [warranties, archiveSearch]);
 
-  // Warranty card
-  const WarrantyCard = ({ warranty }: { warranty: WarrantyRequest }) => {
-    const age = getAgeDays(warranty);
-    const isCompleted = warranty.status === "completed" || warranty.status === "denied";
-    const statusConfig = WARRANTY_STATUSES.find(s => s.value === warranty.status);
-    const priorityConfig = PRIORITY_LEVELS.find(p => p.value === warranty.priority_level);
+  const activeWarranty = activeId ? warranties.find(w => w.id === activeId) : null;
 
-    return (
-      <div
-        onClick={() => handleView(warranty)}
-        className={cn(
-          "rounded-xl border p-3 cursor-pointer transition-all hover:shadow-md bg-card",
-          !isCompleted && age > 30 && "border-destructive/60",
-          !isCompleted && age > 14 && age <= 30 && "border-amber-400/60",
-        )}
-        style={{ borderLeftWidth: 4, borderLeftColor: getPriorityBorderColor(warranty.priority_level) }}
-      >
-        <div className="flex items-start justify-between gap-2 mb-1.5">
-          <p className="font-medium text-sm truncate">{warranty.customer_name}</p>
-          {!isCompleted && age > 0 && (
-            <span className={cn("text-[10px] font-medium px-1.5 py-0.5 rounded-full whitespace-nowrap",
-              age > 30 ? "bg-destructive/10 text-destructive" :
-              age > 14 ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" :
-              "bg-muted text-muted-foreground"
-            )}>
-              {age}d
-            </span>
-          )}
-        </div>
-        <p className="text-xs text-muted-foreground truncate mb-2">{warranty.job_address}</p>
-        <p className="text-xs text-muted-foreground line-clamp-2 mb-2">{warranty.issue_description}</p>
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <Badge className={cn("text-[10px]", statusConfig?.color)}>{statusConfig?.label}</Badge>
-          <Badge className={cn("text-[10px]", priorityConfig?.color)}>{priorityConfig?.label}</Badge>
-        </div>
-        {warranty.assigned_production_member && (
-          <p className="text-[10px] text-muted-foreground mt-1.5">Assigned</p>
-        )}
-        <p className="text-[10px] text-muted-foreground">{format(parseISO(warranty.date_submitted), "MMM d, yyyy")}</p>
-      </div>
-    );
+  const handleDragStart = (event: DragStartEvent) => {
+    if (!canEdit) return;
+    setActiveId(event.active.id as string);
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    setActiveId(null);
+    if (!canEdit) return;
+
+    const { active, over } = event;
+    if (!over) return;
+
+    const warranty = warranties.find(w => w.id === active.id);
+    if (!warranty) return;
+
+    // The "over" id is the column key
+    const targetColumnKey = over.id as string;
+    const targetStatus = STATUS_FOR_COLUMN[targetColumnKey];
+    if (!targetStatus) return;
+
+    // Check if warranty is already in this column
+    const targetColumn = KANBAN_COLUMNS.find(c => c.key === targetColumnKey);
+    if (targetColumn?.statuses.includes(warranty.status)) return;
+
+    updateWarranty.mutate({
+      id: warranty.id,
+      status: targetStatus,
+      previousStatus: warranty.status,
+    });
   };
 
   if (isLoading) {
@@ -159,42 +297,60 @@ export default function Warranties() {
           </TabsList>
 
           <TabsContent value="board" className="mt-4">
-            {/* Desktop Kanban */}
-            <div className="hidden md:grid grid-cols-4 gap-4">
-              {columns.map(col => (
-                <div key={col.key} className="space-y-3">
-                  <div className="flex items-center justify-between px-1">
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-sm font-semibold">{col.label}</h3>
-                      <Badge variant="secondary" className="text-xs">{col.items.length}</Badge>
+            {/* Desktop Kanban with DnD */}
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+            >
+              <div className="hidden md:grid grid-cols-4 gap-4">
+                {columns.map(col => (
+                  <div key={col.key} className="space-y-3">
+                    <div className="flex items-center justify-between px-1">
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-sm font-semibold">{col.label}</h3>
+                        <Badge variant="secondary" className="text-xs">{col.items.length}</Badge>
+                      </div>
+                      {col.overdueCount > 0 && (
+                        <span className="text-xs text-destructive font-medium">{col.overdueCount} overdue</span>
+                      )}
                     </div>
-                    {col.overdueCount > 0 && (
-                      <span className="text-xs text-destructive font-medium">{col.overdueCount} overdue</span>
-                    )}
-                  </div>
-                  <div className="space-y-2 min-h-[200px] bg-muted/20 rounded-xl p-2">
-                    {col.key === "completed" ? (
-                      <>
-                        {col.items.slice(0, 5).map(w => <WarrantyCard key={w.id} warranty={w} />)}
-                        {col.items.length > 5 && (
-                          <Button variant="ghost" size="sm" className="w-full text-xs" onClick={() => setShowArchive(true)}>
-                            <Archive className="h-3.5 w-3.5 mr-1" />View Archive ({col.items.length})
-                          </Button>
-                        )}
-                      </>
-                    ) : (
-                      col.items.length === 0 ? (
-                        <p className="text-xs text-muted-foreground text-center py-8">No warranties</p>
+                    <DroppableColumn id={col.key}>
+                      {col.key === "completed" ? (
+                        <>
+                          {col.items.slice(0, 5).map(w => (
+                            <DraggableWarrantyCard key={w.id} warranty={w} onView={handleView} />
+                          ))}
+                          {col.items.length > 5 && (
+                            <Button variant="ghost" size="sm" className="w-full text-xs" onClick={() => setShowArchive(true)}>
+                              <Archive className="h-3.5 w-3.5 mr-1" />View Archive ({col.items.length})
+                            </Button>
+                          )}
+                        </>
                       ) : (
-                        col.items.map(w => <WarrantyCard key={w.id} warranty={w} />)
-                      )
-                    )}
+                        col.items.length === 0 ? (
+                          <p className="text-xs text-muted-foreground text-center py-8">No warranties</p>
+                        ) : (
+                          col.items.map(w => (
+                            <DraggableWarrantyCard key={w.id} warranty={w} onView={handleView} />
+                          ))
+                        )
+                      )}
+                    </DroppableColumn>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
 
-            {/* Mobile Tabs */}
+              {/* Drag overlay */}
+              <DragOverlay>
+                {activeWarranty ? (
+                  <DraggableWarrantyCard warranty={activeWarranty} onView={() => {}} isDragOverlay />
+                ) : null}
+              </DragOverlay>
+            </DndContext>
+
+            {/* Mobile Tabs (no drag) */}
             <div className="md:hidden">
               <Tabs value={mobileTab} onValueChange={setMobileTab}>
                 <TabsList className="w-full grid grid-cols-4">
@@ -211,7 +367,7 @@ export default function Warranties() {
                       {col.items.length === 0 ? (
                         <p className="text-sm text-muted-foreground text-center py-8">No warranties</p>
                       ) : (
-                        col.items.map(w => <WarrantyCard key={w.id} warranty={w} />)
+                        col.items.map(w => <WarrantyCardSimple key={w.id} warranty={w} onView={handleView} />)
                       )}
                     </div>
                   </TabsContent>

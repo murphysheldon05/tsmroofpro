@@ -38,16 +38,12 @@ const DELIVERY_STATUSES = {
   delayed: { label: "Delayed", color: "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300", dotColor: "#ef4444", icon: AlertTriangle },
 };
 
-// We store status in the description field as a prefix "STATUS:xxx|" to avoid DB changes
+// Now using proper status column on delivery_calendar_events table
 function getDeliveryStatus(event: DeliveryCalendarEvent): string {
-  const match = event.description?.match(/^STATUS:(\w+)\|/);
-  return match?.[1] || "scheduled";
+  return event.status || "scheduled";
 }
 function getDeliveryDescription(event: DeliveryCalendarEvent): string {
-  return event.description?.replace(/^STATUS:\w+\|/, "") || "";
-}
-function encodeStatus(status: string, description: string): string {
-  return `STATUS:${status}|${description}`;
+  return event.description || "";
 }
 
 function getStoredView(): CalendarView {
@@ -131,9 +127,10 @@ export default function DeliverySchedule() {
     if (!newEvent.title || !newEvent.start_date) return;
     createEvent.mutate({
       title: newEvent.title,
-      description: encodeStatus(newEvent.status, newEvent.description),
+      description: newEvent.description,
       start_date: newEvent.start_date,
       end_date: newEvent.end_date || undefined,
+      status: newEvent.status,
     }, {
       onSuccess: () => { setIsAddOpen(false); setNewEvent({ title: "", description: "", start_date: "", end_date: "", status: "scheduled" }); },
     });
@@ -144,7 +141,8 @@ export default function DeliverySchedule() {
     updateEvent.mutate({
       id: editingEvent.id,
       title: editingEvent.title,
-      description: encodeStatus(editStatus, editDescription),
+      description: editDescription,
+      status: editStatus,
       start_date: editingEvent.start_date,
       end_date: editingEvent.end_date || undefined,
     }, { onSuccess: () => setEditingEvent(null) });

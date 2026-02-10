@@ -18,7 +18,6 @@ export function CommissionSummaryWidget() {
   const { data, isLoading } = useQuery({
     queryKey: ["cc-commission-summary", user?.id, role],
     queryFn: async () => {
-      // Build base query - RLS handles per-user filtering for non-admin
       let pendingQuery = supabase
         .from("commission_submissions")
         .select("net_commission_owed")
@@ -64,33 +63,29 @@ export function CommissionSummaryWidget() {
       label: "Pending",
       value: data?.pending || 0,
       icon: Clock,
-      color: "text-amber-500",
-      bg: "bg-amber-500/10",
-      border: "border-amber-500/20",
+      color: "text-amber-600 dark:text-amber-400",
+      border: "border-t-[3px] border-t-amber-500",
     },
     {
       label: "Approved",
       value: data?.approved || 0,
       icon: CheckCircle,
-      color: "text-blue-500",
-      bg: "bg-blue-500/10",
-      border: "border-blue-500/20",
+      color: "text-blue-600 dark:text-blue-400",
+      border: "border-t-[3px] border-t-blue-500",
     },
     {
       label: "Paid This Month",
       value: data?.paid || 0,
       icon: DollarSign,
-      color: "text-green-500",
-      bg: "bg-green-500/10",
-      border: "border-green-500/20",
+      color: "text-green-600 dark:text-green-400",
+      border: "border-t-[3px] border-t-green-500",
     },
     {
       label: "Draw Balance",
       value: data?.draw || 0,
       icon: AlertTriangle,
-      color: (data?.draw || 0) > 0 ? "text-red-500" : "text-muted-foreground",
-      bg: (data?.draw || 0) > 0 ? "bg-red-500/10" : "bg-muted/50",
-      border: (data?.draw || 0) > 0 ? "border-red-500/20" : "border-border/50",
+      color: (data?.draw || 0) > 0 ? "text-red-600 dark:text-red-400" : "text-muted-foreground",
+      border: (data?.draw || 0) > 0 ? "border-t-[3px] border-t-red-500" : "border-t-[3px] border-t-muted",
     },
   ];
 
@@ -110,13 +105,13 @@ export function CommissionSummaryWidget() {
         <div
           key={card.label}
           className={cn(
-            "rounded-2xl border p-4 transition-all duration-200 hover-lift",
-            card.bg, card.border
+            "rounded-2xl border border-border/50 bg-card p-4 transition-all duration-200 hover-lift",
+            card.border
           )}
         >
           <div className="flex items-center gap-1.5 mb-2">
             <card.icon className={cn("w-4 h-4", card.color)} />
-            <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+            <span className={cn("text-[11px] font-medium uppercase tracking-wider", card.color)}>
               {card.label}
             </span>
           </div>

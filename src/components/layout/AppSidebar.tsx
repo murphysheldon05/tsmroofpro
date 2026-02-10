@@ -458,8 +458,11 @@ export function AppSidebar() {
   const NavContent = () => (
     <>
       <div className="p-4 border-b border-border/50 flex items-center justify-between">
-        <Logo size="sm" />
-        <NotificationBell />
+        <Logo size="sm" showText />
+        <div className="flex items-center gap-1">
+          <ThemeToggle compact />
+          <NotificationBell />
+        </div>
       </div>
 
       <nav className="flex-1 overflow-y-auto p-3 space-y-1">
@@ -537,7 +540,7 @@ export function AppSidebar() {
         {/* Admin & Manager Panel - Visible to admin, manager, sales_manager, accounting */}
         {(isAdmin || isManager || role === 'sales_manager' || role === 'accounting') && (
           <div className="pt-2 border-t border-border/30">
-            <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-3 mb-1 block">
+            <span className="text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-[1px] px-3 mb-1 block">
               {isAdmin ? 'Admin & Manager Panel' : role === 'accounting' ? 'Accounting Panel' : 'Manager Panel'}
             </span>
             {(isAdmin || isManager || role === 'sales_manager') && (
@@ -594,7 +597,7 @@ export function AppSidebar() {
           </div>
         )}
         
-        <ThemeToggle />
+        {/* ThemeToggle moved to compact icon in header */}
         
         <button
           onClick={() => signOut()}

@@ -1,8 +1,14 @@
 import { Moon, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 
-export function ThemeToggle({ className }: { className?: string }) {
+interface ThemeToggleProps {
+  className?: string;
+  compact?: boolean;
+}
+
+export function ThemeToggle({ className, compact = false }: ThemeToggleProps) {
   const [theme, setTheme] = useState<"light" | "dark">(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("tsm-theme");
@@ -20,6 +26,24 @@ export function ThemeToggle({ className }: { className?: string }) {
   }, [theme]);
 
   const toggle = () => setTheme((t) => (t === "dark" ? "light" : "dark"));
+
+  if (compact) {
+    return (
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={toggle}
+        className={cn("h-9 w-9", className)}
+        aria-label="Toggle theme"
+      >
+        {theme === "dark" ? (
+          <Sun className="h-4 w-4" />
+        ) : (
+          <Moon className="h-4 w-4" />
+        )}
+      </Button>
+    );
+  }
 
   return (
     <button

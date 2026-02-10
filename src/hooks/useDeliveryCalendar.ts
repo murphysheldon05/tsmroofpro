@@ -13,6 +13,7 @@ export interface DeliveryCalendarEvent {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+  status: string;
 }
 
 export function useDeliveryCalendarEvents() {
@@ -40,6 +41,7 @@ export function useCreateDeliveryEvent() {
       start_date: string;
       end_date?: string;
       crew_id?: string;
+      status?: string;
     }) => {
       const { data: user } = await supabase.auth.getUser();
       const { data, error } = await supabase
@@ -78,6 +80,7 @@ export function useUpdateDeliveryEvent() {
       start_date?: string;
       end_date?: string | null;
       crew_id?: string | null;
+      status?: string;
     }) => {
       const { data, error } = await supabase
         .from("delivery_calendar_events")
