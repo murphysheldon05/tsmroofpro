@@ -32,6 +32,7 @@ const MasterPlaybook = forwardRef<HTMLDivElement>((_, ref) => {
   const [showCompletionModal, setShowCompletionModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const hasTriggeredCompletion = useRef(false);
+  const celebrationKey = `playbook_celebrated_${user?.id}`;
   
   const {
     sopStatuses,
@@ -54,14 +55,17 @@ const MasterPlaybook = forwardRef<HTMLDivElement>((_, ref) => {
     pb.description.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Trigger celebration when user completes all playbooks
+  // Trigger celebration ONCE EVER per user — persist flag in localStorage
   useEffect(() => {
     if (allCompleted && !hasTriggeredCompletion.current && completedCount === totalCount) {
+      const alreadyCelebrated = localStorage.getItem(celebrationKey);
+      if (alreadyCelebrated) return; // Already celebrated — skip
       hasTriggeredCompletion.current = true;
+      localStorage.setItem(celebrationKey, "true");
       setShowCompletionModal(true);
       sendCompletionNotification();
     }
-  }, [allCompleted, completedCount, totalCount]);
+  }, [allCompleted, completedCount, totalCount, celebrationKey]);
 
   const sendCompletionNotification = async () => {
     try {
