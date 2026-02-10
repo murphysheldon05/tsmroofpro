@@ -70,6 +70,7 @@ interface NavChild {
   icon?: React.ElementType;
   sectionKey: string;
   managerOnly?: boolean;
+  adminOnly?: boolean;
   requiresPlaybook?: boolean;
 }
 
@@ -132,9 +133,9 @@ const navigationItems: NavItem[] = [
     sectionKey: "training",
     requiresPlaybook: true,
     children: [
-      { title: "New Hire", href: "/training/new-hire", icon: UserPlus, sectionKey: "training/new-hire", requiresPlaybook: true },
-      { title: "Role Training", href: "/training/role-training", icon: GraduationCap, sectionKey: "training/role-training", requiresPlaybook: true },
+      { title: "Documents", href: "/training/documents", icon: FileText, sectionKey: "training/documents", requiresPlaybook: true },
       { title: "Video Library", href: "/training/video-library", icon: Video, sectionKey: "training/video-library", requiresPlaybook: true },
+      { title: "New Hires", href: "/training/new-hire", icon: UserPlus, sectionKey: "training/new-hire", requiresPlaybook: true, adminOnly: true },
     ],
   },
   {
@@ -417,6 +418,7 @@ export function AppSidebar() {
         if (item.children) {
           const filteredChildren = item.children.filter((child) => {
             if (child.managerOnly && !isManager && !isAdmin) return false;
+            if (child.adminOnly && !isAdmin) return false;
             return isSectionVisible(child.sectionKey, userPermissions, role);
           });
           if (filteredChildren.length === 0) return null;
