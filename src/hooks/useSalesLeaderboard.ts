@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { startOfWeek, startOfMonth, startOfYear, format } from "date-fns";
 
-export type LeaderboardTab = "profit" | "commissions";
+export type LeaderboardTab = "sales" | "profit" | "commissions";
 export type TimeRange = "week" | "month" | "ytd" | "custom";
 
 export interface LeaderboardEntry {
@@ -31,7 +31,52 @@ export function useSalesLeaderboard(tab: LeaderboardTab, range: TimeRange, custo
   return useQuery({
     queryKey: ["sales-leaderboard", tab, range, start, end],
     queryFn: async () => {
-      // Get all commission documents in date range with approved/paid statuses
+      if (tab === "sales") {
+        // Sales tab: sum gross_contract_total from commission_documents for approved/paid
+        const { data, error } = await supabase
+          .from("commission_documents")
+          .select("sales_rep, sales_rep_id, gross_contract_total, job_date, status")
+          .gte("job_date", start)
+          .lte("job_date", end)
+          .in("status", ["manager_approved", "accounting_approved", "paid", "approved"]);
+
+        if (error) throw error;
+
+        const { data: allReps, error: repsError } = await supabase
+          .from("profiles")
+          .select("id, full_name")
+          .eq("employee_status", "active");
+        if (repsError) throw repsError;
+
+        const { data: roles } = await supabase.from("user_roles").select("user_id, role");
+        const salesRoles = new Set(["employee", "manager", "admin"]);
+        const salesRepIds = new Set((roles || []).filter(r => salesRoles.has(r.role)).map(r => r.user_id));
+
+        const repTotals = new Map<string, { name: string; total: number }>();
+        (allReps || []).forEach(rep => {
+          if (salesRepIds.has(rep.id)) {
+            repTotals.set(rep.id, { name: rep.full_name || "Unknown", total: 0 });
+          }
+        });
+
+        (data || []).forEach(doc => {
+          const repId = doc.sales_rep_id;
+          if (!repId) return;
+          const value = Number(doc.gross_contract_total || 0);
+          const existing = repTotals.get(repId);
+          if (existing) {
+            existing.total += value;
+          } else {
+            repTotals.set(repId, { name: doc.sales_rep || "Unknown", total: value });
+          }
+        });
+
+        return Array.from(repTotals.entries())
+          .map(([repId, { name, total }]) => ({ repId, repName: name, total }))
+          .sort((a, b) => b.total - a.total);
+      }
+
+      // Profit & Commissions tabs (existing logic)
       const { data, error } = await supabase
         .from("commission_documents")
         .select("sales_rep, sales_rep_id, company_profit, rep_commission, job_date, status")
@@ -41,39 +86,26 @@ export function useSalesLeaderboard(tab: LeaderboardTab, range: TimeRange, custo
 
       if (error) throw error;
 
-      // Also get all active sales reps from profiles with sales-related roles
       const { data: allReps, error: repsError } = await supabase
         .from("profiles")
         .select("id, full_name")
         .eq("employee_status", "active");
-
       if (repsError) throw repsError;
 
-      // Get roles to identify sales reps
-      const { data: roles } = await supabase
-        .from("user_roles")
-        .select("user_id, role");
-
+      const { data: roles } = await supabase.from("user_roles").select("user_id, role");
       const salesRoles = new Set(["employee", "manager", "admin"]);
-      const salesRepIds = new Set(
-        (roles || []).filter(r => salesRoles.has(r.role)).map(r => r.user_id)
-      );
+      const salesRepIds = new Set((roles || []).filter(r => salesRoles.has(r.role)).map(r => r.user_id));
 
-      // Aggregate by rep
       const repTotals = new Map<string, { name: string; total: number }>();
-
-      // Initialize all sales reps with 0
       (allReps || []).forEach(rep => {
         if (salesRepIds.has(rep.id)) {
           repTotals.set(rep.id, { name: rep.full_name || "Unknown", total: 0 });
         }
       });
 
-      // Sum values from commission documents
       (data || []).forEach(doc => {
         const repId = doc.sales_rep_id;
         if (!repId) return;
-        
         const value = tab === "profit" ? (doc.company_profit || 0) : (doc.rep_commission || 0);
         const existing = repTotals.get(repId);
         if (existing) {
@@ -83,12 +115,9 @@ export function useSalesLeaderboard(tab: LeaderboardTab, range: TimeRange, custo
         }
       });
 
-      // Convert to sorted array
-      const entries: LeaderboardEntry[] = Array.from(repTotals.entries())
+      return Array.from(repTotals.entries())
         .map(([repId, { name, total }]) => ({ repId, repName: name, total }))
         .sort((a, b) => b.total - a.total);
-
-      return entries;
     },
     refetchInterval: 60000,
   });

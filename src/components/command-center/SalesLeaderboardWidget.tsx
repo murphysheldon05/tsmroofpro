@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSalesLeaderboard, useLeaderboardSetting, LeaderboardTab, TimeRange } from "@/hooks/useSalesLeaderboard";
-import { Trophy, Medal, Calendar } from "lucide-react";
+import { Trophy, Calendar } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, startOfMonth } from "date-fns";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -44,6 +44,11 @@ function RankBadge({ rank }: { rank: number }) {
 }
 
 function getBarColor(rank: number, tab: LeaderboardTab) {
+  if (tab === "sales") {
+    if (rank === 1) return "bg-amber-500";
+    if (rank <= 3) return "bg-amber-400";
+    return "bg-amber-300/70";
+  }
   if (tab === "profit") {
     if (rank === 1) return "bg-emerald-500";
     if (rank <= 3) return "bg-emerald-400";
@@ -54,20 +59,31 @@ function getBarColor(rank: number, tab: LeaderboardTab) {
   return "bg-blue-300/70";
 }
 
+function getAvatarColor(tab: LeaderboardTab) {
+  if (tab === "sales") return "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300";
+  if (tab === "profit") return "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300";
+  return "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300";
+}
+
 function getInitials(name: string) {
   return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
 }
 
-const TIME_RANGE_LABELS: Record<TimeRange, string> = {
-  week: "This Week",
-  month: "This Month",
-  ytd: "Year to Date",
-  custom: "Custom Range",
+const TAB_CONFIG: { key: LeaderboardTab; label: string; activeClass: string }[] = [
+  { key: "sales", label: "Sales", activeClass: "bg-amber-500/10 border-amber-500/30 text-amber-700 dark:text-amber-400" },
+  { key: "profit", label: "Profit", activeClass: "bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-400" },
+  { key: "commissions", label: "Commissions", activeClass: "bg-blue-500/10 border-blue-500/30 text-blue-700 dark:text-blue-400" },
+];
+
+const TAB_LABELS: Record<LeaderboardTab, string> = {
+  sales: "Sales Volume",
+  profit: "Profit",
+  commissions: "Commissions",
 };
 
 export function SalesLeaderboardWidget() {
   const { data: isEnabled, isLoading: settingLoading } = useLeaderboardSetting();
-  const [tab, setTab] = useState<LeaderboardTab>("profit");
+  const [tab, setTab] = useState<LeaderboardTab>("sales");
   const [timeRange, setTimeRange] = useState<TimeRange>("month");
   const [customStart, setCustomStart] = useState<string>(format(startOfMonth(new Date()), "yyyy-MM-dd"));
   const [customEnd, setCustomEnd] = useState<string>(format(new Date(), "yyyy-MM-dd"));
@@ -118,34 +134,29 @@ export function SalesLeaderboardWidget() {
           </div>
         </div>
 
-        {/* Tab toggle */}
+        {/* 3-tab toggle: Sales | Profit | Commissions */}
         <div className="flex items-center gap-0 mt-2">
-          <button
-            onClick={() => setTab("profit")}
-            className={cn(
-              "flex-1 text-center py-1.5 text-sm font-medium rounded-l-lg border transition-all",
-              tab === "profit"
-                ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-400"
-                : "bg-muted/50 border-border text-muted-foreground hover:text-foreground"
-            )}
-          >
-            Profit
-          </button>
-          <button
-            onClick={() => setTab("commissions")}
-            className={cn(
-              "flex-1 text-center py-1.5 text-sm font-medium rounded-r-lg border-t border-b border-r transition-all",
-              tab === "commissions"
-                ? "bg-blue-500/10 border-blue-500/30 text-blue-700 dark:text-blue-400"
-                : "bg-muted/50 border-border text-muted-foreground hover:text-foreground"
-            )}
-          >
-            Commissions
-          </button>
+          {TAB_CONFIG.map((t, idx) => (
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              className={cn(
+                "flex-1 text-center py-1.5 text-sm font-medium border transition-all",
+                idx === 0 && "rounded-l-lg",
+                idx === TAB_CONFIG.length - 1 && "rounded-r-lg",
+                idx > 0 && "border-l-0",
+                tab === t.key
+                  ? t.activeClass
+                  : "bg-muted/50 border-border text-muted-foreground hover:text-foreground"
+              )}
+            >
+              {t.label}
+            </button>
+          ))}
         </div>
 
         <p className="text-xs text-muted-foreground mt-1">
-          {tab === "profit" ? "Profit" : "Commissions"} — {periodLabel}
+          {TAB_LABELS[tab]} — {periodLabel}
         </p>
       </CardHeader>
 
@@ -228,9 +239,7 @@ export function SalesLeaderboardWidget() {
                     className={cn(
                       "flex items-center justify-center rounded-full font-semibold text-xs shrink-0",
                       isTopThree ? "w-9 h-9" : "w-7 h-7",
-                      tab === "profit"
-                        ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300"
-                        : "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300"
+                      getAvatarColor(tab)
                     )}
                   >
                     {getInitials(entry.repName)}
