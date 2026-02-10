@@ -7,20 +7,21 @@ interface LogoProps {
   showText?: boolean;
 }
 
-export function Logo({ className, size = "md", showText = false }: LogoProps) {
-  const sizes = {
-    sm: "h-8",
-    md: "h-10",
-    lg: "h-14",
-    xl: "h-20",
-  };
+const sizeMap = {
+  sm: 28,
+  md: 40,
+  lg: 70,
+  xl: 90,
+};
 
+export function Logo({ className, size = "md", showText = false }: LogoProps) {
   return (
     <div className={cn("flex items-center gap-2", className)}>
       <img
         src={tsmLogo}
         alt="TSM Roofing"
-        className={cn("w-auto object-contain", sizes[size])}
+        style={{ height: `${sizeMap[size]}px`, width: "auto" }}
+        className="object-contain"
       />
       {showText && (
         <span className="text-sm font-bold text-foreground leading-tight">

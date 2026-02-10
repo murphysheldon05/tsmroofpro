@@ -8,7 +8,7 @@
   /* ===== LIGHT THEME ===== */
   :root,
   .light {
-    --background: 220 27% 97%;
+    --background: 220 20% 97%;
     --foreground: 222 47% 11%;
 
     --card: 0 0% 100%;

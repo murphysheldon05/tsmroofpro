@@ -38,9 +38,17 @@ export function CompactCoreIdentity() {
           {coreValues.map((value) => (
             <span
               key={value}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/[0.06] border border-primary/[0.12] text-sm font-medium text-primary"
+              className="inline-flex items-center gap-1.5 rounded-lg text-xs font-semibold"
+              style={{
+                background: "rgba(22,163,74,.06)",
+                border: "1px solid rgba(22,163,74,.12)",
+                color: "#16a34a",
+                padding: "6px 14px",
+                borderRadius: "8px",
+                fontSize: "12px",
+              }}
             >
-              <CheckCircle className="w-3.5 h-3.5 text-primary flex-shrink-0" />
+              <CheckCircle className="w-3.5 h-3.5 flex-shrink-0" />
               {value}
             </span>
           ))}

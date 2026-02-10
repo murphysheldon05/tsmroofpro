@@ -20,10 +20,10 @@ const colorMap = {
 };
 
 const colorMapMuted = {
-  red: "bg-muted text-muted-foreground",
-  amber: "bg-muted text-muted-foreground",
-  blue: "bg-muted text-muted-foreground",
-  green: "bg-muted text-muted-foreground",
+  red: "bg-[#f1f4f7] text-[#9ca3af] dark:bg-muted dark:text-muted-foreground",
+  amber: "bg-[#f1f4f7] text-[#9ca3af] dark:bg-muted dark:text-muted-foreground",
+  blue: "bg-[#f1f4f7] text-[#9ca3af] dark:bg-muted dark:text-muted-foreground",
+  green: "bg-[#f1f4f7] text-[#9ca3af] dark:bg-muted dark:text-muted-foreground",
 };
 
 export function NeedsAttentionWidget() {
@@ -124,9 +124,8 @@ export function NeedsAttentionWidget() {
             key={item.label}
             onClick={() => navigate(item.href)}
             className={cn(
-              "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all duration-150 min-h-[44px]",
-              "hover:bg-muted/50 active:scale-[0.98]",
-              item.count === 0 && "opacity-60"
+              "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-150 min-h-[44px]",
+              "hover:bg-[rgba(0,0,0,0.02)] dark:hover:bg-white/[0.02] active:scale-[0.98]",
             )}
           >
             <span
@@ -137,7 +136,7 @@ export function NeedsAttentionWidget() {
             >
               {item.count}
             </span>
-            <span className={cn("text-left", item.count === 0 ? "text-muted-foreground" : "text-foreground font-medium")}>
+            <span className={cn("text-left", item.count === 0 ? "text-[#9ca3af]" : "text-foreground font-medium")}>
               {item.label}
             </span>
           </button>
