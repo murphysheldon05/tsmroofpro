@@ -54,7 +54,7 @@ const tabs = [
 
 export default function OpsCompliance() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const { isAdmin, isOpsCompliance } = useAuth();
+  const { isAdmin } = useAuth();
   
   const activeTab = searchParams.get("tab") || "dashboard";
 
@@ -162,7 +162,7 @@ export default function OpsCompliance() {
   };
 
   // Access check
-  if (!isAdmin && !isOpsCompliance) {
+  if (!isAdmin) {
     return (
       <AppLayout>
         <div className="flex items-center justify-center min-h-[60vh]">

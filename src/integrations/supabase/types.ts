@@ -2041,6 +2041,7 @@ export type Database = {
           created_at: string
           data_consent_given: boolean | null
           data_consent_given_at: string | null
+          department: string | null
           department_id: string | null
           email: string | null
           employee_status: string | null
@@ -2071,6 +2072,7 @@ export type Database = {
           created_at?: string
           data_consent_given?: boolean | null
           data_consent_given_at?: string | null
+          department?: string | null
           department_id?: string | null
           email?: string | null
           employee_status?: string | null
@@ -2101,6 +2103,7 @@ export type Database = {
           created_at?: string
           data_consent_given?: boolean | null
           data_consent_given_at?: string | null
+          department?: string | null
           department_id?: string | null
           email?: string | null
           employee_status?: string | null
@@ -3426,6 +3429,7 @@ export type Database = {
         | "sales_rep"
         | "sales_manager"
         | "accounting"
+        | "user"
       assignment_role:
         | "business_owner"
         | "system_admin"
@@ -3646,6 +3650,7 @@ export const Constants = {
         "sales_rep",
         "sales_manager",
         "accounting",
+        "user",
       ],
       assignment_role: [
         "business_owner",

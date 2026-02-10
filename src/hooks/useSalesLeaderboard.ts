@@ -79,7 +79,7 @@ export function useSalesLeaderboard(tab: LeaderboardTab, range: TimeRange, custo
       if (repsError) throw repsError;
 
       const { data: roles } = await supabase.from("user_roles").select("user_id, role");
-      const salesRoles = new Set(["employee", "manager", "admin"]);
+      const salesRoles = new Set(["sales_rep", "sales_manager", "user", "manager", "admin"]);
       const salesRepIds = new Set((roles || []).filter(r => salesRoles.has(r.role)).map(r => r.user_id));
 
       const repTotals = new Map<string, { name: string; total: number }>();

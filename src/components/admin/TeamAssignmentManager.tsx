@@ -28,7 +28,7 @@ interface User {
   id: string;
   full_name: string | null;
   email: string | null;
-  role: "admin" | "manager" | "employee";
+  role: string;
 }
 
 function TeamMemberTierSelect({ 
@@ -108,19 +108,19 @@ export function TeamAssignmentManager() {
 
       if (rolesError) throw rolesError;
 
-      const roleByUserId = new Map<string, "admin" | "manager" | "employee" | "ops_compliance">(
-        (roles ?? []).map((r) => [r.user_id, r.role as "admin" | "manager" | "employee" | "ops_compliance"])
+      const roleByUserId = new Map<string, string>(
+        (roles ?? []).map((r) => [r.user_id, r.role as string])
       );
 
       return (profiles ?? []).map((p) => ({
         ...p,
-        role: roleByUserId.get(p.id) ?? "employee",
+        role: roleByUserId.get(p.id) ?? "user",
       })) as User[];
     },
   });
 
-  const managers = users?.filter((u) => u.role === "manager") || [];
-  const employees = users?.filter((u) => u.role === "employee") || [];
+  const managers = users?.filter((u) => u.role === "manager" || u.role === "sales_manager" || u.role === "admin") || [];
+  const employees = users?.filter((u) => u.role !== "admin" && u.role !== "manager") || [];
   
   // Get assigned employee IDs
   const assignedEmployeeIds = new Set(assignments?.map((a) => a.employee_id) || []);

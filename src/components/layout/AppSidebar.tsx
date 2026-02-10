@@ -368,22 +368,16 @@ export function AppSidebar() {
   const getRoleBadgeVariant = () => {
     if (role === 'admin') return 'destructive';
     if (role === 'manager' || role === 'sales_manager') return 'default';
-    if (role === 'ops_compliance') return 'default';
-    if (role === 'accounting') return 'default';
     return 'secondary';
   };
 
   const getRoleLabel = () => {
     if (role === 'admin') return 'Admin';
-    if (role === 'accounting') return 'Accounting';
     if (role === 'manager') return 'Manager';
     if (role === 'sales_manager') return 'Sales Manager';
     if (role === 'sales_rep') return 'Sales Rep';
-    if (role === 'ops_compliance') return 'Ops Compliance';
-    return 'Employee';
+    return 'User';
   };
-
-  const isOpsCompliance = role === 'ops_compliance';
 
   const toggleSection = (title: string) => {
     setOpenSections((prev) =>
@@ -539,13 +533,13 @@ export function AppSidebar() {
           </Badge>
         </button>
 
-        {/* Admin & Manager Panel - Visible to admin, manager, sales_manager, accounting */}
-        {(isAdmin || isManager || role === 'sales_manager' || role === 'accounting') && (
+        {/* Admin & Manager Panel */}
+        {(isAdmin || isManager) && (
           <div className="pt-2 border-t border-border/30">
             <span className="text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-[1px] px-3 mb-1 block">
-              {isAdmin ? 'Admin & Manager Panel' : role === 'accounting' ? 'Accounting Panel' : 'Manager Panel'}
+              {isAdmin ? 'Admin Panel' : 'Manager Panel'}
             </span>
-            {(isAdmin || isManager || role === 'sales_manager') && (
+            {(isAdmin || role === 'sales_manager') && (
               <button
                 onClick={() => handleNavClick("/pending-review")}
                 className={cn(
@@ -573,29 +567,20 @@ export function AppSidebar() {
                 Admin Panel
               </button>
             )}
-          </div>
-        )}
-
-        {/* Ops Compliance - Visible to admin and ops_compliance */}
-        {(isAdmin || isOpsCompliance) && (
-          <div className={cn("pt-2", !(isAdmin || isManager) && "border-t border-border/30")}>
-            {!(isAdmin || isManager) && (
-              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-3 mb-1 block">
-                Compliance
-              </span>
+            {isAdmin && (
+              <button
+                onClick={() => handleNavClick("/ops-compliance")}
+                className={cn(
+                  "w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm transition-all duration-150 relative min-h-[44px]",
+                  location.pathname.startsWith("/ops-compliance")
+                    ? "nav-item-active font-medium"
+                    : "text-sidebar-foreground/70 hover:bg-primary/5 hover:text-primary/80"
+                )}
+              >
+                <Shield className={cn("w-5 h-5", location.pathname.startsWith("/ops-compliance") && "nav-icon-glow")} />
+                Ops Compliance
+              </button>
             )}
-            <button
-              onClick={() => handleNavClick("/ops-compliance")}
-              className={cn(
-                "w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm transition-all duration-150 relative min-h-[44px]",
-                location.pathname.startsWith("/ops-compliance")
-                  ? "nav-item-active font-medium"
-                  : "text-sidebar-foreground/70 hover:bg-primary/5 hover:text-primary/80"
-              )}
-            >
-              <Shield className={cn("w-5 h-5", location.pathname.startsWith("/ops-compliance") && "nav-icon-glow")} />
-              Ops Compliance
-            </button>
           </div>
         )}
         
