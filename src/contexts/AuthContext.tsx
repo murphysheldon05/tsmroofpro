@@ -3,7 +3,7 @@ import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { PasswordResetPrompt } from '@/components/auth/PasswordResetPrompt';
 
-type AppRole = 'admin' | 'manager' | 'employee' | 'ops_compliance';
+type AppRole = 'admin' | 'manager' | 'employee' | 'ops_compliance' | 'sales_rep' | 'sales_manager' | 'accounting';
 type EmployeeStatus = 'active' | 'pending' | 'rejected' | 'inactive';
 
 interface AuthContextType {
@@ -19,6 +19,9 @@ interface AuthContextType {
   isAdmin: boolean;
   isManager: boolean;
   isOpsCompliance: boolean;
+  isAccounting: boolean;
+  isSalesManager: boolean;
+  isSalesRep: boolean;
   isActive: boolean;
 }
 
@@ -200,6 +203,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isAdmin: role === 'admin',
     isManager: role === 'manager' || role === 'admin',
     isOpsCompliance: role === 'ops_compliance',
+    isAccounting: role === 'accounting',
+    isSalesManager: role === 'sales_manager',
+    isSalesRep: role === 'sales_rep',
     isActive,
   };
 

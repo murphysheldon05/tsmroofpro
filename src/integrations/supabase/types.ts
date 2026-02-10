@@ -1320,6 +1320,153 @@ export type Database = {
         }
         Relationships: []
       }
+      draw_applications: {
+        Row: {
+          amount: number
+          applied_at: string
+          applied_by: string
+          commission_id: string
+          draw_id: string
+          id: string
+          notes: string | null
+        }
+        Insert: {
+          amount: number
+          applied_at?: string
+          applied_by: string
+          commission_id: string
+          draw_id: string
+          id?: string
+          notes?: string | null
+        }
+        Update: {
+          amount?: number
+          applied_at?: string
+          applied_by?: string
+          commission_id?: string
+          draw_id?: string
+          id?: string
+          notes?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "draw_applications_applied_by_fkey"
+            columns: ["applied_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "draw_applications_draw_id_fkey"
+            columns: ["draw_id"]
+            isOneToOne: false
+            referencedRelation: "draws"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      draw_settings: {
+        Row: {
+          id: string
+          setting_key: string
+          setting_value: number
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          id?: string
+          setting_key: string
+          setting_value: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          id?: string
+          setting_key?: string
+          setting_value?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "draw_settings_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      draws: {
+        Row: {
+          amount: number
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          denial_reason: string | null
+          denied_by: string | null
+          id: string
+          notes: string | null
+          remaining_balance: number
+          requested_at: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          denial_reason?: string | null
+          denied_by?: string | null
+          id?: string
+          notes?: string | null
+          remaining_balance?: number
+          requested_at?: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          denial_reason?: string | null
+          denied_by?: string | null
+          id?: string
+          notes?: string | null
+          remaining_balance?: number
+          requested_at?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "draws_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "draws_denied_by_fkey"
+            columns: ["denied_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "draws_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_templates: {
         Row: {
           button_text: string
@@ -3032,7 +3179,14 @@ export type Database = {
         | "social"
         | "productivity"
         | "other"
-      app_role: "admin" | "manager" | "employee" | "ops_compliance"
+      app_role:
+        | "admin"
+        | "manager"
+        | "employee"
+        | "ops_compliance"
+        | "sales_rep"
+        | "sales_manager"
+        | "accounting"
       assignment_role:
         | "business_owner"
         | "system_admin"
@@ -3245,7 +3399,15 @@ export const Constants = {
         "productivity",
         "other",
       ],
-      app_role: ["admin", "manager", "employee", "ops_compliance"],
+      app_role: [
+        "admin",
+        "manager",
+        "employee",
+        "ops_compliance",
+        "sales_rep",
+        "sales_manager",
+        "accounting",
+      ],
       assignment_role: [
         "business_owner",
         "system_admin",
