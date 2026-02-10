@@ -128,7 +128,7 @@ export function CommandCenterSettings({
               items={widgetOrder}
               strategy={verticalListSortingStrategy}
             >
-              {widgetOrder.map((key) => (
+              {widgetOrder.filter((key) => WIDGET_LABELS[key]).map((key) => (
                 <DraggableWidgetItem
                   key={key}
                   id={key}
