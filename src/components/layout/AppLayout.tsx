@@ -3,14 +3,12 @@ import { useLocation, Link, useNavigate } from "react-router-dom";
 import { AppSidebar } from "./AppSidebar";
 import { Home, ChevronRight, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { NotificationBell } from "@/components/notifications/NotificationBell";
 
 interface BreadcrumbItem {
   label: string;
   href: string;
 }
 
-// Route hierarchy mapping for proper breadcrumb display
 const routeHierarchy: Record<string, BreadcrumbItem[]> = {
   "/command-center": [],
   "/playbook-library": [{ label: "Playbook Library", href: "/playbook-library" }],
@@ -46,12 +44,10 @@ const routeHierarchy: Record<string, BreadcrumbItem[]> = {
 };
 
 function getBreadcrumbs(pathname: string): BreadcrumbItem[] {
-  // Check for exact match first
   if (routeHierarchy[pathname]) {
     return routeHierarchy[pathname];
   }
 
-  // Check for dynamic routes (e.g., /commissions/:id)
   if (pathname.startsWith("/commissions/") && pathname !== "/commissions/new") {
     return [
       { label: "Commissions", href: "/commissions" },
@@ -88,7 +84,6 @@ function getBreadcrumbs(pathname: string): BreadcrumbItem[] {
     ];
   }
 
-  // Fallback: generate from path segments
   const segments = pathname.split("/").filter(Boolean);
   return segments.map((segment, index) => ({
     label: segment.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
@@ -119,20 +114,9 @@ export const AppLayout = forwardRef<HTMLDivElement, AppLayoutProps>(
     <div ref={ref} className="min-h-screen bg-background">
       <AppSidebar />
       <main className="lg:pl-64 min-h-screen">
-        {/* Header with notification bell */}
-        <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b lg:hidden">
-          <div className="flex items-center justify-end px-4 py-2">
-            <NotificationBell />
-          </div>
-        </div>
-        {/* Desktop notification bell - fixed position */}
-        <div className="hidden lg:block fixed top-4 right-4 z-20">
-          <NotificationBell />
-        </div>
         <div className="p-4 lg:p-8">
           {!isHome && (
             <nav className="mb-4 flex items-center gap-2 text-sm" aria-label="Breadcrumb">
-              {/* Back button - prominent on mobile */}
               <Button
                 variant="ghost"
                 size="sm"
@@ -171,7 +155,6 @@ export const AppLayout = forwardRef<HTMLDivElement, AppLayoutProps>(
                 })}
               </div>
               
-              {/* Mobile: Show current page title */}
               <span className="sm:hidden font-medium text-foreground truncate">
                 {breadcrumbs.length > 0 ? breadcrumbs[breadcrumbs.length - 1].label : ""}
               </span>

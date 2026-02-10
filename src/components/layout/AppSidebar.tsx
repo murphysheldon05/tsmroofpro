@@ -61,6 +61,8 @@ import { useMasterSOPAcknowledgments } from "@/hooks/useMasterSOPAcknowledgments
 import { useSidebarOrder } from "@/hooks/useSidebarOrder";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 interface NavChild {
   title: string;
@@ -240,7 +242,7 @@ function SortableNavItem({
               </button>
             </CollapsibleTrigger>
           </div>
-          <CollapsibleContent className="mt-1 ml-6 space-y-1 border-l border-primary/10 pl-2">
+          <CollapsibleContent className="mt-1 ml-6 space-y-1 border-l border-border/30 pl-2">
             {item.children.map((child) => {
               const childLocked = child.requiresPlaybook && !playbookComplete && !playbookLoading;
               return (
@@ -451,10 +453,9 @@ export function AppSidebar() {
 
   const NavContent = () => (
     <>
-      <div className="p-4 border-b border-primary/20">
-        <div className="flex items-center gap-2">
-          <Logo size="sm" />
-        </div>
+      <div className="p-4 border-b border-border/50 flex items-center justify-between">
+        <Logo size="sm" />
+        <NotificationBell />
       </div>
 
       <nav className="flex-1 overflow-y-auto p-3 space-y-1">
@@ -488,7 +489,7 @@ export function AppSidebar() {
         </DndContext>
       </nav>
 
-      <div className="p-3 border-t border-primary/20 space-y-2">
+      <div className="p-3 border-t border-border/50 space-y-1">
         {/* User info with avatar and role badge */}
         <button
           onClick={() => handleNavClick("/profile")}
@@ -531,7 +532,7 @@ export function AppSidebar() {
 
         {/* Admin & Manager Panel - Only visible to admins/managers */}
         {(isAdmin || isManager) && (
-          <div className="pt-2 border-t border-primary/10">
+          <div className="pt-2 border-t border-border/30">
             <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-3 mb-1 block">
               Admin & Manager Panel
             </span>
@@ -566,7 +567,7 @@ export function AppSidebar() {
 
         {/* Ops Compliance - Visible to admin and ops_compliance */}
         {(isAdmin || isOpsCompliance) && (
-          <div className={cn("pt-2", !(isAdmin || isManager) && "border-t border-primary/10")}>
+          <div className={cn("pt-2", !(isAdmin || isManager) && "border-t border-border/30")}>
             {!(isAdmin || isManager) && (
               <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-3 mb-1 block">
                 Compliance
@@ -587,11 +588,13 @@ export function AppSidebar() {
           </div>
         )}
         
+        <ThemeToggle />
+        
         <button
           onClick={() => signOut()}
-          className="w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium text-sidebar-foreground hover:bg-destructive/10 hover:text-destructive transition-all duration-150 min-h-[44px]"
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-sidebar-foreground/70 hover:bg-destructive/10 hover:text-destructive transition-all duration-150 min-h-[44px]"
         >
-          <LogOut className="w-5 h-5" />
+          <LogOut className="w-[18px] h-[18px]" />
           Sign Out
         </button>
       </div>
