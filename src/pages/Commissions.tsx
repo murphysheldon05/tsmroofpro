@@ -34,7 +34,8 @@ export default function Commissions() {
 
   const isAdmin = role === "admin";
   const isManager = role === "manager";
-  const canSubmit = isAdmin || isManager;
+  // Any active user can submit commissions per governance rules
+  const canSubmit = true;
   const commissionHolds = userHolds?.filter(h => h.hold_type === "commission_hold") || [];
 
   // Status counts
@@ -114,17 +115,17 @@ export default function Commissions() {
             </p>
           </div>
           
-          {canSubmit && (
-            <div className="flex gap-2">
-              <Button 
-                onClick={() => navigate("/commissions/new")} 
-                className="gap-2 rounded-xl"
-                disabled={commissionHolds.length > 0}
-                title={commissionHolds.length > 0 ? "Blocked by active hold" : ""}
-              >
-                <Plus className="h-4 w-4" />
-                New Commission
-              </Button>
+          <div className="flex gap-2">
+            <Button 
+              onClick={() => navigate("/commissions/new")} 
+              className="gap-2 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground"
+              disabled={commissionHolds.length > 0}
+              title={commissionHolds.length > 0 ? "Blocked by active hold" : ""}
+            >
+              <Plus className="h-4 w-4" />
+              Submit Commission
+            </Button>
+            {(isAdmin || isManager) && (
               <Button 
                 variant="outline" 
                 onClick={() => navigate("/commissions/new?type=subcontractor")}
@@ -134,8 +135,8 @@ export default function Commissions() {
                 <Users className="h-4 w-4" />
                 Sub
               </Button>
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
         {/* Summary Cards - large rounded numbers */}
