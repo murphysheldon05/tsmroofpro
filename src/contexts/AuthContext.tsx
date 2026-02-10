@@ -1,10 +1,9 @@
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react'; // v2
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { PasswordResetPrompt } from '@/components/auth/PasswordResetPrompt';
 
 type AppRole = 'admin' | 'manager' | 'employee' | 'ops_compliance';
-// CANONICAL STATUS: Single source of truth for user access
 type EmployeeStatus = 'active' | 'pending' | 'rejected' | 'inactive';
 
 interface AuthContextType {
@@ -20,7 +19,7 @@ interface AuthContextType {
   isAdmin: boolean;
   isManager: boolean;
   isOpsCompliance: boolean;
-  isActive: boolean; // True ONLY when employee_status = 'active'
+  isActive: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -28,12 +27,13 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true); // TRUE by default — never false until init completes
   const [role, setRole] = useState<AppRole | null>(null);
   const [employeeStatus, setEmployeeStatus] = useState<EmployeeStatus | null>(null);
   const [mustResetPassword, setMustResetPassword] = useState(false);
+  const isMounted = useRef(true);
 
-  const fetchUserRole = async (userId: string) => {
+  const fetchUserRole = useCallback(async (userId: string) => {
     const { data } = await supabase
       .from('user_roles')
       .select('role')
@@ -42,12 +42,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .limit(1)
       .maybeSingle();
     
-    if (data) {
+    if (isMounted.current && data) {
       setRole(data.role as AppRole);
     }
-  };
+  }, []);
 
-  // CANONICAL ACCESS CHECK: employee_status is the SINGLE source of truth
   const checkProfileStatus = useCallback(async (userId: string) => {
     const { data } = await supabase
       .from('profiles')
@@ -55,13 +54,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .eq('id', userId)
       .maybeSingle();
     
+    if (!isMounted.current) return;
+
     if (data) {
       if (data.must_reset_password) {
         setMustResetPassword(true);
       }
       
-      // GOVERNANCE: employee_status is canonical; is_approved is kept for backward compat
-      // Active status requires BOTH employee_status='active' AND is_approved=true
       let status: EmployeeStatus = 'pending';
       if (data.employee_status) {
         status = data.employee_status as EmployeeStatus;
@@ -73,57 +72,73 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       setEmployeeStatus(status);
     } else {
-      // No profile found - treat as pending
       setEmployeeStatus('pending');
     }
   }, []);
 
-  // Public method to refresh profile status after approval
   const refreshProfile = useCallback(async () => {
     if (user) {
       await fetchUserRole(user.id);
       await checkProfileStatus(user.id);
     }
-  }, [user, checkProfileStatus]);
+  }, [user, checkProfileStatus, fetchUserRole]);
 
   useEffect(() => {
+    isMounted.current = true;
+
+    // 1. Set up listener for ONGOING auth changes (does NOT control loading)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        
-        if (session?.user) {
-          setTimeout(() => {
-            fetchUserRole(session.user.id);
-            checkProfileStatus(session.user.id);
-          }, 0);
+      (event, newSession) => {
+        if (!isMounted.current) return;
+        setSession(newSession);
+        setUser(newSession?.user ?? null);
+
+        if (newSession?.user) {
+          // Fire and forget — don't await, don't touch loading
+          fetchUserRole(newSession.user.id);
+          checkProfileStatus(newSession.user.id);
         } else {
           setRole(null);
           setEmployeeStatus(null);
           setMustResetPassword(false);
         }
-        
-        setLoading(false);
       }
     );
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchUserRole(session.user.id);
-        checkProfileStatus(session.user.id);
-      }
-      setLoading(false);
-    });
+    // 2. INITIAL load — controls loading state
+    const initializeAuth = async () => {
+      try {
+        const { data: { session: initialSession } } = await supabase.auth.getSession();
+        if (!isMounted.current) return;
 
-    return () => subscription.unsubscribe();
-  }, [checkProfileStatus]);
+        setSession(initialSession);
+        setUser(initialSession?.user ?? null);
+
+        if (initialSession?.user) {
+          // Await BOTH before setting loading false
+          await Promise.all([
+            fetchUserRole(initialSession.user.id),
+            checkProfileStatus(initialSession.user.id),
+          ]);
+        }
+      } finally {
+        if (isMounted.current) {
+          setLoading(false);
+        }
+      }
+    };
+
+    initializeAuth();
+
+    return () => {
+      isMounted.current = false;
+      subscription.unsubscribe();
+    };
+  }, [checkProfileStatus, fetchUserRole]);
 
   const signIn = async (email: string, password: string) => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     
-    // Update last login timestamp on successful sign in
     if (!error && data.user) {
       supabase
         .from('profiles')
@@ -136,7 +151,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signUp = async (email: string, password: string, fullName: string) => {
-    // HARD LOCK: Always use tsmroofpro.com for all auth redirects
     const redirectUrl = 'https://tsmroofpro.com/auth';
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -147,7 +161,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       },
     });
 
-    // Update profile with data consent
     if (!error && data.user) {
       await supabase
         .from("profiles")
@@ -156,8 +169,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           data_consent_given_at: new Date().toISOString(),
         })
         .eq("id", data.user.id);
-      
-      // Note: Admin notification is sent from Signup.tsx with full details
     }
 
     return { error };
@@ -174,7 +185,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setMustResetPassword(false);
   };
 
-  // CANONICAL ACCESS RULE: Only 'active' status grants access
   const isActive = employeeStatus === 'active';
 
   const value = {
