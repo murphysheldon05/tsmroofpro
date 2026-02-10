@@ -28,6 +28,7 @@ import {
 } from "@/hooks/useDeliveryCalendar";
 import { cn } from "@/lib/utils";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { DayOverflowModal, OverflowTrigger } from "@/components/calendar/DayOverflowModal";
 
 type CalendarView = "day" | "week" | "month";
 
@@ -64,6 +65,7 @@ export default function DeliverySchedule() {
   const [editDescription, setEditDescription] = useState("");
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [newEvent, setNewEvent] = useState({ title: "", description: "", start_date: "", end_date: "", status: "scheduled" });
+  const [overflowDate, setOverflowDate] = useState<Date | null>(null);
 
   const { isManager, isAdmin } = useAuth();
   const canEdit = isManager || isAdmin;
@@ -288,7 +290,7 @@ export default function DeliverySchedule() {
                   </div>
                   <div className="space-y-1">
                     {dayEvents.slice(0, 3).map(e => <DeliveryCard key={e.id} event={e} compact />)}
-                    {dayEvents.length > 3 && <p className="text-xs text-muted-foreground text-center">+{dayEvents.length - 3} more</p>}
+                    {dayEvents.length > 3 && <OverflowTrigger count={dayEvents.length - 3} onClick={() => setOverflowDate(day)} />}
                   </div>
                 </div>
               );
@@ -351,6 +353,11 @@ export default function DeliverySchedule() {
           </button>
         )}
       </div>
+
+      {/* Day overflow modal */}
+      <DayOverflowModal date={overflowDate} onClose={() => setOverflowDate(null)}>
+        {overflowDate && getEventsForDate(overflowDate).map(e => <DeliveryCard key={e.id} event={e} />)}
+      </DayOverflowModal>
 
       {/* Add Delivery Dialog */}
       <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
