@@ -45,9 +45,9 @@ interface CommissionDocumentFormProps {
 }
 
 // Shared input classes — h-12 = 48px touch targets on all devices
-const inputBaseClasses = "h-12 text-base transition-all duration-200 ease-out bg-background/50 border-border/50 hover:border-primary/50 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:shadow-md focus:shadow-primary/10";
-const numberInputClasses = `font-mono tracking-wide tabular-nums ${inputBaseClasses}`;
-const calculatedInputClasses = "h-12 font-mono tracking-wide tabular-nums bg-primary/5 border-primary/20 text-primary text-base";
+const inputBaseClasses = "h-12 text-base px-4 rounded-xl transition-all duration-200 ease-out bg-background border-border/60 hover:border-primary/50 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:shadow-md";
+const numberInputClasses = `font-mono text-base tracking-wide tabular-nums ${inputBaseClasses}`;
+const calculatedInputClasses = "h-12 px-4 rounded-xl font-mono text-base tracking-wide tabular-nums bg-primary/5 border-primary/20 text-primary";
 
 // ─── Section Header ──────────────────────────────────────────
 interface SectionHeaderProps {
@@ -117,24 +117,25 @@ interface FormRowProps {
 function EnhancedFormRow({ label, children, hint, variant = "default", highlight }: FormRowProps) {
   return (
     <div className={cn(
-      "py-4 border-b border-border/30 transition-colors",
+      "py-3.5 border-b border-border/20 transition-colors",
       variant === "negative" && "hover:bg-destructive/5",
       variant === "positive" && "hover:bg-emerald-500/5",
-      variant === "calculated" && "bg-primary/5 rounded-lg my-2 border-none px-4",
-      highlight && "bg-primary/10 rounded-xl my-3 border-none p-4 ring-1 ring-primary/20"
+      variant === "calculated" && "bg-primary/5 rounded-xl my-1.5 border-none px-4 py-3.5",
+      highlight && "bg-primary/10 rounded-xl my-2 border-none p-4 ring-1 ring-primary/20"
     )}>
       <Label className={cn(
-        "text-sm font-medium mb-2 flex items-center gap-2",
+        "text-[13px] font-semibold tracking-wide uppercase mb-1.5 flex items-center gap-1.5",
         variant === "negative" && "text-destructive",
         variant === "positive" && "text-emerald-500",
-        variant === "calculated" && "text-primary"
+        variant === "calculated" && "text-primary",
+        variant === "default" && "text-muted-foreground"
       )}>
         {label}
-        {variant === "calculated" && <Lock className="w-3 h-3 text-muted-foreground" />}
+        {variant === "calculated" && <Lock className="w-3 h-3 text-muted-foreground/60" />}
       </Label>
-      <div className="mt-2">{children}</div>
+      <div className="mt-1.5">{children}</div>
       {hint && (
-        <p className="mt-2 text-xs text-muted-foreground flex items-center gap-1">
+        <p className="mt-1.5 text-[11px] text-muted-foreground/80 flex items-center gap-1">
           <Info className="w-3 h-3 shrink-0" />
           {hint}
         </p>
@@ -706,7 +707,7 @@ export function CommissionDocumentForm({ document: existingDoc, readOnly = false
                   <Input value={formatCurrency(calculated.net_profit)} disabled className={calculatedInputClasses} />
                 </EnhancedFormRow>
                 <EnhancedFormRow label="Rep Commission" variant="calculated" highlight hint="Total dollars paid to you">
-                  <Input value={formatCurrency(calculated.rep_commission)} disabled className={cn(calculatedInputClasses, "text-xl font-bold")} />
+                  <Input value={formatCurrency(calculated.rep_commission)} disabled className={cn(calculatedInputClasses, "text-xl font-bold h-14")} />
                 </EnhancedFormRow>
                 <EnhancedFormRow label="Advance Total">{renderMoneyInput("advance_total")}</EnhancedFormRow>
                 {isPrivileged && (
@@ -733,19 +734,19 @@ export function CommissionDocumentForm({ document: existingDoc, readOnly = false
 
       {/* ── Mobile Floating Commission Summary ── */}
       <div className="fixed bottom-20 left-4 right-4 sm:hidden z-10">
-        <Card className="glass-card border-primary/30 shadow-lg shadow-primary/20">
-          <CardContent className="py-4 px-5">
+        <Card className="bg-card/95 backdrop-blur-lg border-primary/30 shadow-xl rounded-2xl">
+          <CardContent className="py-3.5 px-5">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-muted-foreground mb-1">Your Commission</p>
-                <p className="text-2xl font-bold text-primary neon-text font-mono">
+                <p className="text-[11px] text-muted-foreground uppercase tracking-wider mb-0.5">Your Commission</p>
+                <p className="text-2xl font-bold text-primary font-mono tracking-tight">
                   {formatCurrency(calculated.rep_commission)}
                 </p>
               </div>
               {formData.advance_total > 0 && (
                 <div className="text-right">
-                  <p className="text-xs text-muted-foreground">After Advance</p>
-                  <p className="text-lg font-semibold font-mono">
+                  <p className="text-[11px] text-muted-foreground uppercase tracking-wider">After Advance</p>
+                  <p className="text-lg font-semibold font-mono tracking-tight">
                     {formatCurrency(calculated.rep_commission - formData.advance_total)}
                   </p>
                 </div>
