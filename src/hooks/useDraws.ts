@@ -97,7 +97,7 @@ export function useRequestDraw() {
   const { user } = useAuth();
   
   return useMutation({
-    mutationFn: async ({ amount, notes }: { amount: number; notes?: string }) => {
+    mutationFn: async ({ amount, notes, job_number, reason }: { amount: number; notes?: string; job_number: string; reason: string }) => {
       const { data, error } = await supabase
         .from("draws")
         .insert({
@@ -106,7 +106,9 @@ export function useRequestDraw() {
           remaining_balance: amount,
           notes: notes || null,
           status: "requested",
-        })
+          job_number,
+          reason,
+        } as any)
         .select()
         .single();
       if (error) throw error;

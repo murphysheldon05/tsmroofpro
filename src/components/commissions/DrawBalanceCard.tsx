@@ -10,19 +10,20 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
+  DialogDescription,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import {
   useUserDraws,
   useActiveDrawForUser,
   useRequestDraw,
   useDrawSettings,
-  useDrawApplications,
 } from "@/hooks/useDraws";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRolePermissions } from "@/hooks/useRolePermissions";
-import { DollarSign, Plus, Clock, CheckCircle, AlertTriangle, Loader2 } from "lucide-react";
+import { DollarSign, Plus, AlertTriangle, Loader2, Wallet } from "lucide-react";
 import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
 export function DrawBalanceCard() {
   const { user } = useAuth();
@@ -33,7 +34,8 @@ export function DrawBalanceCard() {
   const requestDraw = useRequestDraw();
   const [showRequestDialog, setShowRequestDialog] = useState(false);
   const [amount, setAmount] = useState("");
-  const [notes, setNotes] = useState("");
+  const [jobNumber, setJobNumber] = useState("");
+  const [reason, setReason] = useState("");
 
   const maxDraw = settings?.max_draw_amount ?? 4000;
   const existingBalance = activeDraw?.remaining_balance ?? 0;
@@ -43,13 +45,22 @@ export function DrawBalanceCard() {
     const numAmount = parseFloat(amount);
     if (isNaN(numAmount) || numAmount <= 0) return;
     if (numAmount > maxAllowed) return;
-    requestDraw.mutate({ amount: numAmount, notes: notes || undefined });
-    setShowRequestDialog(false);
-    setAmount("");
-    setNotes("");
+    if (!jobNumber.trim() || !reason.trim()) return;
+    requestDraw.mutate(
+      { amount: numAmount, job_number: jobNumber.trim(), reason: reason.trim() },
+      {
+        onSuccess: () => {
+          setShowRequestDialog(false);
+          setAmount("");
+          setJobNumber("");
+          setReason("");
+        },
+      }
+    );
   };
 
   const pendingRequests = draws?.filter(d => d.status === "requested") || [];
+  const activeDraws = draws?.filter(d => ["active", "approved"].includes(d.status)) || [];
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -64,44 +75,37 @@ export function DrawBalanceCard() {
 
   if (isLoading) return null;
 
+  const totalBalance = activeDraws.reduce((s, d) => s + Number(d.remaining_balance || 0), 0);
+
   return (
     <Card className="glass-card">
       <CardHeader className="pb-3">
         <CardTitle className="text-sm flex items-center gap-2">
-          <DollarSign className="w-4 h-4 text-primary" />
+          <Wallet className="w-4 h-4 text-primary" />
           Draw Balance
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
-        {activeDraw ? (
-          <>
-            <div className="space-y-1">
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Original Amount</span>
-                <span className="font-medium">${Number(activeDraw.amount).toLocaleString()}</span>
+        {totalBalance > 0 ? (
+          <div className="space-y-2">
+            <p className={cn(
+              "text-2xl font-extrabold",
+              totalBalance >= 2000 ? "text-red-600" : "text-amber-600"
+            )}>
+              ${totalBalance.toLocaleString()}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {activeDraws.length} active draw{activeDraws.length !== 1 ? "s" : ""}
+            </p>
+            {activeDraws.map(d => (
+              <div key={d.id} className="text-xs p-2 bg-muted/30 rounded-lg flex justify-between items-center">
+                <span className="font-medium">{(d as any).job_number || "—"}</span>
+                <span className="font-semibold">${Number(d.remaining_balance).toLocaleString()}</span>
               </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Applied from Commissions</span>
-                <span className="font-medium text-green-600">
-                  -${(Number(activeDraw.amount) - Number(activeDraw.remaining_balance)).toLocaleString()}
-                </span>
-              </div>
-              <div className="flex justify-between text-sm font-semibold border-t border-border/50 pt-1 mt-1">
-                <span>Remaining Balance</span>
-                <span className={Number(activeDraw.remaining_balance) > 0 ? "text-amber-600" : "text-green-600"}>
-                  ${Number(activeDraw.remaining_balance).toLocaleString()}
-                </span>
-              </div>
-              {activeDraw.approved_at && (
-                <p className="text-xs text-muted-foreground">
-                  Approved {format(new Date(activeDraw.approved_at), "MMM d, yyyy")}
-                </p>
-              )}
-            </div>
-            {getStatusBadge(activeDraw.status)}
-          </>
+            ))}
+          </div>
         ) : (
-          <p className="text-sm text-muted-foreground">No active draw</p>
+          <p className="text-sm text-muted-foreground">No active draws</p>
         )}
 
         {pendingRequests.length > 0 && (
@@ -116,64 +120,88 @@ export function DrawBalanceCard() {
         )}
 
         {canRequestDraws && (
-          <Dialog open={showRequestDialog} onOpenChange={setShowRequestDialog}>
-            <DialogTrigger asChild>
-              <Button variant="outline" size="sm" className="w-full gap-2">
-                <Plus className="w-3 h-3" />
-                Request Draw
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-md">
-              <DialogHeader>
-                <DialogTitle>Request Draw / Advance</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4 mt-4">
-                <p className="text-sm text-muted-foreground">
-                  Request an advance against future commissions. Maximum: ${maxAllowed.toLocaleString()}
-                </p>
-                <div className="space-y-2">
-                  <Label>Amount *</Label>
-                  <Input
-                    type="number"
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                    placeholder="0.00"
-                    max={maxAllowed}
-                  />
-                  {parseFloat(amount) > maxAllowed && (
-                    <p className="text-xs text-destructive flex items-center gap-1">
-                      <AlertTriangle className="w-3 h-3" />
-                      Exceeds maximum allowed (${maxAllowed.toLocaleString()})
-                    </p>
-                  )}
+          <>
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full gap-2 border-amber-500/50 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-500/10"
+              onClick={() => setShowRequestDialog(true)}
+            >
+              <Plus className="w-3 h-3" />
+              Request Draw
+            </Button>
+
+            <Dialog open={showRequestDialog} onOpenChange={setShowRequestDialog}>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Request a Draw</DialogTitle>
+                  <DialogDescription>Request an advance against a future commission</DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Job Number *</Label>
+                    <Input
+                      value={jobNumber}
+                      onChange={(e) => setJobNumber(e.target.value)}
+                      placeholder="Enter the job number"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Draw Amount *</Label>
+                    <Input
+                      type="number"
+                      value={amount}
+                      onChange={(e) => setAmount(e.target.value)}
+                      placeholder="0.00"
+                      max={maxAllowed}
+                    />
+                    <p className="text-xs text-muted-foreground">Maximum draw: ${maxDraw.toLocaleString()}</p>
+                    {existingBalance > 0 && (
+                      <p className="text-xs text-muted-foreground">
+                        Current balance: ${existingBalance.toLocaleString()}. You can request up to ${maxAllowed.toLocaleString()}.
+                      </p>
+                    )}
+                    {parseFloat(amount) > maxAllowed && (
+                      <p className="text-xs text-destructive flex items-center gap-1">
+                        <AlertTriangle className="w-3 h-3" />
+                        Exceeds maximum allowed
+                      </p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Reason *</Label>
+                    <Textarea
+                      value={reason}
+                      onChange={(e) => setReason(e.target.value)}
+                      placeholder="Why do you need this advance?"
+                      rows={3}
+                    />
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label>Reason / Notes</Label>
-                  <Textarea
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    placeholder="Why do you need this draw?"
-                  />
-                </div>
-                <Button
-                  onClick={handleSubmit}
-                  className="w-full"
-                  disabled={
-                    requestDraw.isPending ||
-                    !amount ||
-                    parseFloat(amount) <= 0 ||
-                    parseFloat(amount) > maxAllowed
-                  }
-                >
-                  {requestDraw.isPending ? (
-                    <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Submitting...</>
-                  ) : (
-                    "Submit Draw Request"
-                  )}
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setShowRequestDialog(false)}>Cancel</Button>
+                  <Button
+                    onClick={handleSubmit}
+                    className="bg-amber-600 hover:bg-amber-700 text-white"
+                    disabled={
+                      requestDraw.isPending ||
+                      !amount ||
+                      !jobNumber.trim() ||
+                      !reason.trim() ||
+                      parseFloat(amount) <= 0 ||
+                      parseFloat(amount) > maxAllowed
+                    }
+                  >
+                    {requestDraw.isPending ? (
+                      <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Submitting...</>
+                    ) : (
+                      "Submit Request"
+                    )}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </>
         )}
       </CardContent>
     </Card>

@@ -213,11 +213,7 @@ const App = () => (
             />
             <Route
               path="/commissions/draws"
-              element={
-                <ProtectedRoute>
-                  <Draws />
-                </ProtectedRoute>
-              }
+              element={<Navigate to="/commissions" replace />}
             />
             <Route
               path="/commissions/:id"

@@ -49,7 +49,6 @@ import {
   BookOpen,
   Lock,
   GripVertical,
-  Wallet,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -99,7 +98,6 @@ const navigationItems: NavItem[] = [
     children: [
       { title: "Submissions", href: "/commissions", icon: DollarSign, sectionKey: "commissions", requiresPlaybook: true },
       { title: "Documents", href: "/commission-documents", icon: FileText, sectionKey: "commissions", requiresPlaybook: true },
-      { title: "Draws", href: "/commissions/draws", icon: Wallet, sectionKey: "commissions", requiresPlaybook: true },
     ],
   },
   {

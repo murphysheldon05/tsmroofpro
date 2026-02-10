@@ -117,7 +117,7 @@ export default function Commissions() {
             </p>
           </div>
           
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <Button 
               onClick={() => navigate("/commissions/new")} 
               className="gap-2 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground"
