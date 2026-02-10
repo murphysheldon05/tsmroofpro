@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Users, Search, FileSpreadsheet, BarChart3 } from "lucide-react";
+import { Plus, DollarSign, Search, FileSpreadsheet, BarChart3 } from "lucide-react";
 import { useCommissionSubmissions, useIsCommissionReviewer } from "@/hooks/useCommissions";
 import { CommissionTracker } from "@/components/commissions/CommissionTracker";
 import { CommissionStatusPipeline } from "@/components/commissions/CommissionStatusPipeline";
@@ -33,6 +33,7 @@ export default function Commissions() {
   const { data: userHolds } = useUserHoldsCheck();
   const [searchQuery, setSearchQuery] = useState("");
   const [activeStatus, setActiveStatus] = useState("all");
+  const [showDrawModal, setShowDrawModal] = useState(false);
 
   const isAdmin = role === "admin";
   const isManager = role === "manager";
@@ -127,17 +128,15 @@ export default function Commissions() {
               <Plus className="h-4 w-4" />
               Submit Commission
             </Button>
-            {(isAdmin || isManager) && (
-              <Button 
-                variant="outline" 
-                onClick={() => navigate("/commissions/new?type=subcontractor")}
-                className="gap-2 rounded-xl"
-                disabled={commissionHolds.length > 0}
-              >
-                <Users className="h-4 w-4" />
-                Sub
-              </Button>
-            )}
+            <Button 
+              variant="outline" 
+              onClick={() => setShowDrawModal(true)}
+              className="gap-2 rounded-xl border-amber-500 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-500/10"
+              disabled={commissionHolds.length > 0}
+            >
+              <DollarSign className="h-4 w-4" />
+              Request Draw
+            </Button>
           </div>
         </div>
 
@@ -147,7 +146,7 @@ export default function Commissions() {
         {/* Summary Cards + Draw Balance */}
         <div className="grid gap-4 grid-cols-1 lg:grid-cols-[1fr_300px]">
           <CommissionSummaryCards {...summaryStats} />
-          <DrawBalanceCard />
+          <DrawBalanceCard showDrawModal={showDrawModal} onDrawModalChange={setShowDrawModal} />
         </div>
 
         {/* Main Content Tabs */}
