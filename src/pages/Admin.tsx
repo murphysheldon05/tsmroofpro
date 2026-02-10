@@ -166,7 +166,7 @@ export default function Admin() {
 
       return (profiles ?? []).map((p) => ({
         ...p,
-        role: roleByUserId.get(p.id) ?? "employee",
+        role: roleByUserId.get(p.id) ?? "user",
       }));
     },
     refetchOnWindowFocus: true,
@@ -586,7 +586,7 @@ export default function Admin() {
                     const deptName = departments?.find((d) => d.id === user.department_id)?.name;
                     const userManagerId = getUserManager(user.id);
                     const managerName = managers?.find((m) => m.id === userManagerId)?.full_name;
-                    const isSalesWithoutManager = user.role === "employee" && deptName?.toLowerCase() === "sales" && !userManagerId;
+                    const isSalesWithoutManager = (user.role === "sales_rep" || user.role === "sales_manager") && !userManagerId;
 
                     return (
                       <tr
@@ -643,15 +643,15 @@ export default function Admin() {
                         <td className="px-4 py-3">
                           <Select
                             key={`${user.id}-${user.role}`}
-                            defaultValue={user.role || "employee"}
+                            defaultValue={user.role || "user"}
                             onValueChange={(v) => handleUpdateUserRole(user.id, v)}
                           >
                             <SelectTrigger className="w-32">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="employee">
-                                <span className="font-medium">Employee</span>
+                              <SelectItem value="user">
+                                <span className="font-medium">User</span>
                               </SelectItem>
                               <SelectItem value="sales_rep">
                                 <span className="font-medium">Sales Rep</span>
@@ -662,9 +662,6 @@ export default function Admin() {
                               <SelectItem value="manager">
                                 <span className="font-medium">Manager</span>
                               </SelectItem>
-                              <SelectItem value="accounting">
-                                <span className="font-medium">Accounting</span>
-                              </SelectItem>
                               <SelectItem value="admin">
                                 <span className="font-medium">Admin</span>
                               </SelectItem>
@@ -674,7 +671,7 @@ export default function Admin() {
                         <td className="px-4 py-3 text-right">
                           <div className="flex items-center justify-end gap-1">
                             {/* Permissions button - only show for employees */}
-                            {user.role === "employee" && (
+                            {user.role === "user" && (
                               <Dialog
                                 open={editingUserPermissions?.id === user.id}
                                 onOpenChange={(open) => {
@@ -697,7 +694,7 @@ export default function Admin() {
                                   <div className="mt-4">
                                     <UserPermissionsEditor
                                       userId={user.id}
-                                      userRole={user.role || "employee"}
+                                      userRole={user.role || "user"}
                                       onClose={() => setEditingUserPermissions(null)}
                                     />
                                   </div>

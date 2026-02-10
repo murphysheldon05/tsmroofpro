@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 
 interface UserPermissionsEditorProps {
   userId: string;
-  userRole: "admin" | "manager" | "employee";
+  userRole: string;
   onClose?: () => void;
 }
 

@@ -1,16 +1,13 @@
 import { useAuth } from "@/contexts/AuthContext";
 
 /**
- * RBAC Permission Definitions — 6-Tier Role Model
+ * RBAC Permission Definitions — 5-Role Model
  * 
- * 1. Employee (base read-only access)
+ * 1. User (base read-only access)
  * 2. Sales Rep (submits commissions, views own)
  * 3. Sales Manager (reviews team commissions, manages reps)
- * 4. Manager (full ops, sees all commissions, edits production)
- * 5. Accounting (commission approval and payment processing)
- * 6. Admin (full system access)
- * 
- * Legacy: ops_compliance remains supported for compliance enforcement
+ * 4. Manager (department-level oversight for non-sales departments)
+ * 5. Admin (full system access)
  */
 
 export interface RolePermissions {
@@ -75,6 +72,13 @@ export interface RolePermissions {
   canViewAllAcknowledgments: boolean;
   canGrantExceptions: boolean;
   canDeleteViolations: boolean;
+
+  // Vendors/Subs
+  canManageVendors: boolean;
+
+  // Training
+  canUploadTraining: boolean;
+  canManageNewHires: boolean;
 }
 
 const NO_PERMISSIONS: RolePermissions = {
@@ -93,13 +97,14 @@ const NO_PERMISSIONS: RolePermissions = {
   canManageViolations: false, canManageHolds: false, canCreateEscalations: false,
   canDecideEscalations: false, canViewAuditLog: false, canViewAllAcknowledgments: false,
   canGrantExceptions: false, canDeleteViolations: false,
+  canManageVendors: false,
+  canUploadTraining: false, canManageNewHires: false,
 };
 
 export function useRolePermissions(): RolePermissions {
-  const { role, isAdmin } = useAuth();
+  const { role, isAdmin, userDepartment } = useAuth();
 
   if (isAdmin) {
-    // Admin: FULL CONTROL
     return {
       canEditCommissionTiers: true, canEditCategories: true, canEditTools: true,
       canEditNotificationRouting: true, canPublishSOPs: true, canArchiveSOPs: true,
@@ -116,35 +121,29 @@ export function useRolePermissions(): RolePermissions {
       canManageViolations: true, canManageHolds: true, canCreateEscalations: true,
       canDecideEscalations: true, canViewAuditLog: true, canViewAllAcknowledgments: true,
       canGrantExceptions: true, canDeleteViolations: true,
+      canManageVendors: true,
+      canUploadTraining: true, canManageNewHires: true,
     };
   }
 
-  switch (role) {
-    case 'accounting':
-      return {
-        ...NO_PERMISSIONS,
-        canProcessPayouts: true,
-        canApproveCommissions: true,
-        canViewAllCommissions: true, canViewTeamCommissions: true, canViewOwnCommissionsOnly: false,
-        canExportAllData: true, canExportTeamData: true, canExportOwnData: true,
-        canViewReports: true, canViewTeamReports: true,
-        canReviewRequests: true,
-        canApplyDraws: true,
-        canApproveDraws: true,
-      };
+  const isProductionDept = userDepartment === 'Production';
+  const isAccountingDept = userDepartment === 'Accounting';
 
+  switch (role) {
     case 'manager':
       return {
         ...NO_PERMISSIONS,
-        canSubmitCommissions: true,
-        canApproveCommissions: true, canDenyCommissions: true, canRequestRevisions: true,
-        canViewAllCommissions: true, canViewTeamCommissions: true, canViewOwnCommissionsOnly: false,
-        canExportAllData: false, canExportTeamData: true, canExportOwnData: true,
+        canViewOwnCommissionsOnly: false,
+        canExportOwnData: true,
         canReviewRequests: true, canApproveRequests: true,
         canDraftSOPs: true,
         canViewReports: true, canViewTeamReports: true,
-        canEditProduction: true, canEditDeliveries: true, canManageWarranties: true,
-        canApproveDraws: true, canApplyDraws: true,
+        canEditProduction: isProductionDept, canEditDeliveries: isProductionDept,
+        canManageWarranties: isProductionDept,
+        canProcessPayouts: isAccountingDept,
+        canApplyDraws: isAccountingDept,
+        canManageVendors: true,
+        canUploadTraining: true,
       };
 
     case 'sales_manager':
@@ -158,7 +157,8 @@ export function useRolePermissions(): RolePermissions {
         canDraftSOPs: true,
         canViewReports: true, canViewTeamReports: true,
         canRequestDraws: true,
-        canApproveDraws: true, canApplyDraws: true,
+        canApproveDraws: true,
+        canUploadTraining: true,
       };
 
     case 'sales_rep':
@@ -168,21 +168,9 @@ export function useRolePermissions(): RolePermissions {
         canViewOwnCommissionsOnly: true,
         canExportOwnData: true,
         canRequestDraws: true,
-        canManageWarranties: false,
       };
 
-    case 'ops_compliance':
-      return {
-        ...NO_PERMISSIONS,
-        canViewAllCommissions: true, canViewTeamCommissions: true, canViewOwnCommissionsOnly: false,
-        canExportAllData: true, canExportTeamData: true, canExportOwnData: true,
-        canReviewRequests: true,
-        canViewReports: true, canViewTeamReports: true,
-        canManageViolations: true, canManageHolds: true, canCreateEscalations: true,
-        canViewAuditLog: true, canViewAllAcknowledgments: true,
-      };
-
-    case 'employee':
+    case 'user':
     default:
       return { ...NO_PERMISSIONS, canExportOwnData: true };
   }
@@ -195,21 +183,16 @@ export function useCanEditSystem() {
 }
 
 export function useCanApproveCommissions() {
-  const { isAdmin, isManager, role } = useAuth();
-  return isAdmin || isManager || role === 'sales_manager' || role === 'accounting';
+  const { role } = useAuth();
+  return role === 'admin' || role === 'sales_manager';
 }
 
 export function useCanViewAllData() {
-  const { isAdmin, role } = useAuth();
-  return isAdmin || role === 'ops_compliance' || role === 'accounting';
+  const { isAdmin } = useAuth();
+  return isAdmin;
 }
 
 export function useCanViewTeamData() {
-  const { isAdmin, isManager, role } = useAuth();
-  return isAdmin || isManager || role === 'ops_compliance' || role === 'sales_manager' || role === 'accounting';
-}
-
-export function useIsOpsCompliance() {
   const { role } = useAuth();
-  return role === 'ops_compliance';
+  return role === 'admin' || role === 'manager' || role === 'sales_manager';
 }

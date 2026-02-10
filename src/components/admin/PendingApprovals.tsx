@@ -54,9 +54,11 @@ const DEPARTMENT_LABELS: Record<string, string> = {
 };
 
 const ASSIGNABLE_ROLES = [
-  { value: "admin", label: "Admin" },
-  { value: "manager", label: "Manager" },
-  { value: "employee", label: "Employee" },
+  { value: "user", label: "User", description: "Base access — view data, submit forms, access training" },
+  { value: "sales_rep", label: "Sales Rep", description: "Submit commissions, request draws, sales leaderboard" },
+  { value: "sales_manager", label: "Sales Manager", description: "Approve commissions, manage team, override on deals" },
+  { value: "manager", label: "Manager", description: "Department oversight, manage schedules & vendors" },
+  { value: "admin", label: "Admin", description: "Full system access — all pages, settings, user management" },
 ] as const;
 
 export function PendingApprovals() {
@@ -158,10 +160,10 @@ export function PendingApprovals() {
   });
 
   const getDefaultRole = (requestedRole: string | null): string => {
-    if (!requestedRole) return "employee";
+    if (!requestedRole) return "user";
     if (requestedRole === "admin") return "admin";
     if (["office_admin", "va"].includes(requestedRole)) return "manager";
-    return "employee";
+    return "user";
   };
 
   const openApprovalDialog = (pendingUser: PendingUser) => {
@@ -441,7 +443,7 @@ export function PendingApprovals() {
                 Assigned Role
               </Label>
               <Select
-                value={approvalDialog.user ? (selectedRoles[approvalDialog.user.id] || getDefaultRole(approvalDialog.user.requested_role)) : "employee"}
+                value={approvalDialog.user ? (selectedRoles[approvalDialog.user.id] || getDefaultRole(approvalDialog.user.requested_role)) : "user"}
                 onValueChange={(value) => {
                   if (approvalDialog.user) {
                     setSelectedRoles(prev => ({ ...prev, [approvalDialog.user!.id]: value }));
@@ -454,7 +456,10 @@ export function PendingApprovals() {
                 <SelectContent>
                   {ASSIGNABLE_ROLES.map((role) => (
                     <SelectItem key={role.value} value={role.value}>
-                      {role.label}
+                      <div>
+                        <span className="font-medium">{role.label}</span>
+                        <span className="text-xs text-muted-foreground ml-2">— {role.description}</span>
+                      </div>
                     </SelectItem>
                   ))}
                 </SelectContent>

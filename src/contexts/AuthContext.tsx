@@ -3,7 +3,7 @@ import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { PasswordResetPrompt } from '@/components/auth/PasswordResetPrompt';
 
-type AppRole = 'admin' | 'manager' | 'employee' | 'ops_compliance' | 'sales_rep' | 'sales_manager' | 'accounting';
+type AppRole = 'admin' | 'manager' | 'user' | 'sales_rep' | 'sales_manager';
 type EmployeeStatus = 'active' | 'pending' | 'rejected' | 'inactive';
 
 interface AuthContextType {
@@ -18,10 +18,11 @@ interface AuthContextType {
   refreshProfile: () => Promise<void>;
   isAdmin: boolean;
   isManager: boolean;
-  isOpsCompliance: boolean;
-  isAccounting: boolean;
   isSalesManager: boolean;
   isSalesRep: boolean;
+  canApproveCommissions: boolean;
+  canSubmitCommissions: boolean;
+  userDepartment: string | null;
   isActive: boolean;
 }
 
@@ -34,6 +35,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [role, setRole] = useState<AppRole | null>(null);
   const [employeeStatus, setEmployeeStatus] = useState<EmployeeStatus | null>(null);
   const [mustResetPassword, setMustResetPassword] = useState(false);
+  const [userDepartment, setUserDepartment] = useState<string | null>(null);
   const isMounted = useRef(true);
 
   const fetchUserRole = useCallback(async (userId: string) => {
@@ -53,7 +55,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const checkProfileStatus = useCallback(async (userId: string) => {
     const { data } = await supabase
       .from('profiles')
-      .select('must_reset_password, employee_status, is_approved')
+      .select('must_reset_password, employee_status, is_approved, department')
       .eq('id', userId)
       .maybeSingle();
     
@@ -63,6 +65,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (data.must_reset_password) {
         setMustResetPassword(true);
       }
+      
+      setUserDepartment(data.department || null);
       
       let status: EmployeeStatus = 'pending';
       if (data.employee_status) {
@@ -76,6 +80,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setEmployeeStatus(status);
     } else {
       setEmployeeStatus('pending');
+      setUserDepartment(null);
     }
   }, []);
 
@@ -101,9 +106,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           fetchUserRole(newSession.user.id);
           checkProfileStatus(newSession.user.id);
         } else {
-          setRole(null);
-          setEmployeeStatus(null);
-          setMustResetPassword(false);
+        setRole(null);
+        setEmployeeStatus(null);
+        setMustResetPassword(false);
+        setUserDepartment(null);
         }
       }
     );
@@ -182,6 +188,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setRole(null);
     setEmployeeStatus(null);
     setMustResetPassword(false);
+    setUserDepartment(null);
   };
 
   const handlePasswordReset = () => {
@@ -201,11 +208,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signOut,
     refreshProfile,
     isAdmin: role === 'admin',
-    isManager: role === 'manager' || role === 'admin',
-    isOpsCompliance: role === 'ops_compliance',
-    isAccounting: role === 'accounting',
-    isSalesManager: role === 'sales_manager',
-    isSalesRep: role === 'sales_rep',
+    isManager: role === 'manager' || role === 'sales_manager' || role === 'admin',
+    isSalesManager: role === 'sales_manager' || role === 'admin',
+    isSalesRep: role === 'sales_rep' || role === 'sales_manager' || role === 'admin',
+    canApproveCommissions: role === 'sales_manager' || role === 'admin',
+    canSubmitCommissions: role === 'sales_rep' || role === 'sales_manager' || role === 'admin',
+    userDepartment,
     isActive,
   };
 

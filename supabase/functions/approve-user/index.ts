@@ -10,7 +10,7 @@ const corsHeaders = {
 
 interface ApproveUserRequest {
   user_id: string;
-  assigned_role: "admin" | "manager" | "employee";
+  assigned_role: "admin" | "manager" | "sales_manager" | "sales_rep" | "user";
   assigned_department_id: string | null;
   assigned_tier_id: string | null;
   assigned_manager_id: string | null;
@@ -20,7 +20,9 @@ interface ApproveUserRequest {
 const ROLE_LABELS: Record<string, string> = {
   admin: "Administrator",
   manager: "Manager",
-  employee: "Team Member",
+  sales_manager: "Sales Manager",
+  sales_rep: "Sales Rep",
+  user: "Team Member",
 };
 
 /**

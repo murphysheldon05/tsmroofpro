@@ -92,12 +92,12 @@ export function NeedsAttentionWidget() {
 
       return results;
     },
-    enabled: isAdmin || isManager || role === "ops_compliance",
+    enabled: isAdmin || isManager,
     refetchInterval: 60000,
   });
 
   // Don't render for non-admin/manager roles
-  if (!isAdmin && !isManager && role !== "ops_compliance") return null;
+  if (!isAdmin && !isManager) return null;
 
   if (isLoading) {
     return (
