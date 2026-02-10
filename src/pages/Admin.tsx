@@ -62,6 +62,8 @@ import { useAdminAuditLog, AUDIT_ACTIONS, OBJECT_TYPES } from "@/hooks/useAdminA
 import { DrawSettingsManager } from "@/components/admin/DrawSettingsManager";
 import { OverrideReportPanel } from "@/components/admin/OverrideReportPanel";
 import { LeaderboardSettingsPanel } from "@/components/admin/LeaderboardSettingsPanel";
+import { PlaybookCompletionStatus } from "@/components/admin/PlaybookCompletionStatus";
+import { BookOpen } from "lucide-react";
 
 export default function Admin() {
   const queryClient = useQueryClient();
@@ -464,6 +466,10 @@ export default function Admin() {
             <TabsTrigger value="leaderboard" className="gap-2">
               <Trophy className="w-4 h-4" />
               Leaderboard
+            </TabsTrigger>
+            <TabsTrigger value="playbook-status" className="gap-2">
+              <BookOpen className="w-4 h-4" />
+              Playbook Status
             </TabsTrigger>
           </TabsList>
 
@@ -887,6 +893,15 @@ export default function Admin() {
           {/* Leaderboard Settings Tab */}
           <TabsContent value="leaderboard" className="space-y-4">
             <LeaderboardSettingsPanel />
+          </TabsContent>
+
+          {/* Playbook Completion Status Tab */}
+          <TabsContent value="playbook-status" className="space-y-4">
+            <h2 className="text-lg font-semibold text-foreground">Playbook Completion Status</h2>
+            <p className="text-sm text-muted-foreground">
+              Track which users have completed the Master Playbook acknowledgment requirement.
+            </p>
+            <PlaybookCompletionStatus />
           </TabsContent>
         </Tabs>
       </div>

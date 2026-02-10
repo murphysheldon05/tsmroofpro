@@ -40,7 +40,8 @@ export function ProtectedRoute({
   
   // Routes that are exempt from the Master Playbook gate
   // (the playbook page itself, and the profile page for reference)
-  const isExemptRoute = location.pathname.startsWith("/sops/master-playbook") ||
+  const isExemptRoute = location.pathname.startsWith("/playbook-library/master-playbook") ||
+    location.pathname === "/playbook-library" ||
     location.pathname === "/profile";
   if (loading || accessHoldLoading) {
     return <AppLoadingScreen />;

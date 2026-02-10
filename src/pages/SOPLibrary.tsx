@@ -11,6 +11,7 @@ import { useState, useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { ResourceDetailModal } from "@/components/resources/ResourceDetailModal";
 import { useAuth } from "@/contexts/AuthContext";
+import { useMasterSOPAcknowledgments } from "@/hooks/useMasterSOPAcknowledgments";
 import {
   Select,
   SelectContent,
@@ -75,6 +76,7 @@ export default function SOPLibrary() {
   const { category } = useParams<{ category: string }>();
   const navigate = useNavigate();
   const { isAdmin, isManager } = useAuth();
+  const { completedCount, totalCount, allCompleted } = useMasterSOPAcknowledgments();
   const { data: allResourcesRaw, isLoading: allLoading } = useResources();
   const { data: categoryResourcesRaw, isLoading: categoryLoading } = useResources(category);
   const { data: categories } = useCategories();
@@ -340,15 +342,24 @@ export default function SOPLibrary() {
               {/* Master Playbook - Always first, special styling */}
               <Link
                 to="/playbook-library/master-playbook"
-                className="p-3 sm:p-4 rounded-lg border text-center transition-all bg-primary/5 border-primary/30 hover:border-primary/50 hover:shadow-glow-sm"
+                className="p-3 sm:p-4 rounded-lg border text-center transition-all bg-primary/5 border-primary/30 hover:border-primary/50 hover:shadow-glow-sm relative"
               >
-                <BookOpen className="w-5 h-5 sm:w-6 sm:h-6 mx-auto mb-1.5 text-primary" />
+                <Shield className="w-5 h-5 sm:w-6 sm:h-6 mx-auto mb-1.5 text-primary" />
                 <p className="text-xs sm:text-sm font-medium text-primary">
                   Master Playbook
                 </p>
                 <p className="text-[10px] text-muted-foreground mt-0.5">
                   Core Playbooks 1-10
                 </p>
+                <Badge
+                  variant={allCompleted ? "default" : "secondary"}
+                  className={cn(
+                    "mt-1.5 text-[10px]",
+                    allCompleted && "bg-primary text-primary-foreground"
+                  )}
+                >
+                  {allCompleted ? "✓ Complete" : `${completedCount}/${totalCount}`}
+                </Badge>
               </Link>
               
               {categories?.filter(cat => cat.slug !== 'master-playbook').map((cat) => {
