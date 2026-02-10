@@ -59,6 +59,7 @@ import { ResetPasswordDialog } from "@/components/admin/ResetPasswordDialog";
 import { useCommissionTiers } from "@/hooks/useCommissionTiers";
 import { useAdminAuditLog, AUDIT_ACTIONS, OBJECT_TYPES } from "@/hooks/useAdminAuditLog";
 import { DrawSettingsManager } from "@/components/admin/DrawSettingsManager";
+import { OverrideReportPanel } from "@/components/admin/OverrideReportPanel";
 
 export default function Admin() {
   const queryClient = useQueryClient();
@@ -453,6 +454,10 @@ export default function Admin() {
             <TabsTrigger value="draws" className="gap-2">
               <DollarSign className="w-4 h-4" />
               Draw Settings
+            </TabsTrigger>
+            <TabsTrigger value="overrides" className="gap-2">
+              <Percent className="w-4 h-4" />
+              Overrides
             </TabsTrigger>
           </TabsList>
 
@@ -866,6 +871,11 @@ export default function Admin() {
           {/* Draw Settings Tab */}
           <TabsContent value="draws" className="space-y-4">
             <DrawSettingsManager />
+          </TabsContent>
+
+          {/* Overrides Tab */}
+          <TabsContent value="overrides" className="space-y-4">
+            <OverrideReportPanel />
           </TabsContent>
         </Tabs>
       </div>
