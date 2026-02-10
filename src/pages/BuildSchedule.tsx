@@ -33,6 +33,7 @@ import { cn } from "@/lib/utils";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { useUserHoldsCheck } from "@/hooks/useComplianceHoldCheck";
 import { HoldWarningBanner } from "@/components/compliance/HoldWarningBanner";
+import { DayOverflowModal, OverflowTrigger } from "@/components/calendar/DayOverflowModal";
 
 type CalendarView = "day" | "week" | "month";
 
@@ -54,6 +55,7 @@ export default function BuildSchedule() {
   const [editingEvent, setEditingEvent] = useState<ProductionCalendarEvent | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [newEvent, setNewEvent] = useState({ title: "", description: "", start_date: "", end_date: "", event_category: "other" as EventCategory, crew_id: "" });
+  const [overflowDate, setOverflowDate] = useState<Date | null>(null);
 
   const [isAddCrewOpen, setIsAddCrewOpen] = useState(false);
   const [editingCrew, setEditingCrew] = useState<Crew | null>(null);
@@ -387,7 +389,7 @@ export default function BuildSchedule() {
                   </div>
                   <div className="space-y-1">
                     {dayEvents.slice(0, 3).map(e => <EventCard key={e.id} event={e} compact />)}
-                    {dayEvents.length > 3 && <p className="text-xs text-muted-foreground text-center">+{dayEvents.length - 3} more</p>}
+                    {dayEvents.length > 3 && <OverflowTrigger count={dayEvents.length - 3} onClick={() => setOverflowDate(day)} />}
                   </div>
                 </div>
               );
@@ -427,7 +429,9 @@ export default function BuildSchedule() {
                         {dayEvents.slice(0, 4).map(e => (
                           <div key={e.id} className="w-2 h-2 rounded-full" style={{ backgroundColor: getCrewColor(e.crew_id) }} />
                         ))}
-                        {dayEvents.length > 4 && <span className="text-[9px] text-muted-foreground">+{dayEvents.length - 4}</span>}
+                        {dayEvents.length > 4 && (
+                          <button onClick={(e) => { e.stopPropagation(); setOverflowDate(day); }} className="text-[9px] text-primary hover:underline cursor-pointer">+{dayEvents.length - 4}</button>
+                        )}
                       </div>
                     </div>
                   );
@@ -465,6 +469,11 @@ export default function BuildSchedule() {
           </button>
         )}
       </div>
+
+      {/* Day overflow modal */}
+      <DayOverflowModal date={overflowDate} onClose={() => setOverflowDate(null)}>
+        {overflowDate && getEventsForDate(overflowDate).map(e => <EventCard key={e.id} event={e} />)}
+      </DayOverflowModal>
 
       {/* Add Event Dialog */}
       <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
