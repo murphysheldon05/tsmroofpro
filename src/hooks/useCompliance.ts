@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { startOfMonth } from "date-fns";
 
 // Fetch open/blocked violations count
 export function useOpenViolationsCount() {
@@ -73,6 +74,29 @@ export function useUnacknowledgedUsersCount(currentVersion: string = "2025-01-30
 
       const acknowledgedCount = new Set(acknowledged?.map(a => a.user_id)).size;
       return Math.max(0, (totalUsers || 0) - acknowledgedCount);
+    },
+  });
+}
+
+// Fetch resolved this month count (violations + holds resolved)
+export function useResolvedThisMonthCount() {
+  return useQuery({
+    queryKey: ["compliance-resolved-this-month"],
+    queryFn: async () => {
+      const monthStart = startOfMonth(new Date()).toISOString();
+      const [violationsRes, holdsRes] = await Promise.all([
+        supabase
+          .from("compliance_violations")
+          .select("*", { count: "exact", head: true })
+          .eq("status", "resolved")
+          .gte("resolved_at", monthStart),
+        supabase
+          .from("compliance_holds")
+          .select("*", { count: "exact", head: true })
+          .eq("status", "released")
+          .gte("released_at", monthStart),
+      ]);
+      return (violationsRes.count || 0) + (holdsRes.count || 0);
     },
   });
 }

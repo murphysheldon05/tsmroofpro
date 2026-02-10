@@ -24,6 +24,7 @@ import {
   useActiveHoldsCount,
   usePendingEscalationsCount,
   useUnacknowledgedUsersCount,
+  useResolvedThisMonthCount,
   useRecentViolations,
   usePendingEscalations,
 } from "@/hooks/useCompliance";
@@ -67,10 +68,11 @@ export default function OpsCompliance() {
   const { data: activeHolds, isLoading: loadingHolds } = useActiveHoldsCount();
   const { data: pendingEscalations, isLoading: loadingEscalations } = usePendingEscalationsCount();
   const { data: unacknowledgedUsers, isLoading: loadingUnack } = useUnacknowledgedUsersCount();
+  const { data: resolvedThisMonth, isLoading: loadingResolved } = useResolvedThisMonthCount();
   const { data: recentViolations, isLoading: loadingRecent } = useRecentViolations(5);
   const { data: pendingEscalationsList, isLoading: loadingPendingList } = usePendingEscalations();
 
-  const isLoadingSummary = loadingViolations || loadingHolds || loadingEscalations || loadingUnack;
+  const isLoadingSummary = loadingViolations || loadingHolds || loadingEscalations || loadingUnack || loadingResolved;
 
   const handleTabChange = (value: string) => {
     if (value === "dashboard") {
@@ -221,6 +223,7 @@ export default function OpsCompliance() {
               activeHolds={activeHolds}
               pendingEscalations={pendingEscalations}
               unacknowledgedUsers={unacknowledgedUsers}
+              resolvedThisMonth={resolvedThisMonth}
               isLoading={isLoadingSummary}
               onNavigate={handleNavigate}
             />

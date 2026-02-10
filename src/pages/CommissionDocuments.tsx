@@ -25,6 +25,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
+import { useDraws } from "@/hooks/useDraws";
 
 export default function CommissionDocuments() {
   const navigate = useNavigate();
@@ -39,7 +40,7 @@ export default function CommissionDocuments() {
   const [paidSearchQuery, setPaidSearchQuery] = useState("");
 
   const { data: documents, isLoading } = useCommissionDocuments(statusFilter);
-
+  const { data: draws } = useDraws();
   // Fetch team assignments for managers to see only their assigned reps
   const { data: teamAssignments } = useQuery({
     queryKey: ["team-assignments", user?.id],
@@ -199,7 +200,7 @@ export default function CommissionDocuments() {
     );
   };
 
-  // Export to CSV
+  // Export to CSV — includes draw activity
   const exportToCSV = (docs: CommissionDocument[], filename: string) => {
     try {
       const headers = [
@@ -218,16 +219,16 @@ export default function CommissionDocuments() {
       
       const rows = docs.map(doc => [
         `"${doc.job_name_id.replace(/"/g, '""')}"`,
-        doc.job_date ? format(parseISO(doc.job_date), "yyyy-MM-dd") : "",
+        doc.job_date ? format(parseISO(doc.job_date), "MM/dd/yyyy") : "",
         `"${doc.sales_rep.replace(/"/g, '""')}"`,
         doc.status,
         doc.gross_contract_total.toFixed(2),
         doc.net_profit.toFixed(2),
         `${doc.commission_rate}%`,
         doc.rep_commission.toFixed(2),
-        format(parseISO(doc.created_at), "yyyy-MM-dd"),
-        doc.approved_at ? format(parseISO(doc.approved_at), "yyyy-MM-dd") : "",
-        doc.paid_at ? format(parseISO(doc.paid_at), "yyyy-MM-dd") : "",
+        format(parseISO(doc.created_at), "MM/dd/yyyy"),
+        doc.approved_at ? format(parseISO(doc.approved_at), "MM/dd/yyyy") : "",
+        doc.paid_at ? format(parseISO(doc.paid_at), "MM/dd/yyyy") : "",
       ]);
 
       // Add summary
@@ -235,7 +236,23 @@ export default function CommissionDocuments() {
       rows.push([]);
       rows.push(["SUMMARY"]);
       rows.push(["Total Records", docs.length.toString()]);
-      rows.push(["Total Commission", totalCommission.toFixed(2)]);
+      rows.push(["Total Commission", `$${totalCommission.toFixed(2)}`]);
+
+      // Add draw activity section
+      if (draws && draws.length > 0) {
+        rows.push([]);
+        rows.push(["DRAW ACTIVITY"]);
+        rows.push(["Status", "Amount", "Remaining Balance", "Requested", "Approved"]);
+        draws.forEach(d => {
+          rows.push([
+            d.status,
+            (d.amount || 0).toFixed(2),
+            (d.remaining_balance || 0).toFixed(2),
+            d.requested_at ? format(parseISO(d.requested_at), "MM/dd/yyyy") : "",
+            d.approved_at ? format(parseISO(d.approved_at), "MM/dd/yyyy") : "",
+          ]);
+        });
+      }
 
       const csvContent = [headers.join(","), ...rows.map(row => row.join(","))].join("\n");
       const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
@@ -254,63 +271,76 @@ export default function CommissionDocuments() {
     }
   };
 
-  // Export to PDF
+  // Export to PDF — TSM branding + draw activity
   const exportToPDF = (docs: CommissionDocument[], title: string, filename: string) => {
     try {
-      const doc = new jsPDF();
-      const pageWidth = doc.internal.pageSize.getWidth();
+      const pdf = new jsPDF();
+      const pageWidth = pdf.internal.pageSize.getWidth();
       let yPosition = 20;
 
-      // Title
-      doc.setFontSize(18);
-      doc.setFont("helvetica", "bold");
-      doc.text(title, pageWidth / 2, yPosition, { align: "center" });
+      // TSM Roof Pro branding
+      pdf.setFontSize(22);
+      pdf.setFont("helvetica", "bold");
+      pdf.text("TSM Roof Pro", pageWidth / 2, yPosition, { align: "center" });
       yPosition += 8;
 
-      // Subtitle with date
-      doc.setFontSize(10);
-      doc.setFont("helvetica", "normal");
-      doc.text(`Generated: ${format(new Date(), "MMMM d, yyyy")}`, pageWidth / 2, yPosition, { align: "center" });
-      yPosition += 15;
+      // Title
+      pdf.setFontSize(14);
+      pdf.setFont("helvetica", "normal");
+      pdf.text(title, pageWidth / 2, yPosition, { align: "center" });
+      yPosition += 6;
 
-      // Summary
+      // Date
+      pdf.setFontSize(10);
+      pdf.text(`Generated: ${format(new Date(), "MMMM d, yyyy")}`, pageWidth / 2, yPosition, { align: "center" });
+      yPosition += 12;
+
+      // Summary section
+      const totalSubmitted = docs.length;
+      const totalApproved = docs.filter(d => ['approved', 'accounting_approved', 'paid'].includes(d.status)).length;
+      const totalPaid = docs.filter(d => d.status === 'paid').length;
       const totalCommission = docs.reduce((sum, d) => sum + (d.rep_commission || 0), 0);
-      doc.setFontSize(12);
-      doc.setFont("helvetica", "bold");
-      doc.text("Summary", 14, yPosition);
+      const totalDrawBalance = draws?.reduce((sum, d) => sum + (d.remaining_balance || 0), 0) || 0;
+
+      pdf.setFontSize(12);
+      pdf.setFont("helvetica", "bold");
+      pdf.text("Summary", 14, yPosition);
       yPosition += 7;
 
-      doc.setFontSize(10);
-      doc.setFont("helvetica", "normal");
+      pdf.setFontSize(10);
+      pdf.setFont("helvetica", "normal");
       const summaryLines = [
-        `Total Records: ${docs.length}`,
+        `Total Submitted: ${totalSubmitted}`,
+        `Total Approved: ${totalApproved}`,
+        `Total Paid: ${totalPaid}`,
         `Total Commission: ${formatCurrency(totalCommission)}`,
+        `Outstanding Draw Balance: ${formatCurrency(totalDrawBalance)}`,
       ];
       
       summaryLines.forEach(line => {
-        doc.text(line, 14, yPosition);
+        pdf.text(line, 14, yPosition);
         yPosition += 5;
       });
-      yPosition += 10;
+      yPosition += 8;
 
       // Table header
-      doc.setFontSize(9);
-      doc.setFont("helvetica", "bold");
+      pdf.setFontSize(9);
+      pdf.setFont("helvetica", "bold");
       const headers = ["Job Name", "Sales Rep", "Status", "Commission", "Date"];
       const colWidths = [50, 40, 30, 30, 30];
       let xPos = 14;
       
       headers.forEach((header, i) => {
-        doc.text(header, xPos, yPosition);
+        pdf.text(header, xPos, yPosition);
         xPos += colWidths[i];
       });
       yPosition += 6;
 
       // Table rows
-      doc.setFont("helvetica", "normal");
-      docs.slice(0, 30).forEach((item) => {
+      pdf.setFont("helvetica", "normal");
+      docs.slice(0, 40).forEach((item) => {
         if (yPosition > 270) {
-          doc.addPage();
+          pdf.addPage();
           yPosition = 20;
         }
         
@@ -321,22 +351,42 @@ export default function CommissionDocuments() {
           item.sales_rep.substring(0, 20),
           item.status.replace(/_/g, ' '),
           formatCurrency(item.rep_commission),
-          paidDate ? format(parseISO(paidDate), 'MM/dd/yy') : '-',
+          paidDate ? format(parseISO(paidDate), 'MM/dd/yyyy') : '-',
         ];
         
         rowData.forEach((cell, i) => {
-          doc.text(cell, xPos, yPosition);
+          pdf.text(cell, xPos, yPosition);
           xPos += colWidths[i];
         });
         yPosition += 5;
       });
 
-      if (docs.length > 30) {
+      if (docs.length > 40) {
         yPosition += 5;
-        doc.text(`... and ${docs.length - 30} more records`, 14, yPosition);
+        pdf.text(`... and ${docs.length - 40} more records`, 14, yPosition);
       }
 
-      doc.save(`${filename}-${format(new Date(), "yyyy-MM-dd")}.pdf`);
+      // Draw activity section
+      if (draws && draws.length > 0) {
+        if (yPosition > 240) { pdf.addPage(); yPosition = 20; }
+        yPosition += 10;
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(11);
+        pdf.text("Draw Activity", 14, yPosition);
+        yPosition += 6;
+        pdf.setFont("helvetica", "normal");
+        pdf.setFontSize(9);
+        draws.forEach(d => {
+          if (yPosition > 270) { pdf.addPage(); yPosition = 20; }
+          pdf.text(
+            `${d.status.toUpperCase()} — Amount: ${formatCurrency(d.amount)} | Balance: ${formatCurrency(d.remaining_balance)}`,
+            14, yPosition
+          );
+          yPosition += 5;
+        });
+      }
+
+      pdf.save(`${filename}-${format(new Date(), "yyyy-MM-dd")}.pdf`);
       toast.success("PDF exported successfully");
     } catch (error) {
       console.error("Export error:", error);
