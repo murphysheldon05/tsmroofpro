@@ -10,6 +10,7 @@ export interface CommandCenterWidgets {
   slaSnapshot: boolean;
   quickSOPAccess: boolean;
   quickLinks: boolean;
+  salesLeaderboard: boolean;
 }
 
 export type WidgetKey = keyof CommandCenterWidgets;
@@ -25,10 +26,12 @@ const DEFAULT_WIDGETS: CommandCenterWidgets = {
   slaSnapshot: true,
   quickSOPAccess: false,
   quickLinks: false,
+  salesLeaderboard: true,
 };
 
 // Core Identity is ALWAYS FIRST and LOCKED - cannot be reordered
 export const DEFAULT_WIDGET_ORDER: WidgetKey[] = [
+  "salesLeaderboard",
   "todaysBuilds",
   "todaysDeliveries",
   "weather",

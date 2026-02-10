@@ -68,6 +68,10 @@ const WIDGET_LABELS: Record<WidgetKey, { label: string; description: string }> =
     label: "Pending Review / Needs Action",
     description: "Role-based items requiring review or your action",
   },
+  salesLeaderboard: {
+    label: "Sales Leaderboard",
+    description: "Ranked rep performance by profit and commissions",
+  },
   quickLinks: {
     label: "Quick Links",
     description: "Shortcuts to common actions",
