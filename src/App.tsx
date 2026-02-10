@@ -14,6 +14,7 @@ import SOPLibrary from "./pages/SOPLibrary"; // Playbook Library
 import MasterPlaybook from "./pages/MasterPlaybook";
 import ResourceDetail from "./pages/ResourceDetail";
 import Training from "./pages/Training";
+import TrainingDocuments from "./pages/TrainingDocuments";
 import Tools from "./pages/Tools";
 import Requests from "./pages/Requests";
 import Admin from "./pages/Admin";
@@ -110,6 +111,20 @@ const App = () => (
             <Route path="/sops/master-playbook" element={<Navigate to="/playbook-library/master-playbook" replace />} />
             <Route path="/sops/:category" element={<Navigate to="/playbook-library" replace />} />
             <Route path="/sop-library" element={<Navigate to="/playbook-library" replace />} />
+            {/* Training Documents route */}
+            <Route
+              path="/training/documents"
+              element={
+                <ProtectedRoute>
+                  <TrainingDocuments />
+                </ProtectedRoute>
+              }
+            />
+            {/* Redirect old role-training to documents */}
+            <Route
+              path="/training/role-training"
+              element={<Navigate to="/training/documents" replace />}
+            />
             <Route
               path="/training/:category"
               element={

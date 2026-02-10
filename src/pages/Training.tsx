@@ -1,4 +1,4 @@
-import { useParams } from "react-router-dom";
+import { useParams, Navigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { SearchBar } from "@/components/SearchBar";
 import { ResourceCard } from "@/components/dashboard/ResourceCard";
@@ -34,6 +34,11 @@ export default function Training() {
 
   const config = category ? categoryConfig[category] : null;
   const Icon = config?.icon || GraduationCap;
+
+  // Redirect non-admins away from new-hire
+  if (category === "new-hire" && !isAdmin) {
+    return <Navigate to="/training/documents" replace />;
+  }
 
   // Special layout for new-hire category
   if (category === "new-hire") {
