@@ -8,6 +8,7 @@ import { ActionRequiredWidget } from "./ActionRequiredWidget";
 import { SlaSnapshotWidget } from "./SlaSnapshotWidget";
 import { QuickSOPAccessWidget } from "./QuickSOPAccessWidget";
 import { CommandCenterQuickLinks } from "./CommandCenterQuickLinks";
+import { SalesLeaderboardWidget } from "./SalesLeaderboardWidget";
 interface WidgetRendererProps {
   widgetKey: WidgetKey;
   isVisible: boolean;
@@ -89,6 +90,12 @@ export function WidgetRenderer({
             Quick Links
           </h2>
           <CommandCenterQuickLinks />
+        </section>
+      );
+    case "salesLeaderboard":
+      return (
+        <section>
+          <SalesLeaderboardWidget />
         </section>
       );
     default:

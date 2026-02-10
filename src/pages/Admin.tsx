@@ -39,6 +39,7 @@ import {
   FolderOpen,
   FileText,
   DollarSign,
+  Trophy,
 } from "lucide-react";
 import { UserPermissionsEditor } from "@/components/admin/UserPermissionsEditor";
 import { PendingApprovals } from "@/components/admin/PendingApprovals";
@@ -60,6 +61,7 @@ import { useCommissionTiers } from "@/hooks/useCommissionTiers";
 import { useAdminAuditLog, AUDIT_ACTIONS, OBJECT_TYPES } from "@/hooks/useAdminAuditLog";
 import { DrawSettingsManager } from "@/components/admin/DrawSettingsManager";
 import { OverrideReportPanel } from "@/components/admin/OverrideReportPanel";
+import { LeaderboardSettingsPanel } from "@/components/admin/LeaderboardSettingsPanel";
 
 export default function Admin() {
   const queryClient = useQueryClient();
@@ -458,6 +460,10 @@ export default function Admin() {
             <TabsTrigger value="overrides" className="gap-2">
               <Percent className="w-4 h-4" />
               Overrides
+            </TabsTrigger>
+            <TabsTrigger value="leaderboard" className="gap-2">
+              <Trophy className="w-4 h-4" />
+              Leaderboard
             </TabsTrigger>
           </TabsList>
 
@@ -876,6 +882,11 @@ export default function Admin() {
           {/* Overrides Tab */}
           <TabsContent value="overrides" className="space-y-4">
             <OverrideReportPanel />
+          </TabsContent>
+
+          {/* Leaderboard Settings Tab */}
+          <TabsContent value="leaderboard" className="space-y-4">
+            <LeaderboardSettingsPanel />
           </TabsContent>
         </Tabs>
       </div>
