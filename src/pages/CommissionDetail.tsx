@@ -435,7 +435,7 @@ export default function CommissionDetail() {
                 {canRequestRevision && (
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
-                      <Button variant="outline" className="gap-2 border-amber-500 text-amber-600 hover:bg-amber-50">
+                      <Button variant="outline" className="gap-2 border-amber-500 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-500/10">
                         <AlertCircle className="h-4 w-4" />
                         Request Revision
                       </Button>
@@ -447,13 +447,17 @@ export default function CommissionDetail() {
                           Please provide a reason for requesting revision. This will be sent to the submitter.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
-                      <div className="py-4">
+                      <div className="py-4 space-y-2">
                         <Textarea
                           placeholder="Enter reason for revision (required)..."
                           value={rejectionReason}
                           onChange={(e) => setRejectionReason(e.target.value)}
                           rows={4}
+                          className={!rejectionReason.trim() ? "border-destructive/50 focus-visible:ring-destructive/30" : ""}
                         />
+                        {!rejectionReason.trim() && (
+                          <p className="text-sm text-destructive">Please provide a reason for sending this back.</p>
+                        )}
                       </div>
                       <AlertDialogFooter>
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
@@ -486,13 +490,17 @@ export default function CommissionDetail() {
                           This action cannot be undone.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
-                      <div className="py-4">
+                      <div className="py-4 space-y-2">
                         <Textarea
                           placeholder="Enter denial reason (required)..."
                           value={rejectionReason}
                           onChange={(e) => setRejectionReason(e.target.value)}
                           rows={4}
+                          className={!rejectionReason.trim() ? "border-destructive/50 focus-visible:ring-destructive/30" : ""}
                         />
+                        {!rejectionReason.trim() && (
+                          <p className="text-sm text-destructive">Please provide a reason for denial.</p>
+                        )}
                       </div>
                       <AlertDialogFooter>
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
