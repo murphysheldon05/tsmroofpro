@@ -25,17 +25,28 @@ import { DollarSign, Plus, AlertTriangle, Loader2, Wallet } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
-export function DrawBalanceCard() {
+interface DrawBalanceCardProps {
+  showDrawModal?: boolean;
+  onDrawModalChange?: (open: boolean) => void;
+}
+
+export function DrawBalanceCard({ showDrawModal, onDrawModalChange }: DrawBalanceCardProps) {
   const { user } = useAuth();
   const { canRequestDraws } = useRolePermissions();
   const { data: activeDraw, isLoading } = useActiveDrawForUser(user?.id);
   const { data: draws } = useUserDraws(user?.id);
   const { data: settings } = useDrawSettings();
   const requestDraw = useRequestDraw();
-  const [showRequestDialog, setShowRequestDialog] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
   const [amount, setAmount] = useState("");
   const [jobNumber, setJobNumber] = useState("");
   const [reason, setReason] = useState("");
+
+  const dialogOpen = showDrawModal ?? internalOpen;
+  const setDialogOpen = (v: boolean) => {
+    if (onDrawModalChange) onDrawModalChange(v);
+    else setInternalOpen(v);
+  };
 
   const maxDraw = settings?.max_draw_amount ?? 4000;
   const existingBalance = activeDraw?.remaining_balance ?? 0;
@@ -50,7 +61,7 @@ export function DrawBalanceCard() {
       { amount: numAmount, job_number: jobNumber.trim(), reason: reason.trim() },
       {
         onSuccess: () => {
-          setShowRequestDialog(false);
+          setDialogOpen(false);
           setAmount("");
           setJobNumber("");
           setReason("");
@@ -125,13 +136,13 @@ export function DrawBalanceCard() {
               variant="outline"
               size="sm"
               className="w-full gap-2 border-amber-500/50 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-500/10"
-              onClick={() => setShowRequestDialog(true)}
+              onClick={() => setDialogOpen(true)}
             >
               <Plus className="w-3 h-3" />
               Request Draw
             </Button>
 
-            <Dialog open={showRequestDialog} onOpenChange={setShowRequestDialog}>
+            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
               <DialogContent className="max-w-md">
                 <DialogHeader>
                   <DialogTitle>Request a Draw</DialogTitle>
@@ -179,7 +190,7 @@ export function DrawBalanceCard() {
                   </div>
                 </div>
                 <DialogFooter>
-                  <Button variant="outline" onClick={() => setShowRequestDialog(false)}>Cancel</Button>
+                  <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
                   <Button
                     onClick={handleSubmit}
                     className="bg-amber-600 hover:bg-amber-700 text-white"
