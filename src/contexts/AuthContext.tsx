@@ -212,7 +212,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isSalesManager: role === 'sales_manager' || role === 'admin',
     isSalesRep: role === 'sales_rep' || role === 'sales_manager' || role === 'admin',
     canApproveCommissions: role === 'sales_manager' || role === 'admin',
-    canSubmitCommissions: role === 'sales_rep' || role === 'sales_manager' || role === 'admin',
+    canSubmitCommissions: true,
     userDepartment,
     isActive,
   };

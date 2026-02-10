@@ -85,7 +85,7 @@ const NO_PERMISSIONS: RolePermissions = {
   canEditCommissionTiers: false, canEditCategories: false, canEditTools: false,
   canEditNotificationRouting: false, canPublishSOPs: false, canArchiveSOPs: false,
   canManageUsers: false, canApproveUsers: false, canAssignRoles: false, canAssignTeams: false,
-  canSubmitCommissions: false, canApproveCommissions: false, canDenyCommissions: false,
+  canSubmitCommissions: true, canApproveCommissions: false, canDenyCommissions: false,
   canRequestRevisions: false, canFinalApproveManagerCommissions: false, canProcessPayouts: false,
   canViewAllCommissions: false, canViewTeamCommissions: false, canViewOwnCommissionsOnly: true,
   canExportAllData: false, canExportTeamData: false, canExportOwnData: false,
