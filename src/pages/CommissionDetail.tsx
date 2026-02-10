@@ -24,6 +24,7 @@ import {
   Ban
 } from "lucide-react";
 import { CommissionWorksheet } from "@/components/commissions/CommissionWorksheet";
+import { CommissionStatusTimeline } from "@/components/commissions/CommissionStatusTimeline";
 import { CommissionEditForm } from "@/components/commissions/CommissionEditForm";
 import { 
   useCommissionSubmission, 
@@ -268,7 +269,7 @@ export default function CommissionDetail() {
 
   return (
     <AppLayout>
-      <div className="max-w-4xl mx-auto space-y-6">
+      <div className="max-w-4xl mx-auto space-y-5">
         {/* Header */}
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-4">
@@ -287,7 +288,6 @@ export default function CommissionDetail() {
             </div>
           </div>
           
-          {/* Edit Button for Submitters */}
           {canEdit && (
             <Button onClick={() => setIsEditing(true)} className="gap-2">
               <Edit className="h-4 w-4" />
@@ -295,6 +295,13 @@ export default function CommissionDetail() {
             </Button>
           )}
         </div>
+
+        {/* Status Timeline */}
+        <CommissionStatusTimeline
+          status={submission.status}
+          approvalStage={submission.approval_stage}
+          isManagerSubmission={submission.is_manager_submission || false}
+        />
 
         {/* Revision Required Alert for Submitters */}
         {canEdit && submission.rejection_reason && (

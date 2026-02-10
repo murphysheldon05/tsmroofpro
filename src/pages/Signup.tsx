@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { Eye, EyeOff, ArrowLeft, CheckCircle, AlertTriangle, Loader2 } from "lucide-react";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
+import { AppLoadingScreen } from "@/components/AppLoadingScreen";
 
 const signupSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -151,11 +152,7 @@ export default function Signup() {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
+    return <AppLoadingScreen />;
   }
 
   // Show pending approval message after successful signup
