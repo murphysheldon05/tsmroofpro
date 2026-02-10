@@ -202,8 +202,34 @@ export function useUpdateWarranty() {
 
       if (error) throw error;
 
-      // Send notification for status changes
+      // E4: Create in-app notifications for status changes and assignments
       if (updates.status && previousStatus && updates.status !== previousStatus) {
+        // Notify the assigned user about status change
+        if (data.assigned_production_member) {
+          const statusLabel = WARRANTY_STATUSES.find(s => s.value === updates.status)?.label || updates.status;
+          await supabase.from("user_notifications").insert({
+            user_id: data.assigned_production_member,
+            notification_type: "warranty_status_change",
+            title: `Warranty Status Updated`,
+            message: `${data.customer_name} warranty moved to "${statusLabel}"`,
+            entity_type: "warranty",
+            entity_id: data.id,
+          }).then(() => {});
+        }
+
+        // If completed, notify the creator
+        if (updates.status === "completed" && data.created_by && data.created_by !== data.assigned_production_member) {
+          await supabase.from("user_notifications").insert({
+            user_id: data.created_by,
+            notification_type: "warranty_completed",
+            title: `Warranty Completed`,
+            message: `${data.customer_name} warranty has been marked as completed`,
+            entity_type: "warranty",
+            entity_id: data.id,
+          }).then(() => {});
+        }
+
+        // Send email notification
         try {
           let notificationType: "status_change" | "assigned" | "completed" = "status_change";
           if (updates.status === "assigned") notificationType = "assigned";
@@ -227,10 +253,24 @@ export function useUpdateWarranty() {
         }
       }
 
+      // E4: Notify on assignment change
+      if (updates.assigned_production_member && updates.assigned_production_member !== data.created_by) {
+        await supabase.from("user_notifications").insert({
+          user_id: updates.assigned_production_member,
+          notification_type: "warranty_assigned",
+          title: `Warranty Assigned to You`,
+          message: `You've been assigned to ${data.customer_name}'s warranty at ${data.job_address}`,
+          entity_type: "warranty",
+          entity_id: data.id,
+        }).then(() => {});
+      }
+
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["warranties"] });
+      queryClient.invalidateQueries({ queryKey: ["user-notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["unread-notification-count"] });
       toast.success("Warranty request updated successfully");
     },
     onError: (error) => {

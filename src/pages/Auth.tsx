@@ -23,12 +23,10 @@ export default function Auth() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // GOVERNANCE: Use isActive (employee_status='active') as the canonical check
   const { signIn, user, loading, isActive, employeeStatus } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Only redirect if user is logged in AND active
     if (!loading && user && isActive) {
       navigate("/command-center", { replace: true });
     }
@@ -55,11 +53,8 @@ export default function Auth() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (!validateForm()) return;
-
     setIsSubmitting(true);
-
     try {
       const { error } = await signIn(email, password);
       if (error) {
@@ -82,15 +77,24 @@ export default function Auth() {
     return <AppLoadingScreen />;
   }
 
-  // GOVERNANCE: Show pending approval screen if user is logged in but not active
   if (user && employeeStatus === 'pending') {
     return <PendingApprovalScreen />;
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      {/* Background effects */}
-      <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top_right,_hsl(var(--primary)/0.08)_0%,_transparent_50%)]" />
+    <div className="min-h-screen flex flex-col relative overflow-hidden">
+      {/* B1: Warm gradient background */}
+      <div className="fixed inset-0 bg-gradient-to-br from-[hsl(142_76%_96%)] via-[hsl(220_20%_97%)] to-[hsl(213_60%_96%)]" />
+      <div className="fixed top-0 right-0 w-[600px] h-[600px] bg-[radial-gradient(ellipse_at_center,_hsl(142_72%_35%/0.05)_0%,_transparent_70%)]" />
+      <div className="fixed bottom-0 left-0 w-[500px] h-[500px] bg-[radial-gradient(ellipse_at_center,_hsl(213_60%_50%/0.04)_0%,_transparent_70%)]" />
+
+      {/* Dark mode overrides */}
+      <div className="dark:hidden" />
+      <style>{`
+        .dark .auth-bg { background: hsl(222 47% 5%); }
+        .dark .auth-bg .auth-gradient-1 { background: radial-gradient(ellipse at top right, hsl(142 71% 45% / 0.06) 0%, transparent 70%); }
+        .dark .auth-bg .auth-gradient-2 { background: radial-gradient(ellipse at bottom left, hsl(213 60% 50% / 0.04) 0%, transparent 70%); }
+      `}</style>
 
       {/* Header */}
       <header className="relative z-10 p-6">
@@ -106,7 +110,8 @@ export default function Auth() {
 
       {/* Auth Form */}
       <main className="relative z-10 flex-1 flex items-center justify-center px-4 pb-20">
-        <div className="w-full max-w-md">
+        <div className="w-full max-w-[420px]">
+          {/* A1: Logo hero */}
           <div className="text-center mb-8">
             <Logo size="lg" className="justify-center mb-6" />
             <h1 className="text-2xl font-bold text-foreground mb-2">
@@ -117,7 +122,8 @@ export default function Auth() {
             </p>
           </div>
 
-          <div className="glass-card rounded-2xl p-8">
+          {/* B2: Login card with premium styling */}
+          <div className="bg-card/95 backdrop-blur-xl border border-border/40 rounded-[20px] px-10 py-10 shadow-[0_8px_30px_rgba(0,0,0,0.08)]">
             <form onSubmit={handleSubmit} className="space-y-5">
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
@@ -127,7 +133,7 @@ export default function Auth() {
                   placeholder="you@tsmroofing.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className={errors.email ? "border-destructive" : ""}
+                  className={`rounded-[10px] transition-all focus:border-primary focus:ring-[3px] focus:ring-primary/10 placeholder:text-[hsl(220_9%_64%)] ${errors.email ? "border-destructive" : ""}`}
                 />
                 {errors.email && (
                   <p className="text-sm text-destructive">{errors.email}</p>
@@ -143,7 +149,7 @@ export default function Auth() {
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className={errors.password ? "border-destructive pr-10" : "pr-10"}
+                    className={`rounded-[10px] pr-10 transition-all focus:border-primary focus:ring-[3px] focus:ring-primary/10 placeholder:text-[hsl(220_9%_64%)] ${errors.password ? "border-destructive" : ""}`}
                   />
                   <button
                     type="button"
@@ -156,32 +162,61 @@ export default function Auth() {
                 {errors.password && (
                   <p className="text-sm text-destructive">{errors.password}</p>
                 )}
+                {/* B5: Forgot password link */}
+                <div className="text-right">
+                  <button
+                    type="button"
+                    className="text-xs text-primary hover:underline font-medium"
+                    onClick={() => toast.info("Contact your administrator to reset your password.")}
+                  >
+                    Forgot password?
+                  </button>
+                </div>
               </div>
 
-              <Button
+              {/* B4: Premium sign in button */}
+              <button
                 type="submit"
-                variant="neon"
-                className="w-full"
-                size="lg"
                 disabled={isSubmitting}
+                className="w-full py-3 rounded-[11px] text-sm font-bold text-white transition-all duration-200 disabled:opacity-60"
+                style={{
+                  background: "linear-gradient(135deg, hsl(142 72% 35%), hsl(142 72% 28%))",
+                  boxShadow: "0 2px 8px hsla(142, 72%, 35%, 0.25)",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.boxShadow = "0 4px 16px hsla(142, 72%, 35%, 0.3)";
+                  e.currentTarget.style.transform = "translateY(-1px)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.boxShadow = "0 2px 8px hsla(142, 72%, 35%, 0.25)";
+                  e.currentTarget.style.transform = "translateY(0)";
+                }}
               >
                 {isSubmitting ? (
-                  <div className="w-5 h-5 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto" />
                 ) : (
                   "Sign In"
                 )}
-              </Button>
+              </button>
             </form>
 
+            {/* B7: Updated create account text */}
             <p className="mt-6 text-center text-sm text-muted-foreground">
-              Don't have an account?{" "}
+              Got an invite?{" "}
               <button
                 onClick={() => navigate("/signup")}
                 className="text-primary hover:underline font-medium"
               >
-                Create one
+                Create your account
               </button>
             </p>
+
+            {/* B6: Footer */}
+            <div className="mt-6 pt-4 border-t border-border/30 text-center">
+              <p className="text-xs text-muted-foreground">
+                © 2026 TSM Roofing LLC • Phoenix & Prescott, AZ
+              </p>
+            </div>
           </div>
         </div>
       </main>

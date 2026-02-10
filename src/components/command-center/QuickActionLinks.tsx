@@ -19,8 +19,8 @@ export function QuickActionLinks() {
           onClick={() => navigate(action.href)}
           className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-medium whitespace-nowrap transition-all duration-150 min-h-[44px] hover:shadow-md active:scale-[0.98] ${
             action.accent
-              ? "bg-primary/[0.06] border-primary/20 text-primary hover:bg-primary/10"
-              : "bg-card border-border/50 text-foreground hover:bg-muted/50"
+              ? "bg-primary/[0.06] border-primary/30 text-primary hover:bg-primary/10 shadow-[0_1px_3px_rgba(0,0,0,0.04)]"
+              : "bg-card border-border/50 text-foreground hover:bg-muted/50 hover:text-primary shadow-[0_1px_3px_rgba(0,0,0,0.04)]"
           }`}
         >
           <action.icon className="w-4 h-4 flex-shrink-0" />
