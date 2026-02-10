@@ -170,10 +170,16 @@ export function useDenyCommission() {
       try {
         const { data: commission } = await supabase
           .from("commission_submissions")
-          .select("*, profiles:submitted_by(email, full_name)")
+          .select("*")
           .eq("id", commissionId)
           .single();
         
+        const { data: submitterProfile } = await supabase
+          .from("profiles")
+          .select("email, full_name")
+          .eq("id", commission?.submitted_by)
+          .single();
+
         await supabase.functions.invoke("send-commission-notification", {
           body: {
             notification_type: "denied",
@@ -181,8 +187,12 @@ export function useDenyCommission() {
             job_name: commission?.job_name,
             job_address: commission?.job_address,
             sales_rep_name: commission?.sales_rep_name,
-            submission_type: commission?.submission_type,
+            subcontractor_name: commission?.subcontractor_name,
+            submission_type: commission?.submission_type || "employee",
             contract_amount: commission?.contract_amount,
+            net_commission_owed: commission?.net_commission_owed || 0,
+            submitter_email: submitterProfile?.email,
+            submitter_name: submitterProfile?.full_name,
             notes: reason,
             status: "denied",
           },
@@ -282,6 +292,12 @@ export function useRequestRevision() {
           .eq("id", commissionId)
           .single();
         
+        const { data: submitterProfile } = await supabase
+          .from("profiles")
+          .select("email, full_name")
+          .eq("id", commission?.submitted_by)
+          .single();
+
         await supabase.functions.invoke("send-commission-notification", {
           body: {
             notification_type: "revision_required",
@@ -289,7 +305,12 @@ export function useRequestRevision() {
             job_name: commission?.job_name,
             job_address: commission?.job_address,
             sales_rep_name: commission?.sales_rep_name,
-            submission_type: commission?.submission_type,
+            subcontractor_name: commission?.subcontractor_name,
+            submission_type: commission?.submission_type || "employee",
+            contract_amount: commission?.contract_amount || 0,
+            net_commission_owed: commission?.net_commission_owed || 0,
+            submitter_email: submitterProfile?.email,
+            submitter_name: submitterProfile?.full_name,
             notes: reason,
             status: "revision_required",
           },
@@ -409,32 +430,51 @@ export function useApproveCommission() {
         notes: notes ? `${logMessage}\n\nNotes: ${notes}` : logMessage,
       });
       
-      // Send celebratory notification for final approvals
-      if (updateData.status === "approved") {
-        try {
-          const { data: commission } = await supabase
-            .from("commission_submissions")
-            .select("*")
-            .eq("id", commissionId)
-            .single();
-          
-          await supabase.functions.invoke("send-commission-notification", {
-            body: {
-              notification_type: "approved",
-              commission_id: commissionId,
-              job_name: commission?.job_name,
-              job_address: commission?.job_address,
-              sales_rep_name: commission?.sales_rep_name,
-              submission_type: commission?.submission_type,
-              contract_amount: commission?.contract_amount,
-              net_commission_owed: finalApprovedAmount,
-              notes: notes || "Congratulations! Your commission has been approved!",
-              status: "approved",
-            },
-          });
-        } catch (notifyError) {
-          console.error("Failed to send approval notification:", notifyError);
+      // Send notifications based on approval stage
+      try {
+        const { data: commission } = await supabase
+          .from("commission_submissions")
+          .select("*")
+          .eq("id", commissionId)
+          .single();
+
+        // Get submitter info
+        const { data: submitterProfile } = await supabase
+          .from("profiles")
+          .select("email, full_name")
+          .eq("id", commission?.submitted_by)
+          .single();
+
+        const notifPayload: any = {
+          commission_id: commissionId,
+          job_name: commission?.job_name,
+          job_address: commission?.job_address,
+          sales_rep_name: commission?.sales_rep_name,
+          subcontractor_name: commission?.subcontractor_name,
+          submission_type: commission?.submission_type || "employee",
+          contract_amount: commission?.contract_amount,
+          net_commission_owed: finalApprovedAmount,
+          submitter_email: submitterProfile?.email,
+          submitter_name: submitterProfile?.full_name,
+          notes,
+          status: updateData.status || "pending_review",
+        };
+
+        if (currentStage === "pending_manager") {
+          // Manager approved — notify accounting
+          notifPayload.notification_type = "manager_approved";
+        } else if (updateData.status === "approved") {
+          // Final approval — celebratory email
+          notifPayload.notification_type = "accounting_approved";
         }
+
+        if (notifPayload.notification_type) {
+          await supabase.functions.invoke("send-commission-notification", {
+            body: notifPayload,
+          });
+        }
+      } catch (notifyError) {
+        console.error("Failed to send approval notification:", notifyError);
       }
       
       return { success: true };
