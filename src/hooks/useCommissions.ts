@@ -64,6 +64,11 @@ export interface CommissionSubmission {
   paid_by: string | null;
   payout_batch_id: string | null;
   
+  // Override tracking
+  override_amount: number | null;
+  override_manager_id: string | null;
+  override_commission_number: number | null;
+  
   created_at: string;
   updated_at: string;
 }
@@ -265,6 +270,66 @@ export function useUpdateCommissionStatus() {
         updateData.approved_by = user.id;
         updateData.commission_approved_at = new Date().toISOString();
         updateData.commission_approved_by = user.id;
+
+        // Calculate override if rep is in override phase
+        if (current?.submitted_by) {
+          try {
+            const repId = current.submitted_by;
+            // Get rep's manager
+            const { data: teamAssignment } = await supabase
+              .from("team_assignments")
+              .select("manager_id")
+              .eq("employee_id", repId)
+              .maybeSingle();
+
+            const managerId = teamAssignment?.manager_id;
+
+            if (managerId) {
+              // Get or create override tracking
+              const { data: tracking } = await supabase
+                .from("sales_rep_override_tracking")
+                .select("approved_commission_count, override_phase_complete")
+                .eq("sales_rep_id", repId)
+                .maybeSingle();
+
+              const currentCount = tracking?.approved_commission_count || 0;
+              const isComplete = tracking?.override_phase_complete || currentCount >= 10;
+
+              if (!isComplete && currentCount < 10) {
+                const newCount = currentCount + 1;
+                const netComm = current?.net_commission_owed || 0;
+                const overrideAmt = netComm * 0.10;
+
+                updateData.override_amount = overrideAmt;
+                updateData.override_manager_id = managerId;
+                updateData.override_commission_number = newCount;
+
+                // Update tracking count
+                if (tracking) {
+                  await supabase
+                    .from("sales_rep_override_tracking")
+                    .update({
+                      approved_commission_count: newCount,
+                      override_phase_complete: newCount >= 10,
+                      updated_at: new Date().toISOString(),
+                    })
+                    .eq("sales_rep_id", repId);
+                } else {
+                  await supabase
+                    .from("sales_rep_override_tracking")
+                    .insert({
+                      sales_rep_id: repId,
+                      approved_commission_count: newCount,
+                      override_phase_complete: newCount >= 10,
+                    });
+                }
+              }
+            }
+          } catch (e) {
+            console.error("Override calculation error:", e);
+            // Don't fail the approval if override calc fails
+          }
+        }
       }
       
       // Handle paid status

@@ -769,6 +769,9 @@ export type Database = {
           manager_approved_at: string | null
           manager_approved_by: string | null
           net_commission_owed: number | null
+          override_amount: number | null
+          override_commission_number: number | null
+          override_manager_id: string | null
           paid_at: string | null
           paid_by: string | null
           payout_batch_id: string | null
@@ -819,6 +822,9 @@ export type Database = {
           manager_approved_at?: string | null
           manager_approved_by?: string | null
           net_commission_owed?: number | null
+          override_amount?: number | null
+          override_commission_number?: number | null
+          override_manager_id?: string | null
           paid_at?: string | null
           paid_by?: string | null
           payout_batch_id?: string | null
@@ -869,6 +875,9 @@ export type Database = {
           manager_approved_at?: string | null
           manager_approved_by?: string | null
           net_commission_owed?: number | null
+          override_amount?: number | null
+          override_commission_number?: number | null
+          override_manager_id?: string | null
           paid_at?: string | null
           paid_by?: string | null
           payout_batch_id?: string | null
@@ -887,7 +896,15 @@ export type Database = {
           total_job_revenue?: number | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "commission_submissions_override_manager_id_fkey"
+            columns: ["override_manager_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       commission_tiers: {
         Row: {

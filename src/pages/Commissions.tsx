@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, DollarSign, Search, FileSpreadsheet, BarChart3 } from "lucide-react";
+import { Plus, DollarSign, Search, FileSpreadsheet, BarChart3, TrendingUp } from "lucide-react";
 import { useCommissionSubmissions, useIsCommissionReviewer } from "@/hooks/useCommissions";
 import { CommissionTracker } from "@/components/commissions/CommissionTracker";
 import { CommissionStatusPipeline } from "@/components/commissions/CommissionStatusPipeline";
@@ -11,6 +11,7 @@ import { CommissionSummaryCards } from "@/components/commissions/CommissionSumma
 import { CommissionCard } from "@/components/commissions/CommissionCard";
 import { DrawBalanceCard } from "@/components/commissions/DrawBalanceCard";
 import { OverridePhaseIndicator } from "@/components/commissions/OverridePhaseIndicator";
+import { ManagerOverrideEarningsCard, ManagerOverridesTab } from "@/components/commissions/ManagerOverrideEarnings";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserHoldsCheck } from "@/hooks/useComplianceHoldCheck";
 import { HoldWarningBanner } from "@/components/compliance/HoldWarningBanner";
@@ -143,9 +144,12 @@ export default function Commissions() {
         {/* Override Phase Indicator */}
         <OverridePhaseIndicator />
 
-        {/* Summary Cards + Draw Balance */}
+        {/* Summary Cards + Draw Balance + Manager Override Earnings */}
         <div className="grid gap-4 grid-cols-1 lg:grid-cols-[1fr_300px]">
-          <CommissionSummaryCards {...summaryStats} />
+          <div className="space-y-4">
+            <CommissionSummaryCards {...summaryStats} />
+            {isManager && <ManagerOverrideEarningsCard />}
+          </div>
           <DrawBalanceCard showDrawModal={showDrawModal} onDrawModalChange={setShowDrawModal} />
         </div>
 
@@ -160,6 +164,12 @@ export default function Commissions() {
               <TabsTrigger value="tracker" className="gap-2 rounded-xl data-[state=active]:bg-primary/15 data-[state=active]:text-primary">
                 <BarChart3 className="h-4 w-4" />
                 Analytics
+              </TabsTrigger>
+            )}
+            {isManager && (
+              <TabsTrigger value="overrides" className="gap-2 rounded-xl data-[state=active]:bg-purple-500/15 data-[state=active]:text-purple-600">
+                <TrendingUp className="h-4 w-4" />
+                My Overrides
               </TabsTrigger>
             )}
           </TabsList>
@@ -237,6 +247,12 @@ export default function Commissions() {
           {isReviewer && (
             <TabsContent value="tracker">
               <CommissionTracker submissions={submissions || []} />
+            </TabsContent>
+          )}
+
+          {isManager && (
+            <TabsContent value="overrides">
+              <ManagerOverridesTab />
             </TabsContent>
           )}
         </Tabs>
