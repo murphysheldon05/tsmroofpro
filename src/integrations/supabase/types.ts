@@ -1405,11 +1405,15 @@ export type Database = {
           amount: number
           approved_at: string | null
           approved_by: string | null
+          commission_id: string | null
           created_at: string
           denial_reason: string | null
           denied_by: string | null
           id: string
+          job_number: string | null
           notes: string | null
+          paid_off_at: string | null
+          reason: string | null
           remaining_balance: number
           requested_at: string
           status: string
@@ -1420,11 +1424,15 @@ export type Database = {
           amount: number
           approved_at?: string | null
           approved_by?: string | null
+          commission_id?: string | null
           created_at?: string
           denial_reason?: string | null
           denied_by?: string | null
           id?: string
+          job_number?: string | null
           notes?: string | null
+          paid_off_at?: string | null
+          reason?: string | null
           remaining_balance?: number
           requested_at?: string
           status?: string
@@ -1435,11 +1443,15 @@ export type Database = {
           amount?: number
           approved_at?: string | null
           approved_by?: string | null
+          commission_id?: string | null
           created_at?: string
           denial_reason?: string | null
           denied_by?: string | null
           id?: string
+          job_number?: string | null
           notes?: string | null
+          paid_off_at?: string | null
+          reason?: string | null
           remaining_balance?: number
           requested_at?: string
           status?: string
