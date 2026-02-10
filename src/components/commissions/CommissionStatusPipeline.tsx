@@ -70,7 +70,7 @@ export function CommissionStatusPipeline({ statusCounts, activeStatus, onStatusC
   return (
     <div className="w-full">
       {/* Mobile: horizontal scroll pipeline */}
-      <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-none">
+      <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-none" style={{ touchAction: 'pan-x pan-y' }}>
         {/* "All" chip */}
         <button
           onClick={() => onStatusClick("all")}
