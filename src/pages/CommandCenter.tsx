@@ -2,8 +2,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { CommandCenterSettings } from "@/components/command-center/CommandCenterSettings";
 import { WidgetRenderer } from "@/components/command-center/WidgetRenderer";
-import { CoreIdentityWidget } from "@/components/command-center/CoreIdentityWidget";
+import { CompactCoreIdentity } from "@/components/command-center/CompactCoreIdentity";
 import { PlaybookCompletionBanner } from "@/components/command-center/PlaybookCompletionBanner";
+import { QuickActionLinks } from "@/components/command-center/QuickActionLinks";
+import { NeedsAttentionWidget } from "@/components/command-center/NeedsAttentionWidget";
+import { CommissionSummaryWidget } from "@/components/command-center/CommissionSummaryWidget";
 import { useCommandCenterPreferences } from "@/hooks/useCommandCenterPreferences";
 import { LayoutGrid } from "lucide-react";
 
@@ -16,7 +19,7 @@ export default function CommandCenter() {
 
   return (
     <AppLayout>
-      <div className="max-w-7xl mx-auto space-y-6 px-4 sm:px-0">
+      <div className="max-w-7xl mx-auto space-y-5 px-4 sm:px-0">
         {/* Header */}
         <header className="pt-4 lg:pt-0">
           <div className="flex items-center justify-between gap-4 flex-wrap">
@@ -43,15 +46,22 @@ export default function CommandCenter() {
           </div>
         </header>
 
-        {/* Master Playbook Completion Banner - Shows if incomplete */}
+        {/* Quick Action Links */}
+        <QuickActionLinks />
+
+        {/* Master Playbook Completion Banner */}
         <PlaybookCompletionBanner />
 
-        {/* LOCKED: Core Identity Widget - Always at top, cannot be removed or reordered */}
-        <section>
-          <CoreIdentityWidget />
-        </section>
+        {/* LOCKED: Compact Core Identity */}
+        <CompactCoreIdentity />
 
-        {/* Dynamic Widget Rendering Based on User Order */}
+        {/* Needs Your Attention - Manager/Admin only */}
+        <NeedsAttentionWidget />
+
+        {/* Commission Summary Cards */}
+        <CommissionSummaryWidget />
+
+        {/* Dynamic Widget Rendering */}
         {widgetOrder.map((widgetKey) => (
           <WidgetRenderer
             key={widgetKey}

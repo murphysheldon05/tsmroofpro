@@ -16,27 +16,27 @@ export type WidgetKey = keyof CommandCenterWidgets;
 
 // Core Identity is LOCKED and always shown - not configurable
 const DEFAULT_WIDGETS: CommandCenterWidgets = {
-  companyInfo: true,
+  companyInfo: false,
   weather: true,
   quickStats: true,
   todaysBuilds: true,
   todaysDeliveries: true,
   actionRequired: true,
   slaSnapshot: true,
-  quickSOPAccess: true,
-  quickLinks: true,
+  quickSOPAccess: false,
+  quickLinks: false,
 };
 
 // Core Identity is ALWAYS FIRST and LOCKED - cannot be reordered
 export const DEFAULT_WIDGET_ORDER: WidgetKey[] = [
-  "companyInfo",
+  "todaysBuilds",
+  "todaysDeliveries",
   "weather",
   "quickStats",
   "slaSnapshot",
-  "quickSOPAccess",
-  "todaysBuilds",
-  "todaysDeliveries",
   "actionRequired",
+  "companyInfo",
+  "quickSOPAccess",
   "quickLinks",
 ];
 
