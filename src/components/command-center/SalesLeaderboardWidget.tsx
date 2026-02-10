@@ -99,6 +99,7 @@ export function SalesLeaderboardWidget() {
 
   const entries = result?.entries || [];
   const acculynxNotConfigured = result?.acculynxNotConfigured || false;
+  const acculynxError = result?.acculynxError || false;
   const maxValue = entries[0]?.total || 1;
 
   const periodLabel = timeRange === "month"
@@ -210,6 +211,21 @@ export function SalesLeaderboardWidget() {
           <div className="text-center py-8 space-y-2">
             <p className="text-muted-foreground text-sm">
               Connect AccuLynx to see live sales data.
+            </p>
+            {isAdmin && (
+              <Link
+                to="/admin"
+                className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+              >
+                <ExternalLink className="w-3 h-3" />
+                Go to Admin Panel
+              </Link>
+            )}
+          </div>
+        ) : tab === "sales" && acculynxError ? (
+          <div className="text-center py-8 space-y-2">
+            <p className="text-muted-foreground text-sm">
+              Unable to load AccuLynx data. Check your connection in Admin Panel &gt; Integrations.
             </p>
             {isAdmin && (
               <Link

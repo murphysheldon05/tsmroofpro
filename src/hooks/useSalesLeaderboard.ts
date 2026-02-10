@@ -32,26 +32,34 @@ export function useSalesLeaderboard(tab: LeaderboardTab, range: TimeRange, custo
     queryKey: ["sales-leaderboard", tab, range, start, end],
     queryFn: async () => {
       if (tab === "sales") {
-        // Sales tab: fetch from AccuLynx via edge function
-        const { data, error } = await supabase.functions.invoke("acculynx-sales-leaderboard", {
-          body: { startDate: start, endDate: end },
-        });
+        try {
+          const { data, error } = await supabase.functions.invoke("acculynx-sales-leaderboard", {
+            body: { startDate: start, endDate: end },
+          });
 
-        if (error) throw error;
+          if (error) {
+            console.error("AccuLynx fetch error:", error);
+            return { entries: [] as LeaderboardEntry[], acculynxNotConfigured: false, acculynxError: true };
+          }
 
-        // Check if AccuLynx is not configured
-        if (data?.error === "acculynx_not_configured") {
-          return { entries: [] as LeaderboardEntry[], acculynxNotConfigured: true };
+          if (data?.error === "acculynx_not_configured") {
+            return { entries: [] as LeaderboardEntry[], acculynxNotConfigured: true, acculynxError: false };
+          }
+
+          if (!data?.success) {
+            console.error("AccuLynx data error:", data?.error);
+            return { entries: [] as LeaderboardEntry[], acculynxNotConfigured: false, acculynxError: true };
+          }
+
+          return {
+            entries: (data.entries || []) as LeaderboardEntry[],
+            acculynxNotConfigured: false,
+            acculynxError: false,
+          };
+        } catch (err) {
+          console.error("AccuLynx exception:", err);
+          return { entries: [] as LeaderboardEntry[], acculynxNotConfigured: false, acculynxError: true };
         }
-
-        if (!data?.success) {
-          throw new Error(data?.error || "Failed to fetch sales data");
-        }
-
-        return {
-          entries: (data.entries || []) as LeaderboardEntry[],
-          acculynxNotConfigured: false,
-        };
       }
 
       // Profit & Commissions tabs (local commission_documents data)
@@ -97,7 +105,7 @@ export function useSalesLeaderboard(tab: LeaderboardTab, range: TimeRange, custo
         .map(([repId, { name, total }]) => ({ repId, repName: name, total }))
         .sort((a, b) => b.total - a.total);
 
-      return { entries, acculynxNotConfigured: false };
+      return { entries, acculynxNotConfigured: false, acculynxError: false };
     },
     refetchInterval: 60000,
   });

@@ -10,29 +10,24 @@ const ACCULYNX_API_BASE = "https://api.acculynx.com/api/v2";
 interface AccuLynxJob {
   id: string;
   jobName?: string;
-  milestone?: string;
-  salesPerson?: {
-    id?: string;
-    firstName?: string;
-    lastName?: string;
-    email?: string;
-  };
+  currentMilestone?: string;
   contractAmount?: number;
   totalContractAmount?: number;
   createdDate?: string;
   milestoneDate?: string;
 }
 
-interface JobsResponse {
-  items?: AccuLynxJob[];
-  totalCount?: number;
+interface SalesOwner {
+  id?: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
 }
 
 async function fetchAllJobs(
   apiKey: string,
   startDate: string,
-  endDate: string,
-  milestones: string
+  endDate: string
 ): Promise<AccuLynxJob[]> {
   const allJobs: AccuLynxJob[] = [];
   let pageStart = 0;
@@ -40,7 +35,7 @@ async function fetchAllJobs(
   let hasMore = true;
 
   while (hasMore) {
-    const url = `${ACCULYNX_API_BASE}/jobs?startDate=${startDate}&endDate=${endDate}&dateFilterType=CreatedDate&milestones=${milestones}&pageSize=${pageSize}&pageStartIndex=${pageStart}&sortBy=CreatedDate&sortOrder=Descending`;
+    const url = `${ACCULYNX_API_BASE}/jobs?startDate=${startDate}&endDate=${endDate}&pageSize=${pageSize}&pageStartIndex=${pageStart}&sortBy=CreatedDate&sortOrder=Descending`;
 
     console.log(`Fetching jobs page at index ${pageStart}...`);
 
@@ -64,16 +59,42 @@ async function fetchAllJobs(
       hasMore = false;
     } else {
       allJobs.push(...items);
-      pageStart += pageSize;
-      // Safety limit
-      if (pageStart > 10000) hasMore = false;
+      if (items.length < pageSize) {
+        hasMore = false;
+      } else {
+        pageStart += pageSize;
+        if (pageStart > 10000) hasMore = false;
+      }
     }
   }
 
   return allJobs;
 }
 
-// Try to get financials for a job to get contract amount
+async function fetchSalesOwner(apiKey: string, jobId: string): Promise<SalesOwner | null> {
+  try {
+    const response = await fetch(`${ACCULYNX_API_BASE}/jobs/${jobId}/representatives/sales-owner`, {
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        Accept: "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      const text = await response.text();
+      console.log(`Sales owner fetch failed for job ${jobId}: ${response.status} - ${text.substring(0, 200)}`);
+      return null;
+    }
+
+    const data = await response.json();
+    console.log(`Sales owner for job ${jobId}: ${JSON.stringify(data)}`);
+    return data as SalesOwner;
+  } catch (e) {
+    console.log(`Sales owner exception for job ${jobId}: ${e}`);
+    return null;
+  }
+}
+
 async function fetchJobFinancials(apiKey: string, jobId: string): Promise<number> {
   try {
     const response = await fetch(`${ACCULYNX_API_BASE}/jobs/${jobId}/financials`, {
@@ -86,7 +107,6 @@ async function fetchJobFinancials(apiKey: string, jobId: string): Promise<number
     if (!response.ok) return 0;
 
     const data = await response.json();
-    // contractAmount or totalContractAmount from financials
     return data.contractAmount || data.totalContractAmount || 0;
   } catch {
     return 0;
@@ -118,17 +138,10 @@ Deno.serve(async (req) => {
 
     console.log(`Fetching AccuLynx sales data: ${startDate} to ${endDate}`);
 
-    // Fetch approved/completed/invoiced/closed jobs (milestones that represent sold jobs)
-    const jobs = await fetchAllJobs(
-      acculynxApiKey,
-      startDate,
-      endDate,
-      "approved,completed,invoiced,closed"
-    );
+    const jobs = await fetchAllJobs(acculynxApiKey, startDate, endDate);
 
     console.log(`Found ${jobs.length} jobs from AccuLynx`);
 
-    // Log first job to see the structure
     if (jobs.length > 0) {
       console.log("Sample job structure:", JSON.stringify(jobs[0]));
     }
@@ -154,7 +167,7 @@ Deno.serve(async (req) => {
       }
     });
 
-    // Aggregate by sales person email
+    // Aggregate by sales owner email
     const repTotals = new Map<string, { repId: string; repName: string; total: number }>();
 
     // Initialize all profiles with 0
@@ -169,33 +182,42 @@ Deno.serve(async (req) => {
     let matchedJobs = 0;
     let unmatchedJobs = 0;
 
-    for (const job of jobs) {
-      const spEmail = job.salesPerson?.email?.toLowerCase();
-      if (!spEmail) {
-        unmatchedJobs++;
-        continue;
-      }
+    // Fetch sales owner and financials for each job in parallel (batched)
+    const BATCH_SIZE = 10;
+    for (let i = 0; i < jobs.length; i += BATCH_SIZE) {
+      const batch = jobs.slice(i, i + BATCH_SIZE);
+      const results = await Promise.all(
+        batch.map(async (job) => {
+          const [salesOwner, financialAmount] = await Promise.all([
+            fetchSalesOwner(acculynxApiKey, job.id),
+            fetchJobFinancials(acculynxApiKey, job.id),
+          ]);
+          return { job, salesOwner, financialAmount };
+        })
+      );
 
-      const profile = emailToProfile.get(spEmail);
-      if (!profile) {
-        unmatchedJobs++;
-        continue;
-      }
+      for (const { job, salesOwner, financialAmount } of results) {
+        const spEmail = salesOwner?.email?.toLowerCase();
+        if (!spEmail) {
+          unmatchedJobs++;
+          continue;
+        }
 
-      // Use contractAmount or totalContractAmount from the job object
-      const amount = job.contractAmount || job.totalContractAmount || 0;
+        const profile = emailToProfile.get(spEmail);
+        if (!profile) {
+          console.log(`Unmatched sales owner email: ${spEmail}`);
+          unmatchedJobs++;
+          continue;
+        }
 
-      const existing = repTotals.get(profile.id);
-      if (existing) {
-        existing.total += amount;
-      } else {
-        repTotals.set(profile.id, {
-          repId: profile.id,
-          repName: profile.name,
-          total: amount,
-        });
+        const amount = financialAmount || job.contractAmount || job.totalContractAmount || 0;
+
+        const existing = repTotals.get(profile.id);
+        if (existing) {
+          existing.total += amount;
+        }
+        matchedJobs++;
       }
-      matchedJobs++;
     }
 
     console.log(`Matched ${matchedJobs} jobs, unmatched ${unmatchedJobs}`);
