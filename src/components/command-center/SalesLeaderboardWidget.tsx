@@ -2,12 +2,14 @@ import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSalesLeaderboard, useLeaderboardSetting, LeaderboardTab, TimeRange } from "@/hooks/useSalesLeaderboard";
-import { Trophy, Calendar } from "lucide-react";
+import { Trophy, Calendar, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, startOfMonth } from "date-fns";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarPicker } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
+import { Link } from "react-router-dom";
 
 function AnimatedNumber({ value, prefix = "$" }: { value: number; prefix?: string }) {
   const [display, setDisplay] = useState(0);
@@ -82,6 +84,7 @@ const TAB_LABELS: Record<LeaderboardTab, string> = {
 };
 
 export function SalesLeaderboardWidget() {
+  const { isAdmin } = useAuth();
   const { data: isEnabled, isLoading: settingLoading } = useLeaderboardSetting();
   const [tab, setTab] = useState<LeaderboardTab>("sales");
   const [timeRange, setTimeRange] = useState<TimeRange>("month");
@@ -89,12 +92,14 @@ export function SalesLeaderboardWidget() {
   const [customEnd, setCustomEnd] = useState<string>(format(new Date(), "yyyy-MM-dd"));
   const [showDatePicker, setShowDatePicker] = useState(false);
 
-  const { data: entries, isLoading } = useSalesLeaderboard(tab, timeRange, customStart, customEnd);
+  const { data: result, isLoading } = useSalesLeaderboard(tab, timeRange, customStart, customEnd);
 
   if (settingLoading) return null;
   if (isEnabled === false) return null;
 
-  const maxValue = entries?.[0]?.total || 1;
+  const entries = result?.entries || [];
+  const acculynxNotConfigured = result?.acculynxNotConfigured || false;
+  const maxValue = entries[0]?.total || 1;
 
   const periodLabel = timeRange === "month"
     ? format(new Date(), "MMMM yyyy")
@@ -200,7 +205,23 @@ export function SalesLeaderboardWidget() {
           </div>
         )}
 
-        {isLoading ? (
+        {/* AccuLynx not configured message for Sales tab */}
+        {tab === "sales" && acculynxNotConfigured ? (
+          <div className="text-center py-8 space-y-2">
+            <p className="text-muted-foreground text-sm">
+              Connect AccuLynx to see live sales data.
+            </p>
+            {isAdmin && (
+              <Link
+                to="/admin"
+                className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+              >
+                <ExternalLink className="w-3 h-3" />
+                Go to Admin Panel
+              </Link>
+            )}
+          </div>
+        ) : isLoading ? (
           <div className="space-y-3">
             {[1, 2, 3, 4].map(i => (
               <div key={i} className="flex items-center gap-3">
@@ -213,9 +234,9 @@ export function SalesLeaderboardWidget() {
               </div>
             ))}
           </div>
-        ) : !entries?.length ? (
+        ) : !entries.length ? (
           <div className="text-center py-8 text-muted-foreground text-sm">
-            No data for this period. Commissions will appear here as they're approved.
+            No data for this period. {tab === "sales" ? "Sales" : "Commissions"} will appear here as they're processed.
           </div>
         ) : (
           <div className="space-y-2 max-h-[400px] overflow-y-auto">
