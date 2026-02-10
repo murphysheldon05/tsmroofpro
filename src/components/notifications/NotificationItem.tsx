@@ -1,6 +1,9 @@
 import { useNavigate } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
-import { FileText, AlertCircle, CheckCircle, DollarSign, RefreshCw } from "lucide-react";
+import {
+  FileText, AlertCircle, CheckCircle, DollarSign, RefreshCw,
+  UserPlus, Shield, Bell, Wrench, BookOpen, AlertTriangle,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { UserNotification } from "@/hooks/useNotifications";
 
@@ -15,21 +18,57 @@ const notificationIcons: Record<string, React.ReactNode> = {
   manager_approved: <CheckCircle className="h-4 w-4 text-green-500" />,
   accounting_approved: <CheckCircle className="h-4 w-4 text-emerald-500" />,
   paid: <DollarSign className="h-4 w-4 text-green-600" />,
+  commission_denied: <AlertTriangle className="h-4 w-4 text-red-500" />,
+  commission_rejected: <RefreshCw className="h-4 w-4 text-red-500" />,
+  new_signup: <UserPlus className="h-4 w-4 text-blue-500" />,
+  user_approved: <CheckCircle className="h-4 w-4 text-green-500" />,
+  compliance_violation: <Shield className="h-4 w-4 text-red-500" />,
+  compliance_hold: <Shield className="h-4 w-4 text-amber-500" />,
+  it_request: <Wrench className="h-4 w-4 text-blue-500" />,
+  training_assigned: <BookOpen className="h-4 w-4 text-purple-500" />,
+  announcement: <Bell className="h-4 w-4 text-blue-500" />,
+  warranty: <Shield className="h-4 w-4 text-amber-500" />,
   default: <AlertCircle className="h-4 w-4 text-muted-foreground" />,
 };
+
+function getNavigationPath(notification: UserNotification): string | null {
+  const { entity_type, entity_id } = notification;
+  if (!entity_type) return null;
+
+  switch (entity_type) {
+    case 'commission':
+    case 'commission_document':
+      return entity_id ? `/commission-documents/${entity_id}` : '/commission-documents';
+    case 'commission_submission':
+      return entity_id ? `/commissions/${entity_id}` : '/commissions';
+    case 'user':
+      return '/admin';
+    case 'it_request':
+      return '/requests';
+    case 'compliance':
+      return '/ops-compliance';
+    case 'warranty':
+      return '/warranties';
+    case 'training':
+      return '/training/new-hire';
+    case 'playbook':
+      return '/playbook-library/master-playbook';
+    default:
+      return null;
+  }
+}
 
 export function NotificationItem({ notification, onMarkRead }: NotificationItemProps) {
   const navigate = useNavigate();
 
   const handleClick = () => {
-    // Mark as read
     if (!notification.is_read) {
       onMarkRead(notification.id);
     }
 
-    // Navigate to relevant page
-    if (notification.entity_type === 'commission' && notification.entity_id) {
-      navigate(`/commission-documents/${notification.entity_id}`);
+    const path = getNavigationPath(notification);
+    if (path) {
+      navigate(path);
     }
   };
 
