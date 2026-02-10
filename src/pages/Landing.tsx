@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/Logo";
 import { ArrowRight, Shield, FileText, Users } from "lucide-react";
+import { AppLoadingScreen } from "@/components/AppLoadingScreen";
 
 export default function Landing() {
   const navigate = useNavigate();
@@ -11,16 +12,12 @@ export default function Landing() {
 
   useEffect(() => {
     if (!loading && user) {
-      navigate("/dashboard");
+      navigate("/command-center", { replace: true });
     }
   }, [user, loading, navigate]);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
+  if (loading || user) {
+    return <AppLoadingScreen />;
   }
 
   return (

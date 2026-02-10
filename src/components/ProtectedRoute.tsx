@@ -7,6 +7,7 @@ import { InactiveScreen } from "@/components/auth/InactiveScreen";
 import { AccessHoldScreen } from "@/components/compliance/AccessHoldScreen";
 import { MasterPlaybookGate } from "@/components/compliance/MasterPlaybookGate";
 import { useAccessHoldCheck } from "@/hooks/useComplianceHoldCheck";
+import { AppLoadingScreen } from "@/components/AppLoadingScreen";
 interface ProtectedRouteProps {
   children: ReactNode;
   requireAdmin?: boolean;
@@ -42,11 +43,7 @@ export function ProtectedRoute({
   const isExemptRoute = location.pathname.startsWith("/sops/master-playbook") ||
     location.pathname === "/profile";
   if (loading || accessHoldLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
+    return <AppLoadingScreen />;
   }
 
   // GOVERNANCE RULE: No user = redirect to auth
