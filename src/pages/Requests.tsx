@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,6 +35,9 @@ import {
   X,
   HelpCircle,
   UserPlus,
+  Archive,
+  RotateCcw,
+  Search,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -48,14 +51,7 @@ import { useAdminAuditLog, AUDIT_ACTIONS, OBJECT_TYPES } from "@/hooks/useAdminA
 
 // Icon map for dynamic icon rendering
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
-  FileEdit,
-  Monitor,
-  Users,
-  Clock,
-  HelpCircle,
-  Send,
-  File,
-  UserPlus,
+  FileEdit, Monitor, Users, Clock, HelpCircle, Send, File, UserPlus,
 };
 
 const getIcon = (iconName: string | null) => {
@@ -64,12 +60,12 @@ const getIcon = (iconName: string | null) => {
 };
 
 const statusColors: Record<string, string> = {
-  pending: "bg-yellow-500/10 text-yellow-500 border-yellow-500/30",
-  in_progress: "bg-blue-500/10 text-blue-500 border-blue-500/30",
-  approved: "bg-green-500/10 text-green-500 border-green-500/30",
-  completed: "bg-green-500/10 text-green-500 border-green-500/30",
-  rejected: "bg-red-500/10 text-red-500 border-red-500/30",
-  closed: "bg-gray-500/10 text-gray-500 border-gray-500/30",
+  pending: "bg-amber-500/10 text-amber-600 border-amber-500/30",
+  in_progress: "bg-blue-500/10 text-blue-600 border-blue-500/30",
+  approved: "bg-green-500/10 text-green-600 border-green-500/30",
+  completed: "bg-emerald-500/10 text-emerald-600 border-emerald-500/30",
+  rejected: "bg-red-500/10 text-red-600 border-red-500/30",
+  closed: "bg-muted text-muted-foreground border-border",
 };
 
 const statusLabels: Record<string, string> = {
@@ -83,6 +79,10 @@ const statusLabels: Record<string, string> = {
 
 // Request types that use support-style workflow (In Progress → Completed)
 const supportRequestTypes = ["hr", "it_access"];
+
+// Statuses considered "archived"
+const ARCHIVED_STATUSES = ["completed", "rejected", "closed"];
+const ACTIVE_STATUSES = ["pending", "in_progress", "approved"];
 
 interface Request {
   id: string;
@@ -146,7 +146,6 @@ export default function Requests() {
         .eq("submitted_by", user.id)
         .neq("type", "commission")
         .order("created_at", { ascending: false });
-      
       if (error) throw error;
       return data as Request[];
     },
@@ -162,22 +161,13 @@ export default function Requests() {
         .select("*")
         .neq("type", "commission")
         .order("created_at", { ascending: false });
-      
       if (error) throw error;
-      
-      // Get unique submitter IDs
       const submitterIds = [...new Set(requestsData.map(r => r.submitted_by))];
-      
-      // Fetch profiles for all users
       const { data: profilesData } = await supabase
         .from("profiles")
         .select("id, full_name, email")
         .in("id", submitterIds);
-      
-      // Create a map of profiles by ID
       const profilesMap = new Map(profilesData?.map(p => [p.id, p]) || []);
-      
-      // Merge profiles with requests
       return requestsData.map(request => ({
         ...request,
         profiles: profilesMap.get(request.submitted_by) || null,
@@ -193,16 +183,12 @@ export default function Requests() {
     setIsSubmitting(true);
     try {
       let filePath: string | null = null;
-
-      // Upload file if selected
       if (selectedFile) {
         const fileExt = selectedFile.name.split(".").pop();
         const fileName = `${user.id}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-
         const { error: uploadError } = await supabase.storage
           .from("request-attachments")
           .upload(fileName, selectedFile);
-
         if (uploadError) throw uploadError;
         filePath = fileName;
       }
@@ -214,17 +200,14 @@ export default function Requests() {
         submitted_by: user.id,
         file_path: filePath,
       });
-
       if (error) throw error;
 
-      // Get user profile for email notification
       const { data: profile } = await supabase
         .from("profiles")
         .select("full_name, email")
         .eq("id", user.id)
         .single();
 
-      // Send email notification
       try {
         await supabase.functions.invoke("send-request-notification", {
           body: {
@@ -247,7 +230,6 @@ export default function Requests() {
       setDescription("");
       clearSelectedFile();
       refetch();
-
       setTimeout(() => setSubmitted(false), 3000);
     } catch (error) {
       toast.error("Failed to submit request");
@@ -256,7 +238,6 @@ export default function Requests() {
     }
   };
 
-  // Handle request status updates
   const handleStatusUpdate = async (requestId: string, newStatus: string) => {
     setIsUpdating(true);
     try {
@@ -265,28 +246,26 @@ export default function Requests() {
         .from("requests")
         .update({ status: newStatus })
         .eq("id", requestId);
-
       if (error) throw error;
 
-      // Log audit trail
-      const actionType = newStatus === "completed" 
-        ? AUDIT_ACTIONS.REQUEST_COMPLETED 
-        : newStatus === "approved" 
-          ? AUDIT_ACTIONS.REQUEST_APPROVED 
-          : newStatus === "rejected" 
-            ? AUDIT_ACTIONS.REQUEST_REJECTED 
+      const actionType = newStatus === "completed"
+        ? AUDIT_ACTIONS.REQUEST_COMPLETED
+        : newStatus === "approved"
+          ? AUDIT_ACTIONS.REQUEST_APPROVED
+          : newStatus === "rejected"
+            ? AUDIT_ACTIONS.REQUEST_REJECTED
             : AUDIT_ACTIONS.REQUEST_STATUS_CHANGED;
-      
+
       logAction.mutate({
         action_type: actionType,
         object_type: OBJECT_TYPES.REQUEST,
         object_id: requestId,
         previous_value: { status: previousStatus },
         new_value: { status: newStatus },
-        notes: `${newStatus === "completed" ? "Completed" : newStatus === "approved" ? "Approved" : newStatus === "rejected" ? "Rejected" : "Updated"} request: "${selectedRequest?.title}"`,
+        notes: `${statusLabels[newStatus] || newStatus} request: "${selectedRequest?.title}"`,
       });
 
-      toast.success(`Request ${newStatus === "completed" ? "completed" : "updated"}`);
+      toast.success(`Request ${statusLabels[newStatus]?.toLowerCase() || newStatus}`);
       refetchAll();
       refetch();
       setSelectedRequest(null);
@@ -302,9 +281,7 @@ export default function Requests() {
       const { data, error } = await supabase.storage
         .from("request-attachments")
         .download(filePath);
-
       if (error) throw error;
-
       const url = URL.createObjectURL(data);
       const link = document.createElement("a");
       link.href = url;
@@ -318,16 +295,26 @@ export default function Requests() {
     }
   };
 
-  // Get pending requests for manager review
-  const getMyPendingRequests = () => {
-    if (!allRequests) return [];
-    return allRequests.filter(r => r.status === 'pending');
-  };
+  // Split requests into active vs archived
+  const activeRequests = useMemo(() =>
+    (allRequests || []).filter(r => ACTIVE_STATUSES.includes(r.status)),
+    [allRequests]
+  );
+  const archivedRequests = useMemo(() =>
+    (allRequests || []).filter(r => ARCHIVED_STATUSES.includes(r.status)),
+    [allRequests]
+  );
+  const myActiveRequests = useMemo(() =>
+    (myRequests || []).filter(r => ACTIVE_STATUSES.includes(r.status)),
+    [myRequests]
+  );
+  const myArchivedRequests = useMemo(() =>
+    (myRequests || []).filter(r => ARCHIVED_STATUSES.includes(r.status)),
+    [myRequests]
+  );
 
-  const pendingRequests = getMyPendingRequests();
-  const pendingCount = pendingRequests.length;
+  const pendingCount = activeRequests.filter(r => r.status === "pending").length;
 
-  // Check if user can submit new hire (only managers/admins)
   const canSubmitNewHire = isManager || isAdmin;
   const isNewHireFlow = type === "hr" && hrSubType === "new-hire" && canSubmitNewHire;
 
@@ -358,12 +345,16 @@ export default function Requests() {
               </TabsTrigger>
               <TabsTrigger value="review" className="gap-2">
                 <CheckSquare className="w-4 h-4" />
-                Review
+                Active
                 {pendingCount > 0 && (
                   <Badge variant="destructive" className="ml-1 h-5 px-1.5 text-xs">
                     {pendingCount}
                   </Badge>
                 )}
+              </TabsTrigger>
+              <TabsTrigger value="archive" className="gap-2">
+                <Archive className="w-4 h-4" />
+                Archive
               </TabsTrigger>
             </TabsList>
 
@@ -388,26 +379,27 @@ export default function Requests() {
                 isManager={isManager}
                 isAdmin={isAdmin}
               />
-              <MyRequestsList requests={myRequests || []} isSubmitter />
+              <RequestsList
+                title="My Active Requests"
+                requests={myActiveRequests}
+              />
             </TabsContent>
 
             <TabsContent value="review" className="space-y-4">
               <h2 className="text-lg font-semibold text-foreground">
-                {isAdmin ? "Pending Requests" : "Requests Needing Your Review"} ({pendingCount})
+                {isAdmin ? "Active & Pending Requests" : "Requests Needing Your Review"} ({activeRequests.length})
               </h2>
               <RequestsTable
-                requests={pendingRequests}
+                requests={activeRequests}
                 onView={setSelectedRequest}
                 showSubmitter
               />
-              
-              <h2 className="text-lg font-semibold text-foreground mt-8">
-                Recently Processed
-              </h2>
-              <RequestsTable
-                requests={allRequests?.filter(r => r.status !== 'pending').slice(0, 10) || []}
+            </TabsContent>
+
+            <TabsContent value="archive" className="space-y-4">
+              <ArchiveSection
+                requests={archivedRequests}
                 onView={setSelectedRequest}
-                showSubmitter
               />
             </TabsContent>
           </Tabs>
@@ -433,7 +425,22 @@ export default function Requests() {
               isManager={isManager}
               isAdmin={isAdmin}
             />
-            <MyRequestsList requests={myRequests || []} isSubmitter />
+            <Tabs defaultValue="active" className="space-y-4">
+              <TabsList className="bg-secondary/50">
+                <TabsTrigger value="active" className="gap-2">
+                  <Clock className="w-4 h-4" />Active
+                </TabsTrigger>
+                <TabsTrigger value="archive" className="gap-2">
+                  <Archive className="w-4 h-4" />Archive
+                </TabsTrigger>
+              </TabsList>
+              <TabsContent value="active">
+                <RequestsList title="My Active Requests" requests={myActiveRequests} />
+              </TabsContent>
+              <TabsContent value="archive">
+                <RequestsList title="Completed & Archived" requests={myArchivedRequests} />
+              </TabsContent>
+            </Tabs>
           </div>
         )}
 
@@ -453,7 +460,7 @@ export default function Requests() {
                     {statusLabels[selectedRequest.status] || selectedRequest.status}
                   </Badge>
                 </div>
-                
+
                 <div>
                   <h3 className="font-semibold text-foreground text-lg">{selectedRequest.title}</h3>
                   <p className="text-sm text-muted-foreground mt-1">
@@ -491,7 +498,7 @@ export default function Requests() {
                   </div>
                 )}
 
-                {/* Actions for managers/admins */}
+                {/* Actions for managers/admins on ACTIVE requests */}
                 {isManager && selectedRequest.status === "pending" && (
                   <DialogFooter className="gap-2 pt-4">
                     {supportRequestTypes.includes(selectedRequest.type) ? (
@@ -534,7 +541,7 @@ export default function Requests() {
                   </DialogFooter>
                 )}
 
-                {/* Action for in-progress requests */}
+                {/* In Progress → Complete */}
                 {isManager && selectedRequest.status === "in_progress" && (
                   <DialogFooter className="pt-4">
                     <Button
@@ -547,7 +554,7 @@ export default function Requests() {
                   </DialogFooter>
                 )}
 
-                {/* Action for approved requests - mark as completed to close out */}
+                {/* Approved → Complete */}
                 {isManager && selectedRequest.status === "approved" && (
                   <DialogFooter className="pt-4">
                     <Button
@@ -556,6 +563,20 @@ export default function Requests() {
                     >
                       <CheckCircle className="w-4 h-4 mr-2" />
                       Mark Complete
+                    </Button>
+                  </DialogFooter>
+                )}
+
+                {/* Reopen — Admin/Manager can reopen completed/rejected */}
+                {isManager && ARCHIVED_STATUSES.includes(selectedRequest.status) && (
+                  <DialogFooter className="pt-4">
+                    <Button
+                      variant="outline"
+                      onClick={() => handleStatusUpdate(selectedRequest.id, "pending")}
+                      disabled={isUpdating}
+                    >
+                      <RotateCcw className="w-4 h-4 mr-2" />
+                      Reopen Request
                     </Button>
                   </DialogFooter>
                 )}
@@ -568,50 +589,29 @@ export default function Requests() {
   );
 }
 
-// Submit Request Form Component
+// ──────────── Submit Request Form ────────────
 function SubmitRequestForm({
-  type,
-  setType,
-  hrSubType,
-  setHrSubType,
-  title,
-  setTitle,
-  description,
-  setDescription,
-  isSubmitting,
-  submitted,
-  handleSubmit,
-  selectedFile,
-  onFileSelect,
-  onClearFile,
-  fileInputRef,
-  requestTypes,
-  isManager,
-  isAdmin,
+  type, setType, hrSubType, setHrSubType,
+  title, setTitle, description, setDescription,
+  isSubmitting, submitted, handleSubmit,
+  selectedFile, onFileSelect, onClearFile, fileInputRef,
+  requestTypes, isManager, isAdmin,
 }: {
-  type: string;
-  setType: (type: string) => void;
-  hrSubType: "simple" | "new-hire" | null;
-  setHrSubType: (type: "simple" | "new-hire" | null) => void;
-  title: string;
-  setTitle: (title: string) => void;
-  description: string;
-  setDescription: (description: string) => void;
-  isSubmitting: boolean;
-  submitted: boolean;
+  type: string; setType: (type: string) => void;
+  hrSubType: "simple" | "new-hire" | null; setHrSubType: (type: "simple" | "new-hire" | null) => void;
+  title: string; setTitle: (title: string) => void;
+  description: string; setDescription: (description: string) => void;
+  isSubmitting: boolean; submitted: boolean;
   handleSubmit: (e: React.FormEvent) => void;
   selectedFile: File | null;
   onFileSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onClearFile: () => void;
   fileInputRef: React.RefObject<HTMLInputElement>;
   requestTypes: RequestType[];
-  isManager: boolean;
-  isAdmin: boolean;
+  isManager: boolean; isAdmin: boolean;
 }) {
   const canSubmitNewHire = isManager || isAdmin;
   const isNewHireFlow = type === "hr" && hrSubType === "new-hire" && canSubmitNewHire;
-
-  // Filter out commission type from request types
   const filteredRequestTypes = requestTypes.filter(rt => rt.value !== "commission" && rt.is_active);
 
   return (
@@ -703,7 +703,6 @@ function SubmitRequestForm({
         />
       ) : (
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Regular form fields */}
           {(type !== "hr" || hrSubType === "simple" || (!canSubmitNewHire && type === "hr")) && type && (
             <>
               <div className="space-y-2">
@@ -738,7 +737,6 @@ function SubmitRequestForm({
                   onChange={onFileSelect}
                   className="hidden"
                 />
-
                 {selectedFile ? (
                   <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50 border border-border/50">
                     <File className="w-5 h-5 text-primary flex-shrink-0" />
@@ -748,13 +746,7 @@ function SubmitRequestForm({
                         {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
                       </p>
                     </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={onClearFile}
-                      className="flex-shrink-0"
-                    >
+                    <Button type="button" variant="ghost" size="sm" onClick={onClearFile} className="flex-shrink-0">
                       <X className="w-4 h-4" />
                     </Button>
                   </div>
@@ -769,27 +761,16 @@ function SubmitRequestForm({
                     Choose File
                   </Button>
                 )}
-
                 <p className="text-xs text-muted-foreground">
                   Accepted formats: PDF, Word, Excel, Images (max 20MB)
                 </p>
               </div>
 
-              <Button 
-                type="submit" 
-                variant="neon" 
-                disabled={!type || !title.trim() || isSubmitting}
-              >
+              <Button type="submit" variant="neon" disabled={!type || !title.trim() || isSubmitting}>
                 {isSubmitting ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Submitting...
-                  </>
+                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Submitting...</>
                 ) : (
-                  <>
-                    <Send className="w-4 h-4 mr-2" />
-                    Submit Request
-                  </>
+                  <><Send className="w-4 h-4 mr-2" />Submit Request</>
                 )}
               </Button>
             </>
@@ -800,16 +781,23 @@ function SubmitRequestForm({
   );
 }
 
-// My Requests List Component
-function MyRequestsList({ requests, isSubmitter }: { requests: Request[]; isSubmitter?: boolean }) {
-  if (!requests.length) return null;
+// ──────────── Requests List (card-style) ────────────
+function RequestsList({ title, requests }: { title: string; requests: Request[] }) {
+  if (!requests.length) {
+    return (
+      <div className="glass-card rounded-xl p-6 text-center text-muted-foreground">
+        <Archive className="w-8 h-8 mx-auto mb-2 opacity-50" />
+        <p className="text-sm">No requests found.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="glass-card rounded-xl p-6 space-y-4">
-      <h2 className="font-semibold text-foreground">My Recent Requests</h2>
+      <h2 className="font-semibold text-foreground">{title}</h2>
       <div className="space-y-3">
-        {requests.slice(0, 5).map((request) => (
-          <div key={request.id} className="flex items-center justify-between p-3 rounded-lg bg-secondary/30">
+        {requests.map((request) => (
+          <div key={request.id} className="flex items-center justify-between p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors">
             <div className="flex items-center gap-3 min-w-0">
               <Badge variant="outline" className="capitalize shrink-0">
                 {request.type.replace("_", " ")}
@@ -820,7 +808,7 @@ function MyRequestsList({ requests, isSubmitter }: { requests: Request[]; isSubm
               <Badge variant="outline" className={statusColors[request.status]}>
                 {statusLabels[request.status] || request.status}
               </Badge>
-              <span className="text-xs text-muted-foreground">
+              <span className="text-xs text-muted-foreground hidden sm:inline">
                 {formatDistanceToNow(new Date(request.created_at), { addSuffix: true })}
               </span>
             </div>
@@ -831,14 +819,55 @@ function MyRequestsList({ requests, isSubmitter }: { requests: Request[]; isSubm
   );
 }
 
-// Requests Table Component
-function RequestsTable({ 
-  requests, 
-  onView, 
-  showSubmitter 
-}: { 
-  requests: Request[]; 
-  onView: (request: Request) => void; 
+// ──────────── Archive Section with search ────────────
+function ArchiveSection({
+  requests,
+  onView,
+}: {
+  requests: Request[];
+  onView: (request: Request) => void;
+}) {
+  const [search, setSearch] = useState("");
+
+  const filtered = useMemo(() => {
+    if (!search) return requests;
+    const q = search.toLowerCase();
+    return requests.filter(
+      r => r.title.toLowerCase().includes(q) ||
+        r.type.toLowerCase().includes(q) ||
+        r.profiles?.full_name?.toLowerCase().includes(q)
+    );
+  }, [requests, search]);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold text-foreground">
+          Archived Requests ({requests.length})
+        </h2>
+      </div>
+      <div className="relative max-w-sm">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Search archive..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="pl-10"
+        />
+      </div>
+      <RequestsTable requests={filtered} onView={onView} showSubmitter />
+    </div>
+  );
+}
+
+// ──────────── Requests Table ────────────
+function RequestsTable({
+  requests,
+  onView,
+  showSubmitter,
+}: {
+  requests: Request[];
+  onView: (request: Request) => void;
   showSubmitter?: boolean;
 }) {
   if (!requests.length) {
@@ -850,49 +879,81 @@ function RequestsTable({
   }
 
   return (
-    <div className="glass-card rounded-xl overflow-hidden">
-      <table className="w-full">
-        <thead className="bg-secondary/50">
-          <tr>
-            <th className="text-left p-3 text-sm font-medium text-muted-foreground">Type</th>
-            <th className="text-left p-3 text-sm font-medium text-muted-foreground">Title</th>
-            {showSubmitter && <th className="text-left p-3 text-sm font-medium text-muted-foreground">Submitted By</th>}
-            <th className="text-left p-3 text-sm font-medium text-muted-foreground">Status</th>
-            <th className="text-left p-3 text-sm font-medium text-muted-foreground">Date</th>
-            <th className="text-right p-3 text-sm font-medium text-muted-foreground">Actions</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-border/50">
-          {requests.map((request) => (
-            <tr key={request.id} className="hover:bg-secondary/30">
-              <td className="p-3">
-                <Badge variant="outline" className="capitalize">
-                  {request.type.replace("_", " ")}
-                </Badge>
-              </td>
-              <td className="p-3 text-sm text-foreground">{request.title}</td>
-              {showSubmitter && (
-                <td className="p-3 text-sm text-muted-foreground">
-                  {request.profiles?.full_name || request.profiles?.email || "Unknown"}
-                </td>
-              )}
-              <td className="p-3">
-                <Badge variant="outline" className={statusColors[request.status]}>
-                  {statusLabels[request.status] || request.status}
-                </Badge>
-              </td>
-              <td className="p-3 text-sm text-muted-foreground">
-                {formatDistanceToNow(new Date(request.created_at), { addSuffix: true })}
-              </td>
-              <td className="p-3 text-right">
-                <Button variant="ghost" size="sm" onClick={() => onView(request)}>
-                  <Eye className="w-4 h-4" />
-                </Button>
-              </td>
+    <>
+      {/* Mobile Cards */}
+      <div className="sm:hidden space-y-3">
+        {requests.map((request) => (
+          <button
+            key={request.id}
+            onClick={() => onView(request)}
+            className="w-full text-left p-4 rounded-lg border border-border bg-card hover:bg-muted/30 transition-all space-y-2"
+          >
+            <div className="flex items-center justify-between gap-2">
+              <Badge variant="outline" className="capitalize text-xs">
+                {request.type.replace("_", " ")}
+              </Badge>
+              <Badge variant="outline" className={`text-xs ${statusColors[request.status]}`}>
+                {statusLabels[request.status] || request.status}
+              </Badge>
+            </div>
+            <p className="text-sm font-medium text-foreground truncate">{request.title}</p>
+            {showSubmitter && (
+              <p className="text-xs text-muted-foreground">
+                {request.profiles?.full_name || "Unknown"}
+              </p>
+            )}
+            <p className="text-xs text-muted-foreground">
+              {formatDistanceToNow(new Date(request.created_at), { addSuffix: true })}
+            </p>
+          </button>
+        ))}
+      </div>
+
+      {/* Desktop Table */}
+      <div className="hidden sm:block glass-card rounded-xl overflow-hidden">
+        <table className="w-full">
+          <thead className="bg-secondary/50">
+            <tr>
+              <th className="text-left p-3 text-sm font-medium text-muted-foreground">Type</th>
+              <th className="text-left p-3 text-sm font-medium text-muted-foreground">Title</th>
+              {showSubmitter && <th className="text-left p-3 text-sm font-medium text-muted-foreground">Submitted By</th>}
+              <th className="text-left p-3 text-sm font-medium text-muted-foreground">Status</th>
+              <th className="text-left p-3 text-sm font-medium text-muted-foreground">Date</th>
+              <th className="text-right p-3 text-sm font-medium text-muted-foreground">Actions</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody className="divide-y divide-border/50">
+            {requests.map((request) => (
+              <tr key={request.id} className="hover:bg-secondary/30">
+                <td className="p-3">
+                  <Badge variant="outline" className="capitalize">
+                    {request.type.replace("_", " ")}
+                  </Badge>
+                </td>
+                <td className="p-3 text-sm text-foreground">{request.title}</td>
+                {showSubmitter && (
+                  <td className="p-3 text-sm text-muted-foreground">
+                    {request.profiles?.full_name || request.profiles?.email || "Unknown"}
+                  </td>
+                )}
+                <td className="p-3">
+                  <Badge variant="outline" className={statusColors[request.status]}>
+                    {statusLabels[request.status] || request.status}
+                  </Badge>
+                </td>
+                <td className="p-3 text-sm text-muted-foreground">
+                  {formatDistanceToNow(new Date(request.created_at), { addSuffix: true })}
+                </td>
+                <td className="p-3 text-right">
+                  <Button variant="ghost" size="sm" onClick={() => onView(request)}>
+                    <Eye className="w-4 h-4" />
+                  </Button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
   );
 }
