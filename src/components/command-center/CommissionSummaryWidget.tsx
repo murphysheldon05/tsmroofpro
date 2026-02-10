@@ -64,28 +64,28 @@ export function CommissionSummaryWidget() {
       value: data?.pending || 0,
       icon: Clock,
       color: "text-amber-600 dark:text-amber-400",
-      border: "border-t-[3px] border-t-amber-500",
+      border: "border-t-[4px] border-t-amber-500",
     },
     {
       label: "Approved",
       value: data?.approved || 0,
       icon: CheckCircle,
       color: "text-blue-600 dark:text-blue-400",
-      border: "border-t-[3px] border-t-blue-500",
+      border: "border-t-[4px] border-t-blue-500",
     },
     {
       label: "Paid This Month",
       value: data?.paid || 0,
       icon: DollarSign,
       color: "text-green-600 dark:text-green-400",
-      border: "border-t-[3px] border-t-green-500",
+      border: "border-t-[4px] border-t-green-500",
     },
     {
       label: "Draw Balance",
       value: data?.draw || 0,
       icon: AlertTriangle,
       color: (data?.draw || 0) > 0 ? "text-red-600 dark:text-red-400" : "text-muted-foreground",
-      border: (data?.draw || 0) > 0 ? "border-t-[3px] border-t-red-500" : "border-t-[3px] border-t-muted",
+      border: (data?.draw || 0) > 0 ? "border-t-[4px] border-t-red-500" : "border-t-[4px] border-t-muted",
     },
   ];
 
@@ -105,7 +105,7 @@ export function CommissionSummaryWidget() {
         <div
           key={card.label}
           className={cn(
-            "rounded-2xl border border-border/50 bg-card p-4 transition-all duration-200 hover-lift",
+            "rounded-[14px] border border-border/50 bg-card p-4 transition-all duration-200 hover-lift shadow-[0_1px_3px_rgba(0,0,0,0.04)]",
             card.border
           )}
         >
@@ -115,7 +115,7 @@ export function CommissionSummaryWidget() {
               {card.label}
             </span>
           </div>
-          <p className={cn("text-2xl font-bold tracking-tight", card.color)}>
+          <p className={cn("text-[28px] font-extrabold tracking-tight", card.color)}>
             {formatCurrency(card.value)}
           </p>
         </div>

@@ -83,17 +83,16 @@ export default function Auth() {
 
   return (
     <div className="min-h-screen flex flex-col relative overflow-hidden">
-      {/* B1: Warm gradient background */}
-      <div className="fixed inset-0 bg-gradient-to-br from-[hsl(142_76%_96%)] via-[hsl(220_20%_97%)] to-[hsl(213_60%_96%)]" />
-      <div className="fixed top-0 right-0 w-[600px] h-[600px] bg-[radial-gradient(ellipse_at_center,_hsl(142_72%_35%/0.05)_0%,_transparent_70%)]" />
-      <div className="fixed bottom-0 left-0 w-[500px] h-[500px] bg-[radial-gradient(ellipse_at_center,_hsl(213_60%_50%/0.04)_0%,_transparent_70%)]" />
+      {/* Warm gradient background */}
+      <div className="fixed inset-0" style={{ background: "linear-gradient(160deg, #f0fdf4 0%, #f6f8fb 40%, #eff6ff 100%)" }} />
+      <div className="fixed" style={{ top: "-200px", right: "-200px", width: "500px", height: "500px", background: "radial-gradient(circle, rgba(22,163,74,.05), transparent 70%)", pointerEvents: "none" }} />
+      <div className="fixed" style={{ bottom: "-150px", left: "-150px", width: "400px", height: "400px", background: "radial-gradient(circle, rgba(37,99,235,.04), transparent 70%)", pointerEvents: "none" }} />
 
       {/* Dark mode overrides */}
-      <div className="dark:hidden" />
       <style>{`
-        .dark .auth-bg { background: hsl(222 47% 5%); }
-        .dark .auth-bg .auth-gradient-1 { background: radial-gradient(ellipse at top right, hsl(142 71% 45% / 0.06) 0%, transparent 70%); }
-        .dark .auth-bg .auth-gradient-2 { background: radial-gradient(ellipse at bottom left, hsl(213 60% 50% / 0.04) 0%, transparent 70%); }
+        .dark .auth-bg-wrapper > div:first-child { background: hsl(222 47% 5%) !important; }
+        .dark .auth-bg-wrapper > div:nth-child(2),
+        .dark .auth-bg-wrapper > div:nth-child(3) { opacity: 0.3; }
       `}</style>
 
       {/* Header */}
@@ -111,7 +110,7 @@ export default function Auth() {
       {/* Auth Form */}
       <main className="relative z-10 flex-1 flex items-center justify-center px-4 pb-20">
         <div className="w-full max-w-[420px]">
-          {/* A1: Logo hero */}
+          {/* Logo hero - large and prominent */}
           <div className="text-center mb-8">
             <Logo size="lg" className="justify-center mb-6" />
             <h1 className="text-2xl font-bold text-foreground mb-2">
@@ -122,8 +121,8 @@ export default function Auth() {
             </p>
           </div>
 
-          {/* B2: Login card with premium styling */}
-          <div className="bg-card/95 backdrop-blur-xl border border-border/40 rounded-[20px] px-10 py-10 shadow-[0_8px_30px_rgba(0,0,0,0.08)]">
+          {/* Login card */}
+          <div style={{ maxWidth: "420px", padding: "40px 36px", borderRadius: "20px", boxShadow: "0 8px 30px rgba(0,0,0,.08)", border: "1px solid rgba(228,233,240,.6)", background: "#ffffff" }} className="dark:bg-card dark:border-border/40 mx-auto">
             <form onSubmit={handleSubmit} className="space-y-5">
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
@@ -174,21 +173,22 @@ export default function Auth() {
                 </div>
               </div>
 
-              {/* B4: Premium sign in button */}
+              {/* Premium sign in button */}
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full py-3 rounded-[11px] text-sm font-bold text-white transition-all duration-200 disabled:opacity-60"
+                className="w-full rounded-[11px] text-[15px] font-bold text-white transition-all duration-200 disabled:opacity-60"
                 style={{
-                  background: "linear-gradient(135deg, hsl(142 72% 35%), hsl(142 72% 28%))",
-                  boxShadow: "0 2px 8px hsla(142, 72%, 35%, 0.25)",
+                  background: "linear-gradient(135deg, #16a34a, #15803d)",
+                  boxShadow: "0 2px 8px rgba(22,163,74,.25)",
+                  padding: "13px",
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.boxShadow = "0 4px 16px hsla(142, 72%, 35%, 0.3)";
+                  e.currentTarget.style.boxShadow = "0 4px 16px rgba(22,163,74,.3)";
                   e.currentTarget.style.transform = "translateY(-1px)";
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.boxShadow = "0 2px 8px hsla(142, 72%, 35%, 0.25)";
+                  e.currentTarget.style.boxShadow = "0 2px 8px rgba(22,163,74,.25)";
                   e.currentTarget.style.transform = "translateY(0)";
                 }}
               >
