@@ -35,10 +35,11 @@ export function CommissionSummaryWidget() {
         .eq("status", "paid")
         .gte("paid_at", monthStart);
 
+      // Draw balance from draws table
       let drawQuery = supabase
-        .from("commission_submissions")
-        .select("advances_paid")
-        .not("status", "in", '("paid","denied")');
+        .from("draws")
+        .select("remaining_balance")
+        .in("status", ["active", "approved"]);
 
       const [pendingRes, approvedRes, paidRes, drawRes] = await Promise.all([
         pendingQuery, approvedQuery, paidQuery, drawQuery,
@@ -51,7 +52,7 @@ export function CommissionSummaryWidget() {
         pending: sum(pendingRes.data, "net_commission_owed"),
         approved: sum(approvedRes.data, "net_commission_owed"),
         paid: sum(paidRes.data, "net_commission_owed"),
-        draw: sum(drawRes.data, "advances_paid"),
+        draw: sum(drawRes.data, "remaining_balance"),
       };
     },
     enabled: !!user,
