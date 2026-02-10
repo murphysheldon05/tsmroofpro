@@ -32,6 +32,7 @@ import DeliverySchedule from "./pages/DeliverySchedule";
 import CommandCenter from "./pages/CommandCenter";
 import PendingReview from "./pages/PendingReview";
 import OpsCompliance from "./pages/OpsCompliance";
+import Draws from "./pages/Draws";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -215,6 +216,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <CommissionDetail />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/commissions/draws"
+              element={
+                <ProtectedRoute>
+                  <Draws />
                 </ProtectedRoute>
               }
             />

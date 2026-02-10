@@ -24,6 +24,10 @@ const routeHierarchy: Record<string, BreadcrumbItem[]> = {
   "/tools": [{ label: "Tools & Systems", href: "/tools" }],
   "/requests": [{ label: "Forms & Requests", href: "/requests" }],
   "/commissions": [{ label: "Commissions", href: "/commissions" }],
+  "/commissions/draws": [
+    { label: "Commissions", href: "/commissions" },
+    { label: "Draws", href: "/commissions/draws" },
+  ],
   "/commission-documents": [
     { label: "Commissions", href: "/commissions" },
     { label: "Documents", href: "/commission-documents" },
