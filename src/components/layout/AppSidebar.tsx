@@ -275,16 +275,16 @@ function SortableNavItem({
           <button
             onClick={() => handleNavClick(item.href!, item.requiresPlaybook)}
             className={cn(
-              "flex-1 flex items-center gap-3 px-2 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 relative",
+              "flex-1 flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium transition-all duration-150 relative min-h-[44px]",
               isActive(item.href!)
                 ? "nav-item-active"
                 : "text-sidebar-foreground hover:bg-primary/5 hover:text-primary/80",
               isLocked && "opacity-60"
             )}
           >
-            <item.icon className={cn("w-4 h-4", isActive(item.href!) && "nav-icon-glow")} />
-            {item.title}
-            {isLocked && <Lock className="w-3 h-3 ml-auto text-muted-foreground" />}
+            <item.icon className={cn("w-5 h-5 flex-shrink-0", isActive(item.href!) && "nav-icon-glow")} />
+            <span className="truncate">{item.title}</span>
+            {isLocked && <Lock className="w-3.5 h-3.5 ml-auto text-muted-foreground flex-shrink-0" />}
           </button>
         </div>
       )}
@@ -538,26 +538,26 @@ export function AppSidebar() {
             <button
               onClick={() => handleNavClick("/pending-review")}
               className={cn(
-                "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-150 relative",
+                "w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm transition-all duration-150 relative min-h-[44px]",
                 isActive("/pending-review")
                   ? "nav-item-active font-medium"
                   : "text-sidebar-foreground/70 hover:bg-primary/5 hover:text-primary/80"
               )}
             >
-              <ClipboardCheck className={cn("w-4 h-4", isActive("/pending-review") && "nav-icon-glow")} />
+              <ClipboardCheck className={cn("w-5 h-5", isActive("/pending-review") && "nav-icon-glow")} />
               Pending Review
             </button>
             {isAdmin && (
               <button
                 onClick={() => handleNavClick("/admin")}
                 className={cn(
-                  "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-150 relative",
+                  "w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm transition-all duration-150 relative min-h-[44px]",
                   isActive("/admin")
                     ? "nav-item-active font-medium"
                     : "text-sidebar-foreground/70 hover:bg-primary/5 hover:text-primary/80"
                 )}
               >
-                <Settings className={cn("w-4 h-4", isActive("/admin") && "nav-icon-glow")} />
+                <Settings className={cn("w-5 h-5", isActive("/admin") && "nav-icon-glow")} />
                 Admin Panel
               </button>
             )}
@@ -575,13 +575,13 @@ export function AppSidebar() {
             <button
               onClick={() => handleNavClick("/ops-compliance")}
               className={cn(
-                "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-150 relative",
+                "w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm transition-all duration-150 relative min-h-[44px]",
                 location.pathname.startsWith("/ops-compliance")
                   ? "nav-item-active font-medium"
                   : "text-sidebar-foreground/70 hover:bg-primary/5 hover:text-primary/80"
               )}
             >
-              <Shield className={cn("w-4 h-4", location.pathname.startsWith("/ops-compliance") && "nav-icon-glow")} />
+              <Shield className={cn("w-5 h-5", location.pathname.startsWith("/ops-compliance") && "nav-icon-glow")} />
               Ops Compliance
             </button>
           </div>
@@ -589,9 +589,9 @@ export function AppSidebar() {
         
         <button
           onClick={() => signOut()}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-sidebar-foreground hover:bg-destructive/10 hover:text-destructive transition-all duration-150"
+          className="w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium text-sidebar-foreground hover:bg-destructive/10 hover:text-destructive transition-all duration-150 min-h-[44px]"
         >
-          <LogOut className="w-4 h-4" />
+          <LogOut className="w-5 h-5" />
           Sign Out
         </button>
       </div>
@@ -600,28 +600,29 @@ export function AppSidebar() {
 
   return (
     <>
-      {/* Mobile menu button */}
+      {/* Mobile menu button - larger touch target */}
       <Button
         variant="ghost"
         size="icon"
-        className="fixed top-4 left-4 z-50 lg:hidden"
+        className="fixed top-3 left-3 z-50 lg:hidden w-11 h-11"
         onClick={() => setMobileOpen(!mobileOpen)}
       >
-        {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+        {mobileOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
       </Button>
 
       {/* Mobile overlay */}
       {mobileOpen && (
         <div
-          className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40 lg:hidden"
+          className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40 lg:hidden animate-in fade-in duration-200"
           onClick={() => setMobileOpen(false)}
         />
       )}
 
-      {/* Sidebar */}
+      {/* Sidebar - smooth slide transition */}
       <aside
         className={cn(
-          "fixed top-0 left-0 h-full w-64 sidebar-neon flex flex-col z-50 transition-transform duration-300 lg:translate-x-0 overflow-y-auto",
+          "fixed top-0 left-0 h-full w-64 sidebar-neon flex flex-col z-50 overflow-y-auto",
+          "transition-transform duration-200 ease-out lg:translate-x-0",
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
