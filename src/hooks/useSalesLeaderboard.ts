@@ -32,51 +32,29 @@ export function useSalesLeaderboard(tab: LeaderboardTab, range: TimeRange, custo
     queryKey: ["sales-leaderboard", tab, range, start, end],
     queryFn: async () => {
       if (tab === "sales") {
-        // Sales tab: sum gross_contract_total from commission_documents for approved/paid
-        const { data, error } = await supabase
-          .from("commission_documents")
-          .select("sales_rep, sales_rep_id, gross_contract_total, job_date, status")
-          .gte("job_date", start)
-          .lte("job_date", end)
-          .in("status", ["manager_approved", "accounting_approved", "paid", "approved"]);
+        // Sales tab: fetch from AccuLynx via edge function
+        const { data, error } = await supabase.functions.invoke("acculynx-sales-leaderboard", {
+          body: { startDate: start, endDate: end },
+        });
 
         if (error) throw error;
 
-        const { data: allReps, error: repsError } = await supabase
-          .from("profiles")
-          .select("id, full_name")
-          .eq("employee_status", "active");
-        if (repsError) throw repsError;
+        // Check if AccuLynx is not configured
+        if (data?.error === "acculynx_not_configured") {
+          return { entries: [] as LeaderboardEntry[], acculynxNotConfigured: true };
+        }
 
-        const { data: roles } = await supabase.from("user_roles").select("user_id, role");
-        const salesRoles = new Set(["employee", "manager", "admin"]);
-        const salesRepIds = new Set((roles || []).filter(r => salesRoles.has(r.role)).map(r => r.user_id));
+        if (!data?.success) {
+          throw new Error(data?.error || "Failed to fetch sales data");
+        }
 
-        const repTotals = new Map<string, { name: string; total: number }>();
-        (allReps || []).forEach(rep => {
-          if (salesRepIds.has(rep.id)) {
-            repTotals.set(rep.id, { name: rep.full_name || "Unknown", total: 0 });
-          }
-        });
-
-        (data || []).forEach(doc => {
-          const repId = doc.sales_rep_id;
-          if (!repId) return;
-          const value = Number(doc.gross_contract_total || 0);
-          const existing = repTotals.get(repId);
-          if (existing) {
-            existing.total += value;
-          } else {
-            repTotals.set(repId, { name: doc.sales_rep || "Unknown", total: value });
-          }
-        });
-
-        return Array.from(repTotals.entries())
-          .map(([repId, { name, total }]) => ({ repId, repName: name, total }))
-          .sort((a, b) => b.total - a.total);
+        return {
+          entries: (data.entries || []) as LeaderboardEntry[],
+          acculynxNotConfigured: false,
+        };
       }
 
-      // Profit & Commissions tabs (existing logic)
+      // Profit & Commissions tabs (local commission_documents data)
       const { data, error } = await supabase
         .from("commission_documents")
         .select("sales_rep, sales_rep_id, company_profit, rep_commission, job_date, status")
@@ -115,9 +93,11 @@ export function useSalesLeaderboard(tab: LeaderboardTab, range: TimeRange, custo
         }
       });
 
-      return Array.from(repTotals.entries())
+      const entries: LeaderboardEntry[] = Array.from(repTotals.entries())
         .map(([repId, { name, total }]) => ({ repId, repName: name, total }))
         .sort((a, b) => b.total - a.total);
+
+      return { entries, acculynxNotConfigured: false };
     },
     refetchInterval: 60000,
   });
