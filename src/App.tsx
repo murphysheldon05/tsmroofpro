@@ -212,18 +212,18 @@ const App = () => (
               }
             />
             <Route
-              path="/commissions/:id"
-              element={
-                <ProtectedRoute>
-                  <CommissionDetail />
-                </ProtectedRoute>
-              }
-            />
-            <Route
               path="/commissions/draws"
               element={
                 <ProtectedRoute>
                   <Draws />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/commissions/:id"
+              element={
+                <ProtectedRoute>
+                  <CommissionDetail />
                 </ProtectedRoute>
               }
             />

@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import tsmLogo from "@/assets/tsm-logo.png";
+import tsmLogo from "@/assets/distressed-logo.jpg";
 
 interface LogoProps {
   className?: string;
