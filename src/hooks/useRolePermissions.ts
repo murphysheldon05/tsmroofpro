@@ -1,14 +1,16 @@
 import { useAuth } from "@/contexts/AuthContext";
 
 /**
- * RBAC Permission Definitions
+ * RBAC Permission Definitions — 6-Tier Role Model
  * 
- * Four roles: Admin, Manager, Employee (Sales Rep), Ops Compliance
+ * 1. Employee (base read-only access)
+ * 2. Sales Rep (submits commissions, views own)
+ * 3. Sales Manager (reviews team commissions, manages reps)
+ * 4. Manager (full ops, sees all commissions, edits production)
+ * 5. Accounting (commission approval and payment processing)
+ * 6. Admin (full system access)
  * 
- * Admin: Full system control via Admin Panel
- * Manager: Review/approve workflows, view reports for scope, draft SOPs
- * Employee: Submit own data, view own data, edit personal preferences
- * Ops Compliance: Compliance enforcement, violations, holds, escalations
+ * Legacy: ops_compliance remains supported for compliance enforcement
  */
 
 export interface RolePermissions {
@@ -32,6 +34,7 @@ export interface RolePermissions {
   canDenyCommissions: boolean;
   canRequestRevisions: boolean;
   canFinalApproveManagerCommissions: boolean;
+  canProcessPayouts: boolean;
   
   // Data access
   canViewAllCommissions: boolean;
@@ -52,7 +55,18 @@ export interface RolePermissions {
   canViewReports: boolean;
   canViewTeamReports: boolean;
   
-  // Compliance (new)
+  // Production
+  canEditProduction: boolean;
+  canEditDeliveries: boolean;
+  canManageWarranties: boolean;
+  
+  // Draws
+  canRequestDraws: boolean;
+  canApproveDraws: boolean;
+  canApplyDraws: boolean;
+  canManageDrawSettings: boolean;
+  
+  // Compliance
   canManageViolations: boolean;
   canManageHolds: boolean;
   canCreateEscalations: boolean;
@@ -63,249 +77,136 @@ export interface RolePermissions {
   canDeleteViolations: boolean;
 }
 
+const NO_PERMISSIONS: RolePermissions = {
+  canEditCommissionTiers: false, canEditCategories: false, canEditTools: false,
+  canEditNotificationRouting: false, canPublishSOPs: false, canArchiveSOPs: false,
+  canManageUsers: false, canApproveUsers: false, canAssignRoles: false, canAssignTeams: false,
+  canSubmitCommissions: false, canApproveCommissions: false, canDenyCommissions: false,
+  canRequestRevisions: false, canFinalApproveManagerCommissions: false, canProcessPayouts: false,
+  canViewAllCommissions: false, canViewTeamCommissions: false, canViewOwnCommissionsOnly: true,
+  canExportAllData: false, canExportTeamData: false, canExportOwnData: false,
+  canReviewRequests: false, canApproveRequests: false,
+  canDraftSOPs: false,
+  canViewReports: false, canViewTeamReports: false,
+  canEditProduction: false, canEditDeliveries: false, canManageWarranties: false,
+  canRequestDraws: false, canApproveDraws: false, canApplyDraws: false, canManageDrawSettings: false,
+  canManageViolations: false, canManageHolds: false, canCreateEscalations: false,
+  canDecideEscalations: false, canViewAuditLog: false, canViewAllAcknowledgments: false,
+  canGrantExceptions: false, canDeleteViolations: false,
+};
+
 export function useRolePermissions(): RolePermissions {
-  const { role, isAdmin, isManager } = useAuth();
-  const isOpsCompliance = role === 'ops_compliance';
+  const { role, isAdmin } = useAuth();
 
-  // Sales Rep (employee) permissions
-  const employeePermissions: RolePermissions = {
-    // System editing - NONE
-    canEditCommissionTiers: false,
-    canEditCategories: false,
-    canEditTools: false,
-    canEditNotificationRouting: false,
-    canPublishSOPs: false,
-    canArchiveSOPs: false,
-    
-    // User management - NONE
-    canManageUsers: false,
-    canApproveUsers: false,
-    canAssignRoles: false,
-    canAssignTeams: false,
-    
-    // Commission workflow
-    canSubmitCommissions: true,
-    canApproveCommissions: false,
-    canDenyCommissions: false,
-    canRequestRevisions: false,
-    canFinalApproveManagerCommissions: false,
-    
-    // Data access - OWN ONLY
-    canViewAllCommissions: false,
-    canViewTeamCommissions: false,
-    canViewOwnCommissionsOnly: true,
-    canExportAllData: false,
-    canExportTeamData: false,
-    canExportOwnData: true,
-    
-    // Requests
-    canReviewRequests: false,
-    canApproveRequests: false,
-    
-    // SOP
-    canDraftSOPs: false,
-    
-    // Reporting
-    canViewReports: false,
-    canViewTeamReports: false,
-    
-    // Compliance - NONE
-    canManageViolations: false,
-    canManageHolds: false,
-    canCreateEscalations: false,
-    canDecideEscalations: false,
-    canViewAuditLog: false,
-    canViewAllAcknowledgments: false,
-    canGrantExceptions: false,
-    canDeleteViolations: false,
-  };
+  if (isAdmin) {
+    // Admin: FULL CONTROL
+    return {
+      canEditCommissionTiers: true, canEditCategories: true, canEditTools: true,
+      canEditNotificationRouting: true, canPublishSOPs: true, canArchiveSOPs: true,
+      canManageUsers: true, canApproveUsers: true, canAssignRoles: true, canAssignTeams: true,
+      canSubmitCommissions: true, canApproveCommissions: true, canDenyCommissions: true,
+      canRequestRevisions: true, canFinalApproveManagerCommissions: true, canProcessPayouts: true,
+      canViewAllCommissions: true, canViewTeamCommissions: true, canViewOwnCommissionsOnly: false,
+      canExportAllData: true, canExportTeamData: true, canExportOwnData: true,
+      canReviewRequests: true, canApproveRequests: true,
+      canDraftSOPs: true,
+      canViewReports: true, canViewTeamReports: true,
+      canEditProduction: true, canEditDeliveries: true, canManageWarranties: true,
+      canRequestDraws: false, canApproveDraws: true, canApplyDraws: true, canManageDrawSettings: true,
+      canManageViolations: true, canManageHolds: true, canCreateEscalations: true,
+      canDecideEscalations: true, canViewAuditLog: true, canViewAllAcknowledgments: true,
+      canGrantExceptions: true, canDeleteViolations: true,
+    };
+  }
 
-  // Ops Compliance permissions
-  const opsCompliancePermissions: RolePermissions = {
-    // System editing - NONE
-    canEditCommissionTiers: false,
-    canEditCategories: false,
-    canEditTools: false,
-    canEditNotificationRouting: false,
-    canPublishSOPs: false,
-    canArchiveSOPs: false,
-    
-    // User management - NONE
-    canManageUsers: false,
-    canApproveUsers: false,
-    canAssignRoles: false,
-    canAssignTeams: false,
-    
-    // Commission workflow - VIEW ONLY (no approve/deny)
-    canSubmitCommissions: false,
-    canApproveCommissions: false,
-    canDenyCommissions: false,
-    canRequestRevisions: false,
-    canFinalApproveManagerCommissions: false,
-    
-    // Data access - READ ALL for compliance review
-    canViewAllCommissions: true,
-    canViewTeamCommissions: true,
-    canViewOwnCommissionsOnly: false,
-    canExportAllData: true, // For compliance reports
-    canExportTeamData: true,
-    canExportOwnData: true,
-    
-    // Requests - VIEW ONLY
-    canReviewRequests: true,
-    canApproveRequests: false,
-    
-    // SOP
-    canDraftSOPs: false,
-    
-    // Reporting
-    canViewReports: true,
-    canViewTeamReports: true,
-    
-    // Compliance - FULL (except decisions and deletions)
-    canManageViolations: true,
-    canManageHolds: true,
-    canCreateEscalations: true,
-    canDecideEscalations: false, // Only admin decides
-    canViewAuditLog: true,
-    canViewAllAcknowledgments: true,
-    canGrantExceptions: false, // Only Sheldon
-    canDeleteViolations: false, // Cannot delete
-  };
+  switch (role) {
+    case 'accounting':
+      return {
+        ...NO_PERMISSIONS,
+        canProcessPayouts: true,
+        canApproveCommissions: true,
+        canViewAllCommissions: true, canViewTeamCommissions: true, canViewOwnCommissionsOnly: false,
+        canExportAllData: true, canExportTeamData: true, canExportOwnData: true,
+        canViewReports: true, canViewTeamReports: true,
+        canReviewRequests: true,
+        canApplyDraws: true,
+        canApproveDraws: true,
+      };
 
-  // Manager permissions
-  const managerPermissions: RolePermissions = {
-    // System editing - NONE (Admin Panel only)
-    canEditCommissionTiers: false,
-    canEditCategories: false,
-    canEditTools: false,
-    canEditNotificationRouting: false,
-    canPublishSOPs: false,
-    canArchiveSOPs: false,
-    
-    // User management - LIMITED
-    canManageUsers: false,
-    canApproveUsers: false,
-    canAssignRoles: false,
-    canAssignTeams: false,
-    
-    // Commission workflow
-    canSubmitCommissions: true,
-    canApproveCommissions: true,
-    canDenyCommissions: true,
-    canRequestRevisions: true,
-    canFinalApproveManagerCommissions: false, // Only Admin (Sheldon)
-    
-    // Data access - TEAM SCOPE
-    canViewAllCommissions: false,
-    canViewTeamCommissions: true,
-    canViewOwnCommissionsOnly: false,
-    canExportAllData: false,
-    canExportTeamData: true,
-    canExportOwnData: true,
-    
-    // Requests
-    canReviewRequests: true,
-    canApproveRequests: true,
-    
-    // SOP
-    canDraftSOPs: true,
-    
-    // Reporting
-    canViewReports: true,
-    canViewTeamReports: true,
-    
-    // Compliance - LIMITED
-    canManageViolations: false,
-    canManageHolds: false,
-    canCreateEscalations: false,
-    canDecideEscalations: false,
-    canViewAuditLog: false,
-    canViewAllAcknowledgments: false,
-    canGrantExceptions: false,
-    canDeleteViolations: false,
-  };
+    case 'manager':
+      return {
+        ...NO_PERMISSIONS,
+        canSubmitCommissions: true,
+        canApproveCommissions: true, canDenyCommissions: true, canRequestRevisions: true,
+        canViewAllCommissions: true, canViewTeamCommissions: true, canViewOwnCommissionsOnly: false,
+        canExportAllData: false, canExportTeamData: true, canExportOwnData: true,
+        canReviewRequests: true, canApproveRequests: true,
+        canDraftSOPs: true,
+        canViewReports: true, canViewTeamReports: true,
+        canEditProduction: true, canEditDeliveries: true, canManageWarranties: true,
+        canApproveDraws: true, canApplyDraws: true,
+      };
 
-  // Admin permissions - FULL CONTROL
-  const adminPermissions: RolePermissions = {
-    // System editing - FULL (via Admin Panel)
-    canEditCommissionTiers: true,
-    canEditCategories: true,
-    canEditTools: true,
-    canEditNotificationRouting: true,
-    canPublishSOPs: true,
-    canArchiveSOPs: true,
-    
-    // User management - FULL
-    canManageUsers: true,
-    canApproveUsers: true,
-    canAssignRoles: true,
-    canAssignTeams: true,
-    
-    // Commission workflow
-    canSubmitCommissions: true,
-    canApproveCommissions: true,
-    canDenyCommissions: true,
-    canRequestRevisions: true,
-    canFinalApproveManagerCommissions: true, // Admin (Sheldon) only
-    
-    // Data access - ALL
-    canViewAllCommissions: true,
-    canViewTeamCommissions: true,
-    canViewOwnCommissionsOnly: false,
-    canExportAllData: true,
-    canExportTeamData: true,
-    canExportOwnData: true,
-    
-    // Requests
-    canReviewRequests: true,
-    canApproveRequests: true,
-    
-    // SOP
-    canDraftSOPs: true,
-    
-    // Reporting
-    canViewReports: true,
-    canViewTeamReports: true,
-    
-    // Compliance - FULL including decisions
-    canManageViolations: true,
-    canManageHolds: true,
-    canCreateEscalations: true,
-    canDecideEscalations: true, // Final decision authority
-    canViewAuditLog: true,
-    canViewAllAcknowledgments: true,
-    canGrantExceptions: true, // Only Sheldon
-    canDeleteViolations: true, // Admin can delete
-  };
+    case 'sales_manager':
+      return {
+        ...NO_PERMISSIONS,
+        canSubmitCommissions: true,
+        canApproveCommissions: true, canDenyCommissions: true, canRequestRevisions: true,
+        canViewTeamCommissions: true, canViewOwnCommissionsOnly: false,
+        canExportTeamData: true, canExportOwnData: true,
+        canReviewRequests: true, canApproveRequests: true,
+        canDraftSOPs: true,
+        canViewReports: true, canViewTeamReports: true,
+        canRequestDraws: true,
+        canApproveDraws: true, canApplyDraws: true,
+      };
 
-  if (isAdmin) return adminPermissions;
-  if (isOpsCompliance) return opsCompliancePermissions;
-  if (isManager) return managerPermissions;
-  return employeePermissions;
+    case 'sales_rep':
+      return {
+        ...NO_PERMISSIONS,
+        canSubmitCommissions: true,
+        canViewOwnCommissionsOnly: true,
+        canExportOwnData: true,
+        canRequestDraws: true,
+        canManageWarranties: false,
+      };
+
+    case 'ops_compliance':
+      return {
+        ...NO_PERMISSIONS,
+        canViewAllCommissions: true, canViewTeamCommissions: true, canViewOwnCommissionsOnly: false,
+        canExportAllData: true, canExportTeamData: true, canExportOwnData: true,
+        canReviewRequests: true,
+        canViewReports: true, canViewTeamReports: true,
+        canManageViolations: true, canManageHolds: true, canCreateEscalations: true,
+        canViewAuditLog: true, canViewAllAcknowledgments: true,
+      };
+
+    case 'employee':
+    default:
+      return { ...NO_PERMISSIONS, canExportOwnData: true };
+  }
 }
 
-/**
- * Quick permission check helpers
- */
+// Quick permission check helpers
 export function useCanEditSystem() {
   const { isAdmin } = useAuth();
   return isAdmin;
 }
 
 export function useCanApproveCommissions() {
-  const { isAdmin, isManager } = useAuth();
-  return isAdmin || isManager;
+  const { isAdmin, isManager, role } = useAuth();
+  return isAdmin || isManager || role === 'sales_manager' || role === 'accounting';
 }
 
 export function useCanViewAllData() {
   const { isAdmin, role } = useAuth();
-  return isAdmin || role === 'ops_compliance';
+  return isAdmin || role === 'ops_compliance' || role === 'accounting';
 }
 
 export function useCanViewTeamData() {
   const { isAdmin, isManager, role } = useAuth();
-  return isAdmin || isManager || role === 'ops_compliance';
+  return isAdmin || isManager || role === 'ops_compliance' || role === 'sales_manager' || role === 'accounting';
 }
 
 export function useIsOpsCompliance() {

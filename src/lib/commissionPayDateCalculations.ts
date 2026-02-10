@@ -2,8 +2,8 @@
  * Pay Date Calculation Utility for Commission Documents
  * 
  * Business Rule:
- * - If approved by Wednesday 4 PM MST → Paid on that Friday
- * - If approved after Wednesday 4 PM MST → Paid on next Friday
+ * - If approved by Tuesday 3 PM MST → Paid on that Friday
+ * - If approved after Tuesday 3 PM MST → Paid on next Friday
  */
 
 /**
@@ -23,9 +23,9 @@ export function calculateScheduledPayDate(approvalDate: Date): Date {
   const dayOfWeek = mstTime.getDay(); // 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
   const hour = mstTime.getHours();
   
-  // Wednesday = 3, deadline is 4 PM (16:00)
-  // Before deadline: Sun, Mon, Tue, or Wed before 4 PM
-  const isBeforeDeadline = dayOfWeek < 3 || (dayOfWeek === 3 && hour < 16);
+  // Tuesday = 2, deadline is 3 PM (15:00)
+  // Before deadline: Sun, Mon, or Tue before 3 PM
+  const isBeforeDeadline = dayOfWeek < 2 || (dayOfWeek === 2 && hour < 15);
   
   // Calculate days until Friday (day 5)
   let daysUntilFriday = (5 - dayOfWeek + 7) % 7;

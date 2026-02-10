@@ -366,14 +366,18 @@ export function AppSidebar() {
 
   const getRoleBadgeVariant = () => {
     if (role === 'admin') return 'destructive';
-    if (role === 'manager') return 'default';
+    if (role === 'manager' || role === 'sales_manager') return 'default';
     if (role === 'ops_compliance') return 'default';
+    if (role === 'accounting') return 'default';
     return 'secondary';
   };
 
   const getRoleLabel = () => {
     if (role === 'admin') return 'Admin';
+    if (role === 'accounting') return 'Accounting';
     if (role === 'manager') return 'Manager';
+    if (role === 'sales_manager') return 'Sales Manager';
+    if (role === 'sales_rep') return 'Sales Rep';
     if (role === 'ops_compliance') return 'Ops Compliance';
     return 'Employee';
   };
@@ -530,24 +534,26 @@ export function AppSidebar() {
           </Badge>
         </button>
 
-        {/* Admin & Manager Panel - Only visible to admins/managers */}
-        {(isAdmin || isManager) && (
+        {/* Admin & Manager Panel - Visible to admin, manager, sales_manager, accounting */}
+        {(isAdmin || isManager || role === 'sales_manager' || role === 'accounting') && (
           <div className="pt-2 border-t border-border/30">
             <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-3 mb-1 block">
-              Admin & Manager Panel
+              {isAdmin ? 'Admin & Manager Panel' : role === 'accounting' ? 'Accounting Panel' : 'Manager Panel'}
             </span>
-            <button
-              onClick={() => handleNavClick("/pending-review")}
-              className={cn(
-                "w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm transition-all duration-150 relative min-h-[44px]",
-                isActive("/pending-review")
-                  ? "nav-item-active font-medium"
-                  : "text-sidebar-foreground/70 hover:bg-primary/5 hover:text-primary/80"
-              )}
-            >
-              <ClipboardCheck className={cn("w-5 h-5", isActive("/pending-review") && "nav-icon-glow")} />
-              Pending Review
-            </button>
+            {(isAdmin || isManager || role === 'sales_manager') && (
+              <button
+                onClick={() => handleNavClick("/pending-review")}
+                className={cn(
+                  "w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm transition-all duration-150 relative min-h-[44px]",
+                  isActive("/pending-review")
+                    ? "nav-item-active font-medium"
+                    : "text-sidebar-foreground/70 hover:bg-primary/5 hover:text-primary/80"
+                )}
+              >
+                <ClipboardCheck className={cn("w-5 h-5", isActive("/pending-review") && "nav-icon-glow")} />
+                Pending Review
+              </button>
+            )}
             {isAdmin && (
               <button
                 onClick={() => handleNavClick("/admin")}

@@ -9,6 +9,7 @@ import { CommissionTracker } from "@/components/commissions/CommissionTracker";
 import { CommissionStatusPipeline } from "@/components/commissions/CommissionStatusPipeline";
 import { CommissionSummaryCards } from "@/components/commissions/CommissionSummaryCards";
 import { CommissionCard } from "@/components/commissions/CommissionCard";
+import { DrawBalanceCard } from "@/components/commissions/DrawBalanceCard";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserHoldsCheck } from "@/hooks/useComplianceHoldCheck";
 import { HoldWarningBanner } from "@/components/compliance/HoldWarningBanner";
@@ -139,8 +140,11 @@ export default function Commissions() {
           </div>
         </div>
 
-        {/* Summary Cards - large rounded numbers */}
-        <CommissionSummaryCards {...summaryStats} />
+        {/* Summary Cards + Draw Balance */}
+        <div className="grid gap-4 grid-cols-1 lg:grid-cols-[1fr_300px]">
+          <CommissionSummaryCards {...summaryStats} />
+          <DrawBalanceCard />
+        </div>
 
         {/* Main Content Tabs */}
         <Tabs defaultValue="pipeline" className="space-y-4">

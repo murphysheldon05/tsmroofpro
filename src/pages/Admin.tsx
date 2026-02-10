@@ -38,6 +38,7 @@ import {
   Wrench,
   FolderOpen,
   FileText,
+  DollarSign,
 } from "lucide-react";
 import { UserPermissionsEditor } from "@/components/admin/UserPermissionsEditor";
 import { PendingApprovals } from "@/components/admin/PendingApprovals";
@@ -57,6 +58,7 @@ import { AuditLogViewer } from "@/components/admin/AuditLogViewer";
 import { ResetPasswordDialog } from "@/components/admin/ResetPasswordDialog";
 import { useCommissionTiers } from "@/hooks/useCommissionTiers";
 import { useAdminAuditLog, AUDIT_ACTIONS, OBJECT_TYPES } from "@/hooks/useAdminAuditLog";
+import { DrawSettingsManager } from "@/components/admin/DrawSettingsManager";
 
 export default function Admin() {
   const queryClient = useQueryClient();
@@ -153,8 +155,8 @@ export default function Admin() {
 
       if (rolesError) throw rolesError;
 
-      const roleByUserId = new Map<string, "admin" | "manager" | "employee" | "ops_compliance">(
-        (roles ?? []).map((r) => [r.user_id, r.role as "admin" | "manager" | "employee" | "ops_compliance"])
+      const roleByUserId = new Map<string, string>(
+        (roles ?? []).map((r) => [r.user_id, r.role as string])
       );
 
       return (profiles ?? []).map((p) => ({
@@ -225,7 +227,7 @@ export default function Admin() {
     
     const { error } = await supabase
       .from("user_roles")
-      .update({ role: newRole as "admin" | "manager" | "employee" })
+      .update({ role: newRole as any })
       .eq("user_id", userId);
 
     if (error) {
@@ -448,6 +450,10 @@ export default function Admin() {
               <FileText className="w-4 h-4" />
               Audit Log
             </TabsTrigger>
+            <TabsTrigger value="draws" className="gap-2">
+              <DollarSign className="w-4 h-4" />
+              Draw Settings
+            </TabsTrigger>
           </TabsList>
 
           {/* Users Tab */}
@@ -627,9 +633,24 @@ export default function Admin() {
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="employee">Employee</SelectItem>
-                              <SelectItem value="manager">Manager</SelectItem>
-                              <SelectItem value="admin">Admin</SelectItem>
+                              <SelectItem value="employee">
+                                <span className="font-medium">Employee</span>
+                              </SelectItem>
+                              <SelectItem value="sales_rep">
+                                <span className="font-medium">Sales Rep</span>
+                              </SelectItem>
+                              <SelectItem value="sales_manager">
+                                <span className="font-medium">Sales Manager</span>
+                              </SelectItem>
+                              <SelectItem value="manager">
+                                <span className="font-medium">Manager</span>
+                              </SelectItem>
+                              <SelectItem value="accounting">
+                                <span className="font-medium">Accounting</span>
+                              </SelectItem>
+                              <SelectItem value="admin">
+                                <span className="font-medium">Admin</span>
+                              </SelectItem>
                             </SelectContent>
                           </Select>
                         </td>
@@ -840,6 +861,11 @@ export default function Admin() {
           {/* Audit Log Tab */}
           <TabsContent value="audit" className="space-y-4">
             <AuditLogViewer />
+          </TabsContent>
+
+          {/* Draw Settings Tab */}
+          <TabsContent value="draws" className="space-y-4">
+            <DrawSettingsManager />
           </TabsContent>
         </Tabs>
       </div>
