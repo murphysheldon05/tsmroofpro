@@ -36,7 +36,7 @@ async function fetchAllJobs(
 ): Promise<AccuLynxJob[]> {
   const allJobs: AccuLynxJob[] = [];
   let pageStart = 0;
-  const pageSize = 100;
+  const pageSize = 25;
   let hasMore = true;
 
   while (hasMore) {
