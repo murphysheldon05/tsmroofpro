@@ -33,6 +33,7 @@ import { cn } from "@/lib/utils";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { useUserHoldsCheck } from "@/hooks/useComplianceHoldCheck";
 import { HoldWarningBanner } from "@/components/compliance/HoldWarningBanner";
+import { TodaysBuildsSection } from "@/components/production/TodaysBuildsSection";
 import { DayOverflowModal, OverflowTrigger } from "@/components/calendar/DayOverflowModal";
 
 type CalendarView = "day" | "week" | "month";
@@ -313,6 +314,9 @@ export default function BuildSchedule() {
         </div>
 
         <HoldWarningBanner holds={schedulingHolds} context="scheduling" />
+
+        {/* Today's Builds Section */}
+        <TodaysBuildsSection />
 
         {/* View toggle + navigation */}
         <div className="flex items-center justify-between flex-wrap gap-2">

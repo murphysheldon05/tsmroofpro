@@ -28,6 +28,7 @@ import {
 } from "@/hooks/useDeliveryCalendar";
 import { cn } from "@/lib/utils";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { TodaysDeliveriesSection } from "@/components/production/TodaysDeliveriesSection";
 import { DayOverflowModal, OverflowTrigger } from "@/components/calendar/DayOverflowModal";
 
 type CalendarView = "day" | "week" | "month";
@@ -245,6 +246,9 @@ export default function DeliverySchedule() {
             <Button variant="outline" size="icon" className="h-9 w-9" onClick={goNext}><ChevronRight className="h-4 w-4" /></Button>
           </div>
         </div>
+
+        {/* Today's Deliveries Section */}
+        <TodaysDeliveriesSection />
 
         {/* Status legend */}
         <div className="flex gap-3 overflow-x-auto pb-1">
