@@ -26,6 +26,7 @@ import {
 import { CommissionWorksheet } from "@/components/commissions/CommissionWorksheet";
 import { CommissionStatusTimeline } from "@/components/commissions/CommissionStatusTimeline";
 import { CommissionEditForm } from "@/components/commissions/CommissionEditForm";
+import { OverrideDetailSection } from "@/components/commissions/OverrideDetailSection";
 import { 
   useCommissionSubmission, 
   useCommissionStatusLog,
@@ -528,9 +529,22 @@ export default function CommissionDetail() {
                     <AlertDialogContent>
                       <AlertDialogHeader>
                         <AlertDialogTitle>Mark Commission as Paid</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          This will mark the commission of {formatCurrency(submission.net_commission_owed)} as paid. 
-                          The submitter will be notified.
+                        <AlertDialogDescription asChild>
+                          <div className="space-y-2">
+                            <p>
+                              This will mark the commission of {formatCurrency(submission.net_commission_owed)} as paid. 
+                              The submitter will be notified.
+                            </p>
+                            {submission.override_amount && submission.override_amount > 0 && (
+                              <div className="p-3 rounded-lg bg-purple-50 dark:bg-purple-950/20 border border-purple-200/50 text-sm space-y-1">
+                                <p className="font-medium text-foreground">Payout Breakdown:</p>
+                                <p>Rep Payout: <span className="font-semibold">{formatCurrency(submission.net_commission_owed)}</span></p>
+                                <p className="text-purple-700 dark:text-purple-400">
+                                  Sales Manager Override (10%): <span className="font-semibold">{formatCurrency(submission.override_amount)}</span>
+                                </p>
+                              </div>
+                            )}
+                          </div>
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
@@ -670,6 +684,9 @@ export default function CommissionDetail() {
             </dl>
           </CardContent>
         </Card>
+
+        {/* Sales Manager Override Section */}
+        <OverrideDetailSection commission={submission} />
 
         {/* Commission Worksheet (Read-only) */}
         <CommissionWorksheet
