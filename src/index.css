@@ -342,6 +342,17 @@
   * {
     -webkit-overflow-scrolling: touch;
   }
+
+  /* Ensure scroll passthrough on all horizontal scroll containers */
+  .scrollbar-none,
+  [class*="overflow-x"] {
+    touch-action: pan-x pan-y;
+  }
+
+  /* Allow scroll anywhere on page - no pointer-event traps */
+  main, main * {
+    scroll-behavior: smooth;
+  }
 }
 
 /* Skeleton loader animation */
