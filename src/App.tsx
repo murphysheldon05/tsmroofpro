@@ -14,6 +14,7 @@ import SOPLibrary from "./pages/SOPLibrary"; // Playbook Library
 import MasterPlaybook from "./pages/MasterPlaybook";
 import ResourceDetail from "./pages/ResourceDetail";
 import Training from "./pages/Training";
+import ShingleIdentification from "./pages/ShingleIdentification";
 import TrainingDocuments from "./pages/TrainingDocuments";
 import RoleOnboarding from "./pages/RoleOnboarding";
 import Tools from "./pages/Tools";
@@ -134,6 +135,14 @@ const App = () => (
             <Route
               path="/training/role-training"
               element={<Navigate to="/training/documents" replace />}
+            />
+            <Route
+              path="/training/shingle-identification"
+              element={
+                <ProtectedRoute>
+                  <ShingleIdentification />
+                </ProtectedRoute>
+              }
             />
             <Route
               path="/training/:category"
