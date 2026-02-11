@@ -49,6 +49,7 @@ import {
   BookOpen,
   Lock,
   GripVertical,
+  Ruler,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -136,6 +137,7 @@ const navigationItems: NavItem[] = [
       { title: "My Onboarding", href: "/training/onboarding", icon: ClipboardCheck, sectionKey: "training/onboarding", requiresPlaybook: true },
       { title: "Documents", href: "/training/documents", icon: FileText, sectionKey: "training/documents", requiresPlaybook: true },
       { title: "Video Library", href: "/training/video-library", icon: Video, sectionKey: "training/video-library", requiresPlaybook: true },
+      { title: "Shingle ID Guide", href: "/training/shingle-identification", icon: Ruler, sectionKey: "training/shingle-id", requiresPlaybook: true },
       { title: "New Hires", href: "/training/new-hire", icon: UserPlus, sectionKey: "training/new-hire", requiresPlaybook: true, adminOnly: true },
     ],
   },
