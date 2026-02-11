@@ -47,3 +47,6 @@ verify_jwt = false
 
 [functions.notify-playbook-completion]
 verify_jwt = false
+
+[functions.send-draw-notification]
+verify_jwt = false

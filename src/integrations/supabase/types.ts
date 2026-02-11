@@ -1409,6 +1409,75 @@ export type Database = {
           },
         ]
       }
+      draw_requests: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          deducted_at: string | null
+          deducted_from_commission_id: string | null
+          denial_reason: string | null
+          denied_at: string | null
+          denied_by: string | null
+          estimated_commission: number | null
+          id: string
+          job_name: string | null
+          job_number: string
+          notes: string | null
+          paid_at: string | null
+          remaining_balance: number | null
+          requested_amount: number
+          requires_manager_approval: boolean | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          deducted_at?: string | null
+          deducted_from_commission_id?: string | null
+          denial_reason?: string | null
+          denied_at?: string | null
+          denied_by?: string | null
+          estimated_commission?: number | null
+          id?: string
+          job_name?: string | null
+          job_number: string
+          notes?: string | null
+          paid_at?: string | null
+          remaining_balance?: number | null
+          requested_amount: number
+          requires_manager_approval?: boolean | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          deducted_at?: string | null
+          deducted_from_commission_id?: string | null
+          denial_reason?: string | null
+          denied_at?: string | null
+          denied_by?: string | null
+          estimated_commission?: number | null
+          id?: string
+          job_name?: string | null
+          job_number?: string
+          notes?: string | null
+          paid_at?: string | null
+          remaining_balance?: number | null
+          requested_amount?: number
+          requires_manager_approval?: boolean | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       draw_settings: {
         Row: {
           id: string
