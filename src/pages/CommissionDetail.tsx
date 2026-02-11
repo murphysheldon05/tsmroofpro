@@ -86,7 +86,7 @@ export default function CommissionDetail() {
   
   // Check if the current user is the submitter and can edit
   const isSubmitter = submission && user && submission.submitted_by === user.id;
-  const canEdit = isSubmitter && submission?.status === "revision_required";
+  const canEdit = isSubmitter && (submission?.status === "revision_required" || submission?.status === "denied");
 
   if (isLoading) {
     return (
@@ -305,22 +305,51 @@ export default function CommissionDetail() {
         />
 
         {/* Revision Required Alert for Submitters */}
-        {canEdit && submission.rejection_reason && (
-          <Card className="border-destructive bg-destructive/5">
+        {isSubmitter && submission.status === "revision_required" && submission.rejection_reason && (
+          <Card className="border-amber-300 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-700">
             <CardContent className="py-4">
               <div className="flex items-start gap-3">
-                <div className="p-2 rounded-full bg-destructive/10 text-destructive">
+                <div className="p-2 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-600">
                   <AlertCircle className="h-5 w-5" />
                 </div>
                 <div className="flex-1">
-                  <p className="font-medium text-destructive">Revision Required</p>
-                  <p className="text-sm text-muted-foreground mt-1">
+                  <p className="font-medium text-amber-800 dark:text-amber-400">Revision Requested</p>
+                  <p className="text-sm text-amber-700 dark:text-amber-300/80 mt-1">
                     {submission.rejection_reason}
                   </p>
                   <Button 
                     onClick={() => setIsEditing(true)} 
                     size="sm" 
-                    className="mt-3 gap-2"
+                    className="mt-3 gap-2 bg-green-600 hover:bg-green-700"
+                  >
+                    <Edit className="h-4 w-4" />
+                    Edit & Resubmit
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Denied Alert for Submitters */}
+        {isSubmitter && submission.status === "denied" && (
+          <Card className="border-red-300 bg-red-50 dark:bg-red-950/20 dark:border-red-700">
+            <CardContent className="py-4">
+              <div className="flex items-start gap-3">
+                <div className="p-2 rounded-full bg-red-100 dark:bg-red-900/30 text-red-600">
+                  <XCircle className="h-5 w-5" />
+                </div>
+                <div className="flex-1">
+                  <p className="font-medium text-red-800 dark:text-red-400">Commission Denied</p>
+                  {submission.rejection_reason && (
+                    <p className="text-sm text-red-700 dark:text-red-300/80 mt-1">
+                      {submission.rejection_reason}
+                    </p>
+                  )}
+                  <Button 
+                    onClick={() => setIsEditing(true)} 
+                    size="sm" 
+                    className="mt-3 gap-2 bg-green-600 hover:bg-green-700"
                   >
                     <Edit className="h-4 w-4" />
                     Edit & Resubmit

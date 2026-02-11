@@ -2049,6 +2049,7 @@ export type Database = {
           full_name: string | null
           id: string
           is_approved: boolean | null
+          job_title: string | null
           last_login_at: string | null
           manager_id: string | null
           must_reset_password: boolean | null
@@ -2080,6 +2081,7 @@ export type Database = {
           full_name?: string | null
           id: string
           is_approved?: boolean | null
+          job_title?: string | null
           last_login_at?: string | null
           manager_id?: string | null
           must_reset_password?: boolean | null
@@ -2111,6 +2113,7 @@ export type Database = {
           full_name?: string | null
           id?: string
           is_approved?: boolean | null
+          job_title?: string | null
           last_login_at?: string | null
           manager_id?: string | null
           must_reset_password?: boolean | null

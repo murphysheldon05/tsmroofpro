@@ -19,13 +19,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { GuidedTour } from "@/components/tutorial/GuidedTour";
 import { commissionsSteps } from "@/components/tutorial/tutorialSteps";
 
-const STATUS_ORDER = ["pending_review", "revision_required", "approved", "denied", "paid"];
+const STATUS_ORDER = ["pending_review", "revision_required", "denied", "approved", "paid"];
 const STATUS_LABELS: Record<string, string> = {
   pending_review: "Pending Review",
   revision_required: "Revision Required",
-  approved: "Approved",
   denied: "Denied",
+  approved: "Approved",
   paid: "Paid",
+  needs_action: "Needs Action",
 };
 
 export default function Commissions() {
@@ -81,7 +82,9 @@ export default function Commissions() {
       );
     }
 
-    if (activeStatus !== "all") {
+    if (activeStatus === "needs_action") {
+      filtered = filtered.filter((s) => s.status === "revision_required" || s.status === "denied");
+    } else if (activeStatus !== "all") {
       filtered = filtered.filter((s) => s.status === activeStatus);
     }
 
