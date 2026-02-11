@@ -24,27 +24,56 @@ export function GuidedTour({ pageName, pageTitle, steps }: GuidedTourProps) {
   const {
     isActive,
     showWelcome,
+    showResume,
+    savedStepIndex,
     startTour,
     dismissWelcome,
     completeTour,
+    skipTour,
     restartTour,
-  } = useTutorial(pageName);
+    filteredSteps,
+  } = useTutorial(pageName, steps);
 
   const [currentStep, setCurrentStep] = useState(0);
   const [targetRect, setTargetRect] = useState<Rect | null>(null);
-  const [tooltipPos, setTooltipPos] = useState<"top" | "bottom" | "left" | "right">("bottom");
+  const [tooltipPos, setTooltipPos] = useState<"top" | "bottom">("bottom");
   const isMobile = useIsMobile();
   const rafRef = useRef<number>();
+  const scrolledRef = useRef(false);
+
+  // When tour starts from a saved step
+  useEffect(() => {
+    if (isActive && savedStepIndex > 0) {
+      setCurrentStep(savedStepIndex);
+    }
+  }, [isActive, savedStepIndex]);
 
   const findTarget = useCallback(
     (stepIndex: number): HTMLElement | null => {
-      if (stepIndex < 0 || stepIndex >= steps.length) return null;
-      return document.querySelector(`[data-tutorial="${steps[stepIndex].target}"]`);
+      if (stepIndex < 0 || stepIndex >= filteredSteps.length) return null;
+      return document.querySelector(`[data-tutorial="${filteredSteps[stepIndex].target}"]`);
     },
-    [steps]
+    [filteredSteps]
   );
 
-  // Position tracking
+  // Scroll to target when step changes
+  useEffect(() => {
+    if (!isActive) return;
+    scrolledRef.current = false;
+    const el = findTarget(currentStep);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
+      // Wait for scroll to settle
+      const timer = setTimeout(() => {
+        scrolledRef.current = true;
+      }, 450);
+      return () => clearTimeout(timer);
+    } else {
+      scrolledRef.current = true;
+    }
+  }, [isActive, currentStep, findTarget]);
+
+  // Position tracking via RAF
   useEffect(() => {
     if (!isActive) return;
 
@@ -54,28 +83,15 @@ export function GuidedTour({ pageName, pageTitle, steps }: GuidedTourProps) {
         const rect = el.getBoundingClientRect();
         const padding = 6;
         setTargetRect({
-          top: rect.top - padding + window.scrollY,
+          top: rect.top - padding,
           left: rect.left - padding,
           width: rect.width + padding * 2,
           height: rect.height + padding * 2,
         });
 
-        // Determine tooltip position
-        const spaceBelow = window.innerHeight - rect.bottom;
-        const spaceAbove = rect.top;
-        if (isMobile) {
-          setTooltipPos("bottom"); // mobile uses bottom sheet
-        } else if (spaceBelow > 200) {
-          setTooltipPos("bottom");
-        } else if (spaceAbove > 200) {
-          setTooltipPos("top");
-        } else {
-          setTooltipPos("bottom");
-        }
-
-        // Scroll into view if needed
-        if (rect.top < 80 || rect.bottom > window.innerHeight - 80) {
-          el.scrollIntoView({ behavior: "smooth", block: "center" });
+        if (!isMobile) {
+          const spaceBelow = window.innerHeight - rect.bottom;
+          setTooltipPos(spaceBelow > 220 ? "bottom" : "top");
         }
       } else {
         setTargetRect(null);
@@ -90,7 +106,7 @@ export function GuidedTour({ pageName, pageTitle, steps }: GuidedTourProps) {
   }, [isActive, currentStep, findTarget, isMobile]);
 
   const handleNext = () => {
-    if (currentStep < steps.length - 1) {
+    if (currentStep < filteredSteps.length - 1) {
       setCurrentStep((s) => s + 1);
     } else {
       completeTour();
@@ -103,7 +119,7 @@ export function GuidedTour({ pageName, pageTitle, steps }: GuidedTourProps) {
   };
 
   const handleSkip = () => {
-    completeTour();
+    skipTour(currentStep);
     setCurrentStep(0);
   };
 
@@ -112,7 +128,7 @@ export function GuidedTour({ pageName, pageTitle, steps }: GuidedTourProps) {
     restartTour();
   };
 
-  const step = steps[currentStep];
+  const step = filteredSteps[currentStep];
 
   // Touch swipe for mobile
   const touchStartX = useRef(0);
@@ -126,6 +142,8 @@ export function GuidedTour({ pageName, pageTitle, steps }: GuidedTourProps) {
       else handlePrev();
     }
   };
+
+  if (filteredSteps.length === 0) return null;
 
   return (
     <>
@@ -142,7 +160,7 @@ export function GuidedTour({ pageName, pageTitle, steps }: GuidedTourProps) {
               </p>
               <div className="flex gap-3">
                 <Button
-                  onClick={startTour}
+                  onClick={() => startTour(0)}
                   size="sm"
                   className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 text-xs"
                 >
@@ -162,19 +180,60 @@ export function GuidedTour({ pageName, pageTitle, steps }: GuidedTourProps) {
           document.body
         )}
 
+      {/* Resume Prompt */}
+      {showResume &&
+        createPortal(
+          <div className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/40 animate-in fade-in-0 duration-300">
+            <div className="bg-card border border-border rounded-2xl p-6 max-w-sm mx-4 shadow-2xl animate-in zoom-in-95 duration-300">
+              <h3 className="text-base font-bold text-foreground mb-2">
+                Continue Tour?
+              </h3>
+              <p className="text-sm text-muted-foreground mb-5">
+                You left off at step {savedStepIndex + 1} of {filteredSteps.length}. Pick up where you left off?
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  onClick={() => startTour(savedStepIndex)}
+                  size="sm"
+                  className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 text-xs"
+                >
+                  Continue
+                </Button>
+                <Button
+                  onClick={() => startTour(0)}
+                  variant="outline"
+                  size="sm"
+                  className="flex-1 text-xs"
+                >
+                  Start Over
+                </Button>
+                <Button
+                  onClick={dismissWelcome}
+                  variant="ghost"
+                  size="sm"
+                  className="text-xs text-muted-foreground"
+                >
+                  Skip
+                </Button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
+
       {/* Active Tour Overlay */}
       {isActive &&
         step &&
         createPortal(
           <div
-            className="fixed inset-0 z-[9999]"
+            className="fixed inset-0 z-[9999] pointer-events-none"
             onTouchStart={handleTouchStart}
             onTouchEnd={handleTouchEnd}
           >
-            {/* Dim overlay with cutout */}
+            {/* Dim overlay with cutout — pointer-events: none so page scrolls */}
             <svg
-              className="absolute inset-0 w-full h-full"
-              style={{ height: document.documentElement.scrollHeight }}
+              className="absolute inset-0 w-full h-full pointer-events-none"
+              style={{ position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh" }}
             >
               <defs>
                 <mask id="tutorial-mask">
@@ -202,7 +261,7 @@ export function GuidedTour({ pageName, pageTitle, steps }: GuidedTourProps) {
             {/* Spotlight border */}
             {targetRect && (
               <div
-                className="absolute rounded-xl ring-2 ring-primary/60 pointer-events-none transition-all duration-300 ease-out"
+                className="fixed rounded-xl ring-2 ring-primary/60 pointer-events-none transition-all duration-300 ease-out"
                 style={{
                   top: targetRect.top,
                   left: targetRect.left,
@@ -212,14 +271,17 @@ export function GuidedTour({ pageName, pageTitle, steps }: GuidedTourProps) {
               />
             )}
 
-            {/* Tooltip */}
+            {/* Tooltip — pointer-events: auto so buttons work */}
             {isMobile ? (
               // Mobile bottom sheet
-              <div className="fixed bottom-0 left-0 right-0 bg-card border-t border-border rounded-t-2xl p-5 shadow-2xl animate-in slide-in-from-bottom-4 duration-300">
+              <div
+                className="fixed bottom-0 left-0 right-0 bg-card border-t border-border rounded-t-2xl p-5 shadow-2xl animate-in slide-in-from-bottom-4 duration-300 pointer-events-auto"
+                style={{ maxHeight: "40vh", zIndex: 10000 }}
+              >
                 <div className="flex items-start justify-between mb-2">
                   <div>
                     <p className="text-[11px] text-muted-foreground mb-1">
-                      Step {currentStep + 1} of {steps.length}
+                      Step {currentStep + 1} of {filteredSteps.length}
                     </p>
                     <h4 className="text-sm font-bold text-foreground">{step.title}</h4>
                   </div>
@@ -248,8 +310,8 @@ export function GuidedTour({ pageName, pageTitle, steps }: GuidedTourProps) {
                       </Button>
                     )}
                     <Button size="sm" onClick={handleNext} className="text-xs h-8 bg-primary text-primary-foreground">
-                      {currentStep === steps.length - 1 ? "Done" : "Next"}
-                      {currentStep < steps.length - 1 && <ChevronRight className="h-3 w-3 ml-1" />}
+                      {currentStep === filteredSteps.length - 1 ? "Done" : "Next"}
+                      {currentStep < filteredSteps.length - 1 && <ChevronRight className="h-3 w-3 ml-1" />}
                     </Button>
                   </div>
                 </div>
@@ -259,7 +321,7 @@ export function GuidedTour({ pageName, pageTitle, steps }: GuidedTourProps) {
               targetRect && (
                 <div
                   className={cn(
-                    "absolute bg-card border border-border rounded-xl p-4 shadow-[0_8px_30px_rgba(0,0,0,0.12)] max-w-[320px] animate-in fade-in-0 zoom-in-95 duration-200 pointer-events-auto",
+                    "fixed bg-card border border-border rounded-xl p-4 shadow-[0_8px_30px_rgba(0,0,0,0.12)] max-w-[320px] animate-in fade-in-0 zoom-in-95 duration-200 pointer-events-auto"
                   )}
                   style={{
                     ...(tooltipPos === "bottom"
@@ -278,11 +340,12 @@ export function GuidedTour({ pageName, pageTitle, steps }: GuidedTourProps) {
                           ),
                           transform: "translateY(-100%)",
                         }),
+                    zIndex: 10000,
                   }}
                 >
                   <div className="flex items-start justify-between mb-1.5">
                     <p className="text-[11px] text-muted-foreground">
-                      Step {currentStep + 1} of {steps.length}
+                      Step {currentStep + 1} of {filteredSteps.length}
                     </p>
                     <button
                       onClick={handleSkip}
@@ -313,36 +376,28 @@ export function GuidedTour({ pageName, pageTitle, steps }: GuidedTourProps) {
                         onClick={handleNext}
                         className="text-xs h-7 px-3 bg-primary text-primary-foreground hover:bg-primary/90"
                       >
-                        {currentStep === steps.length - 1 ? "Done" : "Next"}
+                        {currentStep === filteredSteps.length - 1 ? "Done" : "Next"}
                       </Button>
                     </div>
                   </div>
                 </div>
               )
             )}
-
-            {/* Click overlay to prevent interaction (except tooltip) */}
-            <div
-              className="absolute inset-0"
-              onClick={(e) => {
-                // Allow clicking inside the tooltip
-                const tooltip = (e.target as HTMLElement).closest("[data-tutorial-tooltip]");
-                if (!tooltip) e.stopPropagation();
-              }}
-              style={{ zIndex: -1 }}
-            />
           </div>,
           document.body
         )}
 
-      {/* Floating Help Button */}
-      {!isActive && !showWelcome && (
+      {/* Floating Help Button — hidden during active tour */}
+      {!isActive && !showWelcome && !showResume && (
         <button
           onClick={handleRestart}
-          className="fixed bottom-6 right-6 z-50 w-10 h-10 rounded-full bg-muted/80 hover:bg-muted border border-border/50 flex items-center justify-center shadow-sm transition-all duration-200 hover:scale-105 text-muted-foreground hover:text-foreground"
+          className={cn(
+            "fixed z-50 w-9 h-9 rounded-full bg-card border border-border/60 flex items-center justify-center shadow-sm transition-all duration-200 hover:scale-105 hover:border-primary/40 hover:shadow-md text-muted-foreground hover:text-foreground",
+            isMobile ? "bottom-[72px] right-5" : "bottom-5 right-5"
+          )}
           title="Page Tutorial"
         >
-          <HelpCircle className="h-4.5 w-4.5" />
+          <HelpCircle className="h-4 w-4" />
         </button>
       )}
     </>

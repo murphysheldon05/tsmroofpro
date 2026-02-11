@@ -3299,6 +3299,44 @@ export type Database = {
         }
         Relationships: []
       }
+      user_tutorial_completions: {
+        Row: {
+          completed_at: string
+          created_at: string
+          dismissed: boolean
+          id: string
+          last_step_index: number | null
+          page_key: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string
+          created_at?: string
+          dismissed?: boolean
+          id?: string
+          last_step_index?: number | null
+          page_key: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string
+          created_at?: string
+          dismissed?: boolean
+          id?: string
+          last_step_index?: number | null
+          page_key?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_tutorial_completions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vendors: {
         Row: {
           account_number: string | null
