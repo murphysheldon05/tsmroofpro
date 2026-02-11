@@ -575,6 +575,7 @@ export function CommissionDocumentForm({ document: existingDoc, readOnly = false
         <CardContent className="p-0">
 
           {/* ── Job Information ── */}
+          <div data-tutorial="job-info">
           <Collapsible open={openSections.job} onOpenChange={() => toggleSection('job')}>
             <SectionHeader title="Job Information" icon={FileText} isOpen={openSections.job} onToggle={() => toggleSection('job')} />
             <CollapsibleContent>
@@ -591,8 +592,10 @@ export function CommissionDocumentForm({ document: existingDoc, readOnly = false
               </div>
             </CollapsibleContent>
           </Collapsible>
+          </div>
 
           {/* ── Contract & Costs ── */}
+          <div data-tutorial="gross-contract">
           <Collapsible open={openSections.contract} onOpenChange={() => toggleSection('contract')}>
             <SectionHeader title="Contract & Costs" icon={Calculator} isOpen={openSections.contract} onToggle={() => toggleSection('contract')} />
             <CollapsibleContent>
@@ -613,8 +616,10 @@ export function CommissionDocumentForm({ document: existingDoc, readOnly = false
               </div>
             </CollapsibleContent>
           </Collapsible>
+          </div>
 
           {/* ── Negative Expenses ── */}
+          <div data-tutorial="expenses">
           <Collapsible open={openSections.negExpenses} onOpenChange={() => toggleSection('negExpenses')}>
             <SectionHeader title="Additional Expenses (−)" icon={DollarSign} color="destructive" isOpen={openSections.negExpenses} onToggle={() => toggleSection('negExpenses')} badge={negExpenseCount} />
             <CollapsibleContent>
@@ -664,6 +669,7 @@ export function CommissionDocumentForm({ document: existingDoc, readOnly = false
               </div>
             </CollapsibleContent>
           </Collapsible>
+          </div>
 
           {/* ── Positive Expenses ── */}
           <Collapsible open={openSections.posExpenses} onOpenChange={() => toggleSection('posExpenses')}>
@@ -699,6 +705,7 @@ export function CommissionDocumentForm({ document: existingDoc, readOnly = false
           </Collapsible>
 
           {/* ── Commission Summary ── */}
+          <div data-tutorial="commission-calc">
           <Collapsible open={openSections.summary} onOpenChange={() => toggleSection('summary')}>
             <SectionHeader title="Commission Summary" icon={DollarSign} isOpen={openSections.summary} onToggle={() => toggleSection('summary')} />
             <CollapsibleContent>
@@ -718,6 +725,7 @@ export function CommissionDocumentForm({ document: existingDoc, readOnly = false
               </div>
             </CollapsibleContent>
           </Collapsible>
+          </div>
 
           {/* ── Notes ── */}
           <Collapsible open={openSections.notes} onOpenChange={() => toggleSection('notes')}>
@@ -758,7 +766,7 @@ export function CommissionDocumentForm({ document: existingDoc, readOnly = false
 
       {/* ── Bottom Action Buttons ── */}
       {canEdit && (
-        <div className="fixed bottom-0 left-0 right-0 sm:relative sm:mt-6 bg-background/95 backdrop-blur sm:bg-transparent border-t sm:border-0 border-border/50 p-4 sm:p-0 flex gap-3 z-20">
+        <div data-tutorial="submit-btn" className="fixed bottom-0 left-0 right-0 sm:relative sm:mt-6 bg-background/95 backdrop-blur sm:bg-transparent border-t sm:border-0 border-border/50 p-4 sm:p-0 flex gap-3 z-20">
           <Button variant="outline" onClick={() => handleSave(false)} disabled={isLoading || isAutoSaving} className="flex-1 h-12 sm:h-10">
             <Save className="h-4 w-4 mr-2" /> Save Draft
           </Button>

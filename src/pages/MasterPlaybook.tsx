@@ -7,7 +7,6 @@ import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { MasterSOPCard } from "@/components/sop/MasterSOPCard";
-import { PlaybookCompletionModal } from "@/components/compliance/PlaybookCompletionModal";
 import { useMasterSOPAcknowledgments } from "@/hooks/useMasterSOPAcknowledgments";
 import { SOPMASTER_CONTENT, SOPMASTER_VERSION } from "@/lib/sopMasterConstants";
 import { useAuth } from "@/contexts/AuthContext";
@@ -31,10 +30,8 @@ import { playbookSteps } from "@/components/tutorial/tutorialSteps";
 const MasterPlaybook = forwardRef<HTMLDivElement>((_, ref) => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [showCompletionModal, setShowCompletionModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const hasTriggeredCompletion = useRef(false);
-  const celebrationKey = `playbook_celebrated_${user?.id}`;
+  const hasNotified = useRef(false);
   
   const {
     sopStatuses,
@@ -47,7 +44,6 @@ const MasterPlaybook = forwardRef<HTMLDivElement>((_, ref) => {
   } = useMasterSOPAcknowledgments();
 
   const progressPercent = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
-  const userName = user?.user_metadata?.full_name?.split(" ")[0] || "Team Member";
   const remaining = totalCount - completedCount;
 
   // Filter playbooks by search
@@ -57,30 +53,15 @@ const MasterPlaybook = forwardRef<HTMLDivElement>((_, ref) => {
     pb.description.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Trigger celebration ONCE EVER per user — persist flag in localStorage
+  // Send completion notification once when all complete
   useEffect(() => {
-    if (allCompleted && !hasTriggeredCompletion.current && completedCount === totalCount) {
-      const alreadyCelebrated = localStorage.getItem(celebrationKey);
-      if (alreadyCelebrated) return; // Already celebrated — skip
-      hasTriggeredCompletion.current = true;
-      localStorage.setItem(celebrationKey, "true");
-      setShowCompletionModal(true);
-      sendCompletionNotification();
-    }
-  }, [allCompleted, completedCount, totalCount, celebrationKey]);
-
-  const sendCompletionNotification = async () => {
-    try {
-      const { error } = await supabase.functions.invoke("notify-playbook-completion", {
+    if (allCompleted && !hasNotified.current && completedCount === totalCount) {
+      hasNotified.current = true;
+      supabase.functions.invoke("notify-playbook-completion", {
         body: { userId: user?.id },
-      });
-      if (error) {
-        console.error("Failed to send completion notification:", error);
-      }
-    } catch (e) {
-      console.error("Error sending completion notification:", e);
+      }).catch(e => console.error("Error sending completion notification:", e));
     }
-  };
+  }, [allCompleted, completedCount, totalCount, user?.id]);
 
   const handleAcknowledge = async (sopNumber: number) => {
     try {
@@ -89,11 +70,6 @@ const MasterPlaybook = forwardRef<HTMLDivElement>((_, ref) => {
     } catch (e: any) {
       toast.error("Failed to acknowledge: " + e.message);
     }
-  };
-
-  const handleCloseModal = () => {
-    setShowCompletionModal(false);
-    navigate("/command-center");
   };
 
   if (isLoading) {
@@ -112,13 +88,6 @@ const MasterPlaybook = forwardRef<HTMLDivElement>((_, ref) => {
   return (
     <AppLayout>
       <div ref={ref} className="max-w-4xl mx-auto space-y-6 px-4 pb-8">
-        {/* Completion Modal with Confetti */}
-        <PlaybookCompletionModal 
-          open={showCompletionModal} 
-          onClose={handleCloseModal}
-          userName={userName}
-        />
-
         {/* Header */}
         <header className="pt-4 lg:pt-0">
           <div className="flex items-center gap-4 mb-6">

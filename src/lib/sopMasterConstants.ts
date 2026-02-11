@@ -70,7 +70,8 @@ export const SOPMASTER_CONTENT: MasterPlaybookContent[] = [
       "Tier drop: every 5% below minimum = drop one full tier (automatic)",
       "Overrides allowed ONLY on deals 1–10; beyond requires executive approval",
       "Routing MUST go: Sales Rep → Sales Manager → Accounting (never direct)",
-      "Accounting executes only — cannot approve or modify"
+      "Accounting executes only — cannot approve or modify",
+      "Draw requests: maximum 50% of the commission on the stated future job, not to exceed $1,500 without Sales Manager approval"
     ],
     zeroTolerance: [
       { violation: "Tier gaming", severity: "SEVERE", consequence: "Termination escalation" },
@@ -96,6 +97,9 @@ After job completion and payment collection, when submitting for commission paym
 3. Submit commission at assigned tier
 4. Route to Sales Manager for approval
 5. Accounting executes payment
+
+## Draw Request Rules
+Reps may request a draw advance against a future job's commission. The maximum draw is 50% of the estimated commission, capped at $1,500. Draws exceeding $1,500 require explicit Sales Manager approval. Draws are automatically deducted when the commission for that job is paid.
 
 ## Entry Criteria
 - Job status = Completed

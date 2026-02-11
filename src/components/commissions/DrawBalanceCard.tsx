@@ -48,9 +48,10 @@ export function DrawBalanceCard({ showDrawModal, onDrawModalChange }: DrawBalanc
     else setInternalOpen(v);
   };
 
-  const maxDraw = settings?.max_draw_amount ?? 4000;
+  const maxDraw = settings?.max_draw_amount ?? 1500;
   const existingBalance = activeDraw?.remaining_balance ?? 0;
   const maxAllowed = Math.max(0, maxDraw - existingBalance);
+  const requiresManagerApproval = parseFloat(amount) > 1500;
 
   const handleSubmit = () => {
     const numAmount = parseFloat(amount);
@@ -146,7 +147,7 @@ export function DrawBalanceCard({ showDrawModal, onDrawModalChange }: DrawBalanc
               <DialogContent className="max-w-md">
                 <DialogHeader>
                   <DialogTitle>Request a Draw</DialogTitle>
-                  <DialogDescription>Request an advance against a future commission</DialogDescription>
+                  <DialogDescription>Request an advance against a future job's commission. Maximum is 50% of estimated commission, capped at $1,500 without manager approval.</DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4">
                   <div className="space-y-2">
@@ -164,18 +165,17 @@ export function DrawBalanceCard({ showDrawModal, onDrawModalChange }: DrawBalanc
                       value={amount}
                       onChange={(e) => setAmount(e.target.value)}
                       placeholder="0.00"
-                      max={maxAllowed}
                     />
-                    <p className="text-xs text-muted-foreground">Maximum draw: ${maxDraw.toLocaleString()}</p>
+                    <p className="text-xs text-muted-foreground">Maximum: 50% of estimated commission on this job, capped at $1,500</p>
                     {existingBalance > 0 && (
                       <p className="text-xs text-muted-foreground">
-                        Current balance: ${existingBalance.toLocaleString()}. You can request up to ${maxAllowed.toLocaleString()}.
+                        Current balance: ${existingBalance.toLocaleString()}.
                       </p>
                     )}
-                    {parseFloat(amount) > maxAllowed && (
-                      <p className="text-xs text-destructive flex items-center gap-1">
+                    {requiresManagerApproval && parseFloat(amount) > 0 && (
+                      <p className="text-xs text-amber-600 flex items-center gap-1">
                         <AlertTriangle className="w-3 h-3" />
-                        Exceeds maximum allowed
+                        Draw requests over $1,500 require Sales Manager approval
                       </p>
                     )}
                   </div>
@@ -199,8 +199,7 @@ export function DrawBalanceCard({ showDrawModal, onDrawModalChange }: DrawBalanc
                       !amount ||
                       !jobNumber.trim() ||
                       !reason.trim() ||
-                      parseFloat(amount) <= 0 ||
-                      parseFloat(amount) > maxAllowed
+                      parseFloat(amount) <= 0
                     }
                   >
                     {requestDraw.isPending ? (

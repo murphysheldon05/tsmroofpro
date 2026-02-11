@@ -167,6 +167,13 @@ const navigationItems: NavItem[] = [
     sectionKey: "vendors",
     requiresPlaybook: true,
   },
+  {
+    title: "Ops Compliance",
+    href: "/ops-compliance",
+    icon: Shield,
+    sectionKey: "ops-compliance",
+    requiresPlaybook: true,
+  },
 ];
 
 // Sortable nav item component
@@ -408,7 +415,11 @@ export function AppSidebar() {
   // Filter navigation based on permissions
   const filteredNavigation = useMemo(() => {
     return navigationItems
-      .filter((item) => isSectionVisible(item.sectionKey, userPermissions, role))
+      .filter((item) => {
+        // Ops Compliance only visible to admin
+        if (item.sectionKey === "ops-compliance" && !isAdmin) return false;
+        return isSectionVisible(item.sectionKey, userPermissions, role);
+      })
       .map((item) => {
         if (item.children) {
           const filteredChildren = item.children.filter((child) => {
@@ -568,20 +579,6 @@ export function AppSidebar() {
               >
                 <Settings className={cn("w-5 h-5", isActive("/admin") && "nav-icon-glow")} />
                 Admin Panel
-              </button>
-            )}
-            {isAdmin && (
-              <button
-                onClick={() => handleNavClick("/ops-compliance")}
-                className={cn(
-                  "w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm transition-all duration-150 relative min-h-[44px]",
-                  location.pathname.startsWith("/ops-compliance")
-                    ? "nav-item-active font-medium"
-                    : "text-sidebar-foreground/70 hover:bg-primary/5 hover:text-primary/80"
-                )}
-              >
-                <Shield className={cn("w-5 h-5", location.pathname.startsWith("/ops-compliance") && "nav-icon-glow")} />
-                Ops Compliance
               </button>
             )}
           </div>
