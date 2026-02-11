@@ -2,74 +2,104 @@ export interface TutorialStep {
   target: string; // data-tutorial attribute value
   title: string;
   description: string;
+  roles?: string[]; // optional role filter — if set, only these roles see this step
 }
 
+// ─── COMMAND CENTER ───
 export const commandCenterSteps: TutorialStep[] = [
+  {
+    target: "command-center-header",
+    title: "Welcome to Your Dashboard",
+    description: "This is your Command Center — your daily HQ. Everything you need is right here.",
+  },
   {
     target: "sales-leaderboard",
     title: "Sales Leaderboard",
-    description: "See how your team ranks. Toggle between Sales, Profit, and Commissions views. Use Week/Month/YTD to change the time range.",
+    description: "See how the team ranks. Toggle between Sales, Profit, and Commissions tabs. Use the time range buttons to view different periods.",
   },
   {
     target: "commission-summary",
-    title: "Commission Summary Cards",
-    description: "Your commission snapshot at a glance. Pending, Approved, Paid this month, and any outstanding Draw balance.",
+    title: "Commission Summary",
+    description: "Your commission snapshot: Pending, Approved, Paid this month, and any Draw balance.",
+    roles: ["sales_rep", "sales_manager", "admin"],
   },
   {
     target: "quick-links",
     title: "Quick Links",
-    description: "Jump directly to Build Schedule, Delivery Schedule, Submit Warranty, or Submit Commission.",
+    description: "Jump to common actions: Build Schedule, Delivery Schedule, Submit Warranty, or Submit Commission.",
   },
   {
     target: "quick-stats",
     title: "Today's Stats",
-    description: "Click any of these boxes to see details — today's builds, deliveries, open warranties, or pending approvals.",
+    description: "Click any stat box to see details — builds, deliveries, warranties, or pending approvals.",
   },
   {
-    target: "weather-widget",
-    title: "Weather Widget",
-    description: "Live weather for Phoenix to help plan outdoor work. Shows 5-day forecast.",
+    target: "cc-settings-gear",
+    title: "Customize Your Dashboard",
+    description: "Click the gear icon to rearrange widgets. Drag items to reorder, toggle sections on or off, and put what matters most to you at the top.",
   },
   {
     target: "notification-bell",
     title: "Notification Bell",
-    description: "Check your notifications here. New commissions, approvals, and compliance alerts all show up in real-time.",
+    description: "Your notifications live here. Commission updates, approvals, compliance alerts — all in real-time.",
+  },
+  {
+    target: "pending-review-widget",
+    title: "Pending Review",
+    description: "Commission submissions from your reps appear here. Review and approve them promptly.",
+    roles: ["sales_manager", "admin"],
   },
 ];
 
+// ─── COMMISSIONS ───
 export const commissionsSteps: TutorialStep[] = [
+  {
+    target: "commissions-header",
+    title: "Commissions Overview",
+    description: "This is where you manage all commission activity.",
+  },
   {
     target: "submit-commission",
     title: "Submit Commission",
-    description: "Click here to submit a new commission after a job is completed and paid.",
+    description: "Click here after a job is completed AND paid in AccuLynx. Fill in the job details and the system calculates your commission at your assigned tier.",
+    roles: ["sales_rep", "sales_manager", "admin"],
   },
   {
     target: "request-draw",
     title: "Request Draw",
-    description: "Need an advance? Request a draw against a future job's commission.",
+    description: "Need an advance? Request a draw against a specific job. Max $4,000 per request. Your manager must approve it.",
+    roles: ["sales_rep", "sales_manager"],
   },
   {
     target: "commission-pipeline",
     title: "Commission Pipeline",
-    description: "Filter your commissions by status: Pending, Revision, Approved, Denied, or Paid.",
+    description: "Filter by status: Pending (awaiting manager review), Revision (needs corrections), Approved (going to Accounting), Paid.",
   },
   {
-    target: "commission-search",
-    title: "Search",
-    description: "Search by job number, rep name, or customer to find specific commissions.",
+    target: "approval-chain",
+    title: "Approval Chain Reminder",
+    description: "Remember: You submit → Your Sales Manager reviews → Accounting processes payment. No steps can be skipped.",
+    roles: ["sales_rep"],
   },
   {
-    target: "draw-balance",
-    title: "Draw Balance Card",
-    description: "See your active draws and remaining balances here.",
+    target: "pending-review-queue",
+    title: "Pending Review Queue",
+    description: "Commissions from your reps land here. Review each one carefully — verify job completion and payment before approving.",
+    roles: ["sales_manager", "admin"],
   },
 ];
 
+// ─── PRODUCTION / BUILD SCHEDULE ───
 export const buildScheduleSteps: TutorialStep[] = [
   {
     target: "calendar-views",
-    title: "Calendar Views",
-    description: "Switch between Day, Week, and Month views to see your production schedule.",
+    title: "Build Schedule",
+    description: "View all upcoming production builds by Day, Week, or Month.",
+  },
+  {
+    target: "todays-builds",
+    title: "Today's Builds",
+    description: "See all builds happening today right above the calendar.",
   },
   {
     target: "crew-filters",
@@ -78,34 +108,77 @@ export const buildScheduleSteps: TutorialStep[] = [
   },
   {
     target: "add-build",
-    title: "Add Build",
-    description: "Click to schedule a new build. Assign a crew, date, and job details.",
-  },
-  {
-    target: "todays-builds",
-    title: "Today's Builds",
-    description: "See all builds happening today at a glance, right above the calendar.",
+    title: "Add/Edit Builds",
+    description: "Click to schedule or modify builds. Assign crews, dates, and job details.",
+    roles: ["manager", "admin"],
   },
 ];
 
+// ─── DELIVERY SCHEDULE ───
 export const deliveryScheduleSteps: TutorialStep[] = [
   {
     target: "calendar-view",
-    title: "Calendar View",
-    description: "See all upcoming material deliveries by day, week, or month.",
-  },
-  {
-    target: "add-delivery",
-    title: "Add Delivery",
-    description: "Schedule a new delivery with supplier, material, and job details.",
+    title: "Delivery Schedule",
+    description: "Track material deliveries. Switch views to see supplier schedules.",
   },
   {
     target: "todays-deliveries",
     title: "Today's Deliveries",
     description: "Today's scheduled deliveries appear here with status tracking.",
   },
+  {
+    target: "add-delivery",
+    title: "Add Delivery",
+    description: "Schedule a new delivery with supplier, material, and job details.",
+    roles: ["manager", "admin"],
+  },
 ];
 
+// ─── PLAYBOOK LIBRARY ───
+export const playbookSteps: TutorialStep[] = [
+  {
+    target: "playbook-progress",
+    title: "Master Playbook",
+    description: "This is the core. All 10 Standard Operating Procedures must be read and acknowledged before you can access the full hub. If you haven't completed them yet, start here.",
+  },
+  {
+    target: "playbook-search",
+    title: "Browse Playbooks",
+    description: "After completing the Master Playbook, you can browse all company playbooks by category.",
+  },
+  {
+    target: "playbook-cards",
+    title: "Your Acknowledgment Status",
+    description: "Green checkmarks show which SOPs you've acknowledged. You can re-read any of them anytime.",
+  },
+];
+
+// ─── TRAINING ───
+export const trainingSteps: TutorialStep[] = [
+  {
+    target: "training-header",
+    title: "Documents",
+    description: "Browse company documents organized by category: Sales Scripts, Email Templates, Manufacturer Specs, Product Knowledge, and more. Download anything you need.",
+  },
+  {
+    target: "training-content",
+    title: "Video Library",
+    description: "Watch training videos and Loom recordings. Organized by category: Onboarding, Sales Training, Product Training, and more.",
+  },
+  {
+    target: "training-search",
+    title: "My Onboarding",
+    description: "Your role-specific onboarding SOP lives here. Complete all sections and sign electronically.",
+  },
+  {
+    target: "training-new-hires",
+    title: "New Hires",
+    description: "Manage new hire onboarding materials and track progress.",
+    roles: ["admin"],
+  },
+];
+
+// ─── WARRANTY ───
 export const warrantySteps: TutorialStep[] = [
   {
     target: "kanban-board",
@@ -129,98 +202,107 @@ export const warrantySteps: TutorialStep[] = [
   },
 ];
 
+// ─── WHO TO CONTACT ───
+export const directorySteps: TutorialStep[] = [
+  {
+    target: "assigned-manager",
+    title: "Your Assigned Manager",
+    description: "Your #1 point of contact. For commission questions, deal strategy, draw requests, and day-to-day support — always start with your manager.",
+    roles: ["sales_rep", "user"],
+  },
+  {
+    target: "other-managers",
+    title: "Other Sales Managers",
+    description: "If your manager is unavailable, you can reach out to another Sales Manager as your backup contact.",
+    roles: ["sales_rep", "user"],
+  },
+  {
+    target: "compliance-officer",
+    title: "Compliance Officer",
+    description: "For compliance questions, playbook clarifications, or violation inquiries, contact the Ops Compliance team.",
+  },
+  {
+    target: "department-contacts",
+    title: "Department Contacts",
+    description: "Browse contacts by department. You'll find Production, Supplements, and other key team members here.",
+  },
+  {
+    target: "accounting-owner",
+    title: "Accounting & Owner",
+    description: "To reach Accounting or the Owner, please submit a meeting request via Forms & Requests or email. A formal request ensures your question gets proper attention.",
+    roles: ["sales_rep", "user"],
+  },
+];
+
+// ─── OPS COMPLIANCE ───
 export const opsComplianceSteps: TutorialStep[] = [
   {
     target: "compliance-summary",
-    title: "Dashboard Cards",
+    title: "Dashboard Overview",
     description: "Quick summary of active holds, violations, escalations, and pending items.",
+    roles: ["admin"],
   },
   {
     target: "violations-tab",
-    title: "Violations Tab",
+    title: "Violations",
     description: "View and create violations. Classify as MINOR, MAJOR, or SEVERE with documentation.",
+    roles: ["admin"],
   },
   {
     target: "holds-tab",
-    title: "Holds Tab",
-    description: "Place access holds or commission holds on users who have compliance issues.",
+    title: "Holds",
+    description: "Place access or commission holds on users with compliance issues.",
+    roles: ["admin"],
   },
   {
     target: "escalations-tab",
-    title: "Escalations Tab",
+    title: "Escalations",
     description: "Create and manage escalations that need executive review.",
+    roles: ["admin"],
   },
   {
     target: "audit-log-tab",
     title: "Audit Log",
-    description: "Complete history of every compliance action taken in the system. Filter by user, date, or action type.",
+    description: "Complete history of every compliance action. Filter by user, date, or action type.",
+    roles: ["admin"],
   },
 ];
 
-export const playbookSteps: TutorialStep[] = [
-  {
-    target: "playbook-progress",
-    title: "Master Playbook",
-    description: "The 10 core SOPs every team member must acknowledge. Click to read and review.",
-  },
-  {
-    target: "playbook-search",
-    title: "Search",
-    description: "Browse playbooks by name or phase to find specific SOPs.",
-  },
-  {
-    target: "playbook-cards",
-    title: "Playbook Cards",
-    description: "Access detailed guides, flowcharts, and reference materials for each SOP.",
-  },
-];
-
-export const trainingSteps: TutorialStep[] = [
-  {
-    target: "training-header",
-    title: "Training Resources",
-    description: "Upload and browse company documents: sales scripts, email templates, manufacturer specs, and more.",
-  },
-  {
-    target: "training-search",
-    title: "Search",
-    description: "Find specific training materials by keyword.",
-  },
-  {
-    target: "training-content",
-    title: "Content Library",
-    description: "Watch training videos and browse documents organized by category. Managers and Admins can upload new content.",
-  },
-];
-
+// ─── ADMIN PANEL ───
 export const adminSteps: TutorialStep[] = [
   {
     target: "admin-users-tab",
     title: "User Management",
-    description: "View all users, edit roles and departments, approve or reject accounts.",
+    description: "View all users, edit roles and departments, approve or reject new signups.",
+    roles: ["admin"],
   },
   {
     target: "admin-pending",
     title: "Pending Approvals",
     description: "New users waiting for your review. Assign their role, department, and commission tier.",
+    roles: ["admin"],
   },
   {
     target: "admin-tiers-tab",
     title: "Commission Management",
-    description: "Manage commission tiers and formulas for accurate YTD data.",
+    description: "Import historical commissions or manually add records.",
+    roles: ["admin"],
   },
   {
     target: "admin-draws-tab",
     title: "Draw Management",
-    description: "Configure draw settings, view all active draws company-wide.",
+    description: "Import draws, add manually, view all active draws company-wide.",
+    roles: ["admin"],
   },
   {
     target: "admin-leaderboard-tab",
     title: "Integrations",
-    description: "Configure leaderboard settings and AccuLynx API for live production and sales data.",
+    description: "Connect AccuLynx API for live production and sales data.",
+    roles: ["admin"],
   },
 ];
 
+// ─── ROLE ONBOARDING ───
 export const roleOnboardingSteps: TutorialStep[] = [
   {
     target: "onboarding-header",
@@ -244,6 +326,7 @@ export const roleOnboardingSteps: TutorialStep[] = [
   },
 ];
 
+// ─── COMMISSION DOCUMENTS ───
 export const commissionDocumentsSteps: TutorialStep[] = [
   {
     target: "cd-new-document",
