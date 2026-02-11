@@ -68,9 +68,9 @@ export default function CommissionDocumentDetail() {
   // Accounting can mark as paid
   const canMarkAsPaid = isAdmin && document?.status === 'accounting_approved';
   
-  // Creator can edit drafts and revision_required
+  // Creator can edit drafts, revision_required, and rejected docs
   const canEdit = document?.created_by === user?.id && 
-    (document?.status === 'draft' || document?.status === 'revision_required');
+    (document?.status === 'draft' || document?.status === 'revision_required' || document?.status === 'rejected');
   
   // Creator can resubmit revision_required or rejected docs
   const canResubmit = document?.created_by === user?.id && 
@@ -341,13 +341,33 @@ export default function CommissionDocumentDetail() {
 
       {/* Revision Notice */}
       {document.status === 'revision_required' && document.revision_reason && (
-        <Card className="border-amber-300 bg-amber-50">
+        <Card className="border-amber-300 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-700">
           <CardContent className="pt-4">
             <div className="flex items-start gap-2">
               <RotateCcw className="h-5 w-5 text-amber-600 mt-0.5" />
               <div>
-                <p className="font-medium text-amber-800">Revision Required</p>
-                <p className="text-sm text-amber-700 mt-1">{document.revision_reason}</p>
+                <p className="font-medium text-amber-800 dark:text-amber-400">Revision Requested</p>
+                <p className="text-sm text-amber-700 dark:text-amber-300/80 mt-1">{document.revision_reason}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Denied Notice */}
+      {document.status === 'rejected' && (
+        <Card className="border-red-300 bg-red-50 dark:bg-red-950/20 dark:border-red-700">
+          <CardContent className="pt-4">
+            <div className="flex items-start gap-2">
+              <X className="h-5 w-5 text-red-600 mt-0.5" />
+              <div>
+                <p className="font-medium text-red-800 dark:text-red-400">Commission Denied</p>
+                {document.approval_comment && (
+                  <p className="text-sm text-red-700 dark:text-red-300/80 mt-1">{document.approval_comment}</p>
+                )}
+                {document.revision_reason && (
+                  <p className="text-sm text-red-700 dark:text-red-300/80 mt-1">{document.revision_reason}</p>
+                )}
               </div>
             </div>
           </CardContent>

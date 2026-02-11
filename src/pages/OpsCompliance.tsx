@@ -15,7 +15,10 @@ import {
   TrendingUp, 
   FileText, 
   CheckCircle,
-  LayoutDashboard
+  LayoutDashboard,
+  DollarSign,
+  Shield,
+  GraduationCap,
 } from "lucide-react";
 
 // Hooks
@@ -42,13 +45,20 @@ import { EscalationsTab } from "@/components/compliance/EscalationsTab";
 import { AuditLogTab } from "@/components/compliance/AuditLogTab";
 import { AcknowledgmentsTab } from "@/components/compliance/AcknowledgmentsTab";
 import { MasterSOPsTab } from "@/components/compliance/MasterSOPsTab";
+import { CommissionOversightTab } from "@/components/compliance/CommissionOversightTab";
+import { WarrantyOversightTab } from "@/components/compliance/WarrantyOversightTab";
+import { OnboardingOversightTab } from "@/components/compliance/OnboardingOversightTab";
 import { GuidedTour } from "@/components/tutorial/GuidedTour";
 import { opsComplianceSteps } from "@/components/tutorial/tutorialSteps";
+
 const tabs = [
   { value: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { value: "violations", label: "Violations", icon: AlertTriangle },
   { value: "holds", label: "Holds", icon: Ban },
   { value: "escalations", label: "Escalations", icon: TrendingUp },
+  { value: "commissions", label: "Commissions", icon: DollarSign },
+  { value: "warranties", label: "Warranties", icon: Shield },
+  { value: "onboarding", label: "Onboarding", icon: GraduationCap },
   { value: "audit-log", label: "Audit Log", icon: FileText },
   { value: "sops", label: "Master SOPs", icon: ShieldCheck },
   { value: "acknowledgments", label: "Acknowledgments", icon: CheckCircle },
@@ -212,7 +222,7 @@ export default function OpsCompliance() {
         {/* Tab Navigation - Mobile Friendly */}
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
           <ScrollArea className="w-full">
-            <TabsList className="inline-flex w-max min-w-full sm:w-full sm:grid sm:grid-cols-7 h-auto p-1 bg-muted/50">
+            <TabsList className="inline-flex w-max min-w-full sm:w-full sm:grid sm:grid-cols-10 h-auto p-1 bg-muted/50">
               {tabs.map((tab) => (
                 <TabsTrigger
                   key={tab.value}
@@ -292,6 +302,21 @@ export default function OpsCompliance() {
           {/* Master SOPs Tab */}
           <TabsContent value="sops" className="mt-4">
             <MasterSOPsTab />
+          </TabsContent>
+
+          {/* Commission Oversight Tab */}
+          <TabsContent value="commissions" className="mt-4">
+            <CommissionOversightTab />
+          </TabsContent>
+
+          {/* Warranty Oversight Tab */}
+          <TabsContent value="warranties" className="mt-4">
+            <WarrantyOversightTab />
+          </TabsContent>
+
+          {/* Onboarding Oversight Tab */}
+          <TabsContent value="onboarding" className="mt-4">
+            <OnboardingOversightTab />
           </TabsContent>
 
           {/* Acknowledgments Tab */}

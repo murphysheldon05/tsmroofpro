@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { 
-  Clock, CheckCircle, AlertCircle, XCircle, DollarSign, Users, MapPin, Calendar
+  Clock, CheckCircle, AlertCircle, XCircle, DollarSign, Users, MapPin, Calendar, Edit, RotateCcw
 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -110,6 +110,18 @@ export function CommissionCard({ submission }: CommissionCardProps) {
             <Calendar className="h-3.5 w-3.5" />
             {format(new Date(submission.created_at), "MMM d")}
           </span>
+          {submission.status === "revision_required" && (
+            <span className="flex items-center gap-1 text-amber-500 text-xs font-medium">
+              <Edit className="h-3 w-3" />
+              Edit
+            </span>
+          )}
+          {submission.status === "denied" && (
+            <span className="flex items-center gap-1 text-red-500 text-xs font-medium">
+              <RotateCcw className="h-3 w-3" />
+              Resubmit
+            </span>
+          )}
         </div>
 
         <div className="text-right flex-shrink-0">

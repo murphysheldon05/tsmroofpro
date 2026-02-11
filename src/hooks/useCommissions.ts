@@ -572,7 +572,7 @@ export function useUpdateCommission() {
       
       if (fetchError) throw fetchError;
       if (current.submitted_by !== user.id) throw new Error("You can only edit your own submissions");
-      if (current.status !== "revision_required") throw new Error("You can only edit submissions that require revision");
+      if (current.status !== "revision_required" && current.status !== "denied") throw new Error("You can only edit submissions that require revision or have been denied");
       
       // Update the submission and set status back to pending_review
       const updateData = {
@@ -592,12 +592,13 @@ export function useUpdateCommission() {
       if (error) throw error;
       
       // Log the resubmission
+      const previousStatus = current.status;
       await supabase.from("commission_status_log").insert({
         commission_id: id,
-        previous_status: "revision_required",
+        previous_status: previousStatus,
         new_status: "pending_review",
         changed_by: user.id,
-        notes: "Commission revised and resubmitted",
+        notes: `Commission resubmitted — previously ${previousStatus === 'denied' ? 'denied' : 'revision required'}`,
       });
       
       // Send notification
