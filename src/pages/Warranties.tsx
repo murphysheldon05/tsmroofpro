@@ -17,6 +17,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Plus, Shield, BarChart3, Search, Archive } from "lucide-react";
 import { differenceInDays, parseISO, format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { GuidedTour } from "@/components/tutorial/GuidedTour";
+import { warrantySteps } from "@/components/tutorial/tutorialSteps";
 import {
   DndContext, closestCenter, DragEndEvent, DragOverlay, DragStartEvent,
   PointerSensor, useSensor, useSensors, useDroppable,
@@ -285,7 +287,7 @@ export default function Warranties() {
               <p className="text-sm text-muted-foreground">Track and manage roofing warranty requests</p>
             </div>
           </div>
-          <Button onClick={handleCreate} className="bg-primary text-primary-foreground">
+          <Button onClick={handleCreate} className="bg-primary text-primary-foreground" data-tutorial="submit-warranty">
             <Plus className="h-4 w-4 mr-1.5" />Submit Warranty
           </Button>
         </div>
@@ -293,10 +295,10 @@ export default function Warranties() {
         <Tabs defaultValue="board">
           <TabsList>
             <TabsTrigger value="board" className="flex items-center gap-1.5"><Shield className="h-3.5 w-3.5" />Board</TabsTrigger>
-            <TabsTrigger value="aging" className="flex items-center gap-1.5"><BarChart3 className="h-3.5 w-3.5" />Aging Report</TabsTrigger>
+            <TabsTrigger value="aging" className="flex items-center gap-1.5" data-tutorial="aging-tab"><BarChart3 className="h-3.5 w-3.5" />Aging Report</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="board" className="mt-4">
+          <TabsContent value="board" className="mt-4" data-tutorial="kanban-board">
             {/* Desktop Kanban with DnD */}
             <DndContext
               sensors={sensors}
@@ -431,6 +433,7 @@ export default function Warranties() {
         warranty={selectedWarranty}
         onEdit={() => { setIsDetailOpen(false); setIsFormOpen(true); }}
       />
+      <GuidedTour pageName="warranties" pageTitle="Warranty Tracker" steps={warrantySteps} />
     </AppLayout>
   );
 }

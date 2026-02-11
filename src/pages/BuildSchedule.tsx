@@ -31,6 +31,8 @@ import {
 import { useCrews, useCreateCrew, useUpdateCrew, useDeleteCrew, Crew } from "@/hooks/useCrews";
 import { cn } from "@/lib/utils";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { GuidedTour } from "@/components/tutorial/GuidedTour";
+import { buildScheduleSteps } from "@/components/tutorial/tutorialSteps";
 import { useUserHoldsCheck } from "@/hooks/useComplianceHoldCheck";
 import { HoldWarningBanner } from "@/components/compliance/HoldWarningBanner";
 import { TodaysBuildsSection } from "@/components/production/TodaysBuildsSection";
@@ -306,7 +308,7 @@ export default function BuildSchedule() {
               </Sheet>
             )}
             {canEdit && (
-              <Button size="sm" onClick={() => setIsAddOpen(true)} disabled={hasSchedulingHold} className="bg-primary text-primary-foreground">
+              <Button size="sm" onClick={() => setIsAddOpen(true)} disabled={hasSchedulingHold} className="bg-primary text-primary-foreground" data-tutorial="add-build">
                 <Plus className="h-4 w-4 mr-1" />Add Build
               </Button>
             )}
@@ -316,11 +318,13 @@ export default function BuildSchedule() {
         <HoldWarningBanner holds={schedulingHolds} context="scheduling" />
 
         {/* Today's Builds Section */}
-        <TodaysBuildsSection />
+        <div data-tutorial="todays-builds">
+          <TodaysBuildsSection />
+        </div>
 
         {/* View toggle + navigation */}
         <div className="flex items-center justify-between flex-wrap gap-2">
-          <div className="flex items-center rounded-lg border bg-muted/30 p-0.5">
+          <div className="flex items-center rounded-lg border bg-muted/30 p-0.5" data-tutorial="calendar-views">
             {(["day", "week", "month"] as CalendarView[]).map(v => (
               <button
                 key={v}
@@ -343,7 +347,7 @@ export default function BuildSchedule() {
         </div>
 
         {/* Crew filter chips */}
-        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide" data-tutorial="crew-filters">
           <button onClick={() => toggleCrewFilter("all")} className={cn("flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all border whitespace-nowrap min-h-[36px]", visibleCrews.has("all") ? "bg-primary text-primary-foreground border-primary" : "bg-background text-muted-foreground border-border hover:bg-accent")}>All Crews</button>
           {crews.map(crew => (
             <button key={crew.id} onClick={() => toggleCrewFilter(crew.id)} className={cn("flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all border whitespace-nowrap min-h-[36px]", visibleCrews.has(crew.id) ? "text-white border-transparent" : "bg-background text-muted-foreground border-border hover:bg-accent")} style={visibleCrews.has(crew.id) ? { backgroundColor: crew.color } : undefined}>
@@ -605,6 +609,7 @@ export default function BuildSchedule() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      <GuidedTour pageName="build-schedule" pageTitle="Build Schedule" steps={buildScheduleSteps} />
     </AppLayout>
   );
 }

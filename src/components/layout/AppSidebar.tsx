@@ -458,7 +458,9 @@ export function AppSidebar() {
         <Logo size="sm" showText />
         <div className="flex items-center gap-1">
           <ThemeToggle compact />
-          <NotificationBell />
+          <div data-tutorial="notification-bell">
+            <NotificationBell />
+          </div>
         </div>
       </div>
 

@@ -42,6 +42,8 @@ import { EscalationsTab } from "@/components/compliance/EscalationsTab";
 import { AuditLogTab } from "@/components/compliance/AuditLogTab";
 import { AcknowledgmentsTab } from "@/components/compliance/AcknowledgmentsTab";
 import { MasterSOPsTab } from "@/components/compliance/MasterSOPsTab";
+import { GuidedTour } from "@/components/tutorial/GuidedTour";
+import { opsComplianceSteps } from "@/components/tutorial/tutorialSteps";
 const tabs = [
   { value: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { value: "violations", label: "Violations", icon: AlertTriangle },
@@ -218,6 +220,7 @@ export default function OpsCompliance() {
           {/* Dashboard Tab */}
           <TabsContent value="dashboard" className="mt-4 space-y-4 sm:space-y-6">
             {/* Summary Cards */}
+            <div data-tutorial="compliance-summary">
             <ComplianceSummaryCards
               openViolations={openViolations}
               activeHolds={activeHolds}
@@ -227,6 +230,7 @@ export default function OpsCompliance() {
               isLoading={isLoadingSummary}
               onNavigate={handleNavigate}
             />
+            </div>
 
             {/* Quick Actions */}
             <QuickActionsBar
@@ -255,22 +259,22 @@ export default function OpsCompliance() {
           </TabsContent>
 
           {/* Violations Tab */}
-          <TabsContent value="violations" className="mt-4">
+          <TabsContent value="violations" className="mt-4" data-tutorial="violations-tab">
             <ViolationsTab />
           </TabsContent>
 
           {/* Holds Tab */}
-          <TabsContent value="holds" className="mt-4">
+          <TabsContent value="holds" className="mt-4" data-tutorial="holds-tab">
             <HoldsTab />
           </TabsContent>
 
           {/* Escalations Tab */}
-          <TabsContent value="escalations" className="mt-4">
+          <TabsContent value="escalations" className="mt-4" data-tutorial="escalations-tab">
             <EscalationsTab />
           </TabsContent>
 
           {/* Audit Log Tab */}
-          <TabsContent value="audit-log" className="mt-4">
+          <TabsContent value="audit-log" className="mt-4" data-tutorial="audit-log-tab">
             <AuditLogTab />
           </TabsContent>
 
@@ -295,6 +299,7 @@ export default function OpsCompliance() {
         open={holdModalOpen} 
         onOpenChange={setHoldModalOpen} 
       />
+      <GuidedTour pageName="ops-compliance" pageTitle="Ops Compliance" steps={opsComplianceSteps} />
     </AppLayout>
   );
 }

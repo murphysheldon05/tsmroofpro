@@ -16,6 +16,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useUserHoldsCheck } from "@/hooks/useComplianceHoldCheck";
 import { HoldWarningBanner } from "@/components/compliance/HoldWarningBanner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { GuidedTour } from "@/components/tutorial/GuidedTour";
+import { commissionsSteps } from "@/components/tutorial/tutorialSteps";
 
 const STATUS_ORDER = ["pending_review", "revision_required", "approved", "denied", "paid"];
 const STATUS_LABELS: Record<string, string> = {
@@ -121,6 +123,7 @@ export default function Commissions() {
           
           <div className="flex gap-2 flex-wrap">
             <Button 
+              data-tutorial="submit-commission"
               onClick={() => navigate("/commissions/new")} 
               className="gap-2 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground"
               disabled={commissionHolds.length > 0}
@@ -130,6 +133,7 @@ export default function Commissions() {
               Submit Commission
             </Button>
             <Button 
+              data-tutorial="request-draw"
               variant="outline" 
               onClick={() => setShowDrawModal(true)}
               className="gap-2 rounded-xl border-amber-500 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-500/10"
@@ -150,7 +154,9 @@ export default function Commissions() {
             <CommissionSummaryCards {...summaryStats} />
             {isManager && <ManagerOverrideEarningsCard />}
           </div>
-          <DrawBalanceCard showDrawModal={showDrawModal} onDrawModalChange={setShowDrawModal} />
+          <div data-tutorial="draw-balance">
+            <DrawBalanceCard showDrawModal={showDrawModal} onDrawModalChange={setShowDrawModal} />
+          </div>
         </div>
 
         {/* Main Content Tabs */}
@@ -176,14 +182,16 @@ export default function Commissions() {
 
           <TabsContent value="pipeline" className="space-y-4 mt-0">
             {/* Status Pipeline */}
+            <div data-tutorial="commission-pipeline">
             <CommissionStatusPipeline
               statusCounts={statusCounts}
               activeStatus={activeStatus}
               onStatusClick={setActiveStatus}
             />
+            </div>
 
             {/* Search */}
-            <div className="relative">
+            <div className="relative" data-tutorial="commission-search">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search jobs, reps..."
@@ -256,6 +264,7 @@ export default function Commissions() {
             </TabsContent>
           )}
         </Tabs>
+        <GuidedTour pageName="commissions" pageTitle="Commissions" steps={commissionsSteps} />
       </div>
     </AppLayout>
   );
