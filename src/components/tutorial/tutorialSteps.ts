@@ -220,3 +220,54 @@ export const adminSteps: TutorialStep[] = [
     description: "Configure leaderboard settings and AccuLynx API for live production and sales data.",
   },
 ];
+
+export const roleOnboardingSteps: TutorialStep[] = [
+  {
+    target: "onboarding-header",
+    title: "Your Onboarding SOP",
+    description: "This is your role-specific onboarding document. Complete each section in order to get fully onboarded.",
+  },
+  {
+    target: "onboarding-progress",
+    title: "Progress Tracker",
+    description: "See how far along you are. Each acknowledged section fills the progress bar.",
+  },
+  {
+    target: "onboarding-sections",
+    title: "Sections",
+    description: "Read each section and click 'I Acknowledge' to confirm. Sections unlock sequentially — complete the current one to unlock the next.",
+  },
+  {
+    target: "onboarding-signature",
+    title: "Electronic Signature",
+    description: "After all sections are acknowledged, type your full legal name to sign and complete the onboarding.",
+  },
+];
+
+export const commissionDocumentsSteps: TutorialStep[] = [
+  {
+    target: "cd-new-document",
+    title: "New Commission Document",
+    description: "Click here to create a new commission worksheet with detailed profit calculations.",
+  },
+  {
+    target: "cd-status-filter",
+    title: "Status Filter",
+    description: "Filter documents by status: Draft, Submitted, Approved, Rejected, or Paid.",
+  },
+  {
+    target: "cd-search",
+    title: "Search",
+    description: "Search by job name/ID or sales rep name to find specific commission documents.",
+  },
+  {
+    target: "cd-documents-table",
+    title: "Documents Table",
+    description: "View all commission documents with key details. Click any row to open the full worksheet.",
+  },
+  {
+    target: "cd-export",
+    title: "Export",
+    description: "Download your commission data as CSV or PDF for record-keeping and reporting.",
+  },
+];
