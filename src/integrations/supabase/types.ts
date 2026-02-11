@@ -2435,6 +2435,182 @@ export type Database = {
         }
         Relationships: []
       }
+      role_onboarding_acknowledgments: {
+        Row: {
+          acknowledged_at: string
+          id: string
+          ip_address: string | null
+          section_id: string
+          sop_id: string
+          user_id: string
+        }
+        Insert: {
+          acknowledged_at?: string
+          id?: string
+          ip_address?: string | null
+          section_id: string
+          sop_id: string
+          user_id: string
+        }
+        Update: {
+          acknowledged_at?: string
+          id?: string
+          ip_address?: string | null
+          section_id?: string
+          sop_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "role_onboarding_acknowledgments_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "role_onboarding_sections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "role_onboarding_acknowledgments_sop_id_fkey"
+            columns: ["sop_id"]
+            isOneToOne: false
+            referencedRelation: "role_onboarding_sops"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "role_onboarding_acknowledgments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      role_onboarding_completions: {
+        Row: {
+          completed_at: string
+          electronic_signature: string
+          id: string
+          signature_date: string
+          sop_id: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string
+          electronic_signature: string
+          id?: string
+          signature_date?: string
+          sop_id: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string
+          electronic_signature?: string
+          id?: string
+          signature_date?: string
+          sop_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "role_onboarding_completions_sop_id_fkey"
+            columns: ["sop_id"]
+            isOneToOne: false
+            referencedRelation: "role_onboarding_sops"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "role_onboarding_completions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      role_onboarding_sections: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          is_acknowledgment_required: boolean
+          section_number: number
+          section_type: string
+          sop_id: string
+          title: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          is_acknowledgment_required?: boolean
+          section_number: number
+          section_type?: string
+          sop_id: string
+          title: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          is_acknowledgment_required?: boolean
+          section_number?: number
+          section_type?: string
+          sop_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "role_onboarding_sections_sop_id_fkey"
+            columns: ["sop_id"]
+            isOneToOne: false
+            referencedRelation: "role_onboarding_sops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      role_onboarding_sops: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean
+          role: string
+          title: string
+          updated_at: string
+          version: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          role: string
+          title: string
+          updated_at?: string
+          version: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          role?: string
+          title?: string
+          updated_at?: string
+          version?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "role_onboarding_sops_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sales_manager_overrides: {
         Row: {
           commission_id: string
