@@ -30,21 +30,47 @@ const handler = async (req: Request): Promise<Response> => {
     const payload: ViolationNotification = await req.json();
     console.log("Violation notification payload:", payload);
 
+    // BUG FIX: Guard required fields
+    if (!payload.user_id) {
+      return new Response(
+        JSON.stringify({ error: "user_id is required" }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+    if (!payload.violation_id) {
+      return new Response(
+        JSON.stringify({ error: "violation_id is required" }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    // Get the user profile who has the violation
+    // Get the user profile who has the violation - BUG FIX: use maybeSingle
     const { data: userProfile, error: userError } = await supabaseAdmin
       .from("profiles")
       .select("id, email, full_name, manager_id")
       .eq("id", payload.user_id)
-      .single();
+      .maybeSingle();
 
     if (userError || !userProfile) {
-      console.error("User profile lookup failed:", userError);
-      throw new Error("Could not find user profile");
+      console.error("User profile not found for ID:", payload.user_id, userError);
+      return new Response(
+        JSON.stringify({ error: "User profile not found", user_id: payload.user_id }),
+        { status: 404, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    const userName = userProfile?.full_name || "Team Member";
+    const userEmail = userProfile?.email;
+    if (!userEmail) {
+      return new Response(
+        JSON.stringify({ error: "No email found for user" }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
     }
 
     // Get ops_compliance users
