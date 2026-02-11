@@ -133,6 +133,7 @@ const navigationItems: NavItem[] = [
     sectionKey: "training",
     requiresPlaybook: true,
     children: [
+      { title: "My Onboarding", href: "/training/onboarding", icon: ClipboardCheck, sectionKey: "training/onboarding", requiresPlaybook: true },
       { title: "Documents", href: "/training/documents", icon: FileText, sectionKey: "training/documents", requiresPlaybook: true },
       { title: "Video Library", href: "/training/video-library", icon: Video, sectionKey: "training/video-library", requiresPlaybook: true },
       { title: "New Hires", href: "/training/new-hire", icon: UserPlus, sectionKey: "training/new-hire", requiresPlaybook: true, adminOnly: true },

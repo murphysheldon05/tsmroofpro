@@ -63,7 +63,8 @@ import { DrawSettingsManager } from "@/components/admin/DrawSettingsManager";
 import { OverrideReportPanel } from "@/components/admin/OverrideReportPanel";
 import { LeaderboardSettingsPanel } from "@/components/admin/LeaderboardSettingsPanel";
 import { PlaybookCompletionStatus } from "@/components/admin/PlaybookCompletionStatus";
-import { BookOpen } from "lucide-react";
+import { RoleOnboardingAdmin } from "@/components/admin/RoleOnboardingAdmin";
+import { BookOpen, GraduationCap } from "lucide-react";
 
 export default function Admin() {
   const queryClient = useQueryClient();
@@ -470,6 +471,10 @@ export default function Admin() {
             <TabsTrigger value="playbook-status" className="gap-2">
               <BookOpen className="w-4 h-4" />
               Playbook Status
+            </TabsTrigger>
+            <TabsTrigger value="role-onboarding" className="gap-2">
+              <GraduationCap className="w-4 h-4" />
+              Role Onboarding
             </TabsTrigger>
           </TabsList>
 
@@ -899,6 +904,11 @@ export default function Admin() {
               Track which users have completed the Master Playbook acknowledgment requirement.
             </p>
             <PlaybookCompletionStatus />
+          </TabsContent>
+
+          {/* Role Onboarding Tab */}
+          <TabsContent value="role-onboarding" className="space-y-4">
+            <RoleOnboardingAdmin />
           </TabsContent>
         </Tabs>
       </div>

@@ -15,6 +15,7 @@ import MasterPlaybook from "./pages/MasterPlaybook";
 import ResourceDetail from "./pages/ResourceDetail";
 import Training from "./pages/Training";
 import TrainingDocuments from "./pages/TrainingDocuments";
+import RoleOnboarding from "./pages/RoleOnboarding";
 import Tools from "./pages/Tools";
 import Requests from "./pages/Requests";
 import Admin from "./pages/Admin";
@@ -117,6 +118,15 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <TrainingDocuments />
+                </ProtectedRoute>
+              }
+            />
+            {/* Role Onboarding SOP */}
+            <Route
+              path="/training/onboarding"
+              element={
+                <ProtectedRoute>
+                  <RoleOnboarding />
                 </ProtectedRoute>
               }
             />

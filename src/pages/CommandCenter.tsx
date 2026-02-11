@@ -2,6 +2,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { CompactCoreIdentity } from "@/components/command-center/CompactCoreIdentity";
 import { PlaybookCompletionBanner } from "@/components/command-center/PlaybookCompletionBanner";
+import { OnboardingBanner } from "@/components/command-center/OnboardingBanner";
 import { QuickActionLinks } from "@/components/command-center/QuickActionLinks";
 import { CommissionSummaryWidget } from "@/components/command-center/CommissionSummaryWidget";
 import { SalesLeaderboardWidget } from "@/components/command-center/SalesLeaderboardWidget";
@@ -38,6 +39,9 @@ export default function CommandCenter() {
 
         {/* Master Playbook Completion Banner */}
         <PlaybookCompletionBanner />
+
+        {/* Role Onboarding Banner */}
+        <OnboardingBanner />
 
         {/* 2. Core Focus + Core Values (locked) */}
         <CompactCoreIdentity />
