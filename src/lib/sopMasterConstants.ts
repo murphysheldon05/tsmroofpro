@@ -450,7 +450,7 @@ For any status or data changes in the system.
     ],
     flowSteps: [
       { label: "Commission Approved", type: "start", owner: "Sales Manager" },
-      { label: "Cutoff Check: Before Wed 4PM?", type: "decision", owner: "System", branches: ["No → Next Week", "Yes → This Week"] },
+      { label: "Cutoff Check: Before Tue 3PM MST?", type: "decision", owner: "System", branches: ["No → Next Week", "Yes → This Week"] },
       { label: "100% Closeout Verified?", type: "decision", owner: "System", branches: ["No → Blocked", "Yes → Continue"] },
       { label: "Added to Friday Payroll", type: "end", owner: "Accounting" }
     ],
