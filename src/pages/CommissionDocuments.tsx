@@ -25,6 +25,8 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
+import { GuidedTour } from "@/components/tutorial/GuidedTour";
+import { commissionDocumentsSteps } from "@/components/tutorial/tutorialSteps";
 import { useDraws } from "@/hooks/useDraws";
 
 export default function CommissionDocuments() {
@@ -472,7 +474,7 @@ export default function CommissionDocuments() {
   const FilterContent = ({ isMobile = false }: { isMobile?: boolean }) => (
     <div className={`space-y-4 ${isMobile ? '' : 'flex flex-col sm:flex-row gap-4'}`}>
       {/* Status Filter */}
-      <div className="space-y-1">
+      <div className="space-y-1" data-tutorial="cd-status-filter">
         <label className="text-xs font-medium text-muted-foreground">Status</label>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-full">
@@ -574,7 +576,7 @@ export default function CommissionDocuments() {
             </p>
           </div>
           <div className="flex gap-2">
-            <Button size="sm" onClick={() => navigate('/commissions/new')}>
+            <Button size="sm" onClick={() => navigate('/commissions/new')} data-tutorial="cd-new-document">
               <Plus className="h-4 w-4 sm:mr-2" />
               <span className="hidden sm:inline">New Document</span>
             </Button>
@@ -651,7 +653,7 @@ export default function CommissionDocuments() {
                 <div className="flex flex-col gap-3">
                   {/* Search + Filter Button (Mobile) */}
                   <div className="flex gap-2">
-                    <div className="relative flex-1">
+                     <div className="relative flex-1" data-tutorial="cd-search">
                       <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
                         placeholder="Search..."
@@ -684,7 +686,7 @@ export default function CommissionDocuments() {
                     {/* Export dropdown */}
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="outline" size="icon">
+                        <Button variant="outline" size="icon" data-tutorial="cd-export">
                           <Download className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
@@ -735,7 +737,7 @@ export default function CommissionDocuments() {
                     </div>
 
                     {/* Desktop Table View */}
-                    <div className="hidden sm:block overflow-x-auto">
+                    <div className="hidden sm:block overflow-x-auto" data-tutorial="cd-documents-table">
                       <Table>
                         <TableHeader>
                           <TableRow>
@@ -938,6 +940,7 @@ export default function CommissionDocuments() {
           </TabsContent>
         </Tabs>
       </div>
+      <GuidedTour pageName="commission-documents" pageTitle="Commission Documents" steps={commissionDocumentsSteps} />
     </AppLayout>
   );
 }

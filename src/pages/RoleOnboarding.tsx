@@ -18,8 +18,11 @@ import {
   PenLine,
   Loader2,
   Shield,
+  Lock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { GuidedTour } from "@/components/tutorial/GuidedTour";
+import { roleOnboardingSteps } from "@/components/tutorial/tutorialSteps";
 
 const sectionTypeIcons: Record<string, React.ElementType> = {
   reading: BookOpen,
@@ -106,7 +109,7 @@ export default function RoleOnboarding() {
     <AppLayout>
       <div className="max-w-3xl mx-auto space-y-6 px-4 sm:px-0">
         {/* Header */}
-        <header className="pt-4 lg:pt-0">
+        <header className="pt-4 lg:pt-0" data-tutorial="onboarding-header">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
               <GraduationCap className="w-6 h-6 text-primary" />
@@ -141,7 +144,7 @@ export default function RoleOnboarding() {
 
         {/* Progress */}
         {!isComplete && (
-          <Card>
+          <Card data-tutorial="onboarding-progress">
             <CardContent className="py-4 space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Progress</span>
@@ -153,26 +156,38 @@ export default function RoleOnboarding() {
         )}
 
         {/* Sections */}
-        <div className="space-y-3">
-          {sections.map((section) => {
+        <div className="space-y-3" data-tutorial="onboarding-sections">
+          {sections.map((section, index) => {
             const isAcked = acknowledgedIds.has(section.id);
             const Icon = sectionTypeIcons[section.section_type] || FileText;
+
+            // Sequential locking: find the previous required section
+            const previousRequiredSections = sections
+              .slice(0, index)
+              .filter((s) => s.is_acknowledgment_required);
+            const allPreviousAcked = previousRequiredSections.every((s) =>
+              acknowledgedIds.has(s.id)
+            );
+            const isLocked = section.is_acknowledgment_required && !allPreviousAcked && !isAcked && !isComplete;
 
             return (
               <Collapsible
                 key={section.id}
                 open={openSections.includes(section.id)}
-                onOpenChange={() => toggleSection(section.id)}
+                onOpenChange={() => !isLocked && toggleSection(section.id)}
               >
                 <Card className={cn(
                   "transition-colors",
-                  isAcked && "border-primary/20 bg-primary/[0.02]"
+                  isAcked && "border-primary/20 bg-primary/[0.02]",
+                  isLocked && "opacity-60"
                 )}>
-                  <CollapsibleTrigger asChild>
-                    <CardHeader className="cursor-pointer py-4">
+                  <CollapsibleTrigger asChild disabled={isLocked}>
+                    <CardHeader className={cn("cursor-pointer py-4", isLocked && "cursor-not-allowed")}>
                       <div className="flex items-center gap-3">
                         {isAcked ? (
                           <CheckCircle2 className="w-5 h-5 text-primary flex-shrink-0" />
+                        ) : isLocked ? (
+                          <Lock className="w-5 h-5 text-muted-foreground/50 flex-shrink-0" />
                         ) : (
                           <div className="w-5 h-5 rounded-full border-2 border-muted-foreground/30 flex-shrink-0" />
                         )}
@@ -183,6 +198,9 @@ export default function RoleOnboarding() {
                             </span>
                             <CardTitle className="text-sm font-medium">{section.title}</CardTitle>
                           </div>
+                          {isLocked && (
+                            <p className="text-[11px] text-muted-foreground mt-0.5">Complete previous sections to unlock</p>
+                          )}
                         </div>
                         <div className="flex items-center gap-2 flex-shrink-0">
                           <Badge variant="secondary" className="text-[10px] gap-1">
@@ -202,7 +220,7 @@ export default function RoleOnboarding() {
                       <div className="prose prose-sm dark:prose-invert max-w-none text-muted-foreground whitespace-pre-line">
                         {section.content}
                       </div>
-                      {section.is_acknowledgment_required && !isAcked && !isComplete && (
+                      {section.is_acknowledgment_required && !isAcked && !isComplete && !isLocked && (
                         <Button
                           size="sm"
                           onClick={() => handleAcknowledge(section.id)}
@@ -232,7 +250,7 @@ export default function RoleOnboarding() {
 
         {/* Electronic Signature */}
         {allSectionsAcknowledged && !isComplete && (
-          <Card className="border-primary/30">
+          <Card className="border-primary/30" data-tutorial="onboarding-signature">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
                 <PenLine className="w-5 h-5 text-primary" />
@@ -273,6 +291,7 @@ export default function RoleOnboarding() {
           </Card>
         )}
       </div>
+      <GuidedTour pageName="role-onboarding" pageTitle="Role Onboarding" steps={roleOnboardingSteps} />
     </AppLayout>
   );
 }
