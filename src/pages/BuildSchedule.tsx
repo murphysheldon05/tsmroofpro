@@ -412,12 +412,15 @@ export default function BuildSchedule() {
                 {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(d => (
                   <div key={d} className="text-center text-xs font-medium text-muted-foreground py-1.5">{d}</div>
                 ))}
-                {monthPadding.map((_, i) => <div key={`pad-${i}`} className="h-16 bg-muted/20 rounded" />)}
+                {monthPadding.map((_, i) => <div key={`pad-${i}`} className="min-h-[110px] bg-muted/20 rounded" />)}
                 {monthDays.map(day => {
                   const dayEvents = getEventsForDate(day);
                   const isToday = isSameDay(day, new Date());
                   const isSelected = selectedDate && isSameDay(day, selectedDate);
                   const isDragOver = dragOverDate && isSameDay(day, dragOverDate);
+                  const maxVisible = 3;
+                  const visibleEvents = dayEvents.slice(0, maxVisible);
+                  const overflowCount = dayEvents.length - maxVisible;
                   return (
                     <div
                       key={day.toISOString()}
@@ -426,19 +429,37 @@ export default function BuildSchedule() {
                       onDragLeave={() => setDragOverDate(null)}
                       onDrop={e => handleDrop(e, day)}
                       className={cn(
-                        "h-16 p-1 border rounded cursor-pointer transition-all hover:bg-accent/50",
+                        "min-h-[110px] p-1 border rounded cursor-pointer transition-all hover:bg-accent/50 flex flex-col",
                         isToday && "bg-primary/10",
                         isSelected && "ring-2 ring-primary",
                         isDragOver && "ring-2 ring-primary bg-primary/20"
                       )}
                     >
-                      <div className={cn("text-xs font-medium", isToday && "text-primary")}>{format(day, "d")}</div>
-                      <div className="flex gap-0.5 flex-wrap mt-0.5">
-                        {dayEvents.slice(0, 4).map(e => (
-                          <div key={e.id} className="w-2 h-2 rounded-full" style={{ backgroundColor: getCrewColor(e.crew_id) }} />
-                        ))}
-                        {dayEvents.length > 4 && (
-                          <button onClick={(e) => { e.stopPropagation(); setOverflowDate(day); }} className="text-[9px] text-primary hover:underline cursor-pointer">+{dayEvents.length - 4}</button>
+                      <div className={cn("text-xs font-medium mb-0.5", isToday && "text-primary")}>{format(day, "d")}</div>
+                      <div className="flex-1 space-y-0.5 overflow-hidden">
+                        {visibleEvents.map(e => {
+                          const color = getCrewColor(e.crew_id);
+                          return (
+                            <div
+                              key={e.id}
+                              draggable={canEdit}
+                              onDragStart={ev => handleDragStart(ev, e)}
+                              onDragEnd={() => { setDraggedEvent(null); setDragOverDate(null); }}
+                              onClick={ev => { ev.stopPropagation(); setEditingEvent(e); }}
+                              className={cn(
+                                "text-[11px] leading-tight px-1.5 py-0.5 rounded truncate text-white font-medium cursor-pointer hover:brightness-110 transition-all",
+                                canEdit && "active:cursor-grabbing",
+                                draggedEvent?.id === e.id && "opacity-40"
+                              )}
+                              style={{ backgroundColor: color }}
+                              title={`${getCrewName(e.crew_id)}: ${e.title}`}
+                            >
+                              {e.title}
+                            </div>
+                          );
+                        })}
+                        {overflowCount > 0 && (
+                          <OverflowTrigger count={overflowCount} onClick={(ev) => { ev.stopPropagation(); setOverflowDate(day); }} />
                         )}
                       </div>
                     </div>
