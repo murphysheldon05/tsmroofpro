@@ -5,7 +5,6 @@ import { QuickStatsWidget } from "./QuickStatsWidget";
 import { TodaysBuildsWidgetV2 } from "./TodaysBuildsWidgetV2";
 import { TodaysDeliveriesWidgetV2 } from "./TodaysDeliveriesWidgetV2";
 import { ActionRequiredWidget } from "./ActionRequiredWidget";
-import { SlaSnapshotWidget } from "./SlaSnapshotWidget";
 import { CommandCenterQuickLinks } from "./CommandCenterQuickLinks";
 import { SalesLeaderboardWidget } from "./SalesLeaderboardWidget";
 interface WidgetRendererProps {
@@ -30,8 +29,6 @@ export function WidgetRenderer({
   const showDeliveries = isAdmin || isManager || role === "employee";
   // Action Required widget is now visible to all users (shows different content based on role)
   const showActionRequired = true;
-  // SLA Snapshot only for managers/admins
-  const showSlaSnapshot = isAdmin || isManager;
 
   switch (widgetKey) {
     case "companyInfo":
@@ -53,11 +50,7 @@ export function WidgetRenderer({
         </section>
       );
     case "slaSnapshot":
-      return showSlaSnapshot ? (
-        <section>
-          <SlaSnapshotWidget />
-        </section>
-      ) : null;
+      return null;
     case "todaysBuilds":
       return showBuilds ? (
         <section>
