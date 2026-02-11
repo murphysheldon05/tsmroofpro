@@ -266,6 +266,9 @@ export function useUpdateCommissionDocumentStatus() {
       if (status === 'submitted') {
         updateData.submitted_at = new Date().toISOString();
         
+        // Clear revision/rejection data on resubmission
+        updateData.revision_reason = null;
+        
         // Get user's profile to find their manager
         if (user) {
           const { data: profile } = await supabase
@@ -274,22 +277,24 @@ export function useUpdateCommissionDocumentStatus() {
             .eq('id', user.id)
             .single();
           
-          // Check if submitter is a manager - if so, route directly to accounting (no manager_id)
+          // Check if submitter is a sales_manager or admin — self-commission prevention
           const { data: roleData } = await supabase
             .from('user_roles')
             .select('role')
             .eq('user_id', user.id)
             .single();
           
-          const isSubmitterManager = roleData?.role === 'manager' || roleData?.role === 'admin';
+          const isSubmitterSalesManager = roleData?.role === 'sales_manager';
+          const isSubmitterAdmin = roleData?.role === 'admin';
           
-          if (isSubmitterManager) {
-            // Manager submission - skip manager approval, go straight to accounting
+          if (isSubmitterAdmin) {
+            // Admin submission — skip manager approval, go straight to accounting
             updateData.manager_id = null;
-            updateData.manager_approved_by = user.id; // Self-approved manager step
+            updateData.manager_approved_by = user.id;
             updateData.manager_approved_at = new Date().toISOString();
-            // DON'T change status to manager_approved here - it will still be 'submitted' 
-            // and accounting will see it
+          } else if (isSubmitterSalesManager) {
+            // Sales Manager self-submission — route to Admin for review (can't approve own)
+            updateData.manager_id = null; // No specific manager — Admin will pick it up
           } else if (profile?.manager_id) {
             updateData.manager_id = profile.manager_id;
           }
@@ -330,7 +335,7 @@ export function useUpdateCommissionDocumentStatus() {
         if (approval_comment) {
           updateData.approval_comment = approval_comment;
         }
-        // Calculate the Friday pay date based on Wed 4 PM MST rule
+        // Calculate the Friday pay date based on Tue 3 PM MST rule
         const { calculateScheduledPayDate } = await import('@/lib/commissionPayDateCalculations');
         const payDate = calculateScheduledPayDate(new Date());
         updateData.scheduled_pay_date = payDate.toISOString().split('T')[0]; // YYYY-MM-DD format

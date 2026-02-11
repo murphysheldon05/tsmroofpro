@@ -163,9 +163,49 @@ const handler = async (req: Request): Promise<Response> => {
       case "submitted":
         subject = `📋 New Commission Submitted: ${payload.job_name}`;
         heading = "New Commission Submitted";
-        introText = `A new commission has been submitted and is awaiting manager review.`;
+        introText = `A new commission has been submitted by <strong>${payload.submitter_name || repName}</strong> and is awaiting manager review.`;
         headerColor = "#d97706";
+        // Get the routing recipients (fallback)
         recipientEmails = await resolveRecipients(supabaseClient, "commission_submission");
+        // Also look up the assigned manager directly from the commission document
+        if (payload.commission_id) {
+          const { data: commDoc } = await supabaseClient
+            .from("commission_documents")
+            .select("manager_id")
+            .eq("id", payload.commission_id)
+            .single();
+          if (commDoc?.manager_id) {
+            const { data: mgrProfile } = await supabaseClient
+              .from("profiles")
+              .select("email")
+              .eq("id", commDoc.manager_id)
+              .single();
+            if (mgrProfile?.email) {
+              recipientEmails.push(mgrProfile.email);
+              console.log("Added assigned manager email:", mgrProfile.email);
+            }
+          }
+          // For sales manager self-submissions, notify all admins
+          if (!commDoc?.manager_id) {
+            const { data: adminUsers } = await supabaseClient
+              .from("user_roles")
+              .select("user_id")
+              .eq("role", "admin");
+            if (adminUsers) {
+              for (const au of adminUsers) {
+                const { data: adminProfile } = await supabaseClient
+                  .from("profiles")
+                  .select("email")
+                  .eq("id", au.user_id)
+                  .single();
+                if (adminProfile?.email) {
+                  recipientEmails.push(adminProfile.email);
+                  console.log("Added admin email for self-submission:", adminProfile.email);
+                }
+              }
+            }
+          }
+        }
         additionalPlainText = `Job Name: ${payload.job_name}\nJob Address: ${payload.job_address}\nRep/Subcontractor: ${repName}\nContract Amount: ${formatCurrency(payload.contract_amount)}\nNet Commission: ${formatCurrency(payload.net_commission_owed)}`;
         additionalContent = `
           <tr><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;"><strong>Job Name:</strong></td><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">${payload.job_name}</td></tr>
@@ -387,9 +427,28 @@ If you have questions, please contact your supervisor or the accounting team.
       .single();
 
     if (commission) {
-      // For submitted notifications - notify managers or accounting
+      // For submitted notifications - notify the assigned manager directly
       if (payload.notification_type === "submitted") {
-        // Notify all commission reviewers
+        // Look up the assigned manager from the commission document
+        const { data: commDoc } = await supabaseClient
+          .from("commission_documents")
+          .select("manager_id")
+          .eq("id", payload.commission_id)
+          .single();
+
+        if (commDoc?.manager_id) {
+          await createInAppNotification(
+            supabaseClient,
+            commDoc.manager_id,
+            "commission_submitted",
+            `📋 New Commission: ${payload.job_name}`,
+            `A commission has been submitted by ${payload.submitter_name || payload.sales_rep_name} for your review.`,
+            "commission",
+            payload.commission_id
+          );
+        }
+
+        // Also notify commission reviewers
         const { data: reviewers } = await supabaseClient
           .from("commission_reviewers")
           .select("user_email")
@@ -403,13 +462,34 @@ If you have questions, please contact your supervisor or the accounting team.
               .eq("email", reviewer.user_email)
               .single();
 
-            if (profile?.id) {
+            if (profile?.id && profile.id !== commDoc?.manager_id) {
               await createInAppNotification(
                 supabaseClient,
                 profile.id,
                 "commission_submitted",
                 `📋 New Commission: ${payload.job_name}`,
                 `A commission has been submitted by ${payload.submitter_name || payload.sales_rep_name} for review.`,
+                "commission",
+                payload.commission_id
+              );
+            }
+          }
+        }
+
+        // For self-submissions (no manager_id), notify all admins
+        if (!commDoc?.manager_id) {
+          const { data: adminUsers } = await supabaseClient
+            .from("user_roles")
+            .select("user_id")
+            .eq("role", "admin");
+          if (adminUsers) {
+            for (const au of adminUsers) {
+              await createInAppNotification(
+                supabaseClient,
+                au.user_id,
+                "commission_submitted",
+                `📋 Self-Submitted Commission: ${payload.job_name}`,
+                `A sales manager has self-submitted a commission for ${payload.job_name}. Admin approval required.`,
                 "commission",
                 payload.commission_id
               );
