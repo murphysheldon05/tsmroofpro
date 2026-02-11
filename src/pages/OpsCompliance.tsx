@@ -163,17 +163,28 @@ export default function OpsCompliance() {
     }
   };
 
-  // Access check
+  // Non-admin users get a limited compliance reporting view
   if (!isAdmin) {
     return (
       <AppLayout>
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <Card className="max-w-md">
-            <CardContent className="pt-6 text-center">
+        <div className="space-y-6">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+              <ShieldCheck className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <h1 className="text-xl sm:text-2xl font-bold">Compliance</h1>
+              <p className="text-sm text-muted-foreground">
+                Report compliance issues to the Ops Compliance team
+              </p>
+            </div>
+          </div>
+          <Card>
+            <CardContent className="pt-6 text-center py-12">
               <ShieldCheck className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-              <h2 className="text-xl font-semibold mb-2">Access Denied</h2>
-              <p className="text-muted-foreground">
-                You don't have permission to access the Ops Compliance section.
+              <h2 className="text-lg font-semibold mb-2">Compliance Reporting</h2>
+              <p className="text-muted-foreground text-sm max-w-md mx-auto">
+                To report a compliance issue, contact the Ops Compliance team directly or submit a request through Forms & Requests.
               </p>
             </CardContent>
           </Card>

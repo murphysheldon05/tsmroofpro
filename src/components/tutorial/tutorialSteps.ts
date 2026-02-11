@@ -67,7 +67,7 @@ export const commissionsSteps: TutorialStep[] = [
   {
     target: "request-draw",
     title: "Request Draw",
-    description: "Need an advance? Request a draw against a specific job. Max $4,000 per request. Your manager must approve it.",
+    description: "Request a draw against a future job's commission. Maximum is 50% of that job's commission, capped at $1,500 without manager approval.",
     roles: ["sales_rep", "sales_manager"],
   },
   {
@@ -352,5 +352,34 @@ export const commissionDocumentsSteps: TutorialStep[] = [
     target: "cd-export",
     title: "Export",
     description: "Download your commission data as CSV or PDF for record-keeping and reporting.",
+  },
+];
+
+// ─── COMMISSION DOCUMENT FORM ───
+export const commissionFormSteps: TutorialStep[] = [
+  {
+    target: "job-info",
+    title: "Job Information",
+    description: "Enter the job number from AccuLynx. This must match the exact job you're submitting the commission for.",
+  },
+  {
+    target: "gross-contract",
+    title: "Gross Contract Value",
+    description: "Enter the total contract value. Pull this from the Payments tab in the job's AccuLynx profile.",
+  },
+  {
+    target: "expenses",
+    title: "Expenses",
+    description: "Enter material and labor costs. Pull these numbers from the Payments tab in the job's AccuLynx profile — check the line items for exact amounts.",
+  },
+  {
+    target: "commission-calc",
+    title: "Commission Calculation",
+    description: "The system automatically calculates your commission based on your assigned tier. Verify the numbers look correct before submitting.",
+  },
+  {
+    target: "submit-btn",
+    title: "Submit",
+    description: "Once everything looks right, click Submit. This sends the commission to your Sales Manager for review. You'll get an email when it's approved or if revisions are needed.",
   },
 ];
