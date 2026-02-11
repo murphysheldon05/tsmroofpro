@@ -29,21 +29,41 @@ const handler = async (req: Request): Promise<Response> => {
     const payload: HoldNotification = await req.json();
     console.log("Hold notification payload:", payload);
 
+    // BUG FIX: Guard required fields
+    if (!payload.user_id) {
+      return new Response(
+        JSON.stringify({ error: "user_id is required" }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    // Get the user profile
+    // Get the user profile - BUG FIX: use maybeSingle + proper null check
     const { data: userProfile, error: userError } = await supabaseAdmin
       .from("profiles")
       .select("id, email, full_name")
       .eq("id", payload.user_id)
-      .single();
+      .maybeSingle();
 
     if (userError || !userProfile) {
-      console.error("User profile lookup failed:", userError);
-      throw new Error("Could not find user profile");
+      console.error("User profile not found for ID:", payload.user_id, userError);
+      return new Response(
+        JSON.stringify({ error: "User profile not found", user_id: payload.user_id }),
+        { status: 404, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    const userName = userProfile?.full_name || "Team Member";
+    const userEmail = userProfile?.email;
+    if (!userEmail) {
+      return new Response(
+        JSON.stringify({ error: "No email found for user" }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
     }
 
     const appUrl = "https://tsmroofpro.com";
@@ -70,7 +90,7 @@ const handler = async (req: Request): Promise<Response> => {
     });
 
     // Send email notification
-    if (userProfile.email) {
+    if (userEmail) {
       const isApplied = payload.action === "applied";
       const headerColor = isApplied ? "#DC2626" : "#059669";
       const headerEmoji = isApplied ? "🚫" : "✅";
@@ -154,14 +174,14 @@ const handler = async (req: Request): Promise<Response> => {
 
       await resend.emails.send({
         from: "TSM Roof Pro Hub <notifications@tsmroofpro.com>",
-        to: [userProfile.email],
+        to: [userEmail],
         reply_to: "sheldonmurphy@tsmroofs.com",
         subject: `${headerEmoji} ${headerText}: ${payload.hold_type}`,
         html: emailHtml,
         text: `${headerText}\n\nHold Type: ${payload.hold_type}\nStatus: ${isApplied ? "ACTIVE" : "RELEASED"}\nDate: ${actionDate}\n${isApplied ? `\nReason: ${payload.reason}\n\nPlease contact your manager or the compliance team to resolve this hold.` : "\nAll restrictions have been lifted."}\n\nTSM Roofing LLC`,
       });
 
-      console.log("Hold notification email sent to:", userProfile.email);
+      console.log("Hold notification email sent to:", userEmail);
     }
 
     return new Response(

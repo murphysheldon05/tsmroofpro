@@ -159,10 +159,26 @@ serve(async (req: Request): Promise<Response> => {
     const payload: WarrantyNotification = await req.json();
     console.log("Warranty notification payload:", payload);
 
+    // BUG FIX: Guard required fields
+    if (!payload.warranty_id) {
+      return new Response(
+        JSON.stringify({ error: "warranty_id is required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // BUG FIX: Null-safe defaults for all payload fields
+    const customerName = payload.customer_name || "Unknown Customer";
+    const jobAddress = payload.job_address || "Address not provided";
+    const issueDescription = payload.issue_description || "No description provided";
+    const priorityLevel = payload.priority_level || "medium";
+    const currentStatus = payload.status || "submitted";
+    const assignedTo = payload.assigned_to || null;
+
     // HARD LOCK: Always use tsmroofpro.com for all portal links - never use any other domain
     const appUrl = "https://tsmroofpro.com";
     const warrantyUrl = `${appUrl}/warranties?id=${payload.warranty_id}`;
-    const priorityColor = PRIORITY_COLORS[payload.priority_level] || "#6b7280";
+    const priorityColor = PRIORITY_COLORS[priorityLevel] || "#6b7280";
 
     // Determine notification type for routing lookup
     const routingType = payload.notification_type === "submitted" 
@@ -190,22 +206,22 @@ serve(async (req: Request): Promise<Response> => {
 
     switch (payload.notification_type) {
       case "submitted":
-        subject = `🔧 New Warranty Request: ${payload.customer_name}`;
+        subject = `🔧 New Warranty Request: ${customerName}`;
         heading = "New Warranty Request Submitted";
         headerColor = "#d97706";
         break;
       case "status_change":
-        subject = `📋 Warranty Status Updated: ${payload.customer_name}`;
+        subject = `📋 Warranty Status Updated: ${customerName}`;
         heading = "Warranty Status Changed";
         headerColor = "#1d4ed8";
         break;
       case "assigned":
-        subject = `👤 Warranty Assigned: ${payload.customer_name}`;
+        subject = `👤 Warranty Assigned: ${customerName}`;
         heading = "Warranty Request Assigned";
         headerColor = "#7c3aed";
         break;
       case "completed":
-        subject = `✅ Warranty Completed: ${payload.customer_name}`;
+        subject = `✅ Warranty Completed: ${customerName}`;
         heading = "Warranty Request Completed";
         headerColor = "#059669";
         break;
@@ -214,15 +230,15 @@ serve(async (req: Request): Promise<Response> => {
     // Plain text version for deliverability
     const plainText = `${heading}
 
-Customer: ${payload.customer_name}
-Address: ${payload.job_address}
-Priority: ${payload.priority_level.toUpperCase()}
-Status: ${payload.status.replace(/_/g, " ")}
+Customer: ${customerName}
+Address: ${jobAddress}
+Priority: ${priorityLevel.toUpperCase()}
+Status: ${currentStatus.replace(/_/g, " ")}
 ${payload.previous_status ? `Previous Status: ${payload.previous_status.replace(/_/g, " ")}` : ""}
-${payload.assigned_to ? `Assigned To: ${payload.assigned_to}` : ""}
+${assignedTo ? `Assigned To: ${assignedTo}` : ""}
 
 Issue Description:
-${payload.issue_description}
+${issueDescription}
 
 View Warranty Details: ${warrantyUrl}
 
@@ -247,7 +263,7 @@ View Warranty Details: ${warrantyUrl}
                 <strong>Customer:</strong>
               </td>
               <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">
-                ${payload.customer_name}
+                ${customerName}
               </td>
             </tr>
             <tr>
@@ -255,7 +271,7 @@ View Warranty Details: ${warrantyUrl}
                 <strong>Address:</strong>
               </td>
               <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">
-                ${payload.job_address}
+                ${jobAddress}
               </td>
             </tr>
             <tr>
@@ -264,7 +280,7 @@ View Warranty Details: ${warrantyUrl}
               </td>
               <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">
                 <span style="background: ${priorityColor}; color: white; padding: 4px 12px; border-radius: 4px; font-size: 12px; text-transform: uppercase;">
-                  ${payload.priority_level}
+                  ${priorityLevel}
                 </span>
               </td>
             </tr>
@@ -273,7 +289,7 @@ View Warranty Details: ${warrantyUrl}
                 <strong>Status:</strong>
               </td>
               <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb; font-weight: bold; color: #1e40af;">
-                ${payload.status.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase())}
+                ${currentStatus.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase())}
               </td>
             </tr>
             ${payload.previous_status ? `
@@ -286,20 +302,20 @@ View Warranty Details: ${warrantyUrl}
               </td>
             </tr>
             ` : ""}
-            ${payload.assigned_to ? `
+            ${assignedTo ? `
             <tr>
               <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">
                 <strong>Assigned To:</strong>
               </td>
               <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">
-                ${payload.assigned_to}
+                ${assignedTo}
               </td>
             </tr>
             ` : ""}
             <tr>
               <td colspan="2" style="padding: 15px 0;">
                 <strong>Issue Description:</strong><br>
-                <p style="margin: 8px 0 0 0; color: #4b5563;">${payload.issue_description}</p>
+                <p style="margin: 8px 0 0 0; color: #4b5563;">${issueDescription}</p>
               </td>
             </tr>
           </table>

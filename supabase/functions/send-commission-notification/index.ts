@@ -121,8 +121,30 @@ const handler = async (req: Request): Promise<Response> => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    const payload: CommissionNotification = await req.json();
-    console.log("Commission notification payload:", payload);
+    const rawPayload = await req.json();
+    console.log("Commission notification raw payload:", rawPayload);
+
+    // BUG FIX: Accept both notification_type and action for backwards compatibility
+    if (!rawPayload.notification_type && rawPayload.action) {
+      rawPayload.notification_type = rawPayload.action;
+    }
+
+    if (!rawPayload.notification_type) {
+      return new Response(
+        JSON.stringify({ error: "Missing notification_type in payload" }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    if (!rawPayload.commission_id) {
+      return new Response(
+        JSON.stringify({ error: "Missing commission_id in payload" }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    const payload: CommissionNotification = rawPayload;
+    console.log("Commission notification payload (resolved):", payload);
 
     // HARD LOCK: Always use tsmroofpro.com for all portal links - never use any other domain
     const appUrl = "https://tsmroofpro.com";
