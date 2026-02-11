@@ -24,7 +24,10 @@ const handler = async (req: Request): Promise<Response> => {
     const { userId }: NotifyRequest = await req.json();
 
     if (!userId) {
-      throw new Error("Missing userId");
+      return new Response(
+        JSON.stringify({ error: "userId is required" }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
     }
 
     // Create Supabase admin client
