@@ -3,16 +3,20 @@ import { useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, DollarSign, Search, FileSpreadsheet, BarChart3, TrendingUp } from "lucide-react";
+import { Plus, DollarSign, Search, FileSpreadsheet, BarChart3, TrendingUp, Wallet, ClipboardList } from "lucide-react";
 import { useCommissionSubmissions, useIsCommissionReviewer } from "@/hooks/useCommissions";
 import { CommissionTracker } from "@/components/commissions/CommissionTracker";
 import { CommissionStatusPipeline } from "@/components/commissions/CommissionStatusPipeline";
 import { CommissionSummaryCards } from "@/components/commissions/CommissionSummaryCards";
 import { CommissionCard } from "@/components/commissions/CommissionCard";
-import { DrawBalanceCard } from "@/components/commissions/DrawBalanceCard";
+import { DrawBalanceWidget } from "@/components/commissions/DrawBalanceWidget";
+import { DrawRequestForm } from "@/components/commissions/DrawRequestForm";
+import { DrawApprovalQueue } from "@/components/commissions/DrawApprovalQueue";
+import { DrawHistoryTab } from "@/components/commissions/DrawHistoryTab";
 import { OverridePhaseIndicator } from "@/components/commissions/OverridePhaseIndicator";
 import { ManagerOverrideEarningsCard, ManagerOverridesTab } from "@/components/commissions/ManagerOverrideEarnings";
 import { useAuth } from "@/contexts/AuthContext";
+import { useRolePermissions } from "@/hooks/useRolePermissions";
 import { useUserHoldsCheck } from "@/hooks/useComplianceHoldCheck";
 import { HoldWarningBanner } from "@/components/compliance/HoldWarningBanner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -31,7 +35,8 @@ const STATUS_LABELS: Record<string, string> = {
 
 export default function Commissions() {
   const navigate = useNavigate();
-  const { role } = useAuth();
+  const { role, isAdmin } = useAuth();
+  const { canRequestDraws, canApproveDraws } = useRolePermissions();
   const { data: submissions, isLoading } = useCommissionSubmissions();
   const { data: isReviewer } = useIsCommissionReviewer();
   const { data: userHolds } = useUserHoldsCheck();
@@ -39,10 +44,12 @@ export default function Commissions() {
   const [activeStatus, setActiveStatus] = useState("all");
   const [showDrawModal, setShowDrawModal] = useState(false);
 
-  const isAdmin = role === "admin";
   const isManager = role === "manager";
-  // Any active user can submit commissions per governance rules
-  const canSubmit = true;
+  const isSalesManager = role === "sales_manager";
+  // Bug fix: sales_rep, sales_manager, and admin can submit commissions
+  const canSubmit = role === "sales_rep" || role === "sales_manager" || isAdmin;
+  const showDrawRequests = canApproveDraws || isAdmin;
+  const showMyDraws = canRequestDraws || role === "sales_rep" || role === "sales_manager";
   const commissionHolds = userHolds?.filter(h => h.hold_type === "commission_hold") || [];
 
   // Status counts
@@ -96,7 +103,6 @@ export default function Commissions() {
     const groups: Record<string, typeof filteredSubmissions> = {};
     
     if (activeStatus !== "all") {
-      // Single status - just show as flat list
       return { [activeStatus]: filteredSubmissions };
     }
     
@@ -125,26 +131,30 @@ export default function Commissions() {
           </div>
           
           <div className="flex gap-2 flex-wrap">
-            <Button 
-              data-tutorial="submit-commission"
-              onClick={() => navigate("/commissions/new")} 
-              className="gap-2 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground"
-              disabled={commissionHolds.length > 0}
-              title={commissionHolds.length > 0 ? "Blocked by active hold" : ""}
-            >
-              <Plus className="h-4 w-4" />
-              Submit Commission
-            </Button>
-            <Button 
-              data-tutorial="request-draw"
-              variant="outline" 
-              onClick={() => setShowDrawModal(true)}
-              className="gap-2 rounded-xl border-amber-500 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-500/10"
-              disabled={commissionHolds.length > 0}
-            >
-              <DollarSign className="h-4 w-4" />
-              Request Draw
-            </Button>
+            {canSubmit && (
+              <Button 
+                data-tutorial="submit-commission"
+                onClick={() => navigate("/commissions/new")} 
+                className="gap-2 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground"
+                disabled={commissionHolds.length > 0}
+                title={commissionHolds.length > 0 ? "Blocked by active hold" : ""}
+              >
+                <Plus className="h-4 w-4" />
+                Submit Commission
+              </Button>
+            )}
+            {canRequestDraws && (
+              <Button 
+                data-tutorial="request-draw"
+                variant="outline" 
+                onClick={() => setShowDrawModal(true)}
+                className="gap-2 rounded-xl border-amber-500 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-500/10"
+                disabled={commissionHolds.length > 0}
+              >
+                <DollarSign className="h-4 w-4" />
+                Request Draw
+              </Button>
+            )}
           </div>
         </div>
 
@@ -158,17 +168,29 @@ export default function Commissions() {
             {isManager && <ManagerOverrideEarningsCard />}
           </div>
           <div data-tutorial="draw-balance">
-            <DrawBalanceCard showDrawModal={showDrawModal} onDrawModalChange={setShowDrawModal} />
+            <DrawBalanceWidget />
           </div>
         </div>
 
         {/* Main Content Tabs */}
         <Tabs defaultValue="pipeline" className="space-y-4">
-          <TabsList className="bg-card/60 border border-border/40 rounded-2xl p-1 h-auto">
+          <TabsList className="bg-card/60 border border-border/40 rounded-2xl p-1 h-auto flex-wrap">
             <TabsTrigger value="pipeline" className="gap-2 rounded-xl data-[state=active]:bg-primary/15 data-[state=active]:text-primary">
               <FileSpreadsheet className="h-4 w-4" />
               Pipeline
             </TabsTrigger>
+            {showMyDraws && (
+              <TabsTrigger value="my-draws" className="gap-2 rounded-xl data-[state=active]:bg-amber-500/15 data-[state=active]:text-amber-600">
+                <Wallet className="h-4 w-4" />
+                My Draws
+              </TabsTrigger>
+            )}
+            {showDrawRequests && (
+              <TabsTrigger value="draw-requests" className="gap-2 rounded-xl data-[state=active]:bg-amber-500/15 data-[state=active]:text-amber-600">
+                <ClipboardList className="h-4 w-4" />
+                Draw Requests
+              </TabsTrigger>
+            )}
             {isReviewer && (
               <TabsTrigger value="tracker" className="gap-2 rounded-xl data-[state=active]:bg-primary/15 data-[state=active]:text-primary">
                 <BarChart3 className="h-4 w-4" />
@@ -255,6 +277,18 @@ export default function Commissions() {
             )}
           </TabsContent>
 
+          {showMyDraws && (
+            <TabsContent value="my-draws">
+              <DrawHistoryTab />
+            </TabsContent>
+          )}
+
+          {showDrawRequests && (
+            <TabsContent value="draw-requests">
+              <DrawApprovalQueue />
+            </TabsContent>
+          )}
+
           {isReviewer && (
             <TabsContent value="tracker">
               <CommissionTracker submissions={submissions || []} />
@@ -267,6 +301,10 @@ export default function Commissions() {
             </TabsContent>
           )}
         </Tabs>
+
+        {/* Draw Request Modal */}
+        <DrawRequestForm open={showDrawModal} onOpenChange={setShowDrawModal} />
+
         <GuidedTour pageName="commissions" pageTitle="Commissions" steps={commissionsSteps} />
       </div>
     </AppLayout>

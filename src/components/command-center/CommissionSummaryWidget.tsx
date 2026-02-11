@@ -35,11 +35,11 @@ export function CommissionSummaryWidget() {
         .eq("status", "paid")
         .gte("paid_at", monthStart);
 
-      // Draw balance from draws table
+      // Draw balance from draw_requests table
       let drawQuery = supabase
-        .from("draws")
+        .from("draw_requests" as any)
         .select("remaining_balance")
-        .in("status", ["active", "approved"]);
+        .in("status", ["approved", "paid"]);
 
       const [pendingRes, approvedRes, paidRes, drawRes] = await Promise.all([
         pendingQuery, approvedQuery, paidQuery, drawQuery,
