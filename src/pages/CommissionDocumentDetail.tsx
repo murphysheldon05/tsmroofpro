@@ -1,45 +1,107 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { ArrowLeft, Printer, Edit, Check, X, FileText, Calendar, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Printer, Edit, Check, X, FileText, Calendar, CheckCircle2, RotateCcw, SendHorizonal } from "lucide-react";
 import { useCommissionDocument, useUpdateCommissionDocumentStatus } from "@/hooks/useCommissionDocuments";
 import { useAuth } from "@/contexts/AuthContext";
 import { CommissionDocumentForm } from "@/components/commissions/CommissionDocumentForm";
 import { CommissionDocumentPrintView } from "@/components/commissions/CommissionDocumentPrintView";
 import { formatPayDateShort, getEstimatedPayDate } from "@/lib/commissionPayDateCalculations";
+import { CommissionStatusStepper } from "@/components/commissions/CommissionStatusStepper";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function CommissionDocumentDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { role } = useAuth();
+  const { user, role, isAdmin } = useAuth();
   const { data: document, isLoading } = useCommissionDocument(id);
   const updateStatusMutation = useUpdateCommissionDocumentStatus();
-  
+
   const [isEditing, setIsEditing] = useState(false);
   const [showPrint, setShowPrint] = useState(false);
   const [showApprovalDialog, setShowApprovalDialog] = useState(false);
-  const [approvalAction, setApprovalAction] = useState<'approved' | 'rejected' | 'manager_approved' | 'accounting_approved'>('approved');
+  const [approvalAction, setApprovalAction] = useState<
+    'approved' | 'rejected' | 'manager_approved' | 'accounting_approved' | 'revision_required' | 'submitted'
+  >('approved');
   const [approvalComment, setApprovalComment] = useState("");
 
-  const isManagerOrAdmin = role === 'admin' || role === 'manager';
-  const isAdmin = role === 'admin';
-  const canApproveAsManager = isManagerOrAdmin && document?.status === 'submitted';
+  // Resolve actor names for the stepper
+  const [managerName, setManagerName] = useState<string | null>(null);
+  const [accountingName, setAccountingName] = useState<string | null>(null);
+  const [paidByName, setPaidByName] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!document) return;
+    const fetchNames = async () => {
+      const ids = [document.manager_approved_by, document.accounting_approved_by, document.paid_by].filter(Boolean);
+      if (ids.length === 0) return;
+      const { data } = await supabase.from("profiles").select("id, full_name").in("id", ids);
+      if (data) {
+        const map = Object.fromEntries(data.map(p => [p.id, p.full_name]));
+        setManagerName(map[document.manager_approved_by!] || null);
+        setAccountingName(map[document.accounting_approved_by!] || null);
+        setPaidByName(map[document.paid_by!] || null);
+      }
+    };
+    fetchNames();
+  }, [document]);
+
+  // --- Role-based action permissions ---
+  const isSalesManager = role === 'sales_manager';
+  const isAccountingDept = role === 'admin'; // For now admin handles accounting approval
+  
+  // Manager can approve submitted docs (but NOT their own)
+  const canApproveAsManager = (isAdmin || isSalesManager) && 
+    document?.status === 'submitted' && 
+    document?.created_by !== user?.id; // Self-commission prevention
+  
+  // Self-submitted by a sales manager → needs admin approval
+  const isSelfSubmission = isSalesManager && document?.created_by === user?.id && document?.status === 'submitted';
+  
+  // Accounting can process manager_approved docs
   const canApproveAsAccounting = isAdmin && document?.status === 'manager_approved';
-  const canEdit = document?.status === 'draft';
+  
+  // Accounting can mark as paid
+  const canMarkAsPaid = isAdmin && document?.status === 'accounting_approved';
+  
+  // Creator can edit drafts and revision_required
+  const canEdit = document?.created_by === user?.id && 
+    (document?.status === 'draft' || document?.status === 'revision_required');
+  
+  // Creator can resubmit revision_required or rejected docs
+  const canResubmit = document?.created_by === user?.id && 
+    (document?.status === 'revision_required' || document?.status === 'rejected');
 
   const handleApprovalAction = async () => {
     if (!id) return;
-    await updateStatusMutation.mutateAsync({
-      id,
-      status: approvalAction,
-      approval_comment: approvalComment,
-    });
+    
+    if (approvalAction === 'revision_required') {
+      await updateStatusMutation.mutateAsync({
+        id,
+        status: 'revision_required',
+        revision_reason: approvalComment,
+      });
+    } else {
+      await updateStatusMutation.mutateAsync({
+        id,
+        status: approvalAction,
+        approval_comment: approvalComment,
+      });
+    }
     setShowApprovalDialog(false);
     setApprovalComment("");
+  };
+
+  const handleResubmit = async () => {
+    if (!id) return;
+    await updateStatusMutation.mutateAsync({
+      id,
+      status: 'submitted',
+    });
   };
 
   const handlePrint = () => {
@@ -71,7 +133,7 @@ export default function CommissionDocumentDetail() {
             Close Print View
           </Button>
         </div>
-        <CommissionDocumentPrintView document={document} isAdmin={role === 'admin'} />
+        <CommissionDocumentPrintView document={document} isAdmin={isAdmin} />
       </div>
     );
   }
@@ -92,15 +154,17 @@ export default function CommissionDocumentDetail() {
       accounting_approved: "outline",
       approved: "outline",
       rejected: "destructive",
+      revision_required: "destructive",
       paid: "outline",
     };
     const labels: Record<string, string> = {
       draft: "Draft",
-      submitted: "Submitted",
-      manager_approved: "Manager Approved",
-      accounting_approved: "Accounting Approved",
+      submitted: "Pending — Awaiting Manager Review",
+      manager_approved: "Manager Approved — Awaiting Accounting",
+      accounting_approved: "Approved — Payment Scheduled",
       approved: "Approved",
-      rejected: "Rejected",
+      rejected: "Denied",
+      revision_required: "Revision Required",
       paid: "Paid",
     };
     const colors: Record<string, string> = {
@@ -108,6 +172,7 @@ export default function CommissionDocumentDetail() {
       manager_approved: 'bg-blue-100 text-blue-800 border-blue-300',
       accounting_approved: 'bg-green-100 text-green-800 border-green-300',
       paid: 'bg-emerald-100 text-emerald-800 border-emerald-300',
+      revision_required: 'bg-amber-100 text-amber-800 border-amber-300',
     };
     return (
       <Badge variant={variants[status] || "secondary"} className={colors[status] || ''}>
@@ -118,11 +183,8 @@ export default function CommissionDocumentDetail() {
 
   const getPayDateBadge = () => {
     if (!document) return null;
-    
     const status = document.status;
-    
     if (status === 'manager_approved') {
-      // Show estimated pay date
       const estimatedDate = getEstimatedPayDate();
       return (
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -131,7 +193,6 @@ export default function CommissionDocumentDetail() {
         </div>
       );
     }
-    
     if (status === 'accounting_approved' && document.scheduled_pay_date) {
       return (
         <div className="flex items-center gap-2 text-sm font-medium text-blue-600">
@@ -140,7 +201,6 @@ export default function CommissionDocumentDetail() {
         </div>
       );
     }
-    
     if (status === 'paid' && document.scheduled_pay_date) {
       return (
         <div className="flex items-center gap-2 text-sm font-medium text-green-600">
@@ -149,18 +209,37 @@ export default function CommissionDocumentDetail() {
         </div>
       );
     }
-    
     return null;
   };
 
+  const dialogTitle = {
+    manager_approved: 'Manager Approve Commission',
+    accounting_approved: 'Accounting Approve Commission',
+    approved: 'Approve Commission',
+    rejected: 'Deny Commission',
+    revision_required: 'Request Revision',
+    submitted: 'Send Back to Manager',
+  }[approvalAction] || 'Commission Action';
+
+  const dialogButtonLabel = {
+    manager_approved: 'Approve',
+    accounting_approved: 'Approve for Payment',
+    approved: 'Approve',
+    rejected: 'Deny',
+    revision_required: 'Request Revision',
+    submitted: 'Send Back',
+  }[approvalAction] || 'Confirm';
+
+  const requiresNotes = approvalAction === 'rejected' || approvalAction === 'revision_required';
+
   return (
     <div className="container mx-auto py-6 space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <Button variant="ghost" onClick={() => navigate('/commission-documents')}>
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to List
         </Button>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={handlePrint}>
             <Printer className="h-4 w-4 mr-2" />
             Print
@@ -171,29 +250,49 @@ export default function CommissionDocumentDetail() {
               Edit
             </Button>
           )}
+          {canResubmit && (
+            <Button
+              className="bg-blue-600 hover:bg-blue-700"
+              onClick={handleResubmit}
+              disabled={updateStatusMutation.isPending}
+            >
+              <SendHorizonal className="h-4 w-4 mr-2" />
+              Resubmit
+            </Button>
+          )}
           {canApproveAsManager && (
             <>
               <Button
-                variant="default"
                 className="bg-blue-600 hover:bg-blue-700"
                 onClick={() => { setApprovalAction('manager_approved'); setShowApprovalDialog(true); }}
               >
                 <Check className="h-4 w-4 mr-2" />
-                Manager Approve
+                Approve
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => { setApprovalAction('revision_required'); setShowApprovalDialog(true); }}
+              >
+                <RotateCcw className="h-4 w-4 mr-2" />
+                Request Revision
               </Button>
               <Button
                 variant="destructive"
                 onClick={() => { setApprovalAction('rejected'); setShowApprovalDialog(true); }}
               >
                 <X className="h-4 w-4 mr-2" />
-                Reject
+                Deny
               </Button>
             </>
+          )}
+          {isSelfSubmission && (
+            <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-300 py-2">
+              Self-submitted — requires Admin approval
+            </Badge>
           )}
           {canApproveAsAccounting && (
             <>
               <Button
-                variant="default"
                 className="bg-green-600 hover:bg-green-700"
                 onClick={() => { setApprovalAction('accounting_approved'); setShowApprovalDialog(true); }}
               >
@@ -201,16 +300,59 @@ export default function CommissionDocumentDetail() {
                 Accounting Approve
               </Button>
               <Button
-                variant="destructive"
-                onClick={() => { setApprovalAction('rejected'); setShowApprovalDialog(true); }}
+                variant="outline"
+                onClick={() => { setApprovalAction('submitted'); setShowApprovalDialog(true); }}
               >
-                <X className="h-4 w-4 mr-2" />
-                Reject
+                <RotateCcw className="h-4 w-4 mr-2" />
+                Send Back to Manager
               </Button>
             </>
           )}
+          {canMarkAsPaid && (
+            <Button
+              className="bg-emerald-600 hover:bg-emerald-700"
+              onClick={() => { setApprovalAction('approved'); setShowApprovalDialog(true); }}
+            >
+              <CheckCircle2 className="h-4 w-4 mr-2" />
+              Mark as Paid
+            </Button>
+          )}
         </div>
       </div>
+
+      {/* Status Timeline Stepper */}
+      <Card>
+        <CardContent className="pt-4 pb-2">
+          <CommissionStatusStepper
+            documentStatus={document.status}
+            submittedAt={document.submitted_at}
+            managerApprovedBy={managerName}
+            managerApprovedAt={document.manager_approved_at}
+            accountingApprovedBy={accountingName}
+            accountingApprovedAt={document.accounting_approved_at}
+            paidAt={document.paid_at}
+            paidBy={paidByName}
+            revisionReason={document.revision_reason}
+            approvalComment={document.approval_comment}
+            salesRep={document.sales_rep}
+          />
+        </CardContent>
+      </Card>
+
+      {/* Revision Notice */}
+      {document.status === 'revision_required' && document.revision_reason && (
+        <Card className="border-amber-300 bg-amber-50">
+          <CardContent className="pt-4">
+            <div className="flex items-start gap-2">
+              <RotateCcw className="h-5 w-5 text-amber-600 mt-0.5" />
+              <div>
+                <p className="font-medium text-amber-800">Revision Required</p>
+                <p className="text-sm text-amber-700 mt-1">{document.revision_reason}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
@@ -225,20 +367,15 @@ export default function CommissionDocumentDetail() {
         </CardContent>
       </Card>
 
-      {/* Approval Dialog */}
+      {/* Action Dialog */}
       <Dialog open={showApprovalDialog} onOpenChange={setShowApprovalDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>
-              {approvalAction === 'manager_approved' && 'Manager Approve Commission Document'}
-              {approvalAction === 'accounting_approved' && 'Accounting Approve Commission Document'}
-              {approvalAction === 'approved' && 'Approve Commission Document'}
-              {approvalAction === 'rejected' && 'Reject Commission Document'}
-            </DialogTitle>
+            <DialogTitle>{dialogTitle}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <Textarea
-              placeholder={approvalAction === 'rejected' ? 'Reason for rejection (required)...' : 'Approval comment (optional)'}
+              placeholder={requiresNotes ? 'Reason (required)...' : 'Comment (optional)'}
               value={approvalComment}
               onChange={(e) => setApprovalComment(e.target.value)}
               rows={4}
@@ -252,12 +389,9 @@ export default function CommissionDocumentDetail() {
               variant={approvalAction === 'rejected' ? 'destructive' : 'default'}
               className={approvalAction !== 'rejected' ? 'bg-green-600 hover:bg-green-700' : ''}
               onClick={handleApprovalAction}
-              disabled={updateStatusMutation.isPending || (approvalAction === 'rejected' && !approvalComment.trim())}
+              disabled={updateStatusMutation.isPending || (requiresNotes && !approvalComment.trim())}
             >
-              {approvalAction === 'manager_approved' && 'Manager Approve'}
-              {approvalAction === 'accounting_approved' && 'Accounting Approve'}
-              {approvalAction === 'approved' && 'Approve'}
-              {approvalAction === 'rejected' && 'Reject'}
+              {dialogButtonLabel}
             </Button>
           </DialogFooter>
         </DialogContent>
