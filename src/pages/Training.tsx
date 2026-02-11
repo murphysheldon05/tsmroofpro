@@ -8,6 +8,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { UserPlus, GraduationCap, Video } from "lucide-react";
 import { VideoCard } from "@/components/training/VideoCard";
 import { NewHireList } from "@/components/training/NewHireList";
+import { GuidedTour } from "@/components/tutorial/GuidedTour";
+import { trainingSteps } from "@/components/tutorial/tutorialSteps";
 
 const categoryConfig: Record<string, { title: string; description: string; icon: React.ElementType }> = {
   "new-hire": {
@@ -98,7 +100,7 @@ export default function Training() {
         {/* Header */}
         <header className="pt-4 lg:pt-0">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3" data-tutorial="training-header">
               <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
                 <Icon className="w-6 h-6 text-primary" />
               </div>
@@ -111,13 +113,15 @@ export default function Training() {
                 </p>
               </div>
             </div>
-            <SearchBar className="w-full lg:w-80" />
+            <div data-tutorial="training-search">
+              <SearchBar className="w-full lg:w-80" />
+            </div>
           </div>
         </header>
 
         {/* Video Library Special Layout */}
         {category === "video-library" && resources && resources.length > 0 ? (
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6" data-tutorial="training-content">
             {resources.map((resource) => (
               <VideoCard key={resource.id} video={resource} />
             ))}
@@ -141,6 +145,7 @@ export default function Training() {
             <p className="text-muted-foreground">Check back later for new content.</p>
           </div>
         )}
+        <GuidedTour pageName={`training-${category || "main"}`} pageTitle={config?.title || "Training"} steps={trainingSteps} />
       </div>
     </AppLayout>
   );

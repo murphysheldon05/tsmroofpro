@@ -25,6 +25,8 @@ import {
   Unlock
 } from "lucide-react";
 import { toast } from "sonner";
+import { GuidedTour } from "@/components/tutorial/GuidedTour";
+import { playbookSteps } from "@/components/tutorial/tutorialSteps";
 
 const MasterPlaybook = forwardRef<HTMLDivElement>((_, ref) => {
   const navigate = useNavigate();
@@ -149,7 +151,7 @@ const MasterPlaybook = forwardRef<HTMLDivElement>((_, ref) => {
           </div>
 
           {/* Progress Card */}
-          <div className="p-5 rounded-2xl border bg-card space-y-4">
+          <div className="p-5 rounded-2xl border bg-card space-y-4" data-tutorial="playbook-progress">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Shield className="h-5 w-5 text-primary" />
@@ -216,7 +218,7 @@ const MasterPlaybook = forwardRef<HTMLDivElement>((_, ref) => {
         )}
 
         {/* Search */}
-        <div className="relative">
+        <div className="relative" data-tutorial="playbook-search">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
           <Input
             type="text"
@@ -243,7 +245,7 @@ const MasterPlaybook = forwardRef<HTMLDivElement>((_, ref) => {
         </p>
 
         {/* Playbook Cards */}
-        <div className="space-y-4">
+        <div className="space-y-4" data-tutorial="playbook-cards">
           {filteredPlaybooks.map((playbook) => {
             const status = sopStatuses.find((s) => s.sopNumber === playbook.number);
             return (
@@ -281,6 +283,7 @@ const MasterPlaybook = forwardRef<HTMLDivElement>((_, ref) => {
             </p>
           </div>
         </footer>
+        <GuidedTour pageName="master-playbook" pageTitle="Master Playbook" steps={playbookSteps} />
       </div>
     </AppLayout>
   );

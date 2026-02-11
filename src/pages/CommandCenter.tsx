@@ -12,6 +12,8 @@ import { WeatherWidget } from "@/components/command-center/WeatherWidget";
 import { ActionRequiredWidget } from "@/components/command-center/ActionRequiredWidget";
 import { NeedsAttentionWidget } from "@/components/command-center/NeedsAttentionWidget";
 import { LayoutGrid } from "lucide-react";
+import { GuidedTour } from "@/components/tutorial/GuidedTour";
+import { commandCenterSteps } from "@/components/tutorial/tutorialSteps";
 
 export default function CommandCenter() {
   const { user } = useAuth();
@@ -47,16 +49,24 @@ export default function CommandCenter() {
         <CompactCoreIdentity />
 
         {/* 3. Sales Leaderboard (moved up) */}
-        <SalesLeaderboardWidget />
+        <div data-tutorial="sales-leaderboard">
+          <SalesLeaderboardWidget />
+        </div>
 
         {/* 4. Commission summary cards */}
-        <CommissionSummaryWidget />
+        <div data-tutorial="commission-summary">
+          <CommissionSummaryWidget />
+        </div>
 
         {/* 5. Quick Links row */}
-        <QuickActionLinks />
+        <div data-tutorial="quick-links">
+          <QuickActionLinks />
+        </div>
 
         {/* 6. Stat boxes (clickable) */}
-        <QuickStatsWidget />
+        <div data-tutorial="quick-stats">
+          <QuickStatsWidget />
+        </div>
 
         {/* Needs Your Attention - Manager/Admin only */}
         <NeedsAttentionWidget />
@@ -65,10 +75,14 @@ export default function CommandCenter() {
         <CompanyInfoWidget />
 
         {/* 8. Weather widget */}
-        <WeatherWidget />
+        <div data-tutorial="weather-widget">
+          <WeatherWidget />
+        </div>
 
         {/* 9. Pending Review (compacted) */}
         <ActionRequiredWidget />
+
+        <GuidedTour pageName="command-center" pageTitle="Command Center" steps={commandCenterSteps} />
       </div>
     </AppLayout>
   );

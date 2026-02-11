@@ -65,6 +65,8 @@ import { LeaderboardSettingsPanel } from "@/components/admin/LeaderboardSettings
 import { PlaybookCompletionStatus } from "@/components/admin/PlaybookCompletionStatus";
 import { RoleOnboardingAdmin } from "@/components/admin/RoleOnboardingAdmin";
 import { BookOpen, GraduationCap } from "lucide-react";
+import { GuidedTour } from "@/components/tutorial/GuidedTour";
+import { adminSteps } from "@/components/tutorial/tutorialSteps";
 
 export default function Admin() {
   const queryClient = useQueryClient();
@@ -424,11 +426,11 @@ export default function Admin() {
         {/* Admin Panel Tabs - Centralized Control Plane */}
         <Tabs defaultValue="users" className="space-y-6">
           <TabsList className="bg-secondary/50 flex-wrap h-auto gap-1 p-1">
-            <TabsTrigger value="users" className="gap-2">
+            <TabsTrigger value="users" className="gap-2" data-tutorial="admin-users-tab">
               <Users className="w-4 h-4" />
               Users
             </TabsTrigger>
-            <TabsTrigger value="tiers" className="gap-2">
+            <TabsTrigger value="tiers" className="gap-2" data-tutorial="admin-tiers-tab">
               <Percent className="w-4 h-4" />
               Commission Tiers
             </TabsTrigger>
@@ -456,7 +458,7 @@ export default function Admin() {
               <FileText className="w-4 h-4" />
               Audit Log
             </TabsTrigger>
-            <TabsTrigger value="draws" className="gap-2">
+            <TabsTrigger value="draws" className="gap-2" data-tutorial="admin-draws-tab">
               <DollarSign className="w-4 h-4" />
               Draw Settings
             </TabsTrigger>
@@ -464,7 +466,7 @@ export default function Admin() {
               <Percent className="w-4 h-4" />
               Overrides
             </TabsTrigger>
-            <TabsTrigger value="leaderboard" className="gap-2">
+            <TabsTrigger value="leaderboard" className="gap-2" data-tutorial="admin-leaderboard-tab">
               <Trophy className="w-4 h-4" />
               Leaderboard
             </TabsTrigger>
@@ -487,7 +489,7 @@ export default function Admin() {
             </div>
 
             {/* Pending Approvals Section */}
-            <div>
+            <div data-tutorial="admin-pending">
               <h2 className="text-lg font-semibold text-foreground mb-4">Pending Approvals</h2>
               <PendingApprovals />
             </div>
@@ -911,6 +913,7 @@ export default function Admin() {
             <RoleOnboardingAdmin />
           </TabsContent>
         </Tabs>
+        <GuidedTour pageName="admin" pageTitle="Admin Panel" steps={adminSteps} />
       </div>
     </AppLayout>
   );

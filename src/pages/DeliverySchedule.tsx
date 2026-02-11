@@ -28,6 +28,8 @@ import {
 } from "@/hooks/useDeliveryCalendar";
 import { cn } from "@/lib/utils";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { GuidedTour } from "@/components/tutorial/GuidedTour";
+import { deliveryScheduleSteps } from "@/components/tutorial/tutorialSteps";
 import { TodaysDeliveriesSection } from "@/components/production/TodaysDeliveriesSection";
 import { DayOverflowModal, OverflowTrigger } from "@/components/calendar/DayOverflowModal";
 
@@ -224,7 +226,7 @@ export default function DeliverySchedule() {
             </div>
           </div>
           {canEdit && (
-            <Button size="sm" onClick={() => setIsAddOpen(true)} className="bg-primary text-primary-foreground">
+            <Button size="sm" onClick={() => setIsAddOpen(true)} className="bg-primary text-primary-foreground" data-tutorial="add-delivery">
               <Plus className="h-4 w-4 mr-1" />Add Delivery
             </Button>
           )}
@@ -232,7 +234,7 @@ export default function DeliverySchedule() {
 
         {/* View toggle + nav */}
         <div className="flex items-center justify-between flex-wrap gap-2">
-          <div className="flex items-center rounded-lg border bg-muted/30 p-0.5">
+          <div className="flex items-center rounded-lg border bg-muted/30 p-0.5" data-tutorial="calendar-view">
             {(["day", "week", "month"] as CalendarView[]).map(v => (
               <button key={v} onClick={() => setView(v)} className={cn("px-4 py-2 text-sm font-medium rounded-md transition-all min-h-[44px]", view === v ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}>
                 {v.charAt(0).toUpperCase() + v.slice(1)}
@@ -248,7 +250,9 @@ export default function DeliverySchedule() {
         </div>
 
         {/* Today's Deliveries Section */}
-        <TodaysDeliveriesSection />
+        <div data-tutorial="todays-deliveries">
+          <TodaysDeliveriesSection />
+        </div>
 
         {/* Status legend */}
         <div className="flex gap-3 overflow-x-auto pb-1">
@@ -435,6 +439,7 @@ export default function DeliverySchedule() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      <GuidedTour pageName="delivery-schedule" pageTitle="Delivery Schedule" steps={deliveryScheduleSteps} />
     </AppLayout>
   );
 }
