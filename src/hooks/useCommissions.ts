@@ -205,6 +205,27 @@ export function useCreateCommission() {
         changed_by: user.id,
         notes: "Commission submitted",
       });
+
+      // Send email + in-app notification on submission
+      try {
+        await supabase.functions.invoke("send-commission-notification", {
+          body: {
+            notification_type: "submitted",
+            commission_id: result.id,
+            job_name: data.job_name || "",
+            job_address: data.job_address || "",
+            sales_rep_name: data.sales_rep_name || null,
+            subcontractor_name: data.subcontractor_name || null,
+            submission_type: data.submission_type || "employee",
+            contract_amount: data.contract_amount || 0,
+            net_commission_owed: data.net_commission_owed || data.commission_requested || 0,
+            submitter_email: user.email,
+            submitter_name: profile?.full_name || user.email,
+          },
+        });
+      } catch (notifyError) {
+        console.error("Failed to send submission notification:", notifyError);
+      }
       
       return result as CommissionSubmission;
     },
