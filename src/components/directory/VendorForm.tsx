@@ -48,6 +48,8 @@ export function VendorForm({ open, onOpenChange, vendor }: VendorFormProps) {
 
   const onSubmit = async (data: any) => {
     try {
+      // Convert empty date strings to null for PostgreSQL DATE columns
+      if (data.coi_expiration_date === "") data.coi_expiration_date = null;
       if (isEditing && vendor) {
         await updateMutation.mutateAsync({ id: vendor.id, ...data });
         toast.success("Vendor updated successfully");
