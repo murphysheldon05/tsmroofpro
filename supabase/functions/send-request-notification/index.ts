@@ -96,6 +96,51 @@ serve(async (req: Request): Promise<Response> => {
 
     console.log("Sending notification for request:", { type, title, submitter_name });
 
+    // Create in-app notification for admins and managers
+    try {
+      // Notify all admins
+      const { data: adminUsers } = await supabaseAdmin
+        .from("user_roles")
+        .select("user_id")
+        .eq("role", "admin");
+      
+      if (adminUsers) {
+        for (const au of adminUsers) {
+          if (au.user_id === user.id) continue; // Don't notify submitter
+          await supabaseAdmin.from("user_notifications").insert({
+            user_id: au.user_id,
+            notification_type: "request_submitted",
+            title: `📋 New ${requestTypeLabels[type] || type}: ${title}`,
+            message: `${submitter_name} submitted a new request for review.`,
+            entity_type: "request",
+            entity_id: title, // Using title as reference since requests may not have UUID
+          });
+        }
+      }
+
+      // Notify managers
+      const { data: managerUsers } = await supabaseAdmin
+        .from("user_roles")
+        .select("user_id")
+        .in("role", ["manager", "sales_manager"]);
+      
+      if (managerUsers) {
+        for (const mu of managerUsers) {
+          if (mu.user_id === user.id) continue;
+          await supabaseAdmin.from("user_notifications").insert({
+            user_id: mu.user_id,
+            notification_type: "request_submitted",
+            title: `📋 New ${requestTypeLabels[type] || type}: ${title}`,
+            message: `${submitter_name} submitted a new request for review.`,
+            entity_type: "request",
+            entity_id: title,
+          });
+        }
+      }
+    } catch (notifyError) {
+      console.error("Failed to create in-app notifications for request:", notifyError);
+    }
+
     // Determine which notification type to use based on request type
     let notificationType = "request_submission"; // default for general requests
     if (type === "hr") {

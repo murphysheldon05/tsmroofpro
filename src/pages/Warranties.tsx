@@ -188,7 +188,7 @@ function WarrantyCardSimple({
 }
 
 export default function Warranties() {
-  const { isAdmin, isManager } = useAuth();
+  const { isAdmin, isManager, role } = useAuth();
   const canEdit = isAdmin || isManager;
 
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -259,6 +259,7 @@ export default function Warranties() {
       id: warranty.id,
       status: targetStatus,
       previousStatus: warranty.status,
+      userRole: role || undefined,
     });
   };
 

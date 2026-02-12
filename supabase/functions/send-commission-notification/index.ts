@@ -441,7 +441,13 @@ If you have questions, please contact your supervisor or the accounting team.
 
     console.log("Commission notification sent successfully:", emailResponse);
 
-    // Create in-app notifications — use commission_submissions table
+    // Create in-app notifications — check both commission_submissions and commission_documents tables
+    let submittedBy: string | null = null;
+    let salesRepName: string | null = null;
+    let isManagerSubmission = false;
+    let managerId: string | null = null;
+
+    // Try commission_submissions first
     const { data: commission } = await supabaseClient
       .from("commission_submissions")
       .select("submitted_by, sales_rep_name, is_manager_submission")
@@ -449,22 +455,45 @@ If you have questions, please contact your supervisor or the accounting team.
       .single();
 
     if (commission) {
+      submittedBy = commission.submitted_by;
+      salesRepName = commission.sales_rep_name;
+      isManagerSubmission = commission.is_manager_submission;
+    } else {
+      // Fallback to commission_documents table
+      const { data: commDoc } = await supabaseClient
+        .from("commission_documents")
+        .select("created_by, sales_rep, manager_id")
+        .eq("id", payload.commission_id)
+        .single();
+
+      if (commDoc) {
+        submittedBy = commDoc.created_by;
+        salesRepName = commDoc.sales_rep;
+        managerId = commDoc.manager_id;
+      }
+    }
+
+    if (submittedBy || managerId) {
       // For submitted notifications - notify the assigned manager directly
       if (payload.notification_type === "submitted") {
         // Look up the assigned manager from the commission document
-        const { data: commDoc } = await supabaseClient
-          .from("commission_documents")
-          .select("manager_id")
-          .eq("id", payload.commission_id)
-          .single();
+        let docManagerId = managerId;
+        if (!docManagerId) {
+          const { data: commDoc } = await supabaseClient
+            .from("commission_documents")
+            .select("manager_id")
+            .eq("id", payload.commission_id)
+            .single();
+          docManagerId = commDoc?.manager_id || null;
+        }
 
-        if (commDoc?.manager_id) {
+        if (docManagerId) {
           await createInAppNotification(
             supabaseClient,
-            commDoc.manager_id,
+            docManagerId,
             "commission_submitted",
             `📋 New Commission: ${payload.job_name}`,
-            `A commission has been submitted by ${payload.submitter_name || payload.sales_rep_name} for your review.`,
+            `A commission has been submitted by ${payload.submitter_name || salesRepName} for your review.`,
             "commission",
             payload.commission_id
           );
@@ -484,13 +513,13 @@ If you have questions, please contact your supervisor or the accounting team.
               .eq("email", reviewer.user_email)
               .single();
 
-            if (profile?.id && profile.id !== commDoc?.manager_id) {
+            if (profile?.id && profile.id !== docManagerId) {
               await createInAppNotification(
                 supabaseClient,
                 profile.id,
                 "commission_submitted",
                 `📋 New Commission: ${payload.job_name}`,
-                `A commission has been submitted by ${payload.submitter_name || payload.sales_rep_name} for review.`,
+                `A commission has been submitted by ${payload.submitter_name || salesRepName} for review.`,
                 "commission",
                 payload.commission_id
               );
@@ -499,7 +528,7 @@ If you have questions, please contact your supervisor or the accounting team.
         }
 
         // For self-submissions (no manager_id), notify all admins
-        if (!commDoc?.manager_id) {
+        if (!docManagerId) {
           const { data: adminUsers } = await supabaseClient
             .from("user_roles")
             .select("user_id")
@@ -552,7 +581,7 @@ If you have questions, please contact your supervisor or the accounting team.
 
       // For revision_required, accounting_approved, paid, denied - notify submitter
       if (["revision_required", "accounting_approved", "paid", "denied", "manager_approved"].includes(payload.notification_type)) {
-        if (commission.submitted_by) {
+        if (submittedBy) {
           const notificationTitle = 
             payload.notification_type === "revision_required" ? `⚠️ Revision Required: ${payload.job_name}` :
             payload.notification_type === "accounting_approved" ? `🎉 Commission Approved: ${payload.job_name}` :
@@ -569,7 +598,7 @@ If you have questions, please contact your supervisor or the accounting team.
 
           await createInAppNotification(
             supabaseClient,
-            commission.submitted_by,
+            submittedBy,
             payload.notification_type,
             notificationTitle,
             notificationMessage,

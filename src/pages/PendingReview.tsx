@@ -114,7 +114,7 @@ function SlaBadge({ status }: { status: SlaStatus }) {
 }
 
 export default function PendingReview() {
-  const { isAdmin, isManager } = useAuth();
+  const { isAdmin, isManager, role } = useAuth();
   const { data, isLoading, refetch } = usePendingReview();
   const navigate = useNavigate();
   const updateCommissionStatus = useUpdateCommissionStatus();
@@ -199,6 +199,7 @@ export default function PendingReview() {
           status: "completed",
           previousStatus: item.status,
           date_completed: new Date().toISOString().split("T")[0],
+          userRole: role || undefined,
         });
         
         // Log audit trail
