@@ -51,9 +51,9 @@ export function useSubcontractor(id: string | undefined) {
         .from("subcontractors")
         .select("*")
         .eq("id", id)
-        .single();
+        .maybeSingle();
       if (error) throw error;
-      return data as Subcontractor;
+      return data as Subcontractor | null;
     },
     enabled: !!id,
   });

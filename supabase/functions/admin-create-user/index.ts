@@ -273,7 +273,7 @@ serve(async (req: Request): Promise<Response> => {
           .from("email_templates")
           .select("subject, heading, intro_text, button_text, footer_text")
           .eq("template_key", "user_invite")
-          .single();
+          .maybeSingle();
 
         // Use template values or defaults
         const template: EmailTemplate = templateData || {

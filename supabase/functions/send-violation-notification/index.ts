@@ -31,17 +31,14 @@ const handler = async (req: Request): Promise<Response> => {
     console.log("Violation notification payload:", payload);
 
     // BUG FIX: Guard required fields
-    if (!payload.user_id) {
-      return new Response(
-        JSON.stringify({ error: "user_id is required" }),
-        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
-    }
-    if (!payload.violation_id) {
-      return new Response(
-        JSON.stringify({ error: "violation_id is required" }),
-        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
+    const requiredFields = ['user_id', 'violation_id', 'violation_type', 'severity'] as const;
+    for (const field of requiredFields) {
+      if (!payload[field]) {
+        return new Response(
+          JSON.stringify({ error: `Missing required field: ${field}` }),
+          { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
     }
 
     const supabaseAdmin = createClient(
@@ -99,7 +96,7 @@ const handler = async (req: Request): Promise<Response> => {
         .from("profiles")
         .select("email")
         .eq("id", userProfile.manager_id)
-        .single();
+        .maybeSingle();
 
       if (manager) {
         managerEmail = manager.email;

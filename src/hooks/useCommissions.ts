@@ -147,10 +147,10 @@ export function useCommissionSubmission(id: string) {
         .from("commission_submissions")
         .select("*")
         .eq("id", id)
-        .single();
+        .maybeSingle();
       
       if (error) throw error;
-      return data as CommissionSubmission;
+      return data as CommissionSubmission | null;
     },
     enabled: !!user && !!id,
   });
@@ -169,7 +169,7 @@ export function useCreateCommission() {
         .from("profiles")
         .select("manager_id, full_name")
         .eq("id", user.id)
-        .single();
+        .maybeSingle();
 
       // Check for team assignment as well
       const { data: teamAssignment } = await supabase
