@@ -170,6 +170,13 @@ const navigationItems: NavItem[] = [
     requiresPlaybook: true,
   },
   {
+    title: "Accounting",
+    href: "/accounting",
+    icon: Calculator,
+    sectionKey: "accounting",
+    requiresPlaybook: true,
+  },
+  {
     title: "Ops Compliance",
     href: "/ops-compliance",
     icon: Shield,
@@ -308,7 +315,7 @@ function SortableNavItem({
 export function AppSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { signOut, isAdmin, isManager, role, user } = useAuth();
+  const { signOut, isAdmin, isManager, role, user, userDepartment } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [openSections, setOpenSections] = useState<string[]>([]);
   const { data: userPermissions } = useCurrentUserPermissions();
@@ -420,6 +427,8 @@ export function AppSidebar() {
       .filter((item) => {
         // Ops Compliance only visible to admin
         if (item.sectionKey === "ops-compliance" && !isAdmin) return false;
+        // Accounting only visible to Accounting dept and admin
+        if (item.sectionKey === "accounting" && userDepartment !== "Accounting" && !isAdmin) return false;
         return isSectionVisible(item.sectionKey, userPermissions, role);
       })
       .map((item) => {
