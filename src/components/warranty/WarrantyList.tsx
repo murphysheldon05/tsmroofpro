@@ -422,7 +422,7 @@ export function WarrantyList({ onEdit, onView }: WarrantyListProps) {
               className="bg-destructive text-destructive-foreground"
               onClick={() => {
                 if (deleteId) {
-                  deleteMutation.mutate(deleteId);
+                  deleteMutation.mutate({ id: deleteId, userRole: role || undefined });
                   setDeleteId(null);
                 }
               }}

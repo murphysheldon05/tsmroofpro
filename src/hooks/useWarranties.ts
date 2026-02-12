@@ -192,7 +192,16 @@ export function useUpdateWarranty() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, previousStatus, ...updates }: Partial<WarrantyRequest> & { id: string; previousStatus?: string }) => {
+    mutationFn: async ({ id, previousStatus, userRole, ...updates }: Partial<WarrantyRequest> & { id: string; previousStatus?: string; userRole?: string }) => {
+      // ENFORCEMENT: Only managers and admins can mark as completed or denied
+      const terminalStatuses: string[] = ["completed", "denied"];
+      if (updates.status && terminalStatuses.includes(updates.status)) {
+        const allowedRoles = ["admin", "manager", "sales_manager"];
+        if (!userRole || !allowedRoles.includes(userRole)) {
+          throw new Error("Only managers and admins can mark warranties as completed or denied.");
+        }
+      }
+
       const { data, error } = await supabase
         .from("warranty_requests")
         .update(updates)
@@ -283,7 +292,13 @@ export function useDeleteWarranty() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (id: string) => {
+    mutationFn: async ({ id, userRole }: { id: string; userRole?: string }) => {
+      // ENFORCEMENT: Only managers and admins can delete warranties
+      const allowedRoles = ["admin", "manager", "sales_manager"];
+      if (!userRole || !allowedRoles.includes(userRole)) {
+        throw new Error("Only managers and admins can delete warranty requests.");
+      }
+
       const { error } = await supabase
         .from("warranty_requests")
         .delete()
