@@ -9,9 +9,10 @@ export function useAccountingCommissions() {
   return useQuery({
     queryKey: ["accounting-commissions"],
     queryFn: async () => {
+      // Fetch approved/paid commissions with manager approval info
       const { data, error } = await supabase
         .from("commission_documents")
-        .select("*")
+        .select("*, manager_approved_by_profile:profiles!commission_documents_manager_approved_by_fkey(full_name, email)")
         .in("status", ["approved", "paid"])
         .order("created_at", { ascending: false });
 
