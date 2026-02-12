@@ -3,6 +3,7 @@ import { CommissionSubmission } from "./useCommissions";
 
 interface NotificationPayload {
   notification_type: "submitted" | "manager_approved" | "accounting_approved" | "paid" | "revision_required" | "status_change";
+  document_type?: 'commission_document' | 'commission_submission';
   commission_id: string;
   job_name: string;
   job_address: string;
@@ -34,6 +35,7 @@ export async function sendCommissionNotification(
   try {
     const payload: NotificationPayload = {
       notification_type: notificationType,
+      document_type: 'commission_submission',
       commission_id: submission.id,
       job_name: submission.job_name,
       job_address: submission.job_address,

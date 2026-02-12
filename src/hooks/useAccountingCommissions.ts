@@ -119,6 +119,7 @@ export function useMarkCommissionsPaid() {
           await supabase.functions.invoke("send-commission-notification", {
             body: {
               notification_type: "paid",
+              document_type: "commission_document",
               commission_id: commissionId,
               job_name: commission.job_name_id,
               job_address: commission.job_name_id,
