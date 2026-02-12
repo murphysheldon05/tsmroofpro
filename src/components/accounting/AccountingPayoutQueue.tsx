@@ -179,10 +179,18 @@ export function AccountingPayoutQueue({ mode }: Props) {
                         {commission.status === "paid" ? "Paid" : "Approved"}
                       </Badge>
                     </div>
-                    <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
+                    <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5 flex-wrap">
                       <span>{commission.sales_rep}</span>
+                      {(commission as any).manager_approved_by_profile?.full_name && (
+                        <span className="text-primary/70">
+                          Approved by: {(commission as any).manager_approved_by_profile.full_name}
+                        </span>
+                      )}
+                      {commission.manager_approved_at && (
+                        <span>on {format(new Date(commission.manager_approved_at), "MMM d, yyyy")}</span>
+                      )}
                       {payDate && mode === "pending" && (
-                        <span>Pay by: {formatPayDateShort(payDate)}</span>
+                        <span>• Pay by: {formatPayDateShort(payDate)}</span>
                       )}
                       {commission.paid_at && mode === "history" && (
                         <span>Paid: {format(new Date(commission.paid_at), "MMM d, yyyy")}</span>
