@@ -17,7 +17,7 @@ import { supabase } from "@/integrations/supabase/client";
 export default function CommissionDocumentDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user, role, isAdmin } = useAuth();
+  const { user, role, isAdmin, userDepartment } = useAuth();
   const { data: document, isLoading } = useCommissionDocument(id);
   const updateStatusMutation = useUpdateCommissionDocumentStatus();
 
@@ -52,7 +52,7 @@ export default function CommissionDocumentDetail() {
 
   // --- Role-based action permissions ---
   const isSalesManager = role === 'sales_manager';
-  const isAccountingDept = role === 'admin'; // For now admin handles accounting approval
+  const isAccountingUser = userDepartment === 'Accounting';
   
   // Manager can approve submitted docs (but NOT their own)
   const canApproveAsManager = (isAdmin || isSalesManager) && 
@@ -62,11 +62,11 @@ export default function CommissionDocumentDetail() {
   // Self-submitted by a sales manager → needs admin approval
   const isSelfSubmission = isSalesManager && document?.created_by === user?.id && document?.status === 'submitted';
   
-  // Accounting can process manager_approved docs
-  const canApproveAsAccounting = isAdmin && document?.status === 'manager_approved';
+  // Accounting can process manager_approved docs (Admin OR Accounting department)
+  const canApproveAsAccounting = (isAdmin || isAccountingUser) && document?.status === 'manager_approved';
   
-  // Accounting can mark as paid
-  const canMarkAsPaid = isAdmin && document?.status === 'accounting_approved';
+  // Accounting can mark as paid (Admin OR Accounting department)
+  const canMarkAsPaid = (isAdmin || isAccountingUser) && document?.status === 'accounting_approved';
   
   // Creator can edit drafts, revision_required, and rejected docs
   const canEdit = document?.created_by === user?.id && 

@@ -94,6 +94,14 @@ serve(async (req: Request): Promise<Response> => {
 
     const { type, title, description, submitter_name, submitter_email, has_attachment }: RequestNotification = await req.json();
 
+    // Guard required fields
+    if (!type || !title || !submitter_email) {
+      return new Response(
+        JSON.stringify({ error: "Missing required fields: type, title, and submitter_email are required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     console.log("Sending notification for request:", { type, title, submitter_name });
 
     // Create in-app notification for admins and managers

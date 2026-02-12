@@ -69,7 +69,7 @@ export async function getSubmitterInfo(userId: string): Promise<{ email: string;
       .from("profiles")
       .select("email, full_name")
       .eq("id", userId)
-      .single();
+      .maybeSingle();
 
     if (error || !profile) {
       console.error("Failed to get submitter info:", error);

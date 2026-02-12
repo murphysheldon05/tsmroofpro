@@ -23,6 +23,14 @@ const handler = async (req: Request): Promise<Response> => {
   try {
     const { email, inviter_name }: InviteRequest = await req.json();
 
+    // Guard required fields
+    if (!email) {
+      return new Response(
+        JSON.stringify({ error: "Missing required field: email" }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
     console.log("Sending invite to:", email);
 
     // HARD LOCK: Always use tsmroofpro.com for ALL auth emails

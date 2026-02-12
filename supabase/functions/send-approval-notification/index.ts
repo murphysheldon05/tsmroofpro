@@ -32,6 +32,14 @@ const handler = async (req: Request): Promise<Response> => {
   try {
     const { user_email, user_name, custom_message, assigned_role, assigned_department }: ApprovalNotificationRequest = await req.json();
 
+    // Guard required fields
+    if (!user_email) {
+      return new Response(
+        JSON.stringify({ error: "Missing required field: user_email" }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
     console.log("Sending approval notification to:", user_email, "role:", assigned_role, "dept:", assigned_department);
 
     // HARD LOCK: Always use tsmroofpro.com for all auth emails - never use any other domain

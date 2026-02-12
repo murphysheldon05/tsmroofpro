@@ -22,7 +22,7 @@ export function useEmailTemplate(templateKey: string) {
         .from("email_templates")
         .select("*")
         .eq("template_key", templateKey)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
       return data as EmailTemplate;

@@ -30,11 +30,14 @@ const handler = async (req: Request): Promise<Response> => {
     console.log("Hold notification payload:", payload);
 
     // BUG FIX: Guard required fields
-    if (!payload.user_id) {
-      return new Response(
-        JSON.stringify({ error: "user_id is required" }),
-        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
+    const requiredFields = ['user_id', 'hold_type'] as const;
+    for (const field of requiredFields) {
+      if (!(payload as any)[field]) {
+        return new Response(
+          JSON.stringify({ error: `Missing required field: ${field}` }),
+          { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
     }
 
     const supabaseAdmin = createClient(
