@@ -53,14 +53,25 @@ const MasterPlaybook = forwardRef<HTMLDivElement>((_, ref) => {
     pb.description.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Send completion notification once when all complete
+  // Send completion notification exactly once — check DB to avoid re-sending on revisit
   useEffect(() => {
-    if (allCompleted && !hasNotified.current && completedCount === totalCount) {
-      hasNotified.current = true;
+    if (!allCompleted || hasNotified.current || completedCount !== totalCount || !user?.id) return;
+    hasNotified.current = true;
+
+    (async () => {
+      // Check if a completion notification was already sent for this user
+      const checkResult: { data: any[] | null } = await supabase
+        .from("user_notifications" as any)
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("type", "playbook_complete");
+
+      if (checkResult.data && checkResult.data.length > 0) return;
+
       supabase.functions.invoke("notify-playbook-completion", {
-        body: { userId: user?.id },
+        body: { userId: user.id },
       }).catch(e => console.error("Error sending completion notification:", e));
-    }
+    })();
   }, [allCompleted, completedCount, totalCount, user?.id]);
 
   const handleAcknowledge = async (sopNumber: number) => {
