@@ -36,6 +36,7 @@ import CommandCenter from "./pages/CommandCenter";
 import PendingReview from "./pages/PendingReview";
 import OpsCompliance from "./pages/OpsCompliance";
 import Draws from "./pages/Draws";
+import Accounting from "./pages/Accounting";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -286,6 +287,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <OpsCompliance />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/accounting"
+              element={
+                <ProtectedRoute>
+                  <Accounting />
                 </ProtectedRoute>
               }
             />
