@@ -29,6 +29,9 @@ export function useMasterSOPAcknowledgments() {
       return data || [];
     },
     enabled: !!user?.id,
+    // Once loaded, don't refetch — acknowledgments are permanent per version
+    staleTime: Infinity,
+    gcTime: 1000 * 60 * 60, // Keep cached for 1 hour
   });
 
   // Get status for each SOP (1-10)

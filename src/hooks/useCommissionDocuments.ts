@@ -166,6 +166,34 @@ export function useCreateCommissionDocument() {
         .single();
 
       if (error) throw error;
+
+      // Send notification on creation
+      try {
+        const { data: creatorProfile } = await supabase
+          .from('profiles')
+          .select('email, full_name')
+          .eq('id', user.id)
+          .single();
+
+        await supabase.functions.invoke('send-commission-notification', {
+          body: {
+            notification_type: 'submitted',
+            commission_id: result.id,
+            job_name: data.job_name_id || '',
+            job_address: data.job_name_id || '',
+            sales_rep_name: data.sales_rep || '',
+            subcontractor_name: null,
+            submission_type: 'employee',
+            contract_amount: data.gross_contract_total || 0,
+            net_commission_owed: result.rep_commission || 0,
+            submitter_email: creatorProfile?.email || '',
+            submitter_name: creatorProfile?.full_name || data.sales_rep || '',
+          },
+        });
+      } catch (notifyError) {
+        console.error('Failed to send commission document notification:', notifyError);
+      }
+
       return result;
     },
     onSuccess: () => {
