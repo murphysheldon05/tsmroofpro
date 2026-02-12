@@ -211,6 +211,7 @@ export function useCreateCommission() {
         await supabase.functions.invoke("send-commission-notification", {
           body: {
             notification_type: "submitted",
+            document_type: "commission_submission",
             commission_id: result.id,
             job_name: data.job_name || "",
             job_address: data.job_address || "",
@@ -418,6 +419,7 @@ export function useUpdateCommissionStatus() {
         await supabase.functions.invoke("send-commission-notification", {
           body: {
             notification_type: notificationType,
+            document_type: "commission_submission",
             commission_id: id,
             job_name: current?.job_name,
             job_address: current?.job_address,

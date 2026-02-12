@@ -148,7 +148,11 @@ const handler = async (req: Request): Promise<Response> => {
 
     // HARD LOCK: Always use tsmroofpro.com for all portal links - never use any other domain
     const appUrl = "https://tsmroofpro.com";
-    const commissionUrl = `${appUrl}/commissions/${payload.commission_id}`;
+    // Route to correct detail page based on document_type
+    const basePath = (rawPayload as any).document_type === 'commission_document' 
+      ? 'commission-documents' 
+      : 'commissions';
+    const commissionUrl = `${appUrl}/${basePath}/${payload.commission_id}`;
 
     const formatCurrency = (value: number) => {
       return new Intl.NumberFormat("en-US", {
