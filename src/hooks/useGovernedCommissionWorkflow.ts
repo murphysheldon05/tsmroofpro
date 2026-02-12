@@ -183,6 +183,7 @@ export function useDenyCommission() {
         await supabase.functions.invoke("send-commission-notification", {
           body: {
             notification_type: "denied",
+            document_type: "commission_submission",
             commission_id: commissionId,
             job_name: commission?.job_name,
             job_address: commission?.job_address,
@@ -301,6 +302,7 @@ export function useRequestRevision() {
         await supabase.functions.invoke("send-commission-notification", {
           body: {
             notification_type: "revision_required",
+            document_type: "commission_submission",
             commission_id: commissionId,
             job_name: commission?.job_name,
             job_address: commission?.job_address,
@@ -446,6 +448,7 @@ export function useApproveCommission() {
           .single();
 
         const notifPayload: any = {
+          document_type: "commission_submission",
           commission_id: commissionId,
           job_name: commission?.job_name,
           job_address: commission?.job_address,
