@@ -178,6 +178,7 @@ export function useCreateCommissionDocument() {
         await supabase.functions.invoke('send-commission-notification', {
           body: {
             notification_type: 'submitted',
+            document_type: 'commission_document',
             commission_id: result.id,
             job_name: data.job_name_id || '',
             job_address: data.job_name_id || '',
@@ -444,6 +445,7 @@ async function sendCommissionDocumentNotification(
 
     const payload = {
       notification_type: notificationType,
+      document_type: 'commission_document',
       commission_id: doc.id,
       job_name: doc.job_name_id,
       job_address: doc.job_name_id, // Using job_name_id as we don't have separate address
