@@ -288,6 +288,7 @@ export function useUpdateCommissionDocumentStatus() {
       status: 'draft' | 'submitted' | 'approved' | 'rejected' | 'manager_approved' | 'accounting_approved' | 'paid' | 'revision_required'; 
       approval_comment?: string;
       revision_reason?: string;
+      notes?: string;
     }) => {
       const updateData: Record<string, any> = { status };
       
@@ -370,10 +371,21 @@ export function useUpdateCommissionDocumentStatus() {
         updateData.scheduled_pay_date = payDate.toISOString().split('T')[0]; // YYYY-MM-DD format
       }
 
+      // Handle rejected/denied status
+      if (status === 'rejected') {
+        if (approval_comment) {
+          updateData.approval_comment = approval_comment;
+        }
+        updateData.revision_reason = revision_reason || approval_comment || null;
+      }
+
       // Handle paid status
       if (status === 'paid') {
         updateData.paid_by = user?.id || null;
         updateData.paid_at = new Date().toISOString();
+        if (approval_comment) {
+          updateData.approval_comment = approval_comment;
+        }
       }
 
       const { data, error } = await supabase
@@ -386,7 +398,7 @@ export function useUpdateCommissionDocumentStatus() {
       if (error) throw error;
       
       // Send notification after successful status update
-      await sendCommissionDocumentNotification(data as CommissionDocument, status, revision_reason);
+      await sendCommissionDocumentNotification(data as CommissionDocument, status, revision_reason || approval_comment);
       
       return data;
     },
@@ -426,6 +438,7 @@ async function sendCommissionDocumentNotification(
       'accounting_approved': 'accounting_approved',
       'paid': 'paid',
       'revision_required': 'revision_required',
+      'rejected': 'denied',
     };
 
     const notificationType = notificationTypeMap[status];
