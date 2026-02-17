@@ -642,6 +642,60 @@ export type Database = {
           },
         ]
       }
+      commission_entries: {
+        Row: {
+          amount_paid: number
+          applied_bank: number | null
+          approved_date: string | null
+          check_type: string | null
+          created_at: string
+          customer: string | null
+          earned_comm: number | null
+          has_paid: boolean | null
+          id: string
+          job: string | null
+          job_value: number | null
+          notes: string | null
+          paid_date: string
+          pay_type: string
+          rep_name: string
+        }
+        Insert: {
+          amount_paid?: number
+          applied_bank?: number | null
+          approved_date?: string | null
+          check_type?: string | null
+          created_at?: string
+          customer?: string | null
+          earned_comm?: number | null
+          has_paid?: boolean | null
+          id?: string
+          job?: string | null
+          job_value?: number | null
+          notes?: string | null
+          paid_date: string
+          pay_type?: string
+          rep_name: string
+        }
+        Update: {
+          amount_paid?: number
+          applied_bank?: number | null
+          approved_date?: string | null
+          check_type?: string | null
+          created_at?: string
+          customer?: string | null
+          earned_comm?: number | null
+          has_paid?: boolean | null
+          id?: string
+          job?: string | null
+          job_value?: number | null
+          notes?: string | null
+          paid_date?: string
+          pay_type?: string
+          rep_name?: string
+        }
+        Relationships: []
+      }
       commission_reviewers: {
         Row: {
           can_approve: boolean | null
