@@ -25,7 +25,7 @@ export default function CommissionDocumentDetail() {
   const [showPrint, setShowPrint] = useState(false);
   const [showApprovalDialog, setShowApprovalDialog] = useState(false);
   const [approvalAction, setApprovalAction] = useState<
-    'approved' | 'rejected' | 'manager_approved' | 'accounting_approved' | 'revision_required' | 'submitted'
+    'approved' | 'rejected' | 'manager_approved' | 'accounting_approved' | 'revision_required' | 'submitted' | 'paid'
   >('approved');
   const [approvalComment, setApprovalComment] = useState("");
 
@@ -85,10 +85,17 @@ export default function CommissionDocumentDetail() {
         status: 'revision_required',
         revision_reason: approvalComment,
       });
+    } else if (approvalAction === 'rejected') {
+      await updateStatusMutation.mutateAsync({
+        id,
+        status: 'rejected',
+        approval_comment: approvalComment,
+        revision_reason: approvalComment,
+      });
     } else {
       await updateStatusMutation.mutateAsync({
         id,
-        status: approvalAction,
+        status: approvalAction as any,
         approval_comment: approvalComment,
       });
     }
@@ -219,6 +226,7 @@ export default function CommissionDocumentDetail() {
     rejected: 'Deny Commission',
     revision_required: 'Request Revision',
     submitted: 'Send Back to Manager',
+    paid: 'Mark as Paid',
   }[approvalAction] || 'Commission Action';
 
   const dialogButtonLabel = {
@@ -228,6 +236,7 @@ export default function CommissionDocumentDetail() {
     rejected: 'Deny',
     revision_required: 'Request Revision',
     submitted: 'Send Back',
+    paid: 'Confirm Paid',
   }[approvalAction] || 'Confirm';
 
   const requiresNotes = approvalAction === 'rejected' || approvalAction === 'revision_required';
@@ -311,7 +320,7 @@ export default function CommissionDocumentDetail() {
           {canMarkAsPaid && (
             <Button
               className="bg-emerald-600 hover:bg-emerald-700"
-              onClick={() => { setApprovalAction('approved'); setShowApprovalDialog(true); }}
+              onClick={() => { setApprovalAction('paid' as any); setShowApprovalDialog(true); }}
             >
               <CheckCircle2 className="h-4 w-4 mr-2" />
               Mark as Paid
