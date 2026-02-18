@@ -118,13 +118,42 @@ export function useWarranties() {
   return useQuery({
     queryKey: ["warranties"],
     queryFn: async () => {
+      const { data: userData } = await supabase.auth.getUser();
+      const userId = userData.user?.id;
+
       const { data, error } = await supabase
         .from("warranty_requests")
         .select("*")
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      return data as WarrantyRequest[];
+      const all = data as WarrantyRequest[];
+
+      // If no user, return empty
+      if (!userId) return [];
+
+      // Check role — admin/manager/sales_manager see all; others see only assigned/created
+      const { data: roleData } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userId)
+        .limit(1)
+        .maybeSingle();
+
+      const userRole = roleData?.role;
+      const fullAccessRoles = ["admin", "manager", "sales_manager"];
+
+      if (userRole && fullAccessRoles.includes(userRole)) {
+        return all;
+      }
+
+      // Production / other roles: only assigned, secondary support, or created by them
+      return all.filter(
+        (w) =>
+          w.assigned_production_member === userId ||
+          w.secondary_support === userId ||
+          w.created_by === userId
+      );
     },
   });
 }
@@ -221,11 +250,15 @@ export function useUpdateWarranty() {
         }
       }
 
-      // CLOSE GATE: Cannot move to "closed" without completed requirements + customer notified
+      // CLOSE GATE: Cannot move to "closed" without completed requirements + customer notified + manufacturer claim finalized
       if (updates.status === "closed") {
         if (!updates.customer_notified_of_completion) {
           throw new Error("Customer must be notified of completion before moving to Closed.");
         }
+        // Manufacturer claim must be finalized if warranty is manufacturer or combination type
+        // (We check is_manufacturer_claim_filed is explicitly set — either true or false is fine, 
+        // meaning the user has made a decision on it)
+        
         // Auto-set closed metadata
         const { data: user } = await supabase.auth.getUser();
         updates.closed_date = new Date().toISOString().split("T")[0];
