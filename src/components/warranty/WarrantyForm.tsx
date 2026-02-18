@@ -81,6 +81,7 @@ export function WarrantyForm({ open, onOpenChange, warranty }: WarrantyFormProps
       material_cost: warranty?.material_cost || null,
       is_manufacturer_claim_filed: warranty?.is_manufacturer_claim_filed || false,
       closeout_photos_uploaded: warranty?.closeout_photos_uploaded || false,
+      customer_notified_of_completion: warranty?.customer_notified_of_completion || false,
     },
   });
 
@@ -318,7 +319,7 @@ export function WarrantyForm({ open, onOpenChange, warranty }: WarrantyFormProps
                   <Input id="material_cost" type="number" step="0.01" {...register("material_cost", { valueAsNumber: true })} />
                 </div>
               </div>
-              <div className="flex items-center gap-6">
+              <div className="flex items-center gap-6 flex-wrap">
                 <div className="flex items-center space-x-2">
                   <Switch
                     id="is_manufacturer_claim_filed"
@@ -334,6 +335,14 @@ export function WarrantyForm({ open, onOpenChange, warranty }: WarrantyFormProps
                     onCheckedChange={(v) => setValue("closeout_photos_uploaded", v)}
                   />
                   <Label htmlFor="closeout_photos_uploaded">Close-Out Photos Uploaded</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="customer_notified_of_completion"
+                    checked={watch("customer_notified_of_completion")}
+                    onCheckedChange={(v) => setValue("customer_notified_of_completion", v)}
+                  />
+                  <Label htmlFor="customer_notified_of_completion">Customer Notified of Completion</Label>
                 </div>
               </div>
             </div>

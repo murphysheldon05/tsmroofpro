@@ -286,6 +286,31 @@ export function WarrantyDetail({ open, onOpenChange, warranty, onEdit }: Warrant
                     <span className="text-muted-foreground">Close-Out Photos</span>
                     <p className="font-medium">{warranty.closeout_photos_uploaded ? "Uploaded" : "Not uploaded"}</p>
                   </div>
+                  <div>
+                    <span className="text-muted-foreground">Customer Notified</span>
+                    <p className="font-medium">{warranty.customer_notified_of_completion ? "Yes" : "No"}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Closed Info */}
+            {warranty.status === "closed" && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Closed Info</CardTitle>
+                </CardHeader>
+                <CardContent className="grid grid-cols-2 gap-4 text-sm">
+                  {warranty.closed_date && (
+                    <div>
+                      <span className="text-muted-foreground">Closed Date</span>
+                      <p className="font-medium">{format(parseISO(warranty.closed_date), "MMM d, yyyy")}</p>
+                    </div>
+                  )}
+                  <div>
+                    <span className="text-muted-foreground">Closed By</span>
+                    <p className="font-medium">{getProfileName(warranty.closed_by)}</p>
+                  </div>
                 </CardContent>
               </Card>
             )}

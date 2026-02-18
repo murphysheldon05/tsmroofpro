@@ -43,14 +43,14 @@ export function WarrantyOversightTab() {
 
   const overdue14 = useMemo(() => {
     return (warranties || []).filter(w => {
-      if (w.status === "completed" || w.status === "cancelled") return false;
+      if (w.status === "completed" || w.status === "cancelled" || w.status === "closed") return false;
       return differenceInDays(new Date(), new Date(w.created_at)) > 14;
     }).length;
   }, [warranties]);
 
   const overdue30 = useMemo(() => {
     return (warranties || []).filter(w => {
-      if (w.status === "completed" || w.status === "cancelled") return false;
+      if (w.status === "completed" || w.status === "cancelled" || w.status === "closed") return false;
       return differenceInDays(new Date(), new Date(w.created_at)) > 30;
     }).length;
   }, [warranties]);

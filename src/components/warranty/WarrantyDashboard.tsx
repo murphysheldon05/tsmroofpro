@@ -47,7 +47,7 @@ export function WarrantyDashboard({ onSelectWarranty }: DashboardProps) {
     // By assigned member
     const byMember: Record<string, number> = {};
     warranties.forEach((w) => {
-      if (w.assigned_production_member && w.status !== "completed" && w.status !== "denied") {
+      if (w.assigned_production_member && w.status !== "completed" && w.status !== "denied" && w.status !== "closed") {
         const name = profilesMap[w.assigned_production_member] || "Unknown";
         byMember[name] = (byMember[name] || 0) + 1;
       }
@@ -55,7 +55,7 @@ export function WarrantyDashboard({ onSelectWarranty }: DashboardProps) {
 
     // Overdue (no status change in 7+ days and not completed/denied)
     const overdue = warranties.filter((w) => {
-      if (w.status === "completed" || w.status === "denied") return false;
+      if (w.status === "completed" || w.status === "denied" || w.status === "closed") return false;
       const lastChange = parseISO(w.last_status_change_at);
       return differenceInDays(now, lastChange) >= 7;
     });
@@ -76,7 +76,7 @@ export function WarrantyDashboard({ onSelectWarranty }: DashboardProps) {
 
     // Active (non-completed, non-denied)
     const active = warranties.filter(
-      (w) => w.status !== "completed" && w.status !== "denied"
+      (w) => w.status !== "completed" && w.status !== "denied" && w.status !== "closed"
     );
 
     // By priority (active only)
