@@ -32,6 +32,7 @@ import CommissionDocumentNew from "./pages/CommissionDocumentNew";
 import CommissionDocumentDetail from "./pages/CommissionDocumentDetail";
 import CommissionTracker from "./pages/CommissionTracker";
 import CommissionTrackerDetail from "./pages/CommissionTrackerDetail";
+import MyCommissionTracker from "./pages/MyCommissionTracker";
 import BuildSchedule from "./pages/BuildSchedule";
 import DeliverySchedule from "./pages/DeliverySchedule";
 import CommandCenter from "./pages/CommandCenter";
@@ -297,6 +298,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <CommissionTrackerDetail />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/my-commissions"
+              element={
+                <ProtectedRoute>
+                  <MyCommissionTracker />
                 </ProtectedRoute>
               }
             />

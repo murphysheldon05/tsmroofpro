@@ -50,6 +50,7 @@ import {
   Lock,
   GripVertical,
   Ruler,
+  BarChart3,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -100,6 +101,7 @@ const navigationItems: NavItem[] = [
     children: [
       { title: "Submissions", href: "/commissions", icon: DollarSign, sectionKey: "commissions", requiresPlaybook: true },
       { title: "Documents", href: "/commission-documents", icon: FileText, sectionKey: "commissions", requiresPlaybook: true },
+      { title: "My Tracker", href: "/my-commissions", icon: BarChart3, sectionKey: "commissions", requiresPlaybook: true },
       { title: "Tracker", href: "/commission-tracker", icon: TrendingUp, sectionKey: "commissions", requiresPlaybook: true, managerOnly: true },
     ],
   },
