@@ -17,9 +17,10 @@ interface RepDetailViewProps {
   repColor: string;
   entries: EnrichedEntry[];
   readOnly?: boolean;
+  hideBackButton?: boolean;
 }
 
-export function RepDetailView({ repName, repColor, entries, readOnly }: RepDetailViewProps) {
+export function RepDetailView({ repName, repColor, entries, readOnly, hideBackButton }: RepDetailViewProps) {
   const navigate = useNavigate();
   const [expandedDates, setExpandedDates] = useState<Set<string>>(new Set());
   const [showShareModal, setShowShareModal] = useState(false);
@@ -83,9 +84,11 @@ export function RepDetailView({ repName, repColor, entries, readOnly }: RepDetai
   return (
     <div className="space-y-5">
       <div className="flex items-center gap-3">
-        <Button variant="ghost" size="icon" onClick={() => navigate("/commission-tracker")} className="rounded-xl">
-          <ChevronLeft className="h-5 w-5" />
-        </Button>
+        {!hideBackButton && (
+          <Button variant="ghost" size="icon" onClick={() => navigate("/commission-tracker")} className="rounded-xl">
+            <ChevronLeft className="h-5 w-5" />
+          </Button>
+        )}
         <Avatar className="h-12 w-12">
           <AvatarFallback style={{ backgroundColor: repColor }} className="text-white text-lg font-bold">
             {getRepInitials(repName)}
