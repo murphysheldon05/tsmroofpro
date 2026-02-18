@@ -6,8 +6,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ChevronLeft, ChevronRight, Share2 } from "lucide-react";
 import { PayTypeBadge } from "./PayTypeBadge";
-import { formatUSD, getRepColor, getRepInitials } from "@/hooks/useCommissionEntries";
-import type { CommissionEntry } from "@/hooks/useCommissionEntries";
+import { formatUSD, getRepInitials, type EnrichedEntry } from "@/hooks/useCommissionEntries";
 import { format, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -15,45 +14,41 @@ import { toast } from "sonner";
 
 interface RepDetailViewProps {
   repName: string;
-  entries: CommissionEntry[];
+  repColor: string;
+  entries: EnrichedEntry[];
   readOnly?: boolean;
 }
 
-export function RepDetailView({ repName, entries, readOnly }: RepDetailViewProps) {
+export function RepDetailView({ repName, repColor, entries, readOnly }: RepDetailViewProps) {
   const navigate = useNavigate();
   const [expandedDates, setExpandedDates] = useState<Set<string>>(new Set());
   const [showShareModal, setShowShareModal] = useState(false);
   const isPrestonStuart = repName.toUpperCase().includes("PRESTON STUART");
 
-  const avatarColor = getRepColor(repName);
   const ytdPaid = entries.reduce((s, e) => s + e.amount_paid, 0);
-  const jobCommissions = entries.filter(e => e.pay_type === "Commission");
+  const jobCommissions = entries.filter((e) => e.pay_type_name === "Commission");
   const jobCount = jobCommissions.length;
-  const totalJobValue = entries.filter(e => e.job_value).reduce((s, e) => s + (e.job_value || 0), 0);
-  const avgCommPct = totalJobValue > 0 ? (ytdPaid / totalJobValue * 100) : 0;
-  const drawsAdvances = entries.filter(e => e.pay_type !== "Commission").reduce((s, e) => s + e.amount_paid, 0);
+  const totalJobValue = entries.filter((e) => e.job_value).reduce((s, e) => s + (e.job_value || 0), 0);
+  const avgCommPct = totalJobValue > 0 ? (ytdPaid / totalJobValue) * 100 : 0;
+  const drawsAdvances = entries.filter((e) => e.pay_type_name !== "Commission").reduce((s, e) => s + e.amount_paid, 0);
 
-  // Preston-specific
-  const drawsTaken = isPrestonStuart ? entries.filter(e => (e.applied_bank || 0) < 0).reduce((s, e) => s + Math.abs(e.applied_bank || 0), 0) : 0;
-  const drawPaybacks = isPrestonStuart ? entries.filter(e => (e.applied_bank || 0) > 0).reduce((s, e) => s + (e.applied_bank || 0), 0) : 0;
+  const drawsTaken = isPrestonStuart ? entries.filter((e) => (e.applied_bank || 0) < 0).reduce((s, e) => s + Math.abs(e.applied_bank || 0), 0) : 0;
+  const drawPaybacks = isPrestonStuart ? entries.filter((e) => (e.applied_bank || 0) > 0).reduce((s, e) => s + (e.applied_bank || 0), 0) : 0;
   const drawBalance = isPrestonStuart ? drawsTaken - drawPaybacks : 0;
 
-  // Group by paid_date
   const grouped = useMemo(() => {
-    const groups: { date: string; items: CommissionEntry[] }[] = [];
-    const dateMap = new Map<string, CommissionEntry[]>();
-    entries.forEach(e => {
-      const d = e.paid_date;
-      if (!dateMap.has(d)) dateMap.set(d, []);
-      dateMap.get(d)!.push(e);
+    const dateMap = new Map<string, EnrichedEntry[]>();
+    entries.forEach((e) => {
+      if (!dateMap.has(e.paid_date)) dateMap.set(e.paid_date, []);
+      dateMap.get(e.paid_date)!.push(e);
     });
-    dateMap.forEach((items, date) => groups.push({ date, items }));
-    groups.sort((a, b) => a.date.localeCompare(b.date));
-    return groups;
+    return Array.from(dateMap.entries())
+      .map(([date, items]) => ({ date, items }))
+      .sort((a, b) => a.date.localeCompare(b.date));
   }, [entries]);
 
   const toggleDate = (date: string) => {
-    setExpandedDates(prev => {
+    setExpandedDates((prev) => {
       const next = new Set(prev);
       if (next.has(date)) next.delete(date); else next.add(date);
       return next;
@@ -62,8 +57,7 @@ export function RepDetailView({ repName, entries, readOnly }: RepDetailViewProps
 
   const copyShareLink = () => {
     const slug = repName.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
-    const url = `${window.location.origin}/commission-tracker/${slug}#share`;
-    navigator.clipboard.writeText(url);
+    navigator.clipboard.writeText(`${window.location.origin}/commission-tracker/${slug}#share`);
     toast.success("Share link copied to clipboard");
     setShowShareModal(false);
   };
@@ -83,18 +77,17 @@ export function RepDetailView({ repName, entries, readOnly }: RepDetailViewProps
     );
   }
 
-  const totalJobVal = entries.filter(e => e.job_value).reduce((s, e) => s + (e.job_value || 0), 0);
+  const totalJobVal = entries.filter((e) => e.job_value).reduce((s, e) => s + (e.job_value || 0), 0);
   const totalPaid = entries.reduce((s, e) => s + e.amount_paid, 0);
 
   return (
     <div className="space-y-5">
-      {/* Header */}
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="icon" onClick={() => navigate("/commission-tracker")} className="rounded-xl">
           <ChevronLeft className="h-5 w-5" />
         </Button>
         <Avatar className="h-12 w-12">
-          <AvatarFallback className={`${avatarColor} text-white text-lg font-bold`}>
+          <AvatarFallback style={{ backgroundColor: repColor }} className="text-white text-lg font-bold">
             {getRepInitials(repName)}
           </AvatarFallback>
         </Avatar>
@@ -110,14 +103,11 @@ export function RepDetailView({ repName, entries, readOnly }: RepDetailViewProps
       </div>
 
       {readOnly && (
-        <div className="bg-muted/50 border border-border rounded-xl px-4 py-2 text-sm text-muted-foreground">
-          📋 Read-only view
-        </div>
+        <div className="bg-muted/50 border border-border rounded-xl px-4 py-2 text-sm text-muted-foreground">📋 Read-only view</div>
       )}
 
-      {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {statCards.map(c => (
+        {statCards.map((c) => (
           <Card key={c.label} className={`border-t-4 ${c.color}`}>
             <CardContent className="p-3">
               <div className="text-xs text-muted-foreground font-medium mb-1">{c.label}</div>
@@ -128,12 +118,11 @@ export function RepDetailView({ repName, entries, readOnly }: RepDetailViewProps
         ))}
       </div>
 
-      {/* Transaction Table with collapsible pay runs */}
       <div className="rounded-xl border border-border overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/30">
-              <TableHead className="w-8"></TableHead>
+              <TableHead className="w-8" />
               <TableHead>Pay Date</TableHead>
               <TableHead>Job #</TableHead>
               <TableHead>Customer</TableHead>
@@ -153,54 +142,36 @@ export function RepDetailView({ repName, entries, readOnly }: RepDetailViewProps
             {grouped.map(({ date, items }, gi) => {
               const isMulti = items.length > 1;
               const isExpanded = expandedDates.has(date);
-              const dateJobValue = items.filter(e => e.job_value).reduce((s, e) => s + (e.job_value || 0), 0);
+              const dateJobValue = items.filter((e) => e.job_value).reduce((s, e) => s + (e.job_value || 0), 0);
               const datePaid = items.reduce((s, e) => s + e.amount_paid, 0);
               const bandClass = gi % 2 === 0 ? "" : "bg-blue-50/30 dark:bg-blue-900/5";
 
               if (isMulti) {
                 return (
-                  <>
-                    {/* Summary row */}
-                    <TableRow
-                      key={`summary-${date}`}
-                      className={cn("cursor-pointer hover:bg-muted/20 font-medium", bandClass)}
-                      onClick={() => toggleDate(date)}
-                    >
-                      <TableCell className="w-8 text-center">
-                        <ChevronRight className={cn("h-4 w-4 transition-transform", isExpanded && "rotate-90")} />
-                      </TableCell>
+                  <>{/* Summary row */}
+                    <TableRow key={`summary-${date}`} className={cn("cursor-pointer hover:bg-muted/20 font-medium", bandClass)} onClick={() => toggleDate(date)}>
+                      <TableCell className="w-8 text-center"><ChevronRight className={cn("h-4 w-4 transition-transform", isExpanded && "rotate-90")} /></TableCell>
                       <TableCell className="font-semibold">{format(parseISO(date), "MM/dd/yyyy")}</TableCell>
-                      <TableCell colSpan={isPrestonStuart ? 3 : 3} className="text-muted-foreground text-sm">
-                        {items.length} items on this pay run
-                      </TableCell>
+                      <TableCell colSpan={3} className="text-muted-foreground text-sm">{items.length} items on this pay run</TableCell>
                       <TableCell className="text-right font-mono">{formatUSD(dateJobValue)}</TableCell>
                       <TableCell className="text-right font-mono font-bold">{formatUSD(datePaid)}</TableCell>
                       {isPrestonStuart && <><TableCell /><TableCell /></>}
                       <TableCell />
                     </TableRow>
-                    {/* Expanded items */}
-                    {isExpanded && items.map(entry => (
+                    {isExpanded && items.map((entry) => (
                       <TableRow key={entry.id} className={cn("bg-muted/10", bandClass)}>
                         <TableCell />
                         <TableCell className="text-sm pl-8">{format(parseISO(entry.paid_date), "MM/dd/yyyy")}</TableCell>
                         <TableCell className="text-sm font-mono">{entry.job || "—"}</TableCell>
                         <TableCell className="text-sm">{entry.customer || "—"}</TableCell>
-                        <TableCell>
-                          <PayTypeBadge entryId={entry.id} currentType={entry.pay_type} repName={repName} readOnly={readOnly} />
-                        </TableCell>
+                        <TableCell><PayTypeBadge entryId={entry.id} currentPayType={entry.pay_type} repName={repName} readOnly={readOnly} /></TableCell>
                         <TableCell className="text-right text-sm font-mono">{formatUSD(entry.job_value)}</TableCell>
-                        <TableCell className={cn("text-right text-sm font-mono", !entry.has_paid && "text-muted-foreground")}>
-                          {entry.has_paid ? formatUSD(entry.amount_paid) : "—"}
-                        </TableCell>
+                        <TableCell className={cn("text-right text-sm font-mono", !entry.has_paid && "text-muted-foreground")}>{entry.has_paid ? formatUSD(entry.amount_paid) : "—"}</TableCell>
                         {isPrestonStuart && (
                           <>
                             <TableCell className="text-right text-sm font-mono">{formatUSD(entry.earned_comm)}</TableCell>
                             <TableCell className={cn("text-right text-sm font-mono", (entry.applied_bank || 0) < 0 ? "text-red-600" : (entry.applied_bank || 0) > 0 ? "text-green-600" : "")}>
-                              {entry.applied_bank != null
-                                ? entry.applied_bank < 0
-                                  ? `(${formatUSD(Math.abs(entry.applied_bank))})`
-                                  : formatUSD(entry.applied_bank)
-                                : "—"}
+                              {entry.applied_bank != null ? entry.applied_bank < 0 ? `(${formatUSD(Math.abs(entry.applied_bank))})` : formatUSD(entry.applied_bank) : "—"}
                             </TableCell>
                           </>
                         )}
@@ -211,7 +182,6 @@ export function RepDetailView({ repName, entries, readOnly }: RepDetailViewProps
                 );
               }
 
-              // Single entry - flat row
               const entry = items[0];
               return (
                 <TableRow key={entry.id} className={cn("hover:bg-muted/20", bandClass)}>
@@ -219,22 +189,14 @@ export function RepDetailView({ repName, entries, readOnly }: RepDetailViewProps
                   <TableCell className="text-sm">{format(parseISO(entry.paid_date), "MM/dd/yyyy")}</TableCell>
                   <TableCell className="text-sm font-mono">{entry.job || "—"}</TableCell>
                   <TableCell className="text-sm">{entry.customer || "—"}</TableCell>
-                  <TableCell>
-                    <PayTypeBadge entryId={entry.id} currentType={entry.pay_type} repName={repName} readOnly={readOnly} />
-                  </TableCell>
+                  <TableCell><PayTypeBadge entryId={entry.id} currentPayType={entry.pay_type} repName={repName} readOnly={readOnly} /></TableCell>
                   <TableCell className="text-right text-sm font-mono">{formatUSD(entry.job_value)}</TableCell>
-                  <TableCell className={cn("text-right text-sm font-mono", !entry.has_paid && "text-muted-foreground")}>
-                    {entry.has_paid ? formatUSD(entry.amount_paid) : "—"}
-                  </TableCell>
+                  <TableCell className={cn("text-right text-sm font-mono", !entry.has_paid && "text-muted-foreground")}>{entry.has_paid ? formatUSD(entry.amount_paid) : "—"}</TableCell>
                   {isPrestonStuart && (
                     <>
                       <TableCell className="text-right text-sm font-mono">{formatUSD(entry.earned_comm)}</TableCell>
                       <TableCell className={cn("text-right text-sm font-mono", (entry.applied_bank || 0) < 0 ? "text-red-600" : (entry.applied_bank || 0) > 0 ? "text-green-600" : "")}>
-                        {entry.applied_bank != null
-                          ? entry.applied_bank < 0
-                            ? `(${formatUSD(Math.abs(entry.applied_bank))})`
-                            : formatUSD(entry.applied_bank)
-                          : "—"}
+                        {entry.applied_bank != null ? entry.applied_bank < 0 ? `(${formatUSD(Math.abs(entry.applied_bank))})` : formatUSD(entry.applied_bank) : "—"}
                       </TableCell>
                     </>
                   )}
@@ -257,15 +219,10 @@ export function RepDetailView({ repName, entries, readOnly }: RepDetailViewProps
         </Table>
       </div>
 
-      {/* Share Modal */}
       <Dialog open={showShareModal} onOpenChange={setShowShareModal}>
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Share {repName}'s Commission Report</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-muted-foreground mb-4">
-            Anyone with this link can view a read-only version of this rep's commission data.
-          </p>
+          <DialogHeader><DialogTitle>Share {repName}'s Commission Report</DialogTitle></DialogHeader>
+          <p className="text-sm text-muted-foreground mb-4">Anyone with this link can view a read-only version of this rep's commission data.</p>
           <Button onClick={copyShareLink} className="w-full rounded-xl">Copy Share Link</Button>
         </DialogContent>
       </Dialog>
