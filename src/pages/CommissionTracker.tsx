@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LayoutGrid, List, ClipboardList } from "lucide-react";
-import { useEnrichedEntries, slugifyRep } from "@/hooks/useCommissionEntries";
+import { useEnrichedEntries, useCommissionPayRuns, slugifyRep } from "@/hooks/useCommissionEntries";
 import { TrackerSummaryCards } from "@/components/commissions/tracker/TrackerSummaryCards";
 import { RepCard } from "@/components/commissions/tracker/RepCard";
 import { AllTransactionsTable } from "@/components/commissions/tracker/AllTransactionsTable";
@@ -13,6 +13,7 @@ import { TrackerSettingsDrawer } from "@/components/commissions/tracker/TrackerS
 export default function CommissionTracker() {
   const navigate = useNavigate();
   const { data: allEntries, isLoading, reps, payTypes } = useEnrichedEntries();
+  const { data: payRuns } = useCommissionPayRuns();
 
   const repGroups = useMemo(() => {
     const map = new Map<string, { name: string; color: string; items: typeof allEntries }>();
@@ -88,7 +89,7 @@ export default function CommissionTracker() {
           </TabsContent>
 
           <TabsContent value="all" className="mt-0">
-            <AllTransactionsTable entries={allEntries} reps={reps} payTypes={payTypes} />
+            <AllTransactionsTable entries={allEntries} reps={reps} payTypes={payTypes} payRuns={payRuns} />
           </TabsContent>
 
           <TabsContent value="pay-runs" className="mt-0">
