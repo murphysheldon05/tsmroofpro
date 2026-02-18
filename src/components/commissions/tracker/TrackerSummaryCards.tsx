@@ -1,24 +1,24 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { DollarSign, Briefcase, TrendingDown, BarChart3 } from "lucide-react";
-import { formatUSD } from "@/hooks/useCommissionEntries";
-import type { CommissionEntry } from "@/hooks/useCommissionEntries";
+import { formatUSD, type EnrichedEntry } from "@/hooks/useCommissionEntries";
 
 interface TrackerSummaryCardsProps {
-  entries: CommissionEntry[];
+  entries: EnrichedEntry[];
+  repCount: number;
 }
 
-export function TrackerSummaryCards({ entries }: TrackerSummaryCardsProps) {
+export function TrackerSummaryCards({ entries, repCount }: TrackerSummaryCardsProps) {
   const totalPaid = entries.reduce((s, e) => s + e.amount_paid, 0);
-  const jobCommissions = entries.filter(e => e.pay_type === "Commission").reduce((s, e) => s + e.amount_paid, 0);
-  const drawsAdvances = entries.filter(e => e.pay_type !== "Commission").reduce((s, e) => s + e.amount_paid, 0);
-  const totalJobValue = entries.filter(e => e.job_value != null).reduce((s, e) => s + (e.job_value || 0), 0);
-  const jobCount = entries.filter(e => e.job_value != null && e.job_value > 0).length;
+  const jobCommissions = entries.filter((e) => e.pay_type_name === "Commission").reduce((s, e) => s + e.amount_paid, 0);
+  const drawsAdvances = entries.filter((e) => e.pay_type_name !== "Commission").reduce((s, e) => s + e.amount_paid, 0);
+  const totalJobValue = entries.filter((e) => e.job_value != null).reduce((s, e) => s + (e.job_value || 0), 0);
+  const jobCount = entries.filter((e) => e.job_value != null && (e.job_value || 0) > 0).length;
 
   const cards = [
     { label: "Total Paid Out", value: formatUSD(totalPaid), icon: DollarSign, color: "text-emerald-600", border: "border-t-emerald-500" },
     { label: "Job Commissions", value: formatUSD(jobCommissions), icon: Briefcase, color: "text-blue-600", border: "border-t-blue-500" },
     { label: "Draws & Advances", value: formatUSD(drawsAdvances), icon: TrendingDown, color: "text-amber-600", border: "border-t-amber-500" },
-    { label: "Total Job Value", value: formatUSD(totalJobValue), sub: `${jobCount} jobs`, icon: BarChart3, color: "text-purple-600", border: "border-t-purple-500" },
+    { label: "Total Job Value", value: formatUSD(totalJobValue), sub: `${jobCount} jobs · ${repCount} reps`, icon: BarChart3, color: "text-purple-600", border: "border-t-purple-500" },
   ];
 
   return (

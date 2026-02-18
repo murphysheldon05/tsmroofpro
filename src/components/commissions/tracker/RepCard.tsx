@@ -1,39 +1,38 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
-import { formatUSD, getRepColor, getRepInitials } from "@/hooks/useCommissionEntries";
-import type { CommissionEntry } from "@/hooks/useCommissionEntries";
+import { formatUSD, getRepInitials, type EnrichedEntry } from "@/hooks/useCommissionEntries";
 
 interface RepCardProps {
   repName: string;
-  entries: CommissionEntry[];
+  repColor: string;
+  entries: EnrichedEntry[];
   totalPaidAllReps: number;
   onClick: () => void;
 }
 
-export function RepCard({ repName, entries, totalPaidAllReps, onClick }: RepCardProps) {
+export function RepCard({ repName, repColor, entries, totalPaidAllReps, onClick }: RepCardProps) {
   const ytdPaid = entries.reduce((s, e) => s + e.amount_paid, 0);
-  const jobCount = entries.filter(e => e.pay_type === "Commission").length;
-  const commissionTotal = entries.filter(e => e.pay_type === "Commission").reduce((s, e) => s + e.amount_paid, 0);
-  const drawTotal = entries.filter(e => e.pay_type !== "Commission").reduce((s, e) => s + e.amount_paid, 0);
+  const jobCount = entries.filter((e) => e.pay_type_name === "Commission").length;
+  const commissionTotal = entries.filter((e) => e.pay_type_name === "Commission").reduce((s, e) => s + e.amount_paid, 0);
+  const drawTotal = entries.filter((e) => e.pay_type_name !== "Commission").reduce((s, e) => s + e.amount_paid, 0);
   const pctOfTotal = totalPaidAllReps > 0 ? (ytdPaid / totalPaidAllReps) * 100 : 0;
-  const avatarColor = getRepColor(repName);
 
   return (
-    <Card 
+    <Card
       className="cursor-pointer hover:-translate-y-0.5 hover:shadow-lg transition-all duration-150 border border-border/60"
       onClick={onClick}
     >
       <CardContent className="p-4">
         <div className="flex items-center gap-3 mb-3">
           <Avatar className="h-10 w-10">
-            <AvatarFallback className={`${avatarColor} text-white text-sm font-bold`}>
+            <AvatarFallback style={{ backgroundColor: repColor }} className="text-white text-sm font-bold">
               {getRepInitials(repName)}
             </AvatarFallback>
           </Avatar>
           <div className="min-w-0 flex-1">
             <div className="font-semibold text-sm truncate">{repName}</div>
-            <div className="text-xs text-muted-foreground">{jobCount} jobs</div>
+            <div className="text-xs text-muted-foreground">{jobCount} jobs · {entries.length} entries</div>
           </div>
         </div>
         <div className="text-2xl font-extrabold tracking-tight mb-2">{formatUSD(ytdPaid)}</div>

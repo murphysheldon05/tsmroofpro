@@ -287,7 +287,7 @@ const App = () => (
             <Route
               path="/commission-tracker"
               element={
-                <ProtectedRoute requireAdmin>
+                <ProtectedRoute>
                   <CommissionTracker />
                 </ProtectedRoute>
               }

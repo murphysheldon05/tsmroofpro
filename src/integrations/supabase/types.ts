@@ -651,14 +651,15 @@ export type Database = {
           created_at: string
           customer: string | null
           earned_comm: number | null
-          has_paid: boolean | null
+          has_paid: boolean
           id: string
           job: string | null
           job_value: number | null
           notes: string | null
           paid_date: string
-          pay_type: string
-          rep_name: string
+          pay_run_id: string | null
+          pay_type_id: string
+          rep_id: string
         }
         Insert: {
           amount_paid?: number
@@ -668,14 +669,15 @@ export type Database = {
           created_at?: string
           customer?: string | null
           earned_comm?: number | null
-          has_paid?: boolean | null
+          has_paid?: boolean
           id?: string
           job?: string | null
           job_value?: number | null
           notes?: string | null
           paid_date: string
-          pay_type?: string
-          rep_name: string
+          pay_run_id?: string | null
+          pay_type_id: string
+          rep_id: string
         }
         Update: {
           amount_paid?: number
@@ -685,14 +687,127 @@ export type Database = {
           created_at?: string
           customer?: string | null
           earned_comm?: number | null
-          has_paid?: boolean | null
+          has_paid?: boolean
           id?: string
           job?: string | null
           job_value?: number | null
           notes?: string | null
           paid_date?: string
-          pay_type?: string
-          rep_name?: string
+          pay_run_id?: string | null
+          pay_type_id?: string
+          rep_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commission_entries_pay_run_id_fkey"
+            columns: ["pay_run_id"]
+            isOneToOne: false
+            referencedRelation: "commission_pay_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_entries_pay_type_id_fkey"
+            columns: ["pay_type_id"]
+            isOneToOne: false
+            referencedRelation: "commission_pay_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_entries_rep_id_fkey"
+            columns: ["rep_id"]
+            isOneToOne: false
+            referencedRelation: "commission_reps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commission_pay_runs: {
+        Row: {
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          id: string
+          run_date: string
+          status: string
+        }
+        Insert: {
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          id?: string
+          run_date: string
+          status?: string
+        }
+        Update: {
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          id?: string
+          run_date?: string
+          status?: string
+        }
+        Relationships: []
+      }
+      commission_pay_types: {
+        Row: {
+          badge_bg: string
+          badge_border: string
+          badge_text: string
+          created_at: string
+          id: string
+          name: string
+          sort_order: number
+        }
+        Insert: {
+          badge_bg?: string
+          badge_border?: string
+          badge_text?: string
+          created_at?: string
+          id?: string
+          name: string
+          sort_order?: number
+        }
+        Update: {
+          badge_bg?: string
+          badge_border?: string
+          badge_text?: string
+          created_at?: string
+          id?: string
+          name?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      commission_reps: {
+        Row: {
+          color: string
+          created_at: string
+          email: string | null
+          id: string
+          is_active: boolean
+          name: string
+          phone: string | null
+          user_id: string | null
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          phone?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          phone?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }
