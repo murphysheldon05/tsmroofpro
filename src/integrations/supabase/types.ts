@@ -3711,6 +3711,8 @@ export type Database = {
           created_at: string
           created_by: string | null
           id: string
+          mention_responded: boolean | null
+          mentioned_users: string[] | null
           note: string
           warranty_id: string
         }
@@ -3718,6 +3720,8 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          mention_responded?: boolean | null
+          mentioned_users?: string[] | null
           note: string
           warranty_id: string
         }
@@ -3725,6 +3729,8 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          mention_responded?: boolean | null
+          mentioned_users?: string[] | null
           note?: string
           warranty_id?: string
         }
@@ -3839,6 +3845,35 @@ export type Database = {
           warranty_type?: string
         }
         Relationships: []
+      }
+      warranty_watchers: {
+        Row: {
+          created_at: string
+          id: string
+          user_id: string
+          warranty_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          user_id: string
+          warranty_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          user_id?: string
+          warranty_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "warranty_watchers_warranty_id_fkey"
+            columns: ["warranty_id"]
+            isOneToOne: false
+            referencedRelation: "warranty_requests"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

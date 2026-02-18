@@ -1,8 +1,7 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
@@ -18,10 +17,13 @@ import {
   useWarrantyDocuments,
   useUploadWarrantyDocument,
 } from "@/hooks/useWarranties";
+import { useWarrantyWatchers, useIsWatching, useToggleWatch } from "@/hooks/useWarrantyWatchers";
+import { MentionTextarea, renderMentionText } from "./MentionTextarea";
+import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format, parseISO, differenceInDays } from "date-fns";
-import { Send, Upload, FileText, Image, Download, Clock, AlertTriangle, History } from "lucide-react";
+import { Send, Upload, FileText, Image, Download, Clock, AlertTriangle, History, Eye, EyeOff, Users } from "lucide-react";
 import { ActivityHistory } from "@/components/audit/ActivityHistory";
 import { OBJECT_TYPES } from "@/hooks/useAdminAuditLog";
 
@@ -34,13 +36,19 @@ interface WarrantyDetailProps {
 
 export function WarrantyDetail({ open, onOpenChange, warranty, onEdit }: WarrantyDetailProps) {
   const [newNote, setNewNote] = useState("");
+  const [mentionedUserIds, setMentionedUserIds] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadType, setUploadType] = useState<"intake_photo" | "closeout_photo" | "document">("intake_photo");
+  const { user } = useAuth();
 
   const { data: notes = [] } = useWarrantyNotes(warranty?.id);
   const { data: documents = [] } = useWarrantyDocuments(warranty?.id);
   const createNote = useCreateWarrantyNote();
   const uploadDocument = useUploadWarrantyDocument();
+
+  const { data: watchers = [] } = useWarrantyWatchers(warranty?.id);
+  const isWatching = useIsWatching(warranty?.id);
+  const toggleWatch = useToggleWatch();
 
   // Fetch profiles for display
   const { data: profiles = [] } = useQuery({
@@ -60,6 +68,10 @@ export function WarrantyDetail({ open, onOpenChange, warranty, onEdit }: Warrant
     return profile?.full_name || "Unknown";
   };
 
+  const handleMentionedUsers = useCallback((ids: string[]) => {
+    setMentionedUserIds(ids);
+  }, []);
+
   if (!warranty) return null;
 
   const statusConfig = WARRANTY_STATUSES.find((s) => s.value === warranty.status);
@@ -68,13 +80,42 @@ export function WarrantyDetail({ open, onOpenChange, warranty, onEdit }: Warrant
   const warrantyTypeConfig = WARRANTY_TYPES.find((w) => w.value === warranty.warranty_type);
   const sourceConfig = SOURCE_OPTIONS.find((s) => s.value === warranty.source_of_request);
 
-  const isOverdue = warranty.status !== "completed" && warranty.status !== "denied" &&
+  // 7-day no-status-change overdue
+  const statusOverdue = warranty.status !== "completed" && warranty.status !== "denied" && warranty.status !== "closed" &&
     differenceInDays(new Date(), parseISO(warranty.last_status_change_at)) >= 7;
+
+  // 48h unanswered @mention overdue: check if any note has mentions and no follow-up reply
+  const mentionOverdue = (() => {
+    if (warranty.status === "completed" || warranty.status === "denied" || warranty.status === "closed") return false;
+    // Find notes with mentions that are >48h old and have no subsequent reply from mentioned user
+    for (const note of notes) {
+      const rawNote = note as any;
+      const mentionedUsers: string[] = rawNote.mentioned_users || [];
+      if (mentionedUsers.length === 0) continue;
+      const noteAge = differenceInDays(new Date(), parseISO(note.created_at));
+      if (noteAge < 2) continue; // Less than 48h
+      // Check if any mentioned user replied after this note
+      const noteTime = new Date(note.created_at).getTime();
+      const hasReply = notes.some(n => {
+        const nTime = new Date(n.created_at).getTime();
+        return nTime > noteTime && mentionedUsers.includes(n.created_by || "");
+      });
+      if (!hasReply) return true;
+    }
+    return false;
+  })();
+
+  const isOverdue = statusOverdue || mentionOverdue;
 
   const handleAddNote = async () => {
     if (!newNote.trim() || !warranty) return;
-    await createNote.mutateAsync({ warranty_id: warranty.id, note: newNote.trim() });
+    await createNote.mutateAsync({
+      warranty_id: warranty.id,
+      note: newNote.trim(),
+      mentioned_user_ids: mentionedUserIds,
+    });
     setNewNote("");
+    setMentionedUserIds([]);
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -99,13 +140,36 @@ export function WarrantyDetail({ open, onOpenChange, warranty, onEdit }: Warrant
     }
   };
 
+  const handleToggleWatch = () => {
+    if (!warranty) return;
+    toggleWatch.mutate({ warrantyId: warranty.id, isWatching });
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center justify-between">
             <DialogTitle className="text-xl">Warranty Request Details</DialogTitle>
-            <Button onClick={onEdit}>Edit</Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant={isWatching ? "secondary" : "outline"}
+                size="sm"
+                onClick={handleToggleWatch}
+                disabled={toggleWatch.isPending}
+                className="gap-1.5"
+              >
+                {isWatching ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                {isWatching ? "Unwatch" : "Watch"}
+              </Button>
+              {watchers.length > 0 && (
+                <Badge variant="outline" className="gap-1">
+                  <Users className="h-3 w-3" />
+                  {watchers.length}
+                </Badge>
+              )}
+              <Button onClick={onEdit}>Edit</Button>
+            </div>
           </div>
         </DialogHeader>
 
@@ -314,22 +378,55 @@ export function WarrantyDetail({ open, onOpenChange, warranty, onEdit }: Warrant
                 </CardContent>
               </Card>
             )}
+
+            {/* Watchers */}
+            {watchers.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Users className="h-4 w-4" /> Watchers ({watchers.length})
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-wrap gap-2">
+                    {watchers.map(w => (
+                      <Badge key={w.id} variant="secondary" className="text-xs">
+                        {getProfileName(w.user_id)}
+                      </Badge>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
 
           <TabsContent value="notes" className="space-y-4">
-            {/* Add Note */}
+            {/* Add Note with @mention */}
             <div className="flex gap-2">
-              <Textarea
-                placeholder="Add a note..."
-                value={newNote}
-                onChange={(e) => setNewNote(e.target.value)}
-                rows={2}
-                className="flex-1"
-              />
-              <Button onClick={handleAddNote} disabled={!newNote.trim() || createNote.isPending}>
+              <div className="flex-1">
+                <MentionTextarea
+                  value={newNote}
+                  onChange={setNewNote}
+                  onMentionedUsers={handleMentionedUsers}
+                  placeholder="Add a comment... Use @ to mention someone"
+                  rows={2}
+                />
+              </div>
+              <Button onClick={handleAddNote} disabled={!newNote.trim() || createNote.isPending} className="self-end">
                 <Send className="h-4 w-4" />
               </Button>
             </div>
+
+            {mentionedUserIds.length > 0 && (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <span>Mentioning:</span>
+                {mentionedUserIds.map(id => (
+                  <Badge key={id} variant="outline" className="text-[10px]">
+                    {getProfileName(id)}
+                  </Badge>
+                ))}
+              </div>
+            )}
 
             <Separator />
 
@@ -344,7 +441,7 @@ export function WarrantyDetail({ open, onOpenChange, warranty, onEdit }: Warrant
                       <span>{getProfileName(note.created_by)}</span>
                       <span>{format(parseISO(note.created_at), "MMM d, yyyy h:mm a")}</span>
                     </div>
-                    <p className="text-sm whitespace-pre-wrap">{note.note}</p>
+                    <p className="text-sm whitespace-pre-wrap">{renderMentionText(note.note)}</p>
                   </div>
                 ))}
               </div>

@@ -369,23 +369,102 @@ export function useCreateWarrantyNote() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ warranty_id, note }: { warranty_id: string; note: string }) => {
+    mutationFn: async ({ warranty_id, note, mentioned_user_ids = [] }: { warranty_id: string; note: string; mentioned_user_ids?: string[] }) => {
       const { data: user } = await supabase.auth.getUser();
+      const userId = user.user?.id;
       const { data, error } = await supabase
         .from("warranty_notes")
         .insert({
           warranty_id,
           note,
-          created_by: user.user?.id,
+          created_by: userId,
+          mentioned_users: mentioned_user_ids,
         })
         .select()
         .single();
 
       if (error) throw error;
+
+      // Fetch warranty info for notification context
+      const { data: warranty } = await supabase
+        .from("warranty_requests")
+        .select("customer_name, original_job_number, status, assigned_production_member, created_by")
+        .eq("id", warranty_id)
+        .single();
+
+      // Get commenter name
+      const { data: commenterProfile } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("id", userId || "")
+        .single();
+      const commenterName = commenterProfile?.full_name || "Someone";
+
+      // Notify @mentioned users (in-app)
+      if (mentioned_user_ids.length > 0 && warranty) {
+        const mentionNotifications = mentioned_user_ids
+          .filter(mid => mid !== userId)
+          .map(mid => ({
+            user_id: mid,
+            notification_type: "warranty_mention",
+            title: `You were mentioned in a warranty comment`,
+            message: `${commenterName} mentioned you on ${warranty.customer_name}'s warranty (Job #${warranty.original_job_number})`,
+            entity_type: "warranty",
+            entity_id: warranty_id,
+          }));
+
+        if (mentionNotifications.length > 0) {
+          await supabase.from("user_notifications").insert(mentionNotifications);
+        }
+
+        // Send email notifications for mentions
+        try {
+          await supabase.functions.invoke("send-warranty-notification", {
+            body: {
+              notification_type: "submitted",
+              warranty_id,
+              customer_name: warranty.customer_name || "Unknown",
+              job_address: "",
+              issue_description: `${commenterName} mentioned you: "${note.replace(/@\[([^\]]+)\]\([^)]+\)/g, "@$1").substring(0, 200)}"`,
+              priority_level: "medium",
+              status: warranty.status || "new",
+            },
+          });
+        } catch (e) {
+          console.error("Failed to send mention email:", e);
+        }
+      }
+
+      // Notify watchers (in-app) — exclude the commenter and already-mentioned users
+      const { data: watchers } = await supabase
+        .from("warranty_watchers")
+        .select("user_id")
+        .eq("warranty_id", warranty_id);
+
+      if (watchers && warranty) {
+        const excludeSet = new Set([userId, ...mentioned_user_ids]);
+        const watcherNotifications = watchers
+          .filter(w => !excludeSet.has(w.user_id))
+          .map(w => ({
+            user_id: w.user_id,
+            notification_type: "warranty_comment",
+            title: `New comment on watched warranty`,
+            message: `${commenterName} commented on ${warranty.customer_name}'s warranty`,
+            entity_type: "warranty",
+            entity_id: warranty_id,
+          }));
+
+        if (watcherNotifications.length > 0) {
+          await supabase.from("user_notifications").insert(watcherNotifications);
+        }
+      }
+
       return data;
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["warranty-notes", variables.warranty_id] });
+      queryClient.invalidateQueries({ queryKey: ["user-notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["unread-notification-count"] });
       toast.success("Note added");
     },
     onError: (error) => {

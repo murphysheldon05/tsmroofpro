@@ -28,6 +28,11 @@ const notificationIcons: Record<string, React.ReactNode> = {
   training_assigned: <BookOpen className="h-4 w-4 text-purple-500" />,
   announcement: <Bell className="h-4 w-4 text-blue-500" />,
   warranty: <Shield className="h-4 w-4 text-amber-500" />,
+  warranty_mention: <Bell className="h-4 w-4 text-primary" />,
+  warranty_comment: <Bell className="h-4 w-4 text-blue-400" />,
+  warranty_status_change: <Shield className="h-4 w-4 text-amber-500" />,
+  warranty_assigned: <Shield className="h-4 w-4 text-purple-500" />,
+  warranty_completed: <CheckCircle className="h-4 w-4 text-green-500" />,
   default: <AlertCircle className="h-4 w-4 text-muted-foreground" />,
 };
 
