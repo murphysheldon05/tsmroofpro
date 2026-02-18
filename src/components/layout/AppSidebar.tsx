@@ -100,8 +100,7 @@ const navigationItems: NavItem[] = [
     requiresPlaybook: true,
     children: [
       { title: "Submissions", href: "/commissions", icon: DollarSign, sectionKey: "commissions", requiresPlaybook: true },
-      { title: "Documents", href: "/commission-documents", icon: FileText, sectionKey: "commissions", requiresPlaybook: true },
-      { title: "My Tracker", href: "/my-commissions", icon: BarChart3, sectionKey: "commissions", requiresPlaybook: true },
+      { title: "Commissions", href: "/my-commissions", icon: BarChart3, sectionKey: "commissions", requiresPlaybook: true },
       { title: "Tracker", href: "/commission-tracker", icon: TrendingUp, sectionKey: "commissions", requiresPlaybook: true, managerOnly: true },
     ],
   },
