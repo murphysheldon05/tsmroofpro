@@ -4,27 +4,31 @@ import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, Table
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { PayTypeBadge } from "./PayTypeBadge";
-import { formatUSD, getRepInitials, slugifyRep, type EnrichedEntry, type CommissionRep, type CommissionPayType } from "@/hooks/useCommissionEntries";
+import { formatUSD, getRepInitials, slugifyRep, type EnrichedEntry, type CommissionRep, type CommissionPayType, type CommissionPayRun } from "@/hooks/useCommissionEntries";
 import { format, parseISO } from "date-fns";
 
 interface AllTransactionsTableProps {
   entries: EnrichedEntry[];
   reps: CommissionRep[];
   payTypes: CommissionPayType[];
+  payRuns?: CommissionPayRun[];
   readOnly?: boolean;
 }
 
-export function AllTransactionsTable({ entries, reps, payTypes, readOnly }: AllTransactionsTableProps) {
+export function AllTransactionsTable({ entries, reps, payTypes, payRuns, readOnly }: AllTransactionsTableProps) {
   const navigate = useNavigate();
   const [repFilter, setRepFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
+  const [runFilter, setRunFilter] = useState("all");
 
   const filtered = useMemo(() => {
     let result = entries;
     if (repFilter !== "all") result = result.filter((e) => e.rep_id === repFilter);
     if (typeFilter !== "all") result = result.filter((e) => e.pay_type_id === typeFilter);
+    if (runFilter === "unassigned") result = result.filter((e) => !e.pay_run_id);
+    else if (runFilter !== "all") result = result.filter((e) => e.pay_run_id === runFilter);
     return result;
-  }, [entries, repFilter, typeFilter]);
+  }, [entries, repFilter, typeFilter, runFilter]);
 
   const totalAmount = filtered.reduce((s, e) => s + e.amount_paid, 0);
 
@@ -49,6 +53,22 @@ export function AllTransactionsTable({ entries, reps, payTypes, readOnly }: AllT
             {payTypes.map((pt) => <SelectItem key={pt.id} value={pt.id}>{pt.name}</SelectItem>)}
           </SelectContent>
         </Select>
+        {payRuns && payRuns.length > 0 && (
+          <Select value={runFilter} onValueChange={setRunFilter}>
+            <SelectTrigger className="w-[200px] rounded-xl">
+              <SelectValue placeholder="All Pay Runs" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Pay Runs</SelectItem>
+              <SelectItem value="unassigned">Unassigned</SelectItem>
+              {payRuns.map((pr) => (
+                <SelectItem key={pr.id} value={pr.id}>
+                  {format(parseISO(pr.run_date), "MM/dd/yyyy")} ({pr.status})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
         <div className="text-sm text-muted-foreground ml-auto">
           {filtered.length} transactions · {formatUSD(totalAmount)}
         </div>

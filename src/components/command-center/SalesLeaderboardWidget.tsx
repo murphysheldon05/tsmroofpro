@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useSalesLeaderboard, useLeaderboardSetting, LeaderboardTab, TimeRange } from "@/hooks/useSalesLeaderboard";
-import { Trophy, Calendar, ExternalLink, ChevronDown, ChevronUp } from "lucide-react";
+import { useSalesLeaderboard, useLeaderboardSetting, useLatestCompletedPayRun, usePayRunLeaderboard, usePersonalCommissionStats, LeaderboardTab, TimeRange } from "@/hooks/useSalesLeaderboard";
+import { Trophy, Calendar, ExternalLink, ChevronDown, ChevronUp, DollarSign } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { format, startOfMonth } from "date-fns";
+import { format, startOfMonth, parseISO } from "date-fns";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarPicker } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
@@ -48,7 +48,8 @@ function getBarColor(rank: number, tab: LeaderboardTab) {
   return rank === 1 ? "bg-blue-500" : rank <= 3 ? "bg-blue-400" : "bg-blue-300/70";
 }
 
-function getAvatarColor(tab: LeaderboardTab) {
+function getAvatarColor(tab: LeaderboardTab, repColor?: string) {
+  if (repColor) return "";
   if (tab === "sales") return "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300";
   if (tab === "profit") return "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300";
   return "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300";
@@ -64,33 +65,52 @@ const TAB_CONFIG: { key: LeaderboardTab; label: string; activeClass: string }[] 
   { key: "commissions", label: "Commissions", activeClass: "bg-blue-500/10 border-blue-500/30 text-blue-700 dark:text-blue-400" },
 ];
 
-const TAB_LABELS: Record<LeaderboardTab, string> = {
-  sales: "Sales Volume", profit: "Profit", commissions: "Commissions",
-};
+function formatUSD(amount: number | null | undefined): string {
+  if (amount == null) return "$0.00";
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2 }).format(amount);
+}
 
 export function SalesLeaderboardWidget() {
-  const { isAdmin } = useAuth();
+  const { isAdmin, user } = useAuth();
   const { data: isEnabled, isLoading: settingLoading } = useLeaderboardSetting();
-  const [tab, setTab] = useState<LeaderboardTab>("sales");
+  const [tab, setTab] = useState<LeaderboardTab>("commissions");
   const [timeRange, setTimeRange] = useState<TimeRange>("month");
   const [customStart, setCustomStart] = useState<string>(format(startOfMonth(new Date()), "yyyy-MM-dd"));
   const [customEnd, setCustomEnd] = useState<string>(format(new Date(), "yyyy-MM-dd"));
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showAll, setShowAll] = useState(false);
 
-  const { data: result, isLoading } = useSalesLeaderboard(tab, timeRange, customStart, customEnd);
+  // Latest completed pay run for commissions/profit tabs
+  const { data: latestPayRun } = useLatestCompletedPayRun();
+  const { data: payRunEntries, isLoading: payRunLoading } = usePayRunLeaderboard(
+    tab === "profit" ? "profit" : "commissions",
+    (tab === "commissions" || tab === "profit") ? latestPayRun?.id || null : null
+  );
+
+  // Sales tab uses AccuLynx
+  const { data: salesResult, isLoading: salesLoading } = useSalesLeaderboard("sales", timeRange, customStart, customEnd);
+
+  // Personal stats
+  const { data: personalStats } = usePersonalCommissionStats(user?.id);
 
   if (settingLoading) return null;
   if (isEnabled === false) return null;
 
-  const entries = result?.entries || [];
-  const acculynxNotConfigured = result?.acculynxNotConfigured || false;
-  const acculynxError = result?.acculynxError || false;
+  const isCommissionOrProfit = tab === "commissions" || tab === "profit";
+  const entries = isCommissionOrProfit ? (payRunEntries || []) : (salesResult?.entries || []);
+  const isLoading = isCommissionOrProfit ? payRunLoading : salesLoading;
+  const acculynxNotConfigured = salesResult?.acculynxNotConfigured || false;
+  const acculynxError = salesResult?.acculynxError || false;
+
   const maxValue = entries[0]?.total || 1;
   const displayEntries = showAll ? entries : entries.slice(0, 5);
   const hasMore = entries.length > 5;
 
-  const periodLabel = timeRange === "month" ? format(new Date(), "MMMM yyyy")
+  const periodLabel = isCommissionOrProfit
+    ? latestPayRun
+      ? `Commission Run — ${format(parseISO(latestPayRun.run_date), "yyyy-MM-dd")}`
+      : "No completed pay runs yet"
+    : timeRange === "month" ? format(new Date(), "MMMM yyyy")
     : timeRange === "ytd" ? format(new Date(), "yyyy")
     : timeRange === "week" ? "This Week"
     : `${customStart} — ${customEnd}`;
@@ -103,26 +123,28 @@ export function SalesLeaderboardWidget() {
             <Trophy className="w-4 h-4 text-amber-500" />
             <h3 className="text-base font-bold text-foreground">Sales Leaderboard</h3>
           </div>
-          <div className="flex items-center gap-1 text-xs">
-            {(["week", "month", "ytd", "custom"] as TimeRange[]).map(r => (
-              <button
-                key={r}
-                onClick={() => { setTimeRange(r); if (r === "custom") setShowDatePicker(true); }}
-                className={cn(
-                  "px-2 py-1 rounded-md transition-colors capitalize",
-                  timeRange === r ? "bg-primary text-primary-foreground font-semibold" : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                )}
-              >
-                {r === "ytd" ? "YTD" : r.charAt(0).toUpperCase() + r.slice(1)}
-              </button>
-            ))}
-          </div>
+          {tab === "sales" && (
+            <div className="flex items-center gap-1 text-xs">
+              {(["week", "month", "ytd", "custom"] as TimeRange[]).map(r => (
+                <button
+                  key={r}
+                  onClick={() => { setTimeRange(r); if (r === "custom") setShowDatePicker(true); }}
+                  className={cn(
+                    "px-2 py-1 rounded-md transition-colors capitalize",
+                    timeRange === r ? "bg-primary text-primary-foreground font-semibold" : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                  )}
+                >
+                  {r === "ytd" ? "YTD" : r.charAt(0).toUpperCase() + r.slice(1)}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-0 mt-1.5">
           {TAB_CONFIG.map((t, idx) => (
             <button
               key={t.key}
-              onClick={() => setTab(t.key)}
+              onClick={() => { setTab(t.key); setShowAll(false); }}
               className={cn(
                 "flex-1 text-center py-1 text-xs font-medium border transition-all",
                 idx === 0 && "rounded-l-lg", idx === TAB_CONFIG.length - 1 && "rounded-r-lg", idx > 0 && "border-l-0",
@@ -133,11 +155,11 @@ export function SalesLeaderboardWidget() {
             </button>
           ))}
         </div>
-        <p className="text-[11px] text-muted-foreground mt-1">{TAB_LABELS[tab]} — {periodLabel}</p>
+        <p className="text-[11px] text-muted-foreground mt-1">{periodLabel}</p>
       </CardHeader>
 
       <CardContent className="pt-0 pb-3 px-4">
-        {timeRange === "custom" && showDatePicker && (
+        {tab === "sales" && timeRange === "custom" && showDatePicker && (
           <div className="flex gap-2 mb-2 flex-wrap items-end">
             <Popover>
               <PopoverTrigger asChild><Button variant="outline" size="sm" className="text-xs"><Calendar className="w-3 h-3 mr-1" />{customStart}</Button></PopoverTrigger>
@@ -161,6 +183,8 @@ export function SalesLeaderboardWidget() {
             <p className="text-muted-foreground text-sm">Unable to load AccuLynx data. Check Admin Panel &gt; Integrations.</p>
             {isAdmin && <Link to="/admin" className="inline-flex items-center gap-1 text-xs text-primary hover:underline"><ExternalLink className="w-3 h-3" />Go to Admin Panel</Link>}
           </div>
+        ) : isCommissionOrProfit && !latestPayRun ? (
+          <div className="text-center py-6 text-muted-foreground text-sm">No completed pay runs yet.</div>
         ) : isLoading ? (
           <div className="space-y-2">{[1,2,3].map(i => <div key={i} className="flex items-center gap-2"><Skeleton className="w-5 h-5 rounded-full" /><Skeleton className="w-7 h-7 rounded-full" /><div className="flex-1 space-y-1"><Skeleton className="h-3 w-20" /><Skeleton className="h-2 w-full" /></div></div>)}</div>
         ) : !entries.length ? (
@@ -175,7 +199,14 @@ export function SalesLeaderboardWidget() {
                 return (
                   <div key={entry.repId} className={cn("flex items-center gap-1.5 py-1.5 px-2 rounded-lg transition-colors", isTopThree && "bg-muted/50")}>
                     <RankBadge rank={rank} />
-                    <div className={cn("flex items-center justify-center rounded-full font-semibold shrink-0", isTopThree ? "w-7 h-7 text-[10px]" : "w-6 h-6 text-[9px]", getAvatarColor(tab))}>
+                    <div
+                      className={cn(
+                        "flex items-center justify-center rounded-full font-semibold shrink-0",
+                        isTopThree ? "w-7 h-7 text-[10px]" : "w-6 h-6 text-[9px]",
+                        getAvatarColor(tab, entry.repColor)
+                      )}
+                      style={entry.repColor ? { backgroundColor: entry.repColor, color: "white" } : undefined}
+                    >
                       {getInitials(entry.repName)}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -199,6 +230,30 @@ export function SalesLeaderboardWidget() {
           </>
         )}
         <p className="text-[10px] text-muted-foreground mt-2 text-right">Last updated: {format(new Date(), "h:mm a")}</p>
+
+        {/* Personal Commission Stats */}
+        {personalStats?.hasLinkedRep && (
+          <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-border/40">
+            <div className="bg-muted/40 rounded-lg p-2">
+              <div className="text-[10px] text-muted-foreground font-medium">Submitted</div>
+              <div className="text-sm font-bold">{formatUSD(personalStats.submitted)}</div>
+            </div>
+            <div className="bg-muted/40 rounded-lg p-2">
+              <div className="text-[10px] text-muted-foreground font-medium">Approved</div>
+              <div className="text-sm font-bold">{formatUSD(personalStats.approved)}</div>
+            </div>
+            <div className="bg-muted/40 rounded-lg p-2">
+              <div className="text-[10px] text-muted-foreground font-medium">YTD Paid</div>
+              <div className="text-sm font-bold text-emerald-600">{formatUSD(personalStats.ytdPaid)}</div>
+            </div>
+            <div className="bg-muted/40 rounded-lg p-2">
+              <div className="text-[10px] text-muted-foreground font-medium">Draw Balance</div>
+              <div className={cn("text-sm font-bold", personalStats.drawBalance < 0 ? "text-red-600" : "text-foreground")}>
+                {formatUSD(personalStats.drawBalance)}
+              </div>
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
