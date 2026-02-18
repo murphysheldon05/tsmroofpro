@@ -19,6 +19,16 @@ export default function Accounting() {
   return (
     <AppLayout>
       <div className="space-y-5 pb-8">
+        {/* Migration Banner */}
+        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-xl px-4 py-3 flex items-center justify-between gap-3 flex-wrap">
+          <p className="text-sm text-amber-800 dark:text-amber-300">
+            Commission tracking has moved to the Commission Tracker for a consolidated view.
+          </p>
+          <a href="/commission-tracker" className="text-sm font-medium text-primary hover:underline whitespace-nowrap">
+            Go to Commission Tracker →
+          </a>
+        </div>
+
         {/* Header */}
         <div>
           <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Accounting</h1>

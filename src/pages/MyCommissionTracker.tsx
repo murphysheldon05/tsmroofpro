@@ -1,9 +1,11 @@
-import { useMemo } from "react";
+import { useState, useMemo } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCommissionReps, useEnrichedEntries } from "@/hooks/useCommissionEntries";
 import { RepDetailView } from "@/components/commissions/tracker/RepDetailView";
-import { DollarSign } from "lucide-react";
+import { DollarSign, BarChart3, FileText } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { CommissionDocumentsEmbed } from "@/components/commissions/CommissionDocumentsEmbed";
 
 export default function MyCommissionTracker() {
   const { user } = useAuth();
@@ -55,14 +57,33 @@ export default function MyCommissionTracker() {
 
   return (
     <AppLayout>
-      <div className="pb-8">
-        <RepDetailView
-          repName={linkedRep.name}
-          repColor={linkedRep.color}
-          entries={myEntries}
-          readOnly
-          hideBackButton
-        />
+      <div className="space-y-5 pb-8">
+        <Tabs defaultValue="history" className="space-y-4">
+          <TabsList className="bg-card/60 border border-border/40 rounded-2xl p-1 h-auto">
+            <TabsTrigger value="history" className="gap-2 rounded-xl data-[state=active]:bg-primary/15 data-[state=active]:text-primary">
+              <BarChart3 className="h-4 w-4" />
+              Commission History
+            </TabsTrigger>
+            <TabsTrigger value="documents" className="gap-2 rounded-xl data-[state=active]:bg-primary/15 data-[state=active]:text-primary">
+              <FileText className="h-4 w-4" />
+              Documents
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="history" className="mt-0">
+            <RepDetailView
+              repName={linkedRep.name}
+              repColor={linkedRep.color}
+              entries={myEntries}
+              readOnly
+              hideBackButton
+            />
+          </TabsContent>
+
+          <TabsContent value="documents" className="mt-0">
+            <CommissionDocumentsEmbed />
+          </TabsContent>
+        </Tabs>
       </div>
     </AppLayout>
   );
