@@ -15,7 +15,8 @@ export type WarrantyStatus =
   | "waiting_on_materials" 
   | "waiting_on_manufacturer" 
   | "completed" 
-  | "denied";
+  | "denied"
+  | "closed";
 
 export interface WarrantyRequest {
   id: string;
@@ -43,6 +44,9 @@ export interface WarrantyRequest {
   material_cost: number | null;
   is_manufacturer_claim_filed: boolean;
   closeout_photos_uploaded: boolean;
+  customer_notified_of_completion: boolean;
+  closed_date: string | null;
+  closed_by: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;
@@ -107,6 +111,7 @@ export const WARRANTY_STATUSES: { value: WarrantyStatus; label: string; color: s
   { value: "waiting_on_manufacturer", label: "Waiting on Manufacturer", color: "bg-pink-100 text-pink-800" },
   { value: "completed", label: "Completed", color: "bg-green-100 text-green-800" },
   { value: "denied", label: "Denied / Not Covered", color: "bg-red-100 text-red-800" },
+  { value: "closed", label: "Closed", color: "bg-gray-200 text-gray-700" },
 ];
 
 export function useWarranties() {
@@ -193,13 +198,38 @@ export function useUpdateWarranty() {
 
   return useMutation({
     mutationFn: async ({ id, previousStatus, userRole, ...updates }: Partial<WarrantyRequest> & { id: string; previousStatus?: string; userRole?: string }) => {
-      // ENFORCEMENT: Only managers and admins can mark as completed or denied
-      const terminalStatuses: string[] = ["completed", "denied"];
+      // ENFORCEMENT: Only managers and admins can mark as completed, denied, or closed
+      const terminalStatuses: string[] = ["completed", "denied", "closed"];
       if (updates.status && terminalStatuses.includes(updates.status)) {
         const allowedRoles = ["admin", "manager", "sales_manager"];
         if (!userRole || !allowedRoles.includes(userRole)) {
-          throw new Error("Only managers and admins can mark warranties as completed or denied.");
+          throw new Error("Only managers and admins can mark warranties as completed, denied, or closed.");
         }
+      }
+
+      // CLOSE-OUT GATE: Cannot move to "completed" without resolution + photos
+      if (updates.status === "completed") {
+        const current = { ...updates };
+        if (!current.resolution_summary) {
+          throw new Error("Resolution Summary is required before marking as Completed.");
+        }
+        if (!current.date_completed) {
+          throw new Error("Date Completed is required before marking as Completed.");
+        }
+        if (!current.closeout_photos_uploaded) {
+          throw new Error("Close-Out Photos must be uploaded before marking as Completed.");
+        }
+      }
+
+      // CLOSE GATE: Cannot move to "closed" without completed requirements + customer notified
+      if (updates.status === "closed") {
+        if (!updates.customer_notified_of_completion) {
+          throw new Error("Customer must be notified of completion before moving to Closed.");
+        }
+        // Auto-set closed metadata
+        const { data: user } = await supabase.auth.getUser();
+        updates.closed_date = new Date().toISOString().split("T")[0];
+        updates.closed_by = user.user?.id || null;
       }
 
       const { data, error } = await supabase

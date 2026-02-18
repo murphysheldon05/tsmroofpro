@@ -32,6 +32,7 @@ const KANBAN_COLUMNS: { key: string; label: string; statuses: WarrantyStatus[] }
   { key: "in_progress", label: "In Progress", statuses: ["assigned", "in_review", "in_progress", "waiting_on_materials", "waiting_on_manufacturer"] },
   { key: "scheduled", label: "Scheduled", statuses: ["scheduled"] },
   { key: "completed", label: "Completed", statuses: ["completed", "denied"] },
+  { key: "closed", label: "Closed", statuses: ["closed"] },
 ];
 
 const STATUS_FOR_COLUMN: Record<string, WarrantyStatus> = {
@@ -39,6 +40,7 @@ const STATUS_FOR_COLUMN: Record<string, WarrantyStatus> = {
   in_progress: "in_progress",
   scheduled: "scheduled",
   completed: "completed",
+  closed: "closed",
 };
 
 function getAgeDays(w: WarrantyRequest): number {
@@ -86,7 +88,7 @@ function DraggableWarrantyCard({
   });
 
   const age = getAgeDays(warranty);
-  const isCompleted = warranty.status === "completed" || warranty.status === "denied";
+  const isCompleted = warranty.status === "completed" || warranty.status === "denied" || warranty.status === "closed";
   const statusConfig = WARRANTY_STATUSES.find(s => s.value === warranty.status);
   const priorityConfig = PRIORITY_LEVELS.find(p => p.value === warranty.priority_level);
 
@@ -132,6 +134,9 @@ function DraggableWarrantyCard({
       <div className="flex items-center gap-1.5 flex-wrap">
         <Badge className={cn("text-[10px]", statusConfig?.color)}>{statusConfig?.label}</Badge>
         <Badge className={cn("text-[10px]", priorityConfig?.color)}>{priorityConfig?.label}</Badge>
+        {warranty.status === "completed" && differenceInDays(new Date(), parseISO(warranty.last_status_change_at)) >= 7 && (
+          <Badge variant="outline" className="text-[10px] border-primary text-primary">Ready to Close</Badge>
+        )}
       </div>
       {warranty.assigned_production_member && (
         <p className="text-[10px] text-muted-foreground mt-1.5">Assigned</p>
@@ -150,7 +155,7 @@ function WarrantyCardSimple({
   onView: (w: WarrantyRequest) => void;
 }) {
   const age = getAgeDays(warranty);
-  const isCompleted = warranty.status === "completed" || warranty.status === "denied";
+  const isCompleted = warranty.status === "completed" || warranty.status === "denied" || warranty.status === "closed";
   const statusConfig = WARRANTY_STATUSES.find(s => s.value === warranty.status);
   const priorityConfig = PRIORITY_LEVELS.find(p => p.value === warranty.priority_level);
 
@@ -213,13 +218,13 @@ export default function Warranties() {
   const columns = useMemo(() => {
     return KANBAN_COLUMNS.map(col => {
       const items = warranties.filter(w => col.statuses.includes(w.status));
-      const overdue = items.filter(w => w.status !== "completed" && w.status !== "denied" && getAgeDays(w) > 30);
+      const overdue = items.filter(w => w.status !== "completed" && w.status !== "denied" && w.status !== "closed" && getAgeDays(w) > 30);
       return { ...col, items, overdueCount: overdue.length };
     });
   }, [warranties]);
 
   const archivedWarranties = useMemo(() => {
-    const completed = warranties.filter(w => w.status === "completed" || w.status === "denied");
+    const completed = warranties.filter(w => w.status === "completed" || w.status === "denied" || w.status === "closed");
     if (!archiveSearch) return completed;
     const s = archiveSearch.toLowerCase();
     return completed.filter(w =>
@@ -307,7 +312,7 @@ export default function Warranties() {
               onDragStart={handleDragStart}
               onDragEnd={handleDragEnd}
             >
-              <div className="hidden md:grid grid-cols-4 gap-4">
+              <div className="hidden md:grid grid-cols-5 gap-4">
                 {columns.map(col => (
                   <div key={col.key} className="space-y-3">
                     <div className="flex items-center justify-between px-1">

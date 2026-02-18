@@ -137,7 +137,7 @@ export function WarrantyList({ onEdit, onView }: WarrantyListProps) {
   };
 
   const isOverdue = (warranty: WarrantyRequest) => {
-    if (warranty.status === "completed" || warranty.status === "denied") return false;
+    if (warranty.status === "completed" || warranty.status === "denied" || warranty.status === "closed") return false;
     const lastChange = parseISO(warranty.last_status_change_at);
     return differenceInDays(new Date(), lastChange) >= 7;
   };

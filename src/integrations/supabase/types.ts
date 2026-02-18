@@ -3741,10 +3741,13 @@ export type Database = {
       warranty_requests: {
         Row: {
           assigned_production_member: string | null
+          closed_by: string | null
+          closed_date: string | null
           closeout_photos_uploaded: boolean | null
           created_at: string
           created_by: string | null
           customer_name: string
+          customer_notified_of_completion: boolean | null
           date_assigned: string | null
           date_completed: string | null
           date_submitted: string
@@ -3771,10 +3774,13 @@ export type Database = {
         }
         Insert: {
           assigned_production_member?: string | null
+          closed_by?: string | null
+          closed_date?: string | null
           closeout_photos_uploaded?: boolean | null
           created_at?: string
           created_by?: string | null
           customer_name: string
+          customer_notified_of_completion?: boolean | null
           date_assigned?: string | null
           date_completed?: string | null
           date_submitted?: string
@@ -3801,10 +3807,13 @@ export type Database = {
         }
         Update: {
           assigned_production_member?: string | null
+          closed_by?: string | null
+          closed_date?: string | null
           closeout_photos_uploaded?: boolean | null
           created_at?: string
           created_by?: string | null
           customer_name?: string
+          customer_notified_of_completion?: boolean | null
           date_assigned?: string | null
           date_completed?: string | null
           date_submitted?: string
