@@ -215,6 +215,14 @@ export default function Warranties() {
   const handleEdit = (w: WarrantyRequest) => { setSelectedWarranty(w); setIsFormOpen(true); };
   const handleCreate = () => { setSelectedWarranty(null); setIsFormOpen(true); };
 
+  // Warranties ready to close (completed 7+ days ago)
+  const readyToClose = useMemo(() => {
+    return warranties.filter(w => 
+      w.status === "completed" && 
+      differenceInDays(new Date(), parseISO(w.last_status_change_at)) >= 7
+    );
+  }, [warranties]);
+
   const columns = useMemo(() => {
     return KANBAN_COLUMNS.map(col => {
       const items = warranties.filter(w => col.statuses.includes(w.status));
@@ -297,6 +305,48 @@ export default function Warranties() {
             <Plus className="h-4 w-4 mr-1.5" />Submit Warranty
           </Button>
         </div>
+
+        {/* Auto-close suggestion banner */}
+        {canEdit && readyToClose.length > 0 && (
+          <Card className="border-primary/30 bg-primary/5">
+            <CardContent className="flex items-center justify-between py-3 px-4">
+              <div className="flex items-center gap-2">
+                <Archive className="h-4 w-4 text-primary" />
+                <span className="text-sm font-medium">
+                  {readyToClose.length} warrant{readyToClose.length === 1 ? "y" : "ies"} completed 7+ days ago — ready to close
+                </span>
+              </div>
+              <div className="flex gap-2">
+                {readyToClose.slice(0, 3).map(w => (
+                  <Button
+                    key={w.id}
+                    variant="outline"
+                    size="sm"
+                    className="text-xs"
+                    onClick={() => {
+                      if (w.customer_notified_of_completion) {
+                        updateWarranty.mutate({
+                          id: w.id,
+                          status: "closed" as WarrantyStatus,
+                          previousStatus: w.status,
+                          userRole: role || undefined,
+                          customer_notified_of_completion: true,
+                        });
+                      } else {
+                        handleView(w);
+                      }
+                    }}
+                  >
+                    Close {w.customer_name.split(" ")[0]}
+                  </Button>
+                ))}
+                {readyToClose.length > 3 && (
+                  <Badge variant="secondary" className="text-xs">+{readyToClose.length - 3} more</Badge>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         <Tabs defaultValue="board">
           <TabsList>
