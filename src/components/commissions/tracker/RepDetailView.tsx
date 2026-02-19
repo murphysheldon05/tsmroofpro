@@ -78,7 +78,7 @@ export function RepDetailView({ repName, repColor, entries, readOnly, hideBackBu
   const statCards = [
     { label: "YTD Paid", value: formatUSD(ytdPaid), color: "border-t-emerald-500" },
     { label: "Job Commissions", value: formatUSD(jobCommissions.reduce((s, e) => s + e.amount_paid, 0)), sub: `${jobCount} jobs`, color: "border-t-blue-500" },
-    { label: "Draws & Advances", value: formatUSD(drawsAdvances), color: "border-t-amber-500" },
+    { label: "Draws", value: formatUSD(drawsAdvances), color: "border-t-amber-500" },
     { label: "Total Job Value", value: formatUSD(totalJobValue), sub: `avg ${avgCommPct.toFixed(1)}%`, color: "border-t-purple-500" },
   ];
 

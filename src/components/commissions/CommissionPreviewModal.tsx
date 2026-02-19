@@ -192,7 +192,7 @@ export function CommissionPreviewModal({
                 </div>
                 {formData.advance_total > 0 && (
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Less Advance</span>
+                    <span className="text-muted-foreground">Less Draw</span>
                     <span className="font-mono text-destructive">−{formatCurrency(formData.advance_total)}</span>
                   </div>
                 )}

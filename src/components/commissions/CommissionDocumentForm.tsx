@@ -716,7 +716,7 @@ export function CommissionDocumentForm({ document: existingDoc, readOnly = false
                 <EnhancedFormRow label="Rep Commission" variant="calculated" highlight hint="Total dollars paid to you">
                   <Input value={formatCurrency(calculated.rep_commission)} disabled className={cn(calculatedInputClasses, "text-xl font-bold h-14")} />
                 </EnhancedFormRow>
-                <EnhancedFormRow label="Advance Total">{renderMoneyInput("advance_total")}</EnhancedFormRow>
+                <EnhancedFormRow label="Draw Total">{renderMoneyInput("advance_total")}</EnhancedFormRow>
                 {isPrivileged && (
                   <EnhancedFormRow label="Company Profit" variant="calculated" hint="Total company profit (manager view only)">
                     <Input value={formatCurrency(calculated.company_profit)} disabled className={calculatedInputClasses} />
@@ -753,7 +753,7 @@ export function CommissionDocumentForm({ document: existingDoc, readOnly = false
               </div>
               {formData.advance_total > 0 && (
                 <div className="text-right">
-                  <p className="text-[11px] text-muted-foreground uppercase tracking-wider">After Advance</p>
+                  <p className="text-[11px] text-muted-foreground uppercase tracking-wider">After Draw</p>
                   <p className="text-lg font-semibold font-mono tracking-tight">
                     {formatCurrency(calculated.rep_commission - formData.advance_total)}
                   </p>
