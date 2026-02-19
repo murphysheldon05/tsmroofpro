@@ -38,17 +38,15 @@ export function RepDetailView({ repName, repColor, entries, readOnly, hideBackBu
     return allDocs.filter((d) => d.sales_rep.toLowerCase() === repLower);
   }, [allDocs, repName]);
 
-  const currentYear = new Date().getFullYear().toString();
-  const ytdEntries = entries.filter((e) => e.paid_date.startsWith(currentYear));
-  const ytdPaid = ytdEntries.filter((e) => e.pay_type_name !== "Training Draw (NR)").reduce((s, e) => s + e.amount_paid, 0);
-  const jobCommissions = ytdEntries.filter((e) => e.pay_type_name === "Commission");
+  const ytdPaid = entries.filter((e) => e.pay_type_name !== "Training Draw (NR)").reduce((s, e) => s + e.amount_paid, 0);
+  const jobCommissions = entries.filter((e) => e.pay_type_name === "Commission");
   const jobCount = jobCommissions.length;
-  const totalJobValue = ytdEntries.filter((e) => e.job_value).reduce((s, e) => s + (e.job_value || 0), 0);
+  const totalJobValue = entries.filter((e) => e.job_value).reduce((s, e) => s + (e.job_value || 0), 0);
   const avgCommPct = totalJobValue > 0 ? (ytdPaid / totalJobValue) * 100 : 0;
-  const drawsAdvances = ytdEntries.filter((e) => e.pay_type_name !== "Commission" && e.pay_type_name !== "Training Draw (NR)").reduce((s, e) => s + e.amount_paid, 0);
+  const drawsAdvances = entries.filter((e) => e.pay_type_name !== "Commission" && e.pay_type_name !== "Training Draw (NR)").reduce((s, e) => s + e.amount_paid, 0);
 
-  const drawsTaken = isPrestonStuart ? ytdEntries.filter((e) => (e.applied_bank || 0) < 0).reduce((s, e) => s + Math.abs(e.applied_bank || 0), 0) : 0;
-  const drawPaybacks = isPrestonStuart ? ytdEntries.filter((e) => (e.applied_bank || 0) > 0).reduce((s, e) => s + (e.applied_bank || 0), 0) : 0;
+  const drawsTaken = isPrestonStuart ? entries.filter((e) => (e.applied_bank || 0) < 0).reduce((s, e) => s + Math.abs(e.applied_bank || 0), 0) : 0;
+  const drawPaybacks = isPrestonStuart ? entries.filter((e) => (e.applied_bank || 0) > 0).reduce((s, e) => s + (e.applied_bank || 0), 0) : 0;
   const drawBalance = isPrestonStuart ? drawsTaken - drawPaybacks : 0;
 
   const grouped = useMemo(() => {

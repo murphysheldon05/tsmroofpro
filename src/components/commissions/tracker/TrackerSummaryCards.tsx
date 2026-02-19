@@ -8,13 +8,11 @@ interface TrackerSummaryCardsProps {
 }
 
 export function TrackerSummaryCards({ entries, repCount }: TrackerSummaryCardsProps) {
-  const currentYear = new Date().getFullYear().toString();
-  const ytdEntries = entries.filter((e) => e.paid_date.startsWith(currentYear));
-  const totalPaid = ytdEntries.filter((e) => e.pay_type_name !== "Training Draw (NR)").reduce((s, e) => s + e.amount_paid, 0);
-  const jobCommissions = ytdEntries.filter((e) => e.pay_type_name === "Commission").reduce((s, e) => s + e.amount_paid, 0);
-  const drawsAdvances = ytdEntries.filter((e) => e.pay_type_name !== "Commission" && e.pay_type_name !== "Training Draw (NR)").reduce((s, e) => s + e.amount_paid, 0);
-  const totalJobValue = ytdEntries.filter((e) => e.job_value != null).reduce((s, e) => s + (e.job_value || 0), 0);
-  const jobCount = ytdEntries.filter((e) => e.job_value != null && (e.job_value || 0) > 0).length;
+  const totalPaid = entries.filter((e) => e.pay_type_name !== "Training Draw (NR)").reduce((s, e) => s + e.amount_paid, 0);
+  const jobCommissions = entries.filter((e) => e.pay_type_name === "Commission").reduce((s, e) => s + e.amount_paid, 0);
+  const drawsAdvances = entries.filter((e) => e.pay_type_name !== "Commission" && e.pay_type_name !== "Training Draw (NR)").reduce((s, e) => s + e.amount_paid, 0);
+  const totalJobValue = entries.filter((e) => e.job_value != null).reduce((s, e) => s + (e.job_value || 0), 0);
+  const jobCount = entries.filter((e) => e.job_value != null && (e.job_value || 0) > 0).length;
 
   const cards = [
     { label: "Total Paid Out", value: formatUSD(totalPaid), icon: DollarSign, color: "text-emerald-600", border: "border-t-emerald-500" },
