@@ -96,10 +96,12 @@ function CalendarGrid({
   const filteredEvents = events.filter((event) => isCrewVisible(event.crew_id));
 
   const getEventsForDate = (date: Date) => {
+    // Use string-based date comparison to avoid UTC vs local timezone issues
+    const dateStr = format(date, "yyyy-MM-dd");
     return filteredEvents.filter((event) => {
-      const eventStart = parseISO(event.start_date);
-      const eventEnd = event.end_date ? parseISO(event.end_date) : eventStart;
-      return date >= eventStart && date <= eventEnd;
+      const startStr = event.start_date.slice(0, 10);
+      const endStr = event.end_date ? event.end_date.slice(0, 10) : startStr;
+      return dateStr >= startStr && dateStr <= endStr;
     });
   };
 
@@ -135,10 +137,11 @@ function CalendarGrid({
     e.preventDefault();
     if (!canEdit || !draggedEvent) return;
 
-    const originalStartDate = parseISO(draggedEvent.start_date);
-    const daysDiff = differenceInDays(targetDate, originalStartDate);
+    // Use string-based comparison to avoid UTC/local timezone mismatch
+    const targetDateStr = format(targetDate, "yyyy-MM-dd");
+    const originalStartStr = draggedEvent.start_date.slice(0, 10);
 
-    if (daysDiff !== 0) {
+    if (targetDateStr !== originalStartStr) {
       onDragEvent(draggedEvent, targetDate);
     }
 
