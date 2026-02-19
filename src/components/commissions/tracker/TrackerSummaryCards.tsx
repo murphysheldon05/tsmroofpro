@@ -17,7 +17,7 @@ export function TrackerSummaryCards({ entries, repCount }: TrackerSummaryCardsPr
   const cards = [
     { label: "Total Paid Out", value: formatUSD(totalPaid), icon: DollarSign, color: "text-emerald-600", border: "border-t-emerald-500" },
     { label: "Job Commissions", value: formatUSD(jobCommissions), icon: Briefcase, color: "text-blue-600", border: "border-t-blue-500" },
-    { label: "Draws & Advances", value: formatUSD(drawsAdvances), icon: TrendingDown, color: "text-amber-600", border: "border-t-amber-500" },
+    { label: "Draws", value: formatUSD(drawsAdvances), icon: TrendingDown, color: "text-amber-600", border: "border-t-amber-500" },
     { label: "Total Job Value", value: formatUSD(totalJobValue), sub: `${jobCount} jobs · ${repCount} reps`, icon: BarChart3, color: "text-purple-600", border: "border-t-purple-500" },
   ];
 

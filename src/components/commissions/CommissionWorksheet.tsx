@@ -214,9 +214,9 @@ export function CommissionWorksheet({ data, onChange, readOnly = false }: Commis
               </TableCell>
             </TableRow>
 
-            {/* Editable: Advances / Draws Paid */}
+            {/* Editable: Draws Paid */}
             <TableRow>
-              <TableCell className="font-medium">Advances / Draws Paid</TableCell>
+              <TableCell className="font-medium">Draws Paid</TableCell>
               <TableCell>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
@@ -269,7 +269,7 @@ export function CommissionWorksheet({ data, onChange, readOnly = false }: Commis
           <p><strong>Formulas:</strong></p>
           <p>• Total Job Revenue = Contract Amount + Supplements</p>
           <p>• Gross Commission = Total Job Revenue × Commission %</p>
-          <p>• Net Commission Owed = Gross Commission − Advances Paid</p>
+          <p>• Net Commission Owed = Gross Commission − Draws Paid</p>
         </div>
       </CardContent>
     </Card>

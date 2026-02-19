@@ -147,7 +147,7 @@ export function DrawBalanceCard({ showDrawModal, onDrawModalChange }: DrawBalanc
               <DialogContent className="max-w-md">
                 <DialogHeader>
                   <DialogTitle>Request a Draw</DialogTitle>
-                  <DialogDescription>Request an advance against a future job's commission. Maximum is 50% of estimated commission, capped at $1,500 without manager approval.</DialogDescription>
+                  <DialogDescription>Request a draw against a future job's commission. Maximum is 50% of estimated commission, capped at $1,500 without manager approval.</DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4">
                   <div className="space-y-2">
@@ -184,7 +184,7 @@ export function DrawBalanceCard({ showDrawModal, onDrawModalChange }: DrawBalanc
                     <Textarea
                       value={reason}
                       onChange={(e) => setReason(e.target.value)}
-                      placeholder="Why do you need this advance?"
+                      placeholder="Why do you need this draw?"
                       rows={3}
                     />
                   </div>
