@@ -8,9 +8,9 @@ interface TrackerSummaryCardsProps {
 }
 
 export function TrackerSummaryCards({ entries, repCount }: TrackerSummaryCardsProps) {
-  const totalPaid = entries.reduce((s, e) => s + e.amount_paid, 0);
+  const totalPaid = entries.filter((e) => e.pay_type_name !== "Training Draw (NR)").reduce((s, e) => s + e.amount_paid, 0);
   const jobCommissions = entries.filter((e) => e.pay_type_name === "Commission").reduce((s, e) => s + e.amount_paid, 0);
-  const drawsAdvances = entries.filter((e) => e.pay_type_name !== "Commission").reduce((s, e) => s + e.amount_paid, 0);
+  const drawsAdvances = entries.filter((e) => e.pay_type_name !== "Commission" && e.pay_type_name !== "Training Draw (NR)").reduce((s, e) => s + e.amount_paid, 0);
   const totalJobValue = entries.filter((e) => e.job_value != null).reduce((s, e) => s + (e.job_value || 0), 0);
   const jobCount = entries.filter((e) => e.job_value != null && (e.job_value || 0) > 0).length;
 

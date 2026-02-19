@@ -38,12 +38,12 @@ export function RepDetailView({ repName, repColor, entries, readOnly, hideBackBu
     return allDocs.filter((d) => d.sales_rep.toLowerCase() === repLower);
   }, [allDocs, repName]);
 
-  const ytdPaid = entries.reduce((s, e) => s + e.amount_paid, 0);
+  const ytdPaid = entries.filter((e) => e.pay_type_name !== "Training Draw (NR)").reduce((s, e) => s + e.amount_paid, 0);
   const jobCommissions = entries.filter((e) => e.pay_type_name === "Commission");
   const jobCount = jobCommissions.length;
   const totalJobValue = entries.filter((e) => e.job_value).reduce((s, e) => s + (e.job_value || 0), 0);
   const avgCommPct = totalJobValue > 0 ? (ytdPaid / totalJobValue) * 100 : 0;
-  const drawsAdvances = entries.filter((e) => e.pay_type_name !== "Commission").reduce((s, e) => s + e.amount_paid, 0);
+  const drawsAdvances = entries.filter((e) => e.pay_type_name !== "Commission" && e.pay_type_name !== "Training Draw (NR)").reduce((s, e) => s + e.amount_paid, 0);
 
   const drawsTaken = isPrestonStuart ? entries.filter((e) => (e.applied_bank || 0) < 0).reduce((s, e) => s + Math.abs(e.applied_bank || 0), 0) : 0;
   const drawPaybacks = isPrestonStuart ? entries.filter((e) => (e.applied_bank || 0) > 0).reduce((s, e) => s + (e.applied_bank || 0), 0) : 0;
