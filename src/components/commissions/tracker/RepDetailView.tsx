@@ -93,9 +93,7 @@ export function RepDetailView({ repName, repColor, entries, readOnly, hideBackBu
   }
 
   const totalJobVal = entries.filter((e) => e.job_value).reduce((s, e) => s + (e.job_value || 0), 0);
-  const totalPaid = entries.filter((e) => e.pay_type_name !== "Training Draw (NR)").reduce((s, e) => s + e.amount_paid, 0);
-  const totalEarnedComm = isPrestonStuart ? entries.filter((e) => e.earned_comm != null).reduce((s, e) => s + (e.earned_comm || 0), 0) : 0;
-  const totalAppliedBank = isPrestonStuart ? entries.filter((e) => e.applied_bank != null).reduce((s, e) => s + (e.applied_bank || 0), 0) : 0;
+  const totalPaid = entries.reduce((s, e) => s + e.amount_paid, 0);
 
   const getDocStatusBadge = (status: string) => {
     const icons: Record<string, React.ReactNode> = {
@@ -276,12 +274,7 @@ export function RepDetailView({ repName, repColor, entries, readOnly, hideBackBu
                     <TableCell colSpan={3} />
                     <TableCell className="text-right font-mono">{formatUSD(totalJobVal)}</TableCell>
                     <TableCell className="text-right font-mono">{formatUSD(totalPaid)}</TableCell>
-                    {isPrestonStuart && (
-                      <>
-                        <TableCell className="text-right font-mono">{formatUSD(totalEarnedComm)}</TableCell>
-                        <TableCell className="text-right font-mono">{formatUSD(totalAppliedBank)}</TableCell>
-                      </>
-                    )}
+                    {isPrestonStuart && <><TableCell /><TableCell /></>}
                     <TableCell />
                   </TableRow>
                 </TableFooter>
