@@ -38,15 +38,12 @@ export function RepDetailView({ repName, repColor, entries, readOnly, hideBackBu
     return allDocs.filter((d) => d.sales_rep.toLowerCase() === repLower);
   }, [allDocs, repName]);
 
-  // Use commission documents as source of truth for YTD paid
-  const docsTotal = useMemo(() => repDocs.reduce((s, d) => s + (d.rep_commission || 0), 0), [repDocs]);
-  const paidDocsTotal = useMemo(() => repDocs.filter(d => d.status === "paid").reduce((s, d) => s + (d.rep_commission || 0), 0), [repDocs]);
-  const ytdPaid = docsTotal > 0 ? docsTotal : entries.reduce((s, e) => s + e.amount_paid, 0);
   const jobCommissions = entries.filter((e) => e.pay_type_name === "Commission");
-  const jobCount = repDocs.length > 0 ? repDocs.length : jobCommissions.length;
-  const totalJobValue = entries.filter((e) => e.job_value).reduce((s, e) => s + (e.job_value || 0), 0);
-  const avgCommPct = totalJobValue > 0 ? (ytdPaid / totalJobValue) * 100 : 0;
+  const commissionTotal = jobCommissions.reduce((s, e) => s + e.amount_paid, 0);
   const drawsAdvances = entries.filter((e) => e.pay_type_name !== "Commission").reduce((s, e) => s + e.amount_paid, 0);
+  const jobCount = jobCommissions.length;
+  const totalJobValue = entries.filter((e) => e.job_value).reduce((s, e) => s + (e.job_value || 0), 0);
+  const avgCommPct = totalJobValue > 0 ? (commissionTotal / totalJobValue) * 100 : 0;
 
   const drawsTaken = isPrestonStuart ? entries.filter((e) => (e.applied_bank || 0) < 0).reduce((s, e) => s + Math.abs(e.applied_bank || 0), 0) : 0;
   const drawPaybacks = isPrestonStuart ? entries.filter((e) => (e.applied_bank || 0) > 0).reduce((s, e) => s + (e.applied_bank || 0), 0) : 0;
@@ -79,8 +76,8 @@ export function RepDetailView({ repName, repColor, entries, readOnly, hideBackBu
   };
 
   const statCards = [
-    { label: "YTD Commissions", value: formatUSD(ytdPaid), sub: repDocs.length > 0 ? `${repDocs.length} documents` : undefined, color: "border-t-emerald-500" },
-    { label: "Paid Out", value: formatUSD(paidDocsTotal > 0 ? paidDocsTotal : jobCommissions.reduce((s, e) => s + e.amount_paid, 0)), sub: `${jobCount} jobs`, color: "border-t-blue-500" },
+    { label: "YTD Commissions", value: formatUSD(commissionTotal), sub: `${jobCount} jobs`, color: "border-t-emerald-500" },
+    { label: "Total Paid", value: formatUSD(commissionTotal + drawsAdvances), color: "border-t-blue-500" },
     { label: "Draws & Advances", value: formatUSD(drawsAdvances), color: "border-t-amber-500" },
     { label: "Total Job Value", value: formatUSD(totalJobValue), sub: `avg ${avgCommPct.toFixed(1)}%`, color: "border-t-purple-500" },
   ];
