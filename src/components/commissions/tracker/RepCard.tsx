@@ -12,10 +12,12 @@ interface RepCardProps {
 }
 
 export function RepCard({ repName, repColor, entries, totalPaidAllReps, onClick }: RepCardProps) {
-  const ytdPaid = entries.filter((e) => e.pay_type_name !== "Training Draw (NR)").reduce((s, e) => s + e.amount_paid, 0);
-  const jobCount = entries.filter((e) => e.pay_type_name === "Commission").length;
-  const commissionTotal = entries.filter((e) => e.pay_type_name === "Commission").reduce((s, e) => s + e.amount_paid, 0);
-  const drawTotal = entries.filter((e) => e.pay_type_name !== "Commission" && e.pay_type_name !== "Training Draw (NR)").reduce((s, e) => s + e.amount_paid, 0);
+  const currentYear = new Date().getFullYear().toString();
+  const ytdEntries = entries.filter((e) => e.paid_date.startsWith(currentYear));
+  const ytdPaid = ytdEntries.filter((e) => e.pay_type_name !== "Training Draw (NR)").reduce((s, e) => s + e.amount_paid, 0);
+  const jobCount = ytdEntries.filter((e) => e.pay_type_name === "Commission").length;
+  const commissionTotal = ytdEntries.filter((e) => e.pay_type_name === "Commission").reduce((s, e) => s + e.amount_paid, 0);
+  const drawTotal = ytdEntries.filter((e) => e.pay_type_name !== "Commission" && e.pay_type_name !== "Training Draw (NR)").reduce((s, e) => s + e.amount_paid, 0);
   const pctOfTotal = totalPaidAllReps > 0 ? (ytdPaid / totalPaidAllReps) * 100 : 0;
 
   return (
