@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -84,6 +85,36 @@ export function WarrantyForm({ open, onOpenChange, warranty }: WarrantyFormProps
       customer_notified_of_completion: warranty?.customer_notified_of_completion || false,
     },
   });
+
+  // Reset form values when the warranty prop changes (e.g. opening edit for a different warranty)
+  useEffect(() => {
+    reset({
+      customer_name: warranty?.customer_name || "",
+      job_address: warranty?.job_address || "",
+      original_job_number: warranty?.original_job_number || "",
+      original_install_date: warranty?.original_install_date || "",
+      roof_type: (warranty?.roof_type || "shingle") as RoofType,
+      warranty_type: (warranty?.warranty_type || "workmanship") as WarrantyType,
+      warranty_coverage_description: warranty?.warranty_coverage_description || "",
+      warranty_expiration_date: warranty?.warranty_expiration_date || "",
+      manufacturer: warranty?.manufacturer || "",
+      date_submitted: warranty?.date_submitted || new Date().toISOString().split("T")[0],
+      issue_description: warranty?.issue_description || "",
+      source_of_request: (warranty?.source_of_request || "homeowner") as SourceOfRequest,
+      assigned_production_member: warranty?.assigned_production_member || "",
+      secondary_support: warranty?.secondary_support || "",
+      date_assigned: warranty?.date_assigned || "",
+      priority_level: (warranty?.priority_level || "medium") as PriorityLevel,
+      status: (warranty?.status || "new") as WarrantyStatus,
+      resolution_summary: warranty?.resolution_summary || "",
+      date_completed: warranty?.date_completed || "",
+      labor_cost: warranty?.labor_cost || null,
+      material_cost: warranty?.material_cost || null,
+      is_manufacturer_claim_filed: warranty?.is_manufacturer_claim_filed || false,
+      closeout_photos_uploaded: warranty?.closeout_photos_uploaded || false,
+      customer_notified_of_completion: warranty?.customer_notified_of_completion || false,
+    });
+  }, [warranty, reset]);
 
   const warrantyType = watch("warranty_type");
   const status = watch("status");
