@@ -47,10 +47,9 @@ export function RepDetailView({ repName, repColor, entries, readOnly, hideBackBu
   const avgCommPct = totalJobValue > 0 ? (ytdPaid / totalJobValue) * 100 : 0;
   const drawsAdvances = ytdEntries.filter((e) => e.pay_type_name !== "Commission" && e.pay_type_name !== "Training Draw (NR)").reduce((s, e) => s + e.amount_paid, 0);
 
-  // Draw bank uses ALL entries (balances carry over years)
-  const drawsTaken = isPrestonStuart ? entries.filter((e) => (e.applied_bank || 0) < 0).reduce((s, e) => s + Math.abs(e.applied_bank || 0), 0) : 0;
-  const appliedToBank = isPrestonStuart ? entries.filter((e) => (e.applied_bank || 0) > 0).reduce((s, e) => s + (e.applied_bank || 0), 0) : 0;
-  const drawBalance = isPrestonStuart ? drawsTaken - appliedToBank : 0;
+  const drawsTaken = isPrestonStuart ? ytdEntries.filter((e) => (e.applied_bank || 0) < 0).reduce((s, e) => s + Math.abs(e.applied_bank || 0), 0) : 0;
+  const drawPaybacks = isPrestonStuart ? ytdEntries.filter((e) => (e.applied_bank || 0) > 0).reduce((s, e) => s + (e.applied_bank || 0), 0) : 0;
+  const drawBalance = isPrestonStuart ? drawsTaken - drawPaybacks : 0;
 
   const grouped = useMemo(() => {
     const dateMap = new Map<string, EnrichedEntry[]>();
@@ -87,7 +86,8 @@ export function RepDetailView({ repName, repColor, entries, readOnly, hideBackBu
 
   if (isPrestonStuart) {
     statCards.push(
-      { label: "Total Draws", value: formatUSD(drawsTaken), color: "border-t-red-500" },
+      { label: "Draws Taken", value: formatUSD(drawsTaken), color: "border-t-red-500" },
+      { label: "Draw Paybacks", value: formatUSD(drawPaybacks), color: "border-t-green-500" },
       { label: "Draw Balance", value: formatUSD(drawBalance), sub: drawBalance > 0 ? "Owed" : "Paid Off", color: drawBalance > 0 ? "border-t-red-500" : "border-t-green-500" },
     );
   }
