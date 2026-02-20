@@ -3,7 +3,7 @@ import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { PasswordResetPrompt } from '@/components/auth/PasswordResetPrompt';
 
-type AppRole = 'admin' | 'manager' | 'employee' | 'sales_rep' | 'sales_manager';
+type AppRole = 'admin' | 'manager' | 'employee' | 'sales_rep' | 'sales_manager' | 'ops_compliance' | 'accounting';
 type EmployeeStatus = 'active' | 'pending' | 'rejected' | 'inactive';
 
 interface AuthContextType {
@@ -212,7 +212,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isSalesManager: role === 'sales_manager' || role === 'admin',
     isSalesRep: role === 'sales_rep' || role === 'sales_manager' || role === 'admin',
     canApproveCommissions: role === 'sales_manager' || role === 'admin',
-    canSubmitCommissions: true,
+    canSubmitCommissions: role === 'sales_rep' || role === 'sales_manager' || role === 'admin',
     userDepartment,
     isActive,
   };
