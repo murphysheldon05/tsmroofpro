@@ -364,10 +364,51 @@ export function useUpdateCommissionStatus() {
         }
       }
       
-      // Handle paid status
+      // Handle paid status — also bridge to commission_entries for leaderboard
       if (status === "paid") {
         updateData.paid_at = new Date().toISOString();
         updateData.paid_by = user.id;
+
+        // Auto-create commission_entries record so leaderboard updates
+        try {
+          const submittedBy = current?.submitted_by;
+          if (submittedBy) {
+            // Find linked commission_rep via user_id
+            const { data: linkedRep } = await supabase
+              .from("commission_reps")
+              .select("id")
+              .eq("user_id", submittedBy)
+              .maybeSingle();
+
+            // Find the "Commission" pay type
+            const { data: commPayType } = await supabase
+              .from("commission_pay_types")
+              .select("id")
+              .ilike("name", "%commission%")
+              .limit(1)
+              .maybeSingle();
+
+            if (linkedRep && commPayType) {
+              await supabase.from("commission_entries").insert({
+                rep_id: linkedRep.id,
+                job: current.job_name || null,
+                customer: current.job_address || null,
+                approved_date: current.status === "approved" ? new Date().toISOString().split("T")[0] : null,
+                job_value: current.contract_amount || 0,
+                amount_paid: current.net_commission_owed || 0,
+                paid_date: new Date().toISOString().split("T")[0],
+                check_type: "Direct Deposit",
+                notes: `Auto-created from commission submission ${id}`,
+                pay_type_id: commPayType.id,
+                earned_comm: current.net_commission_owed || 0,
+                has_paid: true,
+              });
+            }
+          }
+        } catch (bridgeError) {
+          console.error("Commission entry bridge failed:", bridgeError);
+          // Don't fail payment if bridge fails
+        }
       }
       
       if (rejection_reason) {
@@ -459,6 +500,11 @@ export function useUpdateCommissionStatus() {
       queryClient.invalidateQueries({ queryKey: ["commission-submission", variables.id] });
       queryClient.invalidateQueries({ queryKey: ["commission-status-log", variables.id] });
       queryClient.invalidateQueries({ queryKey: ["pending-review"] });
+      // Refresh leaderboard data when commission is paid
+      if (variables.status === "paid") {
+        queryClient.invalidateQueries({ queryKey: ["commission-entries"] });
+        queryClient.invalidateQueries({ queryKey: ["pay-run-leaderboard"] });
+      }
 
       const message =
         variables.approval_stage === "pending_accounting" ? "Approved by manager - sent to accounting" :
@@ -667,6 +713,37 @@ export function useUpdateCommission() {
     },
     onError: (error: Error) => {
       toast.error("Failed to update commission: " + error.message);
+    },
+  });
+}
+
+export function useDeleteCommission() {
+  const queryClient = useQueryClient();
+  const { user, isAdmin } = useAuth();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      if (!user || !isAdmin) throw new Error("Only admins can delete commissions");
+
+      const { error } = await supabase
+        .from("commission_submissions")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+
+      // Clean up related status log entries
+      await supabase
+        .from("commission_status_log")
+        .delete()
+        .eq("commission_id", id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["commission-submissions"] });
+      toast.success("Commission deleted successfully");
+    },
+    onError: (error: Error) => {
+      toast.error("Failed to delete commission: " + error.message);
     },
   });
 }

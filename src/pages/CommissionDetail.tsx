@@ -21,18 +21,20 @@ import {
   Calculator,
   Send,
   Edit,
-  Ban
+  Ban,
+  Trash2
 } from "lucide-react";
 import { CommissionWorksheet } from "@/components/commissions/CommissionWorksheet";
 import { CommissionStatusTimeline } from "@/components/commissions/CommissionStatusTimeline";
 import { CommissionEditForm } from "@/components/commissions/CommissionEditForm";
 import { OverrideDetailSection } from "@/components/commissions/OverrideDetailSection";
-import { 
-  useCommissionSubmission, 
+import {
+  useCommissionSubmission,
   useCommissionStatusLog,
   useUpdateCommissionStatus,
   useIsCommissionReviewer,
-  useCanProcessPayouts
+  useCanProcessPayouts,
+  useDeleteCommission
 } from "@/hooks/useCommissions";
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
@@ -74,7 +76,8 @@ export default function CommissionDetail() {
   const { data: isReviewer } = useIsCommissionReviewer();
   const { data: canPayout } = useCanProcessPayouts();
   const updateStatus = useUpdateCommissionStatus();
-  
+  const deleteCommission = useDeleteCommission();
+
   const [rejectionReason, setRejectionReason] = useState("");
   const [reviewerNotes, setReviewerNotes] = useState("");
   
@@ -575,6 +578,41 @@ export default function CommissionDetail() {
                           className="bg-green-600 hover:bg-green-700"
                         >
                           Confirm Payment
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                )}
+
+                {/* Admin Delete Button */}
+                {isAdmin && (
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="ghost" size="sm" className="gap-2 text-destructive hover:text-destructive hover:bg-destructive/10">
+                        <Trash2 className="h-4 w-4" />
+                        Delete
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle className="text-destructive">Delete Commission</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This will permanently delete this commission submission for <strong>{submission.job_name}</strong>.
+                          This action cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => {
+                            deleteCommission.mutate(submission.id, {
+                              onSuccess: () => navigate("/commissions"),
+                            });
+                          }}
+                          disabled={deleteCommission.isPending}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          {deleteCommission.isPending ? "Deleting..." : "Delete Permanently"}
                         </AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>

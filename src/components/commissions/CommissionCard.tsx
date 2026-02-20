@@ -111,13 +111,21 @@ export function CommissionCard({ submission }: CommissionCardProps) {
             {format(new Date(submission.created_at), "MMM d")}
           </span>
           {submission.status === "revision_required" && (
-            <span className="flex items-center gap-1 text-amber-500 text-xs font-medium">
+            <span
+              role="button"
+              onClick={(e) => { e.stopPropagation(); navigate(`/commissions/${submission.id}?edit=true`); }}
+              className="flex items-center gap-1 text-amber-500 text-xs font-medium px-2 py-0.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 transition-colors"
+            >
               <Edit className="h-3 w-3" />
               Edit
             </span>
           )}
           {submission.status === "denied" && (
-            <span className="flex items-center gap-1 text-red-500 text-xs font-medium">
+            <span
+              role="button"
+              onClick={(e) => { e.stopPropagation(); navigate(`/commissions/${submission.id}?edit=true`); }}
+              className="flex items-center gap-1 text-red-500 text-xs font-medium px-2 py-0.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 transition-colors"
+            >
               <RotateCcw className="h-3 w-3" />
               Resubmit
             </span>

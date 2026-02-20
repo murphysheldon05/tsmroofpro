@@ -46,8 +46,8 @@ export default function Commissions() {
 
   const isManager = role === "manager";
   const isSalesManager = role === "sales_manager";
-  // All authenticated roles except base 'employee' can submit commissions
-  const canSubmit = !!role && role !== 'employee';
+  // Only sales roles can submit commissions
+  const canSubmit = role === 'sales_rep' || role === 'sales_manager' || role === 'admin';
   const showDrawRequests = canApproveDraws || isAdmin;
   const showMyDraws = canRequestDraws || role === "sales_rep" || role === "sales_manager";
   const commissionHolds = userHolds?.filter(h => h.hold_type === "commission_hold") || [];

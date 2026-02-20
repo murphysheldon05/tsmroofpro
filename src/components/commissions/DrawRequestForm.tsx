@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -30,6 +30,19 @@ export function DrawRequestForm({ open, onOpenChange }: DrawRequestFormProps) {
   const [estimatedCommission, setEstimatedCommission] = useState("");
   const [requestedAmount, setRequestedAmount] = useState("");
   const [notes, setNotes] = useState("");
+
+  // Refs for Enter-to-advance
+  const jobNameRef = useRef<HTMLInputElement>(null);
+  const estCommRef = useRef<HTMLInputElement>(null);
+  const reqAmtRef = useRef<HTMLInputElement>(null);
+  const notesRef = useRef<HTMLTextAreaElement>(null);
+
+  const advanceOnEnter = useCallback((e: React.KeyboardEvent, nextRef: React.RefObject<HTMLInputElement | HTMLTextAreaElement | null>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      nextRef.current?.focus();
+    }
+  }, []);
 
   const estComm = parseFloat(estimatedCommission) || 0;
   const reqAmount = parseFloat(requestedAmount) || 0;
@@ -94,8 +107,11 @@ export function DrawRequestForm({ open, onOpenChange }: DrawRequestFormProps) {
           <div className="space-y-2">
             <Label>Job Number *</Label>
             <Input
+              autoFocus
               value={jobNumber}
               onChange={(e) => setJobNumber(e.target.value)}
+              onKeyDown={(e) => advanceOnEnter(e, jobNameRef)}
+              onFocus={(e) => e.target.select()}
               placeholder="Enter the AccuLynx job number"
             />
           </div>
@@ -103,8 +119,11 @@ export function DrawRequestForm({ open, onOpenChange }: DrawRequestFormProps) {
           <div className="space-y-2">
             <Label>Job Name / Address</Label>
             <Input
+              ref={jobNameRef}
               value={jobName}
               onChange={(e) => setJobName(e.target.value)}
+              onKeyDown={(e) => advanceOnEnter(e, estCommRef)}
+              onFocus={(e) => e.target.select()}
               placeholder="Job reference for easy identification"
             />
           </div>
@@ -112,10 +131,13 @@ export function DrawRequestForm({ open, onOpenChange }: DrawRequestFormProps) {
           <div className="space-y-2">
             <Label>Estimated Commission</Label>
             <Input
+              ref={estCommRef}
               type="text"
               inputMode="decimal"
               value={estimatedCommission}
               onChange={(e) => setEstimatedCommission(e.target.value)}
+              onKeyDown={(e) => advanceOnEnter(e, reqAmtRef)}
+              onFocus={(e) => e.target.select()}
               placeholder="0.00"
             />
             {estComm > 0 && (
@@ -128,10 +150,13 @@ export function DrawRequestForm({ open, onOpenChange }: DrawRequestFormProps) {
           <div className="space-y-2">
             <Label>Draw Amount Requested *</Label>
             <Input
+              ref={reqAmtRef}
               type="text"
               inputMode="decimal"
               value={requestedAmount}
               onChange={(e) => setRequestedAmount(e.target.value)}
+              onKeyDown={(e) => advanceOnEnter(e, notesRef)}
+              onFocus={(e) => e.target.select()}
               placeholder="0.00"
             />
             {exceedsCap && estComm > 0 && (
@@ -157,6 +182,7 @@ export function DrawRequestForm({ open, onOpenChange }: DrawRequestFormProps) {
           <div className="space-y-2">
             <Label>Reason / Notes</Label>
             <Textarea
+              ref={notesRef}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Why do you need this advance?"

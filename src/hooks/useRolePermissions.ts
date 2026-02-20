@@ -170,6 +170,24 @@ export function useRolePermissions(): RolePermissions {
         canRequestDraws: true,
       };
 
+    case 'accounting':
+      return {
+        ...NO_PERMISSIONS,
+        canViewTeamCommissions: true,
+        canProcessPayouts: true,
+        canApplyDraws: true,
+        canExportOwnData: true,
+        canExportTeamData: true,
+        canViewReports: true,
+      };
+
+    case 'ops_compliance':
+      return {
+        ...NO_PERMISSIONS,
+        canViewReports: true,
+        canExportOwnData: true,
+      };
+
     case 'employee':
     default:
       return { ...NO_PERMISSIONS, canExportOwnData: true };
