@@ -133,7 +133,7 @@ export function WarrantyForm({ open, onOpenChange, warranty }: WarrantyFormProps
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="customer_name">Customer Name *</Label>
-                  <Input id="customer_name" {...register("customer_name", { required: true })} />
+                  <Input id="customer_name" autoFocus {...register("customer_name", { required: true })} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="job_address">Job Address *</Label>

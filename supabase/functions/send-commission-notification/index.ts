@@ -189,45 +189,61 @@ const handler = async (req: Request): Promise<Response> => {
       case "submitted":
         subject = `📋 New Commission Submitted: ${payload.job_name}`;
         heading = "New Commission Submitted";
-        introText = `A new commission has been submitted by <strong>${payload.submitter_name || repName}</strong> and is awaiting manager review.`;
+        introText = `A new commission has been submitted by <strong>${payload.submitter_name || repName}</strong> and is awaiting review.`;
         headerColor = "#d97706";
-        // Get the routing recipients (fallback)
-        recipientEmails = await resolveRecipients(supabaseClient, "commission_submission");
-        // Also look up the assigned manager directly from the commission document
+
+        // Check if this is a manager/sales manager submission
+        let isManagerSub = false;
         if (payload.commission_id) {
-          const { data: commDoc } = await supabaseClient
-            .from("commission_documents")
-            .select("manager_id")
+          const { data: commSub } = await supabaseClient
+            .from("commission_submissions")
+            .select("is_manager_submission")
             .eq("id", payload.commission_id)
             .single();
-          if (commDoc?.manager_id) {
-            const { data: mgrProfile } = await supabaseClient
-              .from("profiles")
-              .select("email")
-              .eq("id", commDoc.manager_id)
-              .single();
-            if (mgrProfile?.email) {
-              recipientEmails.push(mgrProfile.email);
-              console.log("Added assigned manager email:", mgrProfile.email);
+          isManagerSub = commSub?.is_manager_submission === true;
+        }
+
+        if (isManagerSub) {
+          // Manager/SM submissions: notify all admins (Sheldon) + compliance routing
+          introText = `A <strong>manager/sales manager commission</strong> has been submitted by <strong>${payload.submitter_name || repName}</strong> and is awaiting admin review.`;
+          const { data: adminUsers } = await supabaseClient
+            .from("user_roles")
+            .select("user_id")
+            .eq("role", "admin");
+          if (adminUsers) {
+            for (const au of adminUsers) {
+              const { data: adminProfile } = await supabaseClient
+                .from("profiles")
+                .select("email")
+                .eq("id", au.user_id)
+                .single();
+              if (adminProfile?.email) {
+                recipientEmails.push(adminProfile.email);
+                console.log("Added admin email for manager submission:", adminProfile.email);
+              }
             }
           }
-          // For sales manager self-submissions, notify all admins
-          if (!commDoc?.manager_id) {
-            const { data: adminUsers } = await supabaseClient
-              .from("user_roles")
-              .select("user_id")
-              .eq("role", "admin");
-            if (adminUsers) {
-              for (const au of adminUsers) {
-                const { data: adminProfile } = await supabaseClient
-                  .from("profiles")
-                  .select("email")
-                  .eq("id", au.user_id)
-                  .single();
-                if (adminProfile?.email) {
-                  recipientEmails.push(adminProfile.email);
-                  console.log("Added admin email for self-submission:", adminProfile.email);
-                }
+          // Also notify via compliance routing
+          const complianceRecipients = await resolveRecipients(supabaseClient, "commission_submission");
+          recipientEmails.push(...complianceRecipients);
+        } else {
+          // Regular rep submission: notify assigned manager + routing fallback
+          recipientEmails = await resolveRecipients(supabaseClient, "commission_submission");
+          if (payload.commission_id) {
+            const { data: commDoc } = await supabaseClient
+              .from("commission_documents")
+              .select("manager_id")
+              .eq("id", payload.commission_id)
+              .single();
+            if (commDoc?.manager_id) {
+              const { data: mgrProfile } = await supabaseClient
+                .from("profiles")
+                .select("email")
+                .eq("id", commDoc.manager_id)
+                .single();
+              if (mgrProfile?.email) {
+                recipientEmails.push(mgrProfile.email);
+                console.log("Added assigned manager email:", mgrProfile.email);
               }
             }
           }

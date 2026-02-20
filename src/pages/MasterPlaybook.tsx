@@ -64,7 +64,7 @@ const MasterPlaybook = forwardRef<HTMLDivElement>((_, ref) => {
         .from("user_notifications" as any)
         .select("id")
         .eq("user_id", user.id)
-        .eq("type", "playbook_complete");
+        .eq("notification_type", "playbook_complete");
 
       if (checkResult.data && checkResult.data.length > 0) return;
 

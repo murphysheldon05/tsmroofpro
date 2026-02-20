@@ -363,14 +363,14 @@ export function useUpdateCommissionStatus() {
       if (rejection_reason) {
         updateData.rejection_reason = rejection_reason;
         // Reset approval stage when requesting revision
-        updateData.approval_stage = "pending_manager";
-        // Increment revision count
-        const { data: currentCount } = await supabase
+        // Manager submissions restart at pending_admin, regular at pending_manager
+        const { data: submissionCheck } = await supabase
           .from("commission_submissions")
-          .select("revision_count")
+          .select("revision_count, is_manager_submission")
           .eq("id", id)
           .single();
-        updateData.revision_count = (currentCount?.revision_count || 0) + 1;
+        updateData.approval_stage = submissionCheck?.is_manager_submission ? "pending_admin" : "pending_manager";
+        updateData.revision_count = (submissionCheck?.revision_count || 0) + 1;
       }
       
       if (notes) {
@@ -601,10 +601,11 @@ export function useUpdateCommission() {
       if (current.status !== "revision_required" && current.status !== "denied") throw new Error("You can only edit submissions that require revision or have been denied");
       
       // Update the submission and set status back to pending_review
+      // Manager submissions go back to pending_admin (Sheldon/Manny), regular ones to pending_manager
       const updateData = {
         ...data,
         status: "pending_review",
-        approval_stage: "pending_manager",
+        approval_stage: current.is_manager_submission ? "pending_admin" : "pending_manager",
         rejection_reason: null, // Clear rejection reason on resubmit
       };
       

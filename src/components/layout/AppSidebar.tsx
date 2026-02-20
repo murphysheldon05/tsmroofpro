@@ -427,10 +427,14 @@ export function AppSidebar() {
   const filteredNavigation = useMemo(() => {
     return navigationItems
       .filter((item) => {
-        // Ops Compliance only visible to admin
-        if (item.sectionKey === "ops-compliance" && !isAdmin) return false;
-        // Accounting only visible to Accounting dept and admin
-        if (item.sectionKey === "accounting" && userDepartment !== "Accounting" && !isAdmin) return false;
+        // Ops Compliance: visible to admin or users granted ops-compliance permission
+        if (item.sectionKey === "ops-compliance" && !isAdmin) {
+          if (!userPermissions || !userPermissions.includes("ops-compliance")) return false;
+        }
+        // Accounting: visible to Accounting dept, admin, or users granted accounting permission
+        if (item.sectionKey === "accounting" && userDepartment !== "Accounting" && !isAdmin) {
+          if (!userPermissions || !userPermissions.includes("accounting")) return false;
+        }
         return isSectionVisible(item.sectionKey, userPermissions, role);
       })
       .map((item) => {

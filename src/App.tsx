@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -5,42 +6,51 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { PageTransition } from "@/components/PageTransition";
+import { Loader2 } from "lucide-react";
 
-import Landing from "./pages/Landing";
-import Auth from "./pages/Auth";
-import Signup from "./pages/Signup";
-import Dashboard from "./pages/Dashboard";
-import SOPLibrary from "./pages/SOPLibrary"; // Playbook Library
-import MasterPlaybook from "./pages/MasterPlaybook";
-import ResourceDetail from "./pages/ResourceDetail";
-import Training from "./pages/Training";
-import ShingleIdentification from "./pages/ShingleIdentification";
-import TrainingDocuments from "./pages/TrainingDocuments";
-import RoleOnboarding from "./pages/RoleOnboarding";
-import Tools from "./pages/Tools";
-import Requests from "./pages/Requests";
-import Admin from "./pages/Admin";
-import Profile from "./pages/Profile";
-import UserDirectory from "./pages/UserDirectory";
-import Directory from "./pages/Directory";
-import Warranties from "./pages/Warranties";
-import Commissions from "./pages/Commissions";
-import CommissionNew from "./pages/CommissionNew";
-import CommissionDetail from "./pages/CommissionDetail";
-import CommissionDocuments from "./pages/CommissionDocuments";
-import CommissionDocumentNew from "./pages/CommissionDocumentNew";
-import CommissionDocumentDetail from "./pages/CommissionDocumentDetail";
-import CommissionTracker from "./pages/CommissionTracker";
-import CommissionTrackerDetail from "./pages/CommissionTrackerDetail";
-import MyCommissionTracker from "./pages/MyCommissionTracker";
-import BuildSchedule from "./pages/BuildSchedule";
-import DeliverySchedule from "./pages/DeliverySchedule";
-import CommandCenter from "./pages/CommandCenter";
-import PendingReview from "./pages/PendingReview";
-import OpsCompliance from "./pages/OpsCompliance";
-import Draws from "./pages/Draws";
-import Accounting from "./pages/Accounting";
-import NotFound from "./pages/NotFound";
+// Lazy-loaded pages — each chunk loads only when navigated to
+const Landing = lazy(() => import("./pages/Landing"));
+const Auth = lazy(() => import("./pages/Auth"));
+const Signup = lazy(() => import("./pages/Signup"));
+const SOPLibrary = lazy(() => import("./pages/SOPLibrary"));
+const MasterPlaybook = lazy(() => import("./pages/MasterPlaybook"));
+const ResourceDetail = lazy(() => import("./pages/ResourceDetail"));
+const Training = lazy(() => import("./pages/Training"));
+const ShingleIdentification = lazy(() => import("./pages/ShingleIdentification"));
+const TrainingDocuments = lazy(() => import("./pages/TrainingDocuments"));
+const RoleOnboarding = lazy(() => import("./pages/RoleOnboarding"));
+const Tools = lazy(() => import("./pages/Tools"));
+const Requests = lazy(() => import("./pages/Requests"));
+const Admin = lazy(() => import("./pages/Admin"));
+const Profile = lazy(() => import("./pages/Profile"));
+const UserDirectory = lazy(() => import("./pages/UserDirectory"));
+const Directory = lazy(() => import("./pages/Directory"));
+const Warranties = lazy(() => import("./pages/Warranties"));
+const Commissions = lazy(() => import("./pages/Commissions"));
+const CommissionNew = lazy(() => import("./pages/CommissionNew"));
+const CommissionDetail = lazy(() => import("./pages/CommissionDetail"));
+const CommissionDocuments = lazy(() => import("./pages/CommissionDocuments"));
+const CommissionDocumentNew = lazy(() => import("./pages/CommissionDocumentNew"));
+const CommissionDocumentDetail = lazy(() => import("./pages/CommissionDocumentDetail"));
+const CommissionTracker = lazy(() => import("./pages/CommissionTracker"));
+const CommissionTrackerDetail = lazy(() => import("./pages/CommissionTrackerDetail"));
+const MyCommissionTracker = lazy(() => import("./pages/MyCommissionTracker"));
+const BuildSchedule = lazy(() => import("./pages/BuildSchedule"));
+const DeliverySchedule = lazy(() => import("./pages/DeliverySchedule"));
+const CommandCenter = lazy(() => import("./pages/CommandCenter"));
+const PendingReview = lazy(() => import("./pages/PendingReview"));
+const OpsCompliance = lazy(() => import("./pages/OpsCompliance"));
+const Accounting = lazy(() => import("./pages/Accounting"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+
+function PageLoader() {
+  return (
+    <div className="flex items-center justify-center h-screen bg-background">
+      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+    </div>
+  );
+}
 
 const queryClient = new QueryClient();
 
@@ -51,6 +61,8 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
+          <Suspense fallback={<PageLoader />}>
+          <PageTransition>
           <Routes>
             {/* Public routes - root redirects to auth for login/signup flow */}
             <Route path="/" element={<Navigate to="/auth" replace />} />
@@ -329,6 +341,8 @@ const App = () => (
             {/* Catch-all */}
             <Route path="*" element={<NotFound />} />
           </Routes>
+          </PageTransition>
+          </Suspense>
         </BrowserRouter>
       </TooltipProvider>
     </AuthProvider>

@@ -60,7 +60,7 @@ const STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secon
 const APPROVAL_STAGE_CONFIG: Record<string, { label: string; icon: React.ReactNode; color: string }> = {
   pending_manager: { label: "Awaiting Manager Approval", icon: <UserCheck className="h-4 w-4" />, color: "text-amber-600" },
   pending_accounting: { label: "Manager Approved - Awaiting Accounting", icon: <Calculator className="h-4 w-4" />, color: "text-blue-600" },
-  pending_admin: { label: "Awaiting Admin Approval (Manager Submission)", icon: <UserCheck className="h-4 w-4" />, color: "text-purple-600" },
+  pending_admin: { label: "Awaiting Admin Review (Sheldon/Manny)", icon: <UserCheck className="h-4 w-4" />, color: "text-purple-600" },
   completed: { label: "Fully Approved", icon: <CheckCircle className="h-4 w-4" />, color: "text-green-600" },
 };
 
@@ -153,32 +153,23 @@ export default function CommissionDetail() {
   };
 
   const handleAccountingApprove = async () => {
-    // Check if this is a manager submission (needs admin approval)
-    if (submission.is_manager_submission) {
-      await updateStatus.mutateAsync({
-        id: submission.id,
-        status: "pending_review",
-        approval_stage: "pending_admin", // Route to admin (Sheldon)
-        notes: reviewerNotes || "Accounting approved - awaiting admin final approval",
-      });
-    } else {
-      // Regular submission - accounting is final
-      await updateStatus.mutateAsync({
-        id: submission.id,
-        status: "approved",
-        approval_stage: "completed",
-        notes: reviewerNotes || "🎉 Approved - ready for payout",
-      });
-    }
-    setReviewerNotes("");
-  };
-
-  const handleAdminApprove = async () => {
+    // Accounting is always the final step — approves for payment
     await updateStatus.mutateAsync({
       id: submission.id,
       status: "approved",
       approval_stage: "completed",
-      notes: reviewerNotes || "🎉 Admin approved - ready for payout",
+      notes: reviewerNotes || "🎉 Approved - ready for payout",
+    });
+    setReviewerNotes("");
+  };
+
+  const handleAdminApprove = async () => {
+    // Admin/Sheldon approves manager submissions → routes to accounting for final review & mark paid
+    await updateStatus.mutateAsync({
+      id: submission.id,
+      status: "pending_review",
+      approval_stage: "pending_accounting",
+      notes: reviewerNotes || "Admin approved - sent to accounting for final review & payment",
     });
     setReviewerNotes("");
   };
@@ -441,7 +432,7 @@ export default function CommissionDetail() {
                     ) : (
                       <CheckCircle className="h-4 w-4" />
                     )}
-                    {submission.is_manager_submission ? "Approve & Send to Admin" : "Approve for Payment"}
+                    Approve for Payment
                   </Button>
                 )}
                 
@@ -457,7 +448,7 @@ export default function CommissionDetail() {
                     ) : (
                       <CheckCircle className="h-4 w-4" />
                     )}
-                    Admin Final Approval
+                    Approve & Send to Accounting
                   </Button>
                 )}
                 
