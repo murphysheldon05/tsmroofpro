@@ -2,6 +2,9 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.89.0?target=deno";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
+if (!RESEND_API_KEY) {
+  console.error("RESEND_API_KEY environment variable is not set");
+}
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -72,8 +75,8 @@ async function resolveRecipients(
       .from("profiles")
       .select("email")
       .eq("id", assignedToUserId)
-      .single();
-    
+      .maybeSingle();
+
     if (profile?.email) {
       recipients.push(profile.email);
       console.log("Added assigned user email:", profile.email);
@@ -181,9 +184,13 @@ serve(async (req: Request): Promise<Response> => {
     const priorityColor = PRIORITY_COLORS[priorityLevel] || "#6b7280";
 
     // Determine notification type for routing lookup
-    const routingType = payload.notification_type === "submitted" 
-      ? "warranty_submission" 
-      : "warranty_submission"; // All warranty notifications route to Production
+    const routingType = payload.notification_type === "submitted"
+      ? "warranty_submission"
+      : payload.notification_type === "assigned"
+      ? "warranty_assigned"
+      : payload.notification_type === "completed"
+      ? "warranty_completed"
+      : "warranty_status_change";
 
     // Resolve recipients dynamically
     const recipientEmails = await resolveRecipients(

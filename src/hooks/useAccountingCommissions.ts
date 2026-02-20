@@ -70,13 +70,15 @@ export function useMarkCommissionsPaid() {
 
         for (const draw of draws) {
           if (remainingPayout <= 0) break;
-          
-          const deductAmount = Math.min(draw.requested_amount - (draw.remaining_balance || 0), remainingPayout);
+
+          // Use remaining_balance if set (partially deducted), otherwise full requested_amount
+          const outstandingBalance = draw.remaining_balance ?? draw.requested_amount;
+          const deductAmount = Math.min(outstandingBalance, remainingPayout);
           if (deductAmount <= 0) continue;
 
-          const newBalance = (draw.requested_amount - deductAmount);
+          const newBalance = outstandingBalance - deductAmount;
 
-          await supabase
+          const { error: drawUpdateError } = await supabase
             .from("draw_requests")
             .update({
               status: newBalance <= 0 ? "deducted" : "approved",
@@ -85,6 +87,11 @@ export function useMarkCommissionsPaid() {
               remaining_balance: Math.max(0, newBalance),
             })
             .eq("id", draw.id);
+
+          if (drawUpdateError) {
+            console.error("Failed to update draw deduction:", drawUpdateError);
+            continue;
+          }
 
           remainingPayout -= deductAmount;
         }

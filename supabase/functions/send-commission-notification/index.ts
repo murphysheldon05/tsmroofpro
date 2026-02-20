@@ -362,9 +362,9 @@ const handler = async (req: Request): Promise<Response> => {
     recipientEmails = [...new Set(recipientEmails.filter(email => email && email.trim()))];
 
     if (recipientEmails.length === 0) {
-      console.log("No recipients for notification, skipping email send");
+      console.warn("No recipients resolved for commission notification:", payload.notification_type, "commission_id:", payload.commission_id);
       return new Response(
-        JSON.stringify({ success: true, message: "No recipients, email skipped" }),
+        JSON.stringify({ success: false, warning: "No recipients resolved", notification_type: payload.notification_type }),
         { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
