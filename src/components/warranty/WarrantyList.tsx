@@ -39,7 +39,7 @@ export function WarrantyList({ onEdit, onView }: WarrantyListProps) {
   const { data: warranties = [], isLoading } = useWarranties();
   const deleteMutation = useDeleteWarranty();
   const { role } = useAuth();
-  const canDelete = role === "admin";
+  const canDelete = role === "admin" || role === "manager" || role === "sales_manager";
 
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
