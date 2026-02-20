@@ -120,16 +120,22 @@ export const COMMISSION_TIERS: Record<string, number> = {
 };
 
 export function useCommissionSubmissions() {
-  const { user } = useAuth();
-  
+  const { user, role, isAdmin, isManager } = useAuth();
+
   return useQuery({
-    queryKey: ["commission-submissions"],
+    queryKey: ["commission-submissions", user?.id, role],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("commission_submissions")
         .select("*")
         .order("created_at", { ascending: false });
-      
+
+      // Data isolation: sales reps & employees only see their own submissions
+      if (!isAdmin && !isManager) {
+        query = query.eq("submitted_by", user!.id);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       return data as CommissionSubmission[];
     },
@@ -138,8 +144,8 @@ export function useCommissionSubmissions() {
 }
 
 export function useCommissionSubmission(id: string) {
-  const { user } = useAuth();
-  
+  const { user, role, isAdmin, isManager } = useAuth();
+
   return useQuery({
     queryKey: ["commission-submission", id],
     queryFn: async () => {
@@ -148,8 +154,12 @@ export function useCommissionSubmission(id: string) {
         .select("*")
         .eq("id", id)
         .maybeSingle();
-      
+
       if (error) throw error;
+      // Ownership check: non-admin/non-manager can only view their own
+      if (data && !isAdmin && !isManager && data.submitted_by !== user!.id) {
+        return null;
+      }
       return data as CommissionSubmission | null;
     },
     enabled: !!user && !!id,

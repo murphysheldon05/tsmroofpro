@@ -4,15 +4,22 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
 export function useDraws() {
-  const { user } = useAuth();
-  
+  const { user, isAdmin, isManager } = useAuth();
+
   return useQuery({
     queryKey: ["draws", user?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("draws")
         .select("*")
         .order("created_at", { ascending: false });
+
+      // Data isolation: non-admin/non-manager only see their own draws
+      if (!isAdmin && !isManager) {
+        query = query.eq("user_id", user!.id);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       return data;
     },

@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format, startOfDay, endOfDay } from "date-fns";
+import { useAuth } from "@/contexts/AuthContext";
 
 // Today's Builds - filtered from production_calendar_events
 export function useTodaysBuilds() {
@@ -63,8 +64,11 @@ export function useTodaysDeliveries() {
 
 // Action Required items
 export function useActionRequired() {
+  const { user, isAdmin, isManager } = useAuth();
+  const isScopedUser = !isAdmin && !isManager;
+
   return useQuery({
-    queryKey: ["action-required"],
+    queryKey: ["action-required", user?.id, isScopedUser],
     queryFn: async () => {
       // Get pending warranty requests
       const { data: pendingWarranties, error: warrantyError } = await supabase
@@ -76,24 +80,34 @@ export function useActionRequired() {
 
       if (warrantyError) throw warrantyError;
 
-      // Get pending commission submissions
-      const { data: pendingCommissions, error: commissionError } = await supabase
+      // Get pending commission submissions — scoped for non-admins
+      let commQuery = supabase
         .from("commission_submissions")
         .select("id, job_name, job_address, status, updated_at")
         .in("status", ["pending_review", "revision_required"])
         .order("updated_at", { ascending: true })
         .limit(5);
 
+      if (isScopedUser && user) {
+        commQuery = commQuery.eq("submitted_by", user.id);
+      }
+
+      const { data: pendingCommissions, error: commissionError } = await commQuery;
       if (commissionError) throw commissionError;
 
-      // Get pending requests (supplements, etc.)
-      const { data: pendingRequests, error: requestError } = await supabase
+      // Get pending requests — scoped for non-admins
+      let reqQuery = supabase
         .from("requests")
         .select("id, title, type, status, updated_at")
         .eq("status", "pending")
         .order("updated_at", { ascending: true })
         .limit(5);
 
+      if (isScopedUser && user) {
+        reqQuery = reqQuery.eq("submitted_by", user.id);
+      }
+
+      const { data: pendingRequests, error: requestError } = await reqQuery;
       if (requestError) throw requestError;
 
       // Filter to items not updated in 3+ days
@@ -117,8 +131,11 @@ export function useActionRequired() {
 
 // Quick Stats
 export function useQuickStats() {
+  const { user, isAdmin, isManager } = useAuth();
+  const isScopedUser = !isAdmin && !isManager;
+
   return useQuery({
-    queryKey: ["command-center-stats"],
+    queryKey: ["command-center-stats", user?.id, isScopedUser],
     queryFn: async () => {
       const today = new Date();
       const todayStr = format(today, "yyyy-MM-dd");
@@ -142,24 +159,36 @@ export function useQuickStats() {
         .select("*", { count: "exact", head: true })
         .not("status", "in", '("completed","denied")');
 
-      // Pending approvals (requests + commissions)
-      const { count: pendingRequests } = await supabase
-        .from("requests")
-        .select("*", { count: "exact", head: true })
-        .eq("status", "pending");
+      // Pending approvals - scoped for non-admins
+      let pendingRequestsCount = 0;
+      if (!isScopedUser) {
+        const { count } = await supabase
+          .from("requests")
+          .select("*", { count: "exact", head: true })
+          .eq("status", "pending");
+        pendingRequestsCount = count || 0;
+      }
 
-      const { count: pendingCommissions } = await supabase
+      let commQuery = supabase
         .from("commission_submissions")
         .select("*", { count: "exact", head: true })
         .in("status", ["pending_review", "revision_required"]);
+
+      // Sales reps only see their own pending commissions
+      if (isScopedUser) {
+        commQuery = commQuery.eq("submitted_by", user!.id);
+      }
+
+      const { count: pendingCommissions } = await commQuery;
 
       return {
         buildsToday: buildsToday || 0,
         deliveriesToday: deliveriesToday || 0,
         openWarranties: openWarranties || 0,
-        pendingApprovals: (pendingRequests || 0) + (pendingCommissions || 0),
+        pendingApprovals: pendingRequestsCount + (pendingCommissions || 0),
       };
     },
+    enabled: !!user,
     refetchInterval: 60000,
   });
 }

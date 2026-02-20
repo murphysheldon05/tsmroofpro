@@ -13,7 +13,8 @@ const formatCurrency = (value: number) => {
 };
 
 export function CommissionSummaryWidget() {
-  const { user, role } = useAuth();
+  const { user, role, isAdmin, isManager } = useAuth();
+  const isScopedUser = !isAdmin && !isManager;
 
   const { data, isLoading } = useQuery({
     queryKey: ["cc-commission-summary", user?.id, role],
@@ -40,6 +41,14 @@ export function CommissionSummaryWidget() {
         .from("draw_requests" as any)
         .select("remaining_balance")
         .in("status", ["approved", "paid"]);
+
+      // Data isolation: sales reps & employees only see their own data
+      if (isScopedUser) {
+        pendingQuery = pendingQuery.eq("submitted_by", user!.id);
+        approvedQuery = approvedQuery.eq("submitted_by", user!.id);
+        paidQuery = paidQuery.eq("submitted_by", user!.id);
+        drawQuery = drawQuery.eq("user_id", user!.id);
+      }
 
       const [pendingRes, approvedRes, paidRes, drawRes] = await Promise.all([
         pendingQuery, approvedQuery, paidQuery, drawQuery,
