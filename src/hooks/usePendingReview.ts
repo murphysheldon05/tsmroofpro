@@ -146,12 +146,11 @@ export function usePendingReview() {
           });
         });
 
-        // Pending requests needing review (exclude completed/closed)
+        // Pending requests needing review
         const { data: pendingRequests } = await supabase
           .from("requests")
           .select("id, title, type, status, updated_at, created_at, submitted_by")
           .eq("status", "pending")
-          .not("status", "in", '("completed","closed","rejected")')
           .order("created_at", { ascending: true })
           .limit(20);
 

@@ -89,10 +89,11 @@ const handler = async (req: Request): Promise<Response> => {
     // Create in-app notification for the user
     await supabaseAdmin.from("user_notifications").insert({
       user_id: userId,
-      type: "playbook_complete",
+      notification_type: "playbook_complete",
       title: "Master Playbook Complete! 🎉",
       message: "Congratulations! You've completed all 10 Master Playbook acknowledgments and now have full access to the hub.",
-      read: false,
+      entity_type: "playbook",
+      entity_id: userId,
     });
 
     // Build recipient list

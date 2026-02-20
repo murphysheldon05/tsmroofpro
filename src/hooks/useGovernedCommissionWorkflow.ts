@@ -126,7 +126,16 @@ export function useDenyCommission() {
     }) => {
       if (!user) throw new Error("Not authenticated");
       if (!reason.trim()) throw new Error("Denial reason is required");
-      
+
+      // Fetch current status before updating
+      const { data: currentCommission } = await supabase
+        .from("commission_submissions")
+        .select("status")
+        .eq("id", commissionId)
+        .single();
+
+      const previousStatus = currentCommission?.status || "pending_review";
+
       // Update commission status to denied
       const { error: updateError } = await supabase
         .from("commission_submissions")
@@ -138,9 +147,9 @@ export function useDenyCommission() {
           denied_by: user.id,
         })
         .eq("id", commissionId);
-      
+
       if (updateError) throw updateError;
-      
+
       // Lock the job number permanently
       if (jobNumber && jobNumber.length === 4) {
         const { error: lockError } = await supabase
@@ -151,16 +160,16 @@ export function useDenyCommission() {
             denied_by: user.id,
             denial_reason: reason,
           });
-        
+
         if (lockError && !lockError.message.includes("duplicate")) {
           throw lockError;
         }
       }
-      
+
       // Log the status change
       await supabase.from("commission_status_log").insert({
         commission_id: commissionId,
-        previous_status: "pending_review",
+        previous_status: previousStatus,
         new_status: "denied",
         changed_by: user.id,
         notes: `Commission DENIED: ${reason}`,
@@ -208,6 +217,8 @@ export function useDenyCommission() {
       queryClient.invalidateQueries({ queryKey: ["commission-submissions"] });
       queryClient.invalidateQueries({ queryKey: ["commission-submission", variables.commissionId] });
       queryClient.invalidateQueries({ queryKey: ["denied-job-numbers"] });
+      queryClient.invalidateQueries({ queryKey: ["pending-review"] });
+      queryClient.invalidateQueries({ queryKey: ["job-number-denied", variables.jobNumber] });
       toast.error("Commission Denied", {
         description: "The job number has been permanently locked.",
       });
@@ -236,10 +247,10 @@ export function useRequestRevision() {
       if (!user) throw new Error("Not authenticated");
       if (!reason.trim()) throw new Error("Revision reason is required");
       
-      // Get current revision count
+      // Get current revision count and status
       const { data: current } = await supabase
         .from("commission_submissions")
-        .select("revision_count, commission_requested")
+        .select("status, revision_count, commission_requested")
         .eq("id", commissionId)
         .single();
       
@@ -279,7 +290,7 @@ export function useRequestRevision() {
       // Log status change
       await supabase.from("commission_status_log").insert({
         commission_id: commissionId,
-        previous_status: "pending_review",
+        previous_status: current?.status || "pending_review",
         new_status: "revision_required",
         changed_by: user.id,
         notes: `Revision #${newRevisionCount} requested: ${reason}`,
@@ -327,6 +338,7 @@ export function useRequestRevision() {
       queryClient.invalidateQueries({ queryKey: ["commission-submissions"] });
       queryClient.invalidateQueries({ queryKey: ["commission-submission", variables.commissionId] });
       queryClient.invalidateQueries({ queryKey: ["commission-revision-log", variables.commissionId] });
+      queryClient.invalidateQueries({ queryKey: ["pending-review"] });
       toast.warning("Revision Requested", {
         description: "The submitter has been notified to revise their commission.",
       });
@@ -485,8 +497,10 @@ export function useApproveCommission() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["commission-submissions"] });
       queryClient.invalidateQueries({ queryKey: ["commission-submission", variables.commissionId] });
-      
-      const message = 
+      queryClient.invalidateQueries({ queryKey: ["pending-review"] });
+      queryClient.invalidateQueries({ queryKey: ["accounting-commissions"] });
+
+      const message =
         variables.currentStage === "pending_manager" ? "Approved by manager - sent to accounting" :
         variables.currentStage === "pending_accounting" && variables.isManagerSubmission ? "Approved by accounting - sent to admin" :
         "🎉 Commission Approved!";

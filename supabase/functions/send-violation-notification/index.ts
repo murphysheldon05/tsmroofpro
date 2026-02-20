@@ -106,10 +106,11 @@ const handler = async (req: Request): Promise<Response> => {
     // Create in-app notification for the user
     await supabaseAdmin.from("user_notifications").insert({
       user_id: payload.user_id,
-      type: "violation_logged",
+      notification_type: "violation_logged",
       title: `${payload.severity} Violation Logged`,
       message: `A ${payload.severity.toLowerCase()} violation has been logged against your account: ${payload.violation_type}`,
-      read: false,
+      entity_type: "compliance_violation",
+      entity_id: payload.violation_id || null,
     });
 
     // Create in-app notifications for compliance officers
@@ -117,10 +118,11 @@ const handler = async (req: Request): Promise<Response> => {
       await supabaseAdmin.from("user_notifications").insert(
         complianceUsers.map((cu) => ({
           user_id: cu.user_id,
-          type: "violation_logged",
+          notification_type: "violation_logged",
           title: `${payload.severity} Violation: ${userProfile.full_name}`,
           message: `${payload.violation_type}: ${payload.description}`,
-          read: false,
+          entity_type: "compliance_violation",
+          entity_id: payload.violation_id || null,
         }))
       );
     }

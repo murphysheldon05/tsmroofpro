@@ -410,11 +410,13 @@ export function useUpdateCommissionStatus() {
           "status_change";
 
         // Get submitter info
-        const { data: submitterProfile } = await supabase
-          .from("profiles")
-          .select("email, full_name")
-          .eq("id", current?.submitted_by)
-          .single();
+        const { data: submitterProfile } = current?.submitted_by
+          ? await supabase
+              .from("profiles")
+              .select("email, full_name")
+              .eq("id", current.submitted_by)
+              .maybeSingle()
+          : { data: null };
 
         await supabase.functions.invoke("send-commission-notification", {
           body: {
@@ -446,8 +448,9 @@ export function useUpdateCommissionStatus() {
       queryClient.invalidateQueries({ queryKey: ["commission-submissions"] });
       queryClient.invalidateQueries({ queryKey: ["commission-submission", variables.id] });
       queryClient.invalidateQueries({ queryKey: ["commission-status-log", variables.id] });
-      
-      const message = 
+      queryClient.invalidateQueries({ queryKey: ["pending-review"] });
+
+      const message =
         variables.approval_stage === "pending_accounting" ? "Approved by manager - sent to accounting" :
         (variables.approval_stage === "completed" && variables.status === "approved") ? "🎉 Commission Approved!" :
         variables.status === "paid" ? "Marked as paid" :

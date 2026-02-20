@@ -82,14 +82,15 @@ const handler = async (req: Request): Promise<Response> => {
     // Create in-app notification
     await supabaseAdmin.from("user_notifications").insert({
       user_id: payload.user_id,
-      type: payload.action === "applied" ? "hold_applied" : "hold_released",
-      title: payload.action === "applied" 
-        ? `🚫 Hold Applied: ${payload.hold_type}` 
+      notification_type: payload.action === "applied" ? "hold_applied" : "hold_released",
+      title: payload.action === "applied"
+        ? `🚫 Hold Applied: ${payload.hold_type}`
         : `✅ Hold Released: ${payload.hold_type}`,
       message: payload.action === "applied"
         ? `A ${payload.hold_type} hold has been applied to your account: ${payload.reason}`
         : `The ${payload.hold_type} hold on your account has been released.`,
-      read: false,
+      entity_type: "compliance_hold",
+      entity_id: payload.hold_id || null,
     });
 
     // Send email notification

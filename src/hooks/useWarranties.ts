@@ -181,12 +181,18 @@ export function useCreateWarranty() {
 
   return useMutation({
     mutationFn: async (warranty: Omit<WarrantyRequest, "id" | "created_at" | "updated_at" | "last_status_change_at">) => {
-      const { data: user } = await supabase.auth.getUser();
+      // Validate auth before attempting insert (prevents cryptic RLS errors)
+      const { data: userData, error: authError } = await supabase.auth.getUser();
+      if (authError || !userData.user?.id) {
+        throw new Error("You must be logged in to create a warranty request.");
+      }
+
+      const userId = userData.user.id;
       const { data, error } = await supabase
         .from("warranty_requests")
         .insert({
           ...warranty,
-          created_by: user.user?.id,
+          created_by: userId,
         })
         .select()
         .single();
@@ -260,9 +266,9 @@ export function useUpdateWarranty() {
         // meaning the user has made a decision on it)
         
         // Auto-set closed metadata
-        const { data: user } = await supabase.auth.getUser();
+        const { data: closingUser } = await supabase.auth.getUser();
         updates.closed_date = new Date().toISOString().split("T")[0];
-        updates.closed_by = user.user?.id || null;
+        updates.closed_by = closingUser.user?.id || null;
       }
 
       const { data, error } = await supabase
@@ -403,8 +409,8 @@ export function useCreateWarrantyNote() {
 
   return useMutation({
     mutationFn: async ({ warranty_id, note, mentioned_user_ids = [] }: { warranty_id: string; note: string; mentioned_user_ids?: string[] }) => {
-      const { data: user } = await supabase.auth.getUser();
-      const userId = user.user?.id;
+      const { data: noteUser } = await supabase.auth.getUser();
+      const userId = noteUser.user?.id;
       const { data, error } = await supabase
         .from("warranty_notes")
         .insert({
@@ -538,7 +544,8 @@ export function useUploadWarrantyDocument() {
       file: File;
       document_type: "intake_photo" | "closeout_photo" | "document";
     }) => {
-      const { data: user } = await supabase.auth.getUser();
+      const { data: uploaderData } = await supabase.auth.getUser();
+      const uploaderId = uploaderData.user?.id || null;
       const filePath = `${warranty_id}/${Date.now()}_${file.name}`;
 
       const { error: uploadError } = await supabase.storage
@@ -556,7 +563,7 @@ export function useUploadWarrantyDocument() {
           file_type: file.type,
           file_size: file.size,
           document_type,
-          uploaded_by: user.user?.id,
+          uploaded_by: uploaderId,
         })
         .select()
         .single();

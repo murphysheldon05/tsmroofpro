@@ -194,7 +194,7 @@ export default function CommissionDetail() {
   };
 
   const handleDeny = async () => {
-    if (!rejectionReason.trim()) return;
+    if (!rejectionReason.trim() || !user?.id) return;
     // Deny commission - this will lock the job number
     await updateStatus.mutateAsync({
       id: submission.id,
@@ -202,14 +202,14 @@ export default function CommissionDetail() {
       approval_stage: "completed",
       rejection_reason: rejectionReason,
     });
-    
+
     // Lock job number if exists
     if (submission.acculynx_job_id && submission.acculynx_job_id.length === 4) {
       try {
         await supabase.from("denied_job_numbers").insert({
           job_number: submission.acculynx_job_id,
           commission_id: submission.id,
-          denied_by: user?.id,
+          denied_by: user.id,
           denial_reason: rejectionReason,
         });
       } catch (e) {
