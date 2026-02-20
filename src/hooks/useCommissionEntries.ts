@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 // ——— Types ———
 
@@ -105,9 +106,33 @@ export function useCommissionPayRuns() {
 }
 
 export function useCommissionEntries() {
+  const { user, isAdmin, isManager } = useAuth();
+
   return useQuery({
-    queryKey: ["commission-entries"],
+    queryKey: ["commission-entries", user?.id, isAdmin, isManager],
     queryFn: async () => {
+      // For non-admin/non-manager, only show their linked rep's entries
+      if (!isAdmin && !isManager && user) {
+        const { data: linkedRep } = await supabase
+          .from("commission_reps")
+          .select("id")
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        if (linkedRep) {
+          const { data, error } = await supabase
+            .from("commission_entries")
+            .select("*")
+            .eq("rep_id", linkedRep.id)
+            .order("paid_date", { ascending: true });
+          if (error) throw error;
+          return data as CommissionEntry[];
+        }
+        // No linked rep — return empty
+        return [] as CommissionEntry[];
+      }
+
+      // Admins/managers see all entries
       const { data, error } = await supabase
         .from("commission_entries")
         .select("*")
@@ -115,6 +140,7 @@ export function useCommissionEntries() {
       if (error) throw error;
       return data as CommissionEntry[];
     },
+    enabled: !!user,
   });
 }
 

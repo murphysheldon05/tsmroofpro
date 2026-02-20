@@ -208,13 +208,13 @@ export const directorySteps: TutorialStep[] = [
     target: "assigned-manager",
     title: "Your Assigned Manager",
     description: "Your #1 point of contact. For commission questions, deal strategy, draw requests, and day-to-day support — always start with your manager.",
-    roles: ["sales_rep", "user"],
+    roles: ["sales_rep", "employee"],
   },
   {
     target: "other-managers",
     title: "Other Sales Managers",
     description: "If your manager is unavailable, you can reach out to another Sales Manager as your backup contact.",
-    roles: ["sales_rep", "user"],
+    roles: ["sales_rep", "employee"],
   },
   {
     target: "compliance-officer",
@@ -230,7 +230,7 @@ export const directorySteps: TutorialStep[] = [
     target: "accounting-owner",
     title: "Accounting & Owner",
     description: "To reach Accounting or the Owner, please submit a meeting request via Forms & Requests or email. A formal request ensures your question gets proper attention.",
-    roles: ["sales_rep", "user"],
+    roles: ["sales_rep", "employee"],
   },
 ];
 

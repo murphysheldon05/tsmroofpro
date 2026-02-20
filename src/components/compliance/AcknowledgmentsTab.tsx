@@ -104,7 +104,7 @@ function useAcknowledgmentStatus() {
             id: user.id,
             full_name: user.full_name || "Unknown",
             email: user.email || "",
-            role: user.role_title || "user",
+            role: user.role_title || "employee",
             department: deptName,
             acknowledged_at: ack.acknowledged_at,
             version: ack.version,
@@ -115,7 +115,7 @@ function useAcknowledgmentStatus() {
             id: user.id,
             full_name: user.full_name || "Unknown",
             email: user.email || "",
-            role: user.role_title || "user",
+            role: user.role_title || "employee",
             department: deptName,
             last_login_at: user.last_login_at,
           });

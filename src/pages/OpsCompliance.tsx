@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { useAuth } from "@/contexts/AuthContext";
+import { useCurrentUserPermissions } from "@/hooks/useUserPermissions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
@@ -66,7 +67,7 @@ const tabs = [
 
 export default function OpsCompliance() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const { isAdmin } = useAuth();
+  const { isAdmin, user } = useAuth();
   
   const activeTab = searchParams.get("tab") || "dashboard";
 
@@ -173,8 +174,12 @@ export default function OpsCompliance() {
     }
   };
 
-  // Non-admin users get a limited compliance reporting view
-  if (!isAdmin) {
+  // Check for compliance permission grant
+  const { data: userPermissions } = useCurrentUserPermissions();
+  const hasComplianceAccess = isAdmin || (userPermissions && userPermissions.includes("ops-compliance"));
+
+  // Users without compliance access get a limited reporting view
+  if (!hasComplianceAccess) {
     return (
       <AppLayout>
         <div className="space-y-6">

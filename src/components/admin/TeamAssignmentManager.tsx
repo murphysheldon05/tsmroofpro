@@ -114,7 +114,7 @@ export function TeamAssignmentManager() {
 
       return (profiles ?? []).map((p) => ({
         ...p,
-        role: roleByUserId.get(p.id) ?? "user",
+        role: roleByUserId.get(p.id) ?? "employee",
       })) as User[];
     },
   });

@@ -71,7 +71,7 @@ export function CommissionSubmitForm({ variant = "employee" }: CommissionSubmitF
   // Track entered job number to check if denied
   const [enteredJobNumber, setEnteredJobNumber] = useState<string>("");
   const { data: isJobDenied } = useIsJobNumberDenied(enteredJobNumber);
-  const isManagerSubmission = role === "manager" || role === "admin";
+  const isManagerSubmission = role === "manager" || role === "admin" || role === "sales_manager";
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -160,6 +160,8 @@ export function CommissionSubmitForm({ variant = "employee" }: CommissionSubmitF
         advances_paid: data.advances_paid,
         // Mark if this is a manager submission for routing
         is_manager_submission: isManagerSubmission,
+        // Manager/SM submissions skip manager review → go straight to admin (Sheldon/Manny)
+        ...(isManagerSubmission ? { approval_stage: "pending_admin" } : {}),
         // Set commission_requested to the calculated amount
         commission_requested: worksheetData.contract_amount * (worksheetData.commission_percentage / 100) - worksheetData.advances_paid,
       } as any);
@@ -190,7 +192,7 @@ export function CommissionSubmitForm({ variant = "employee" }: CommissionSubmitF
                 <FormItem>
                   <FormLabel>Job Name / Customer Name *</FormLabel>
                   <FormControl>
-                    <Input placeholder="Enter job or customer name" {...field} />
+                    <Input placeholder="Enter job or customer name" autoFocus {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

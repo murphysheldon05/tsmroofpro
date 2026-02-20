@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
 export function useAccountingCommissions() {
-  const { user } = useAuth();
+  const { user, isAdmin, isManager } = useAuth();
 
   return useQuery({
     queryKey: ["accounting-commissions"],
@@ -19,7 +19,8 @@ export function useAccountingCommissions() {
       if (error) throw error;
       return data;
     },
-    enabled: !!user,
+    // Only admins and managers should access accounting commissions
+    enabled: !!user && (isAdmin || isManager),
   });
 }
 

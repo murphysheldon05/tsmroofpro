@@ -30,6 +30,8 @@ export const SIDEBAR_SECTIONS = [
   { key: "company", label: "Company", parent: null },
   { key: "directory", label: "Team Directory", parent: null },
   { key: "vendors", label: "Subs & Vendors", parent: null },
+  { key: "accounting", label: "Accounting", parent: null },
+  { key: "ops-compliance", label: "Ops Compliance", parent: null },
 ] as const;
 
 export type SectionKey = (typeof SIDEBAR_SECTIONS)[number]["key"];

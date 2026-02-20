@@ -120,16 +120,22 @@ export const COMMISSION_TIERS: Record<string, number> = {
 };
 
 export function useCommissionSubmissions() {
-  const { user } = useAuth();
-  
+  const { user, role, isAdmin, isManager } = useAuth();
+
   return useQuery({
-    queryKey: ["commission-submissions"],
+    queryKey: ["commission-submissions", user?.id, role],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("commission_submissions")
         .select("*")
         .order("created_at", { ascending: false });
-      
+
+      // Data isolation: sales reps & employees only see their own submissions
+      if (!isAdmin && !isManager) {
+        query = query.eq("submitted_by", user!.id);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       return data as CommissionSubmission[];
     },
@@ -138,8 +144,8 @@ export function useCommissionSubmissions() {
 }
 
 export function useCommissionSubmission(id: string) {
-  const { user } = useAuth();
-  
+  const { user, role, isAdmin, isManager } = useAuth();
+
   return useQuery({
     queryKey: ["commission-submission", id],
     queryFn: async () => {
@@ -148,8 +154,12 @@ export function useCommissionSubmission(id: string) {
         .select("*")
         .eq("id", id)
         .maybeSingle();
-      
+
       if (error) throw error;
+      // Ownership check: non-admin/non-manager can only view their own
+      if (data && !isAdmin && !isManager && data.submitted_by !== user!.id) {
+        return null;
+      }
       return data as CommissionSubmission | null;
     },
     enabled: !!user && !!id,
@@ -363,14 +373,14 @@ export function useUpdateCommissionStatus() {
       if (rejection_reason) {
         updateData.rejection_reason = rejection_reason;
         // Reset approval stage when requesting revision
-        updateData.approval_stage = "pending_manager";
-        // Increment revision count
-        const { data: currentCount } = await supabase
+        // Manager submissions restart at pending_admin, regular at pending_manager
+        const { data: submissionCheck } = await supabase
           .from("commission_submissions")
-          .select("revision_count")
+          .select("revision_count, is_manager_submission")
           .eq("id", id)
           .single();
-        updateData.revision_count = (currentCount?.revision_count || 0) + 1;
+        updateData.approval_stage = submissionCheck?.is_manager_submission ? "pending_admin" : "pending_manager";
+        updateData.revision_count = (submissionCheck?.revision_count || 0) + 1;
       }
       
       if (notes) {
@@ -601,10 +611,11 @@ export function useUpdateCommission() {
       if (current.status !== "revision_required" && current.status !== "denied") throw new Error("You can only edit submissions that require revision or have been denied");
       
       // Update the submission and set status back to pending_review
+      // Manager submissions go back to pending_admin (Sheldon/Manny), regular ones to pending_manager
       const updateData = {
         ...data,
         status: "pending_review",
-        approval_stage: "pending_manager",
+        approval_stage: current.is_manager_submission ? "pending_admin" : "pending_manager",
         rejection_reason: null, // Clear rejection reason on resubmit
       };
       

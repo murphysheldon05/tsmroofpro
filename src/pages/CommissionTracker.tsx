@@ -9,6 +9,7 @@ import { RepCard } from "@/components/commissions/tracker/RepCard";
 import { AllTransactionsTable } from "@/components/commissions/tracker/AllTransactionsTable";
 import { PayRunsTab } from "@/components/commissions/tracker/PayRunsTab";
 import { TrackerSettingsDrawer } from "@/components/commissions/tracker/TrackerSettingsDrawer";
+import { BulkImportDialog } from "@/components/commissions/tracker/BulkImportDialog";
 
 export default function CommissionTracker() {
   const navigate = useNavigate();
@@ -49,7 +50,10 @@ export default function CommissionTracker() {
             <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Commission Tracker</h1>
             <p className="text-sm text-gray-400 mt-0.5">{new Date().getFullYear()} · TSM Roof Pro Hub</p>
           </div>
-          <TrackerSettingsDrawer />
+          <div className="flex items-center gap-2">
+            <BulkImportDialog />
+            <TrackerSettingsDrawer />
+          </div>
         </div>
 
         <TrackerSummaryCards entries={allEntries} repCount={reps.length} />

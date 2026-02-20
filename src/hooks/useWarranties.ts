@@ -180,7 +180,7 @@ export function useCreateWarranty() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (warranty: Omit<WarrantyRequest, "id" | "created_at" | "updated_at" | "last_status_change_at">) => {
+    mutationFn: async (warranty: Partial<Omit<WarrantyRequest, "id" | "created_at" | "updated_at" | "last_status_change_at">>) => {
       // Validate auth before attempting insert (prevents cryptic RLS errors)
       const { data: userData, error: authError } = await supabase.auth.getUser();
       if (authError || !userData.user?.id) {
