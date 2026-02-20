@@ -7,35 +7,56 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-export function LeaderboardSettingsPanel() {
-  const queryClient = useQueryClient();
-
-  const { data: isEnabled, isLoading } = useQuery({
-    queryKey: ["app-settings", "show_sales_leaderboard"],
+function useAppSetting(key: string) {
+  return useQuery({
+    queryKey: ["app-settings", key],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("app_settings")
         .select("setting_value")
-        .eq("setting_key", "show_sales_leaderboard")
+        .eq("setting_key", key)
         .maybeSingle();
       if (error) throw error;
-      return data?.setting_value === true || data?.setting_value === "true";
+      // If no row exists yet, treat as enabled by default
+      if (!data) return true;
+      return data.setting_value === true || data.setting_value === "true";
     },
   });
+}
 
-  const handleToggle = async (checked: boolean) => {
-    const { error } = await supabase
+export function LeaderboardSettingsPanel() {
+  const queryClient = useQueryClient();
+
+  const { data: isEnabled, isLoading } = useAppSetting("show_sales_leaderboard");
+  const { data: showProfit, isLoading: profitLoading } = useAppSetting("show_profit_on_leaderboard");
+
+  const handleToggle = async (key: string, checked: boolean, label: string) => {
+    // Try update first, then upsert if no row exists
+    const { data: existing } = await supabase
       .from("app_settings")
-      .update({ setting_value: checked, updated_at: new Date().toISOString() })
-      .eq("setting_key", "show_sales_leaderboard");
+      .select("id")
+      .eq("setting_key", key)
+      .maybeSingle();
+
+    let error;
+    if (existing) {
+      ({ error } = await supabase
+        .from("app_settings")
+        .update({ setting_value: checked, updated_at: new Date().toISOString() })
+        .eq("setting_key", key));
+    } else {
+      ({ error } = await supabase
+        .from("app_settings")
+        .insert({ setting_key: key, setting_value: checked }));
+    }
 
     if (error) {
       toast.error("Failed to update setting");
       return;
     }
 
-    toast.success(checked ? "Leaderboard enabled" : "Leaderboard disabled");
-    queryClient.invalidateQueries({ queryKey: ["app-settings", "show_sales_leaderboard"] });
+    toast.success(`${label} ${checked ? "enabled" : "disabled"}`);
+    queryClient.invalidateQueries({ queryKey: ["app-settings", key] });
   };
 
   return (
@@ -49,7 +70,7 @@ export function LeaderboardSettingsPanel() {
           Control the Sales Leaderboard widget visibility on the Command Center for all users.
         </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-4">
         <div className="flex items-center justify-between">
           <Label htmlFor="leaderboard-toggle" className="flex flex-col gap-1">
             <span className="font-medium">Show Sales Leaderboard</span>
@@ -60,8 +81,22 @@ export function LeaderboardSettingsPanel() {
           <Switch
             id="leaderboard-toggle"
             checked={isEnabled ?? true}
-            onCheckedChange={handleToggle}
+            onCheckedChange={(v) => handleToggle("show_sales_leaderboard", v, "Leaderboard")}
             disabled={isLoading}
+          />
+        </div>
+        <div className="flex items-center justify-between">
+          <Label htmlFor="profit-toggle" className="flex flex-col gap-1">
+            <span className="font-medium">Show Profit Tab</span>
+            <span className="text-xs text-muted-foreground">
+              Show the Profit tab on the leaderboard. Profit data comes from pay run job values.
+            </span>
+          </Label>
+          <Switch
+            id="profit-toggle"
+            checked={showProfit ?? true}
+            onCheckedChange={(v) => handleToggle("show_profit_on_leaderboard", v, "Profit tab")}
+            disabled={profitLoading}
           />
         </div>
       </CardContent>

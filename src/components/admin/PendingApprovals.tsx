@@ -54,7 +54,7 @@ const DEPARTMENT_LABELS: Record<string, string> = {
 };
 
 const ASSIGNABLE_ROLES = [
-  { value: "user", label: "User", description: "Base access — view data, submit forms, access training" },
+  { value: "employee", label: "Employee", description: "Base access — view data, submit forms, access training" },
   { value: "sales_rep", label: "Sales Rep", description: "Submit commissions, request draws, sales leaderboard" },
   { value: "sales_manager", label: "Sales Manager", description: "Approve commissions, manage team, override on deals" },
   { value: "manager", label: "Manager", description: "Department oversight, manage schedules & vendors" },
@@ -160,10 +160,10 @@ export function PendingApprovals() {
   });
 
   const getDefaultRole = (requestedRole: string | null): string => {
-    if (!requestedRole) return "user";
+    if (!requestedRole) return "employee";
     if (requestedRole === "admin") return "admin";
     if (["office_admin", "va"].includes(requestedRole)) return "manager";
-    return "user";
+    return "employee";
   };
 
   const openApprovalDialog = (pendingUser: PendingUser) => {
@@ -443,7 +443,7 @@ export function PendingApprovals() {
                 Assigned Role
               </Label>
               <Select
-                value={approvalDialog.user ? (selectedRoles[approvalDialog.user.id] || getDefaultRole(approvalDialog.user.requested_role)) : "user"}
+                value={approvalDialog.user ? (selectedRoles[approvalDialog.user.id] || getDefaultRole(approvalDialog.user.requested_role)) : "employee"}
                 onValueChange={(value) => {
                   if (approvalDialog.user) {
                     setSelectedRoles(prev => ({ ...prev, [approvalDialog.user!.id]: value }));

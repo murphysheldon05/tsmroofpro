@@ -3,7 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 /**
  * RBAC Permission Definitions — 5-Role Model
  * 
- * 1. User (base read-only access)
+ * 1. Employee (base read-only access)
  * 2. Sales Rep (submits commissions, views own)
  * 3. Sales Manager (reviews team commissions, manages reps)
  * 4. Manager (department-level oversight for non-sales departments)
@@ -170,7 +170,7 @@ export function useRolePermissions(): RolePermissions {
         canRequestDraws: true,
       };
 
-    case 'user':
+    case 'employee':
     default:
       return { ...NO_PERMISSIONS, canExportOwnData: true };
   }

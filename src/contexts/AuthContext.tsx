@@ -3,7 +3,7 @@ import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { PasswordResetPrompt } from '@/components/auth/PasswordResetPrompt';
 
-type AppRole = 'admin' | 'manager' | 'user' | 'sales_rep' | 'sales_manager';
+type AppRole = 'admin' | 'manager' | 'employee' | 'sales_rep' | 'sales_manager';
 type EmployeeStatus = 'active' | 'pending' | 'rejected' | 'inactive';
 
 interface AuthContextType {

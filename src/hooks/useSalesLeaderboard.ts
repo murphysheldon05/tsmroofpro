@@ -229,7 +229,7 @@ export function useSalesLeaderboard(tab: LeaderboardTab, range: TimeRange, custo
       if (repsError) throw repsError;
 
       const { data: roles } = await supabase.from("user_roles").select("user_id, role");
-      const salesRoles = new Set(["sales_rep", "sales_manager", "user", "manager", "admin"]);
+      const salesRoles = new Set(["sales_rep", "sales_manager", "employee", "manager", "admin"]);
       const salesRepIds = new Set((roles || []).filter(r => salesRoles.has(r.role)).map(r => r.user_id));
 
       const repTotals = new Map<string, { name: string; total: number }>();
@@ -261,17 +261,18 @@ export function useSalesLeaderboard(tab: LeaderboardTab, range: TimeRange, custo
   });
 }
 
-export function useLeaderboardSetting() {
+export function useLeaderboardSetting(key: string = "show_sales_leaderboard") {
   return useQuery({
-    queryKey: ["app-settings", "show_sales_leaderboard"],
+    queryKey: ["app-settings", key],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("app_settings")
         .select("setting_value")
-        .eq("setting_key", "show_sales_leaderboard")
+        .eq("setting_key", key)
         .maybeSingle();
       if (error) throw error;
-      return data?.setting_value === true || data?.setting_value === "true";
+      if (!data) return true; // Default to enabled if no row exists
+      return data.setting_value === true || data.setting_value === "true";
     },
   });
 }

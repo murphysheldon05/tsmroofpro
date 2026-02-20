@@ -169,7 +169,7 @@ export default function Admin() {
 
       return (profiles ?? []).map((p) => ({
         ...p,
-        role: roleByUserId.get(p.id) ?? "user",
+        role: roleByUserId.get(p.id) ?? "employee",
       }));
     },
     refetchOnWindowFocus: true,
@@ -650,15 +650,15 @@ export default function Admin() {
                         <td className="px-4 py-3">
                           <Select
                             key={`${user.id}-${user.role}`}
-                            defaultValue={user.role || "user"}
+                            defaultValue={user.role || "employee"}
                             onValueChange={(v) => handleUpdateUserRole(user.id, v)}
                           >
                             <SelectTrigger className="w-32">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="user">
-                                <span className="font-medium">User</span>
+                              <SelectItem value="employee">
+                                <span className="font-medium">Employee</span>
                               </SelectItem>
                               <SelectItem value="sales_rep">
                                 <span className="font-medium">Sales Rep</span>
@@ -678,7 +678,7 @@ export default function Admin() {
                         <td className="px-4 py-3 text-right">
                           <div className="flex items-center justify-end gap-1">
                             {/* Permissions button - only show for employees */}
-                            {user.role === "user" && (
+                            {(user.role === "employee" || user.role === "user") && (
                               <Dialog
                                 open={editingUserPermissions?.id === user.id}
                                 onOpenChange={(open) => {
@@ -701,7 +701,7 @@ export default function Admin() {
                                   <div className="mt-4">
                                     <UserPermissionsEditor
                                       userId={user.id}
-                                      userRole={user.role || "user"}
+                                      userRole={user.role || "employee"}
                                       onClose={() => setEditingUserPermissions(null)}
                                     />
                                   </div>

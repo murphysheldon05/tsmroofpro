@@ -73,6 +73,7 @@ function formatUSD(amount: number | null | undefined): string {
 export function SalesLeaderboardWidget() {
   const { isAdmin, user } = useAuth();
   const { data: isEnabled, isLoading: settingLoading } = useLeaderboardSetting();
+  const { data: showProfit } = useLeaderboardSetting("show_profit_on_leaderboard");
   const [tab, setTab] = useState<LeaderboardTab>("commissions");
   const [timeRange, setTimeRange] = useState<TimeRange>("month");
   const [customStart, setCustomStart] = useState<string>(format(startOfMonth(new Date()), "yyyy-MM-dd"));
@@ -93,9 +94,17 @@ export function SalesLeaderboardWidget() {
   // Personal stats
   const { data: personalStats } = usePersonalCommissionStats(user?.id);
 
+  // If profit tab is hidden and user was on it, switch to commissions
+  useEffect(() => {
+    if (showProfit === false && tab === "profit") {
+      setTab("commissions");
+    }
+  }, [showProfit, tab]);
+
   if (settingLoading) return null;
   if (isEnabled === false) return null;
 
+  const visibleTabs = TAB_CONFIG.filter(t => t.key !== "profit" || showProfit !== false);
   const isCommissionOrProfit = tab === "commissions" || tab === "profit";
   const entries = isCommissionOrProfit ? (payRunEntries || []) : (salesResult?.entries || []);
   const isLoading = isCommissionOrProfit ? payRunLoading : salesLoading;
@@ -141,13 +150,13 @@ export function SalesLeaderboardWidget() {
           )}
         </div>
         <div className="flex items-center gap-0 mt-1.5">
-          {TAB_CONFIG.map((t, idx) => (
+          {visibleTabs.map((t, idx) => (
             <button
               key={t.key}
               onClick={() => { setTab(t.key); setShowAll(false); }}
               className={cn(
                 "flex-1 text-center py-1 text-xs font-medium border transition-all",
-                idx === 0 && "rounded-l-lg", idx === TAB_CONFIG.length - 1 && "rounded-r-lg", idx > 0 && "border-l-0",
+                idx === 0 && "rounded-l-lg", idx === visibleTabs.length - 1 && "rounded-r-lg", idx > 0 && "border-l-0",
                 tab === t.key ? t.activeClass : "bg-muted/50 border-border text-muted-foreground hover:text-foreground"
               )}
             >

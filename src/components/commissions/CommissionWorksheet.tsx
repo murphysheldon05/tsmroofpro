@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,10 +21,14 @@ interface CommissionWorksheetProps {
   readOnly?: boolean;
 }
 
+// Ordered editable fields for Tab/Enter advancement
+const FIELD_ORDER: (keyof WorksheetData)[] = ["contract_amount", "supplements_approved", "commission_percentage", "advances_paid"];
+
 export function CommissionWorksheet({ data, onChange, readOnly = false }: CommissionWorksheetProps) {
   // Keep raw typing value while an input is focused to prevent focus/caret loss
   const [editingField, setEditingField] = useState<keyof WorksheetData | null>(null);
   const [editingValue, setEditingValue] = useState<string>("");
+  const inputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   // Calculate derived values in real-time
   const calculations = useMemo(() => {
@@ -58,6 +62,22 @@ export function CommissionWorksheet({ data, onChange, readOnly = false }: Commis
   const handleNumberFocus = (field: keyof WorksheetData, currentValue: number | undefined) => {
     setEditingField(field);
     setEditingValue(currentValue ? String(currentValue) : "");
+    // Auto-select text so user can immediately type to replace
+    setTimeout(() => inputRefs.current[field]?.select(), 0);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent, field: keyof WorksheetData) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      const idx = FIELD_ORDER.indexOf(field);
+      const nextField = FIELD_ORDER[idx + 1];
+      if (nextField) {
+        inputRefs.current[nextField]?.focus();
+      } else {
+        // Last field — blur to commit
+        (e.target as HTMLInputElement).blur();
+      }
+    }
   };
 
   const handleNumberChange = (field: keyof WorksheetData, value: string) => {
@@ -105,12 +125,14 @@ export function CommissionWorksheet({ data, onChange, readOnly = false }: Commis
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
                   <Input
+                    ref={(el) => { inputRefs.current.contract_amount = el; }}
                     type="text"
                     inputMode="decimal"
                     value={getInputValue("contract_amount", data.contract_amount)}
                     onFocus={() => handleNumberFocus("contract_amount", data.contract_amount)}
                     onBlur={handleNumberBlur}
                     onChange={(e) => handleNumberChange("contract_amount", e.target.value)}
+                    onKeyDown={(e) => handleKeyDown(e, "contract_amount")}
                     disabled={readOnly}
                     className="pl-7"
                     placeholder="0.00"
@@ -129,12 +151,14 @@ export function CommissionWorksheet({ data, onChange, readOnly = false }: Commis
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
                   <Input
+                    ref={(el) => { inputRefs.current.supplements_approved = el; }}
                     type="text"
                     inputMode="decimal"
                     value={getInputValue("supplements_approved", data.supplements_approved)}
                     onFocus={() => handleNumberFocus("supplements_approved", data.supplements_approved)}
                     onBlur={handleNumberBlur}
                     onChange={(e) => handleNumberChange("supplements_approved", e.target.value)}
+                    onKeyDown={(e) => handleKeyDown(e, "supplements_approved")}
                     disabled={readOnly}
                     className="pl-7"
                     placeholder="0.00"
@@ -174,12 +198,14 @@ export function CommissionWorksheet({ data, onChange, readOnly = false }: Commis
               <TableCell>
                 <div className="relative">
                   <Input
+                    ref={(el) => { inputRefs.current.commission_percentage = el; }}
                     type="text"
                     inputMode="decimal"
                     value={getInputValue("commission_percentage", data.commission_percentage)}
                     onFocus={() => handleNumberFocus("commission_percentage", data.commission_percentage)}
                     onBlur={handleNumberBlur}
                     onChange={(e) => handleNumberChange("commission_percentage", e.target.value)}
+                    onKeyDown={(e) => handleKeyDown(e, "commission_percentage")}
                     disabled={readOnly}
                     className="pr-7"
                     placeholder="0.00"
@@ -221,12 +247,14 @@ export function CommissionWorksheet({ data, onChange, readOnly = false }: Commis
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
                   <Input
+                    ref={(el) => { inputRefs.current.advances_paid = el; }}
                     type="text"
                     inputMode="decimal"
                     value={getInputValue("advances_paid", data.advances_paid)}
                     onFocus={() => handleNumberFocus("advances_paid", data.advances_paid)}
                     onBlur={handleNumberBlur}
                     onChange={(e) => handleNumberChange("advances_paid", e.target.value)}
+                    onKeyDown={(e) => handleKeyDown(e, "advances_paid")}
                     disabled={readOnly}
                     className="pl-7"
                     placeholder="0.00"
