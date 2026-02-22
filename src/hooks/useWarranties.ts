@@ -188,12 +188,10 @@ export function useCreateWarranty() {
       }
 
       const userId = userData.user.id;
+      const insertData = { ...warranty, created_by: userId } as any;
       const { data, error } = await supabase
         .from("warranty_requests")
-        .insert({
-          ...warranty,
-          created_by: userId,
-        })
+        .insert(insertData)
         .select()
         .single();
 

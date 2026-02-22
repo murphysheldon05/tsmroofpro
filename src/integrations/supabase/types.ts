@@ -3765,7 +3765,7 @@ export type Database = {
           last_status_change_at: string
           manufacturer: string | null
           material_cost: number | null
-          original_install_date: string
+          original_install_date: string | null
           original_job_number: string
           priority_level: string
           resolution_summary: string | null
@@ -3774,8 +3774,8 @@ export type Database = {
           source_of_request: string
           status: string
           updated_at: string
-          warranty_coverage_description: string
-          warranty_expiration_date: string
+          warranty_coverage_description: string | null
+          warranty_expiration_date: string | null
           warranty_type: string
         }
         Insert: {
@@ -3798,7 +3798,7 @@ export type Database = {
           last_status_change_at?: string
           manufacturer?: string | null
           material_cost?: number | null
-          original_install_date: string
+          original_install_date?: string | null
           original_job_number: string
           priority_level?: string
           resolution_summary?: string | null
@@ -3807,8 +3807,8 @@ export type Database = {
           source_of_request: string
           status?: string
           updated_at?: string
-          warranty_coverage_description: string
-          warranty_expiration_date: string
+          warranty_coverage_description?: string | null
+          warranty_expiration_date?: string | null
           warranty_type: string
         }
         Update: {
@@ -3831,7 +3831,7 @@ export type Database = {
           last_status_change_at?: string
           manufacturer?: string | null
           material_cost?: number | null
-          original_install_date?: string
+          original_install_date?: string | null
           original_job_number?: string
           priority_level?: string
           resolution_summary?: string | null
@@ -3840,8 +3840,8 @@ export type Database = {
           source_of_request?: string
           status?: string
           updated_at?: string
-          warranty_coverage_description?: string
-          warranty_expiration_date?: string
+          warranty_coverage_description?: string | null
+          warranty_expiration_date?: string | null
           warranty_type?: string
         }
         Relationships: []
