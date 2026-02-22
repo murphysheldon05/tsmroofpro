@@ -2294,6 +2294,7 @@ export type Database = {
           phone_number: string | null
           requested_department: string | null
           requested_role: string | null
+          role: Database["public"]["Enums"]["user_role"]
           role_title: string | null
           start_date: string | null
           updated_at: string
@@ -2326,6 +2327,7 @@ export type Database = {
           phone_number?: string | null
           requested_department?: string | null
           requested_role?: string | null
+          role?: Database["public"]["Enums"]["user_role"]
           role_title?: string | null
           start_date?: string | null
           updated_at?: string
@@ -2358,6 +2360,7 @@ export type Database = {
           phone_number?: string | null
           requested_department?: string | null
           requested_role?: string | null
+          role?: Database["public"]["Enums"]["user_role"]
           role_title?: string | null
           start_date?: string | null
           updated_at?: string
@@ -3990,6 +3993,16 @@ export type Database = {
         | "drywall"
         | "paint"
         | "other"
+      user_department:
+        | "management"
+        | "accounting"
+        | "operations"
+        | "hr_it"
+        | "sales"
+        | "production"
+        | "office"
+        | "va"
+      user_role: "user" | "manager" | "admin"
       vendor_type:
         | "supplier"
         | "dump"
@@ -4218,6 +4231,17 @@ export const Constants = {
         "paint",
         "other",
       ],
+      user_department: [
+        "management",
+        "accounting",
+        "operations",
+        "hr_it",
+        "sales",
+        "production",
+        "office",
+        "va",
+      ],
+      user_role: ["user", "manager", "admin"],
       vendor_type: [
         "supplier",
         "dump",
