@@ -64,9 +64,10 @@ import { OverrideReportPanel } from "@/components/admin/OverrideReportPanel";
 import { LeaderboardSettingsPanel } from "@/components/admin/LeaderboardSettingsPanel";
 import { PlaybookCompletionStatus } from "@/components/admin/PlaybookCompletionStatus";
 import { RoleOnboardingAdmin } from "@/components/admin/RoleOnboardingAdmin";
-import { BookOpen, GraduationCap } from "lucide-react";
+import { BookOpen, GraduationCap, ShieldCheck } from "lucide-react";
 import { GuidedTour } from "@/components/tutorial/GuidedTour";
 import { adminSteps } from "@/components/tutorial/tutorialSteps";
+import { RoleAssignment } from "@/components/admin/RoleAssignment";
 
 export default function Admin() {
   const queryClient = useQueryClient();
@@ -477,6 +478,10 @@ export default function Admin() {
             <TabsTrigger value="role-onboarding" className="gap-2">
               <GraduationCap className="w-4 h-4" />
               Role Onboarding
+            </TabsTrigger>
+            <TabsTrigger value="roles-departments" className="gap-2">
+              <ShieldCheck className="w-4 h-4" />
+              Roles & Depts
             </TabsTrigger>
           </TabsList>
 
@@ -911,6 +916,11 @@ export default function Admin() {
           {/* Role Onboarding Tab */}
           <TabsContent value="role-onboarding" className="space-y-4">
             <RoleOnboardingAdmin />
+          </TabsContent>
+
+          {/* Roles & Departments Tab */}
+          <TabsContent value="roles-departments" className="space-y-4">
+            <RoleAssignment />
           </TabsContent>
         </Tabs>
         <GuidedTour pageName="admin" pageTitle="Admin Panel" steps={adminSteps} />
