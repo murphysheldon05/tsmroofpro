@@ -52,6 +52,7 @@ interface CommissionCardProps {
     net_commission_owed: number | null;
     status: string;
     created_at: string;
+    was_rejected?: boolean;
   };
 }
 
@@ -84,16 +85,23 @@ export function CommissionCard({ submission }: CommissionCardProps) {
             <span className="text-sm truncate">{submission.job_address}</span>
           </div>
         </div>
-        <Badge 
-          variant="outline" 
-          className={cn(
-            "flex-shrink-0 gap-1 px-2.5 py-1 rounded-xl font-medium text-xs border",
-            config.bgClass, config.colorClass
+        <div className="flex flex-shrink-0 items-center gap-1.5">
+          <Badge 
+            variant="outline" 
+            className={cn(
+              "gap-1 px-2.5 py-1 rounded-xl font-medium text-xs border",
+              config.bgClass, config.colorClass
+            )}
+          >
+            {config.icon}
+            {config.label}
+          </Badge>
+          {submission.was_rejected && (
+            <Badge variant="outline" className="gap-1 px-2 py-1 rounded-xl font-medium text-xs border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30">
+              Rejected
+            </Badge>
           )}
-        >
-          {config.icon}
-          {config.label}
-        </Badge>
+        </div>
       </div>
 
       <div className="flex items-center justify-between gap-3">

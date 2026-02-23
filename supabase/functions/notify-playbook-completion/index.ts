@@ -36,10 +36,10 @@ const handler = async (req: Request): Promise<Response> => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    // Get user profile
+    // Get user profile (include playbook_acknowledged for one-time admin email)
     const { data: profile, error: profileError } = await supabaseAdmin
       .from("profiles")
-      .select("id, email, full_name, manager_id")
+      .select("id, email, full_name, manager_id, playbook_acknowledged")
       .eq("id", userId)
       .single();
 
@@ -48,26 +48,19 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error("Could not find user profile");
     }
 
-    console.log("User completed playbook:", profile.full_name);
-
-    // Get manager info if exists
-    let managerEmail: string | null = null;
-    let managerName: string | null = null;
-
-    if (profile.manager_id) {
-      const { data: manager } = await supabaseAdmin
-        .from("profiles")
-        .select("email, full_name")
-        .eq("id", profile.manager_id)
-        .single();
-
-      if (manager) {
-        managerEmail = manager.email;
-        managerName = manager.full_name;
-      }
+    // One-time only: if we already sent the admin notification for this user, do not send again
+    const alreadyNotified = (profile as { playbook_acknowledged?: boolean }).playbook_acknowledged === true;
+    if (alreadyNotified) {
+      console.log("Admin already notified for this user's playbook completion, skipping email.");
+      return new Response(
+        JSON.stringify({ success: true, message: "Already acknowledged; no duplicate notification" }),
+        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
     }
 
-    // Get all admins
+    console.log("User completed playbook (first time):", profile.full_name);
+
+    // Get all admins — admin receives ONE email per user, one time only
     const { data: adminUsers } = await supabaseAdmin
       .from("user_roles")
       .select("user_id")
@@ -86,7 +79,7 @@ const handler = async (req: Request): Promise<Response> => {
       }
     }
 
-    // Create in-app notification for the user
+    // Create in-app notification for the user (once per completion)
     await supabaseAdmin.from("user_notifications").insert({
       user_id: userId,
       notification_type: "playbook_complete",
@@ -96,15 +89,9 @@ const handler = async (req: Request): Promise<Response> => {
       entity_id: userId,
     });
 
-    // Build recipient list
-    const recipients: string[] = [];
-    if (managerEmail) recipients.push(managerEmail);
-    recipients.push(...adminEmails);
-    
-    // Remove duplicates
-    const uniqueRecipients = [...new Set(recipients)];
+    // Send ONE email to admins only (no manager; no duplicate sends — guarded by playbook_acknowledged)
+    const uniqueRecipients = [...new Set(adminEmails)];
 
-    // Send email notification
     if (uniqueRecipients.length > 0) {
       const completionDate = new Date().toLocaleDateString("en-US", {
         weekday: "long",
@@ -220,6 +207,11 @@ Phoenix & Prescott, Arizona
       });
 
       console.log("Completion email sent to:", uniqueRecipients, emailResponse);
+      // Mark that we have sent the one-time admin notification (only after successful send)
+      await supabaseAdmin
+        .from("profiles")
+        .update({ playbook_acknowledged: true })
+        .eq("id", userId);
     } else {
       console.log("No recipients for completion email");
     }

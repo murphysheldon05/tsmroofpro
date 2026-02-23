@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import { ResourceDetailModal } from "@/components/resources/ResourceDetailModal";
 import { useAuth } from "@/contexts/AuthContext";
 import { useMasterSOPAcknowledgments } from "@/hooks/useMasterSOPAcknowledgments";
+import { useHandbookGateRequired } from "@/hooks/useEmployeeHandbook";
 import {
   Select,
   SelectContent,
@@ -77,6 +78,7 @@ export default function SOPLibrary() {
   const navigate = useNavigate();
   const { isAdmin, isManager } = useAuth();
   const { completedCount, totalCount, allCompleted } = useMasterSOPAcknowledgments();
+  const { hasAcknowledged: handbookAcknowledged, currentVersion: handbookVersion } = useHandbookGateRequired();
   const { data: allResourcesRaw, isLoading: allLoading } = useResources();
   const { data: categoryResourcesRaw, isLoading: categoryLoading } = useResources(category);
   const { data: categories } = useCategories();
@@ -361,8 +363,36 @@ export default function SOPLibrary() {
                   {allCompleted ? "✓ Complete" : `${completedCount}/${totalCount}`}
                 </Badge>
               </Link>
+
+              <Link
+                to="/playbook-library/employee-handbook"
+                className="p-3 sm:p-4 rounded-lg border text-center transition-all bg-card/50 border-border/50 hover:border-primary/20 hover:bg-primary/5 relative"
+              >
+                <FileText className="w-5 h-5 sm:w-6 sm:h-6 mx-auto mb-1.5 text-muted-foreground" />
+                <p className="text-xs sm:text-sm font-medium">
+                  Employee Handbook
+                </p>
+                <p className="text-[10px] text-muted-foreground mt-0.5">
+                  Required acknowledgment
+                </p>
+                {handbookVersion ? (
+                  <Badge
+                    variant={handbookAcknowledged ? "default" : "secondary"}
+                    className={cn(
+                      "mt-1.5 text-[10px]",
+                      handbookAcknowledged && "bg-primary text-primary-foreground"
+                    )}
+                  >
+                    {handbookAcknowledged ? "✓ Acknowledged" : "Action required"}
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="mt-1.5 text-[10px]">
+                    No version yet
+                  </Badge>
+                )}
+              </Link>
               
-              {categories?.filter(cat => cat.slug !== 'master-playbook').map((cat) => {
+              {categories?.filter(cat => cat.slug !== 'master-playbook' && cat.slug !== 'employee-handbook').map((cat) => {
                 const CatIcon = categoryIcons[cat.slug] || FileText;
                 const isActive = category === cat.slug;
                 return (

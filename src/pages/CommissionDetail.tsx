@@ -1,4 +1,5 @@
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import { useMemo } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,6 +26,7 @@ import {
   Trash2,
   RotateCcw,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { CommissionWorksheet } from "@/components/commissions/CommissionWorksheet";
 import { CommissionStatusTimeline } from "@/components/commissions/CommissionStatusTimeline";
 import { CommissionEditForm } from "@/components/commissions/CommissionEditForm";
@@ -121,7 +123,30 @@ export default function CommissionDetail() {
 
   const statusConfig = STATUS_CONFIG[submission.status];
   const approvalStageConfig = submission.approval_stage ? APPROVAL_STAGE_CONFIG[submission.approval_stage] : null;
-  
+
+  // Changed fields from previous submission (for compliance: highlight what rep revised on resubmit)
+  const changedFields = useMemo(() => {
+    const snap = submission.previous_submission_snapshot as Record<string, unknown> | null | undefined;
+    if (!snap || typeof snap !== "object") return new Set<string>();
+    const set = new Set<string>();
+    const keys = [
+      "job_name", "job_address", "acculynx_job_id", "job_type", "roof_type", "contract_date", "install_completion_date",
+      "sales_rep_name", "rep_role", "commission_tier", "custom_commission_percentage", "subcontractor_name",
+      "is_flat_fee", "flat_fee_amount", "contract_amount", "supplements_approved", "commission_percentage",
+      "advances_paid", "net_commission_owed", "total_job_revenue", "gross_commission",
+    ];
+    keys.forEach((key) => {
+      const prev = snap[key];
+      const cur = (submission as Record<string, unknown>)[key];
+      const prevVal = prev === null || prev === undefined ? "" : String(prev);
+      const curVal = cur === null || cur === undefined ? "" : String(cur);
+      if (prevVal !== curVal) set.add(key);
+    });
+    return set;
+  }, [submission]);
+  const showChangeHighlights = (isReviewer || isAdmin) && changedFields.size > 0;
+  const highlightClass = "bg-yellow-100/80 dark:bg-yellow-900/30 border-l-4 border-blue-500 pl-2 -ml-2 rounded-r";
+
   // Determine available actions based on approval stage
   const isPendingManager = submission.status === "pending_review" && submission.approval_stage === "pending_manager";
   const isPendingAccounting = submission.status === "pending_review" && submission.approval_stage === "pending_accounting";
@@ -284,6 +309,12 @@ export default function CommissionDetail() {
                   {statusConfig?.icon}
                   {statusConfig?.label}
                 </Badge>
+                {submission.was_rejected && (
+                  <Badge variant="outline" className="gap-1 border-amber-500/50 text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30">
+                    <AlertCircle className="h-4 w-4" />
+                    Rejected
+                  </Badge>
+                )}
               </div>
               <p className="text-muted-foreground">{submission.job_address}</p>
             </div>
@@ -304,8 +335,8 @@ export default function CommissionDetail() {
           isManagerSubmission={submission.is_manager_submission || false}
         />
 
-        {/* Revision Required Alert for Submitters */}
-        {isSubmitter && submission.status === "revision_required" && submission.rejection_reason && (
+        {/* Rejected Alert for Submitters */}
+        {isSubmitter && submission.status === "rejected" && submission.rejection_reason && (
           <Card className="border-amber-300 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-700">
             <CardContent className="py-4">
               <div className="flex items-start gap-3">
@@ -313,7 +344,7 @@ export default function CommissionDetail() {
                   <AlertCircle className="h-5 w-5" />
                 </div>
                 <div className="flex-1">
-                  <p className="font-medium text-amber-800 dark:text-amber-400">Rejected</p>
+                  <p className="font-medium text-amber-800 dark:text-amber-400">Your commission for {submission.job_name} was rejected.</p>
                   <p className="text-sm text-amber-700 dark:text-amber-300/80 mt-1">
                     {submission.rejection_reason}
                   </p>
@@ -674,6 +705,17 @@ export default function CommissionDetail() {
           </Card>
         )}
 
+        {/* Resubmitted: show what changed (compliance view) */}
+        {showChangeHighlights && (
+          <Card className="border-blue-200 bg-blue-50/50 dark:bg-blue-950/20 dark:border-blue-800">
+            <CardContent className="py-3">
+              <p className="text-sm font-medium text-blue-800 dark:text-blue-300">
+                This is a resubmitted rejected commission. Fields highlighted in yellow were changed from the previous submission.
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Job Information */}
         <Card>
           <CardHeader>
@@ -684,31 +726,31 @@ export default function CommissionDetail() {
           </CardHeader>
           <CardContent>
             <dl className="grid grid-cols-2 gap-4 text-sm">
-              <div>
+              <div className={cn(showChangeHighlights && changedFields.has("job_name") && highlightClass)}>
                 <dt className="text-muted-foreground">Job Name</dt>
                 <dd className="font-medium">{submission.job_name}</dd>
               </div>
-              <div>
+              <div className={cn(showChangeHighlights && changedFields.has("job_address") && highlightClass)}>
                 <dt className="text-muted-foreground">Job Address</dt>
                 <dd className="font-medium">{submission.job_address}</dd>
               </div>
-              <div>
+              <div className={cn(showChangeHighlights && changedFields.has("acculynx_job_id") && highlightClass)}>
                 <dt className="text-muted-foreground">AccuLynx Job ID</dt>
                 <dd className="font-medium">{submission.acculynx_job_id || "N/A"}</dd>
               </div>
-              <div>
+              <div className={cn(showChangeHighlights && changedFields.has("job_type") && highlightClass)}>
                 <dt className="text-muted-foreground">Job Type</dt>
                 <dd className="font-medium capitalize">{submission.job_type}</dd>
               </div>
-              <div>
+              <div className={cn(showChangeHighlights && changedFields.has("roof_type") && highlightClass)}>
                 <dt className="text-muted-foreground">Roof Type</dt>
                 <dd className="font-medium capitalize">{submission.roof_type}</dd>
               </div>
-              <div>
+              <div className={cn(showChangeHighlights && changedFields.has("contract_date") && highlightClass)}>
                 <dt className="text-muted-foreground">Contract Date</dt>
                 <dd className="font-medium">{format(new Date(submission.contract_date), "MMM d, yyyy")}</dd>
               </div>
-              <div>
+              <div className={cn(showChangeHighlights && changedFields.has("install_completion_date") && highlightClass)}>
                 <dt className="text-muted-foreground">Install Completion</dt>
                 <dd className="font-medium">
                   {submission.install_completion_date 
@@ -736,18 +778,18 @@ export default function CommissionDetail() {
             <dl className="grid grid-cols-2 gap-4 text-sm">
               {submission.submission_type === "subcontractor" ? (
                 <>
-                  <div>
+                  <div className={cn(showChangeHighlights && changedFields.has("subcontractor_name") && highlightClass)}>
                     <dt className="text-muted-foreground">Subcontractor Name</dt>
                     <dd className="font-medium">{submission.subcontractor_name}</dd>
                   </div>
-                  <div>
+                  <div className={cn(showChangeHighlights && changedFields.has("is_flat_fee") && highlightClass)}>
                     <dt className="text-muted-foreground">Commission Type</dt>
                     <dd className="font-medium">
                       {submission.is_flat_fee ? "Flat Fee" : "Percentage"}
                     </dd>
                   </div>
                   {submission.is_flat_fee && (
-                    <div>
+                    <div className={cn(showChangeHighlights && changedFields.has("flat_fee_amount") && highlightClass)}>
                       <dt className="text-muted-foreground">Flat Fee Amount</dt>
                       <dd className="font-medium">{formatCurrency(submission.flat_fee_amount || 0)}</dd>
                     </div>
@@ -755,15 +797,15 @@ export default function CommissionDetail() {
                 </>
               ) : (
                 <>
-                  <div>
+                  <div className={cn(showChangeHighlights && changedFields.has("sales_rep_name") && highlightClass)}>
                     <dt className="text-muted-foreground">Sales Rep</dt>
                     <dd className="font-medium">{submission.sales_rep_name}</dd>
                   </div>
-                  <div>
+                  <div className={cn(showChangeHighlights && changedFields.has("rep_role") && highlightClass)}>
                     <dt className="text-muted-foreground">Role</dt>
                     <dd className="font-medium capitalize">{submission.rep_role}</dd>
                   </div>
-                  <div>
+                  <div className={cn(showChangeHighlights && (changedFields.has("commission_tier") || changedFields.has("custom_commission_percentage")) && highlightClass)}>
                     <dt className="text-muted-foreground">Commission Tier</dt>
                     <dd className="font-medium">
                       {submission.commission_tier === "custom" 
@@ -782,18 +824,30 @@ export default function CommissionDetail() {
         <OverrideDetailSection commission={submission} />
 
         {/* Commission Worksheet (Read-only) */}
-        <CommissionWorksheet
-          data={{
-            contract_amount: submission.contract_amount,
-            supplements_approved: submission.supplements_approved,
-            commission_percentage: submission.commission_percentage,
-            advances_paid: submission.advances_paid,
-            is_flat_fee: submission.is_flat_fee,
-            flat_fee_amount: submission.flat_fee_amount || undefined,
-          }}
-          onChange={() => {}}
-          readOnly={true}
-        />
+        <div className={cn(
+          showChangeHighlights && (
+            changedFields.has("contract_amount") ||
+            changedFields.has("supplements_approved") ||
+            changedFields.has("commission_percentage") ||
+            changedFields.has("advances_paid") ||
+            changedFields.has("net_commission_owed") ||
+            changedFields.has("gross_commission") ||
+            changedFields.has("total_job_revenue")
+          ) && "ring-2 ring-yellow-400 dark:ring-yellow-600 rounded-lg p-1"
+        )}>
+          <CommissionWorksheet
+            data={{
+              contract_amount: submission.contract_amount,
+              supplements_approved: submission.supplements_approved,
+              commission_percentage: submission.commission_percentage,
+              advances_paid: submission.advances_paid,
+              is_flat_fee: submission.is_flat_fee,
+              flat_fee_amount: submission.flat_fee_amount || undefined,
+            }}
+            onChange={() => {}}
+            readOnly={true}
+          />
+        </div>
 
         {/* Status History */}
         {statusLog && statusLog.length > 0 && (

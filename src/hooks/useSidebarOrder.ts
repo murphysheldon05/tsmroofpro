@@ -5,6 +5,7 @@ const STORAGE_KEY = "tsm_sidebar_order";
 // Default order of main navigation items
 const DEFAULT_ORDER = [
   "Command Center",
+  "Message Center",
   "Commissions",
   "Production", 
   "Playbook Library",

@@ -17,8 +17,8 @@ function useAppSetting(key: string) {
         .eq("setting_key", key)
         .maybeSingle();
       if (error) throw error;
-      // If no row exists yet, treat as enabled by default
-      if (!data) return true;
+      // If no row exists yet, default OFF (leaderboard hidden until AccuLynx API is confirmed)
+      if (!data) return false;
       return data.setting_value === true || data.setting_value === "true";
     },
   });
@@ -80,7 +80,7 @@ export function LeaderboardSettingsPanel() {
           </Label>
           <Switch
             id="leaderboard-toggle"
-            checked={isEnabled ?? true}
+            checked={isEnabled ?? false}
             onCheckedChange={(v) => handleToggle("show_sales_leaderboard", v, "Leaderboard")}
             disabled={isLoading}
           />

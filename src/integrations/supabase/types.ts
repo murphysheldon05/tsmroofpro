@@ -982,6 +982,8 @@ export type Database = {
           supplements_approved: number
           total_job_revenue: number | null
           updated_at: string
+          was_rejected: boolean
+          previous_submission_snapshot: unknown | null
         }
         Insert: {
           acculynx_job_id?: string | null
@@ -1021,6 +1023,7 @@ export type Database = {
           paid_at?: string | null
           paid_by?: string | null
           payout_batch_id?: string | null
+          previous_submission_snapshot?: unknown | null
           rejection_reason?: string | null
           rep_role?: string | null
           reviewer_notes?: string | null
@@ -1035,6 +1038,7 @@ export type Database = {
           supplements_approved?: number
           total_job_revenue?: number | null
           updated_at?: string
+          was_rejected?: boolean
         }
         Update: {
           acculynx_job_id?: string | null
@@ -1088,6 +1092,8 @@ export type Database = {
           supplements_approved?: number
           total_job_revenue?: number | null
           updated_at?: string
+          was_rejected?: boolean
+          previous_submission_snapshot?: unknown | null
         }
         Relationships: [
           {
@@ -1857,6 +1863,74 @@ export type Database = {
             columns: ["requester_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      employee_handbook_acknowledgments: {
+        Row: {
+          acknowledged_at: string
+          handbook_version_id: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          acknowledged_at?: string
+          handbook_version_id: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          acknowledged_at?: string
+          handbook_version_id?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_handbook_acknowledgments_handbook_version_id_fkey"
+            columns: ["handbook_version_id"]
+            isOneToOne: false
+            referencedRelation: "employee_handbook_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_handbook_acknowledgments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      employee_handbook_versions: {
+        Row: {
+          file_path: string
+          id: string
+          uploaded_at: string
+          uploaded_by: string | null
+          version: string
+        }
+        Insert: {
+          file_path: string
+          id?: string
+          uploaded_at?: string
+          uploaded_by?: string | null
+          version: string
+        }
+        Update: {
+          file_path?: string
+          id?: string
+          uploaded_at?: string
+          uploaded_by?: string | null
+          version?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_handbook_versions_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]

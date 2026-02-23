@@ -18,6 +18,9 @@ export function ProfileInfoTab() {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [email, setEmail] = useState("");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [personalHobbies, setPersonalHobbies] = useState("");
+  const [backgroundInfo, setBackgroundInfo] = useState("");
+  const [companyPhone, setCompanyPhone] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -27,7 +30,7 @@ export function ProfileInfoTab() {
       try {
         const { data, error } = await supabase
           .from("profiles")
-          .select("full_name, phone_number, email, avatar_url")
+          .select("full_name, phone_number, email, avatar_url, personal_hobbies, background_info, company_phone")
           .eq("id", user.id)
           .single();
 
@@ -37,6 +40,9 @@ export function ProfileInfoTab() {
         setPhoneNumber(data?.phone_number || "");
         setEmail(data?.email || user.email || "");
         setAvatarUrl(data?.avatar_url || null);
+        setPersonalHobbies(data?.personal_hobbies || "");
+        setBackgroundInfo(data?.background_info || "");
+        setCompanyPhone(data?.company_phone || "");
       } catch (error) {
         console.error("Error fetching profile:", error);
       } finally {
@@ -124,6 +130,9 @@ export function ProfileInfoTab() {
         .update({
           full_name: fullName.trim(),
           phone_number: phoneNumber.trim() || null,
+          personal_hobbies: personalHobbies.trim() || null,
+          background_info: backgroundInfo.trim() || null,
+          company_phone: companyPhone.trim() || null,
         })
         .eq("id", user.id);
 
@@ -205,7 +214,7 @@ export function ProfileInfoTab() {
         </div>
 
         {/* Form Fields */}
-        <div className="space-y-4">
+        <div className="space-y-6">
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <Input
@@ -237,11 +246,53 @@ export function ProfileInfoTab() {
               type="tel"
               value={phoneNumber}
               onChange={(e) => setPhoneNumber(e.target.value)}
-              placeholder="Enter your phone number"
+              placeholder="Personal or mobile number (optional)"
             />
           </div>
 
-          <Button onClick={handleSave} disabled={saving} className="mt-4">
+          {/* Bio Section */}
+          <div className="space-y-4 pt-2 border-t border-border/50">
+            <div>
+              <h3 className="font-medium">Profile Bio</h3>
+              <p className="text-sm text-muted-foreground">
+                Share a bit about yourself. This helps the team know how to reach you and what you enjoy.
+              </p>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="personal-hobbies">Personal hobbies</Label>
+                <Textarea
+                  id="personal-hobbies"
+                  value={personalHobbies}
+                  onChange={(e) => setPersonalHobbies(e.target.value)}
+                  placeholder="What do you enjoy outside of work?"
+                  rows={3}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="background-info">Background info</Label>
+                <Textarea
+                  id="background-info"
+                  value={backgroundInfo}
+                  onChange={(e) => setBackgroundInfo(e.target.value)}
+                  placeholder="Brief background, experience, or fun facts to share with the team"
+                  rows={3}
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="company-phone">Company phone number</Label>
+              <Input
+                id="company-phone"
+                type="tel"
+                value={companyPhone}
+                onChange={(e) => setCompanyPhone(e.target.value)}
+                placeholder="Best company number to reach you"
+              />
+            </div>
+          </div>
+
+          <Button onClick={handleSave} disabled={saving} className="mt-2">
             {saving ? (
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
             ) : (

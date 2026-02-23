@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -13,7 +14,16 @@ import {
 } from "@/components/ui/dialog";
 import { useSubmitDrawRequest } from "@/hooks/useDrawRequests";
 import { useUserHoldsCheck } from "@/hooks/useComplianceHoldCheck";
-import { AlertTriangle, Loader2, DollarSign } from "lucide-react";
+import { AlertTriangle, Loader2, DollarSign, ClipboardCheck } from "lucide-react";
+
+const DRAW_ELIGIBILITY_ITEMS = [
+  "Signed contract received",
+  "Deposit received from homeowner",
+  "Job number assigned in AccuLynx",
+  "Job is on the build schedule",
+  "Meet-for-color completed",
+  "Full scope and estimate completed",
+] as const;
 
 interface DrawRequestFormProps {
   open: boolean;
@@ -25,6 +35,9 @@ export function DrawRequestForm({ open, onOpenChange }: DrawRequestFormProps) {
   const { data: holds } = useUserHoldsCheck();
   const hasCommissionHold = holds?.some(h => h.hold_type === "commission_hold");
 
+  const [eligibility, setEligibility] = useState<Record<string, boolean>>(
+    DRAW_ELIGIBILITY_ITEMS.reduce((acc, item) => ({ ...acc, [item]: false }), {})
+  );
   const [jobNumber, setJobNumber] = useState("");
   const [jobName, setJobName] = useState("");
   const [estimatedCommission, setEstimatedCommission] = useState("");
@@ -52,7 +65,9 @@ export function DrawRequestForm({ open, onOpenChange }: DrawRequestFormProps) {
   const requiresManagerApproval = reqAmount > 1500;
   const needsEstimateForOver1500 = reqAmount > 1500 && estComm <= 0;
 
+  const allEligibilityChecked = DRAW_ELIGIBILITY_ITEMS.every((item) => eligibility[item]);
   const canSubmit =
+    allEligibilityChecked &&
     !hasCommissionHold &&
     jobNumber.trim() &&
     reqAmount > 0 &&
@@ -73,6 +88,7 @@ export function DrawRequestForm({ open, onOpenChange }: DrawRequestFormProps) {
       {
         onSuccess: () => {
           onOpenChange(false);
+          setEligibility(DRAW_ELIGIBILITY_ITEMS.reduce((acc, item) => ({ ...acc, [item]: false }), {}));
           setJobNumber("");
           setJobName("");
           setEstimatedCommission("");
@@ -95,6 +111,30 @@ export function DrawRequestForm({ open, onOpenChange }: DrawRequestFormProps) {
             Request an advance against a future job's commission. Maximum is 50% of estimated commission, capped at $1,500 without manager approval.
           </DialogDescription>
         </DialogHeader>
+
+        {/* Draw Eligibility — Check All That Apply (self-certification; compliance verifies during review) */}
+        <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-3">
+          <div className="flex items-center gap-2 font-medium text-sm">
+            <ClipboardCheck className="w-4 h-4 text-primary" />
+            Draw Eligibility — Check All That Apply
+          </div>
+          <ul className="space-y-2">
+            {DRAW_ELIGIBILITY_ITEMS.map((item) => (
+              <li key={item} className="flex items-center gap-2">
+                <Checkbox
+                  id={`eligibility-${item}`}
+                  checked={eligibility[item]}
+                  onCheckedChange={(checked) =>
+                    setEligibility((prev) => ({ ...prev, [item]: !!checked }))
+                  }
+                />
+                <label htmlFor={`eligibility-${item}`} className="text-sm cursor-pointer select-none">
+                  {item}
+                </label>
+              </li>
+            ))}
+          </ul>
+        </div>
 
         {hasCommissionHold && (
           <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-lg text-sm text-destructive flex items-center gap-2">
@@ -190,6 +230,13 @@ export function DrawRequestForm({ open, onOpenChange }: DrawRequestFormProps) {
             />
           </div>
         </div>
+
+        {!allEligibilityChecked && (
+          <p className="text-sm text-amber-600 flex items-center gap-1.5">
+            <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+            Please confirm all eligibility requirements before submitting a draw request.
+          </p>
+        )}
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>

@@ -20,6 +20,7 @@ const notificationIcons: Record<string, React.ReactNode> = {
   paid: <DollarSign className="h-4 w-4 text-green-600" />,
   commission_denied: <AlertTriangle className="h-4 w-4 text-red-500" />,
   commission_rejected: <RefreshCw className="h-4 w-4 text-red-500" />,
+  rejected_commission_revised: <RefreshCw className="h-4 w-4 text-amber-500" />,
   new_signup: <UserPlus className="h-4 w-4 text-blue-500" />,
   user_approved: <CheckCircle className="h-4 w-4 text-green-500" />,
   compliance_violation: <Shield className="h-4 w-4 text-red-500" />,
@@ -33,6 +34,8 @@ const notificationIcons: Record<string, React.ReactNode> = {
   warranty_status_change: <Shield className="h-4 w-4 text-amber-500" />,
   warranty_assigned: <Shield className="h-4 w-4 text-purple-500" />,
   warranty_completed: <CheckCircle className="h-4 w-4 text-green-500" />,
+  feed_mention: <Bell className="h-4 w-4 text-primary" />,
+  feed_comment_mention: <Bell className="h-4 w-4 text-blue-400" />,
   default: <AlertCircle className="h-4 w-4 text-muted-foreground" />,
 };
 
@@ -58,6 +61,10 @@ function getNavigationPath(notification: UserNotification): string | null {
       return '/training/new-hire';
     case 'playbook':
       return '/playbook-library/master-playbook';
+    case 'feed_post':
+      return entity_id ? `/message-center?post=${entity_id}` : '/message-center';
+    case 'feed_comment':
+      return entity_id ? `/message-center?post=${entity_id}` : '/message-center';
     default:
       return null;
   }

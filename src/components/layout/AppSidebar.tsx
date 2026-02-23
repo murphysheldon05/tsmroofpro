@@ -51,6 +51,7 @@ import {
   GripVertical,
   Ruler,
   BarChart3,
+  MessageCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -62,6 +63,7 @@ import { useCurrentUserPermissions, isSectionVisible } from "@/hooks/useUserPerm
 import { useUserCommissionTier } from "@/hooks/useCommissionTiers";
 import { useMasterSOPAcknowledgments } from "@/hooks/useMasterSOPAcknowledgments";
 import { useSidebarOrder } from "@/hooks/useSidebarOrder";
+import { usePendingComplianceCount, useNewWarrantyCount, useMessageCenterBadgeCount } from "@/hooks/useNavBadgeCounts";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
@@ -95,6 +97,12 @@ const navigationItems: NavItem[] = [
     sectionKey: "command-center",
   },
   {
+    title: "Message Center",
+    href: "/message-center",
+    icon: MessageCircle,
+    sectionKey: "message-center",
+  },
+  {
     title: "Commissions",
     icon: DollarSign,
     sectionKey: "commissions",
@@ -122,6 +130,7 @@ const navigationItems: NavItem[] = [
     sectionKey: "sops",
     children: [
       { title: "Master Playbook", href: "/playbook-library/master-playbook", icon: BookOpen, sectionKey: "sops/master-playbook" },
+      { title: "Employee Handbook", href: "/playbook-library/employee-handbook", icon: FileText, sectionKey: "sops/employee-handbook" },
       { title: "Sales", href: "/playbook-library/sales", icon: TrendingUp, sectionKey: "sops/sales", requiresPlaybook: true },
       { title: "Production", href: "/playbook-library/production", icon: Hammer, sectionKey: "sops/production", requiresPlaybook: true },
       { title: "Supplements", href: "/playbook-library/supplements", icon: FileCode, sectionKey: "sops/supplements", requiresPlaybook: true },
@@ -171,6 +180,16 @@ const navigationItems: NavItem[] = [
   },
 ];
 
+// Red numeric badge for nav items
+function NavBadge({ count }: { count: number }) {
+  if (count <= 0) return null;
+  return (
+    <span className="flex items-center justify-center min-w-[18px] h-[18px] px-1.5 rounded-full bg-destructive text-destructive-foreground text-[11px] font-semibold">
+      {count > 99 ? "99+" : count}
+    </span>
+  );
+}
+
 // Sortable nav item component
 function SortableNavItem({
   item,
@@ -182,6 +201,8 @@ function SortableNavItem({
   handleNavClick,
   playbookComplete,
   playbookLoading,
+  badgeCount,
+  badgeMoveToChildTitle,
 }: {
   item: NavItem;
   isActive: (href: string) => boolean;
@@ -192,6 +213,8 @@ function SortableNavItem({
   handleNavClick: (href: string, requiresPlaybook?: boolean) => void;
   playbookComplete: boolean;
   playbookLoading: boolean;
+  badgeCount?: number;
+  badgeMoveToChildTitle?: string;
 }) {
   const {
     attributes,
@@ -236,6 +259,9 @@ function SortableNavItem({
                   <item.icon className={cn("w-4 h-4", isParentActive(item.children) && "nav-icon-glow")} />
                   {item.title}
                   {isLocked && <Lock className="w-3 h-3 text-muted-foreground" />}
+                  {badgeCount != null && badgeCount > 0 && !(openSections.includes(item.title) && badgeMoveToChildTitle) && (
+                    <NavBadge count={badgeCount} />
+                  )}
                 </span>
                 <ChevronDown
                   className={cn(
@@ -249,6 +275,7 @@ function SortableNavItem({
           <CollapsibleContent className="mt-1 ml-6 space-y-1 border-l border-border/30 pl-2">
             {item.children.map((child) => {
               const childLocked = child.requiresPlaybook && !playbookComplete && !playbookLoading;
+              const showBadgeOnChild = openSections.includes(item.title) && badgeMoveToChildTitle === child.title && badgeCount != null && badgeCount > 0;
               return (
                 <button
                   key={child.href}
@@ -263,7 +290,8 @@ function SortableNavItem({
                 >
                   {child.icon && <child.icon className={cn("w-4 h-4", isActive(child.href) && "nav-icon-glow")} />}
                   {child.title}
-                  {childLocked && <Lock className="w-3 h-3 ml-auto text-muted-foreground" />}
+                  {showBadgeOnChild && <span className="ml-auto"><NavBadge count={badgeCount!} /></span>}
+                  {childLocked && !showBadgeOnChild && <Lock className="w-3 h-3 ml-auto text-muted-foreground" />}
                 </button>
               );
             })}
@@ -289,8 +317,9 @@ function SortableNavItem({
             )}
           >
             <item.icon className={cn("w-5 h-5 flex-shrink-0", isActive(item.href!) && "nav-icon-glow")} />
-            <span className="truncate">{item.title}</span>
-            {isLocked && <Lock className="w-3.5 h-3.5 ml-auto text-muted-foreground flex-shrink-0" />}
+            <span className="truncate flex-1">{item.title}</span>
+            {badgeCount != null && badgeCount > 0 && <NavBadge count={badgeCount} />}
+            {isLocked && !(badgeCount != null && badgeCount > 0) && <Lock className="w-3.5 h-3.5 ml-auto text-muted-foreground flex-shrink-0" />}
           </button>
         </div>
       )}
@@ -310,6 +339,12 @@ export function AppSidebar() {
   const hasCommissionTier = !!userTier?.tier_id || !!userTier?.tier;
   const { order, reorder } = useSidebarOrder();
   const [profile, setProfile] = useState<{ avatar_url: string | null; full_name: string | null } | null>(null);
+  const { data: pendingComplianceCount = 0 } = usePendingComplianceCount();
+  const { data: newWarrantyCount = 0 } = useNewWarrantyCount();
+  const { data: messageCenterBadgeCount = 0 } = useMessageCenterBadgeCount();
+  const showCommissionsBadge = (isAdmin || role === "ops_compliance") && pendingComplianceCount > 0;
+  const showProductionBadge = isSectionVisible("production", userPermissions, role) && newWarrantyCount > 0;
+  const showMessageCenterBadge = messageCenterBadgeCount > 0;
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -437,6 +472,8 @@ export function AppSidebar() {
         }
         // Ops Compliance: Admin only — hide from Manager and User
         if (item.sectionKey === "ops-compliance") return isAdmin;
+        // Message Center: visible to all users
+        if (item.sectionKey === "message-center") return true;
         return isSectionVisible(item.sectionKey, userPermissions, role);
       })
       .map((item) => {
@@ -506,6 +543,8 @@ export function AppSidebar() {
           >
             {sortedNavigation.map((item) => {
               const isLocked = item.requiresPlaybook && !playbookComplete && !playbookLoading;
+              const badgeCount = item.title === "Commissions" && showCommissionsBadge ? pendingComplianceCount : item.title === "Production" && showProductionBadge ? newWarrantyCount : item.title === "Message Center" && showMessageCenterBadge ? messageCenterBadgeCount : undefined;
+              const badgeMoveToChildTitle = item.title === "Commissions" ? "Accounting" : item.title === "Production" ? "Warranty Tracker" : undefined;
               return (
                 <SortableNavItem
                   key={item.title}
@@ -518,6 +557,8 @@ export function AppSidebar() {
                   handleNavClick={handleNavClick}
                   playbookComplete={playbookComplete}
                   playbookLoading={playbookLoading}
+                  badgeCount={badgeCount}
+                  badgeMoveToChildTitle={badgeMoveToChildTitle}
                 />
               );
             })}

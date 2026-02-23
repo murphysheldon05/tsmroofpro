@@ -4,7 +4,6 @@ import { WeatherWidget } from "./WeatherWidget";
 import { QuickStatsWidget } from "./QuickStatsWidget";
 import { TodaysBuildsWidgetV2 } from "./TodaysBuildsWidgetV2";
 import { TodaysDeliveriesWidgetV2 } from "./TodaysDeliveriesWidgetV2";
-import { ActionRequiredWidget } from "./ActionRequiredWidget";
 import { CommandCenterQuickLinks } from "./CommandCenterQuickLinks";
 import { SalesLeaderboardWidget } from "./SalesLeaderboardWidget";
 interface WidgetRendererProps {
@@ -27,8 +26,6 @@ export function WidgetRenderer({
   // Role-based visibility checks
   const showBuilds = isAdmin || isManager || role === "employee";
   const showDeliveries = isAdmin || isManager || role === "employee";
-  // Action Required widget is now visible to all users (shows different content based on role)
-  const showActionRequired = true;
 
   switch (widgetKey) {
     case "companyInfo":
@@ -61,12 +58,6 @@ export function WidgetRenderer({
       return showDeliveries ? (
         <section>
           <TodaysDeliveriesWidgetV2 />
-        </section>
-      ) : null;
-    case "actionRequired":
-      return showActionRequired ? (
-        <section>
-          <ActionRequiredWidget />
         </section>
       ) : null;
     case "quickLinks":

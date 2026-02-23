@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { SIDEBAR_SECTIONS, useUserPermissions, useUpdateUserPermissions } from "@/hooks/useUserPermissions";
+import { SIDEBAR_SECTIONS, useUserPermissions, useUpdateUserPermissions, MANAGER_ALLOWED_SECTION_KEYS } from "@/hooks/useUserPermissions";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
@@ -19,6 +19,9 @@ export function UserPermissionsEditor({ userId, userRole, onClose }: UserPermiss
   const [selectedSections, setSelectedSections] = useState<string[]>([]);
   const [hasCustomPermissions, setHasCustomPermissions] = useState(false);
 
+  const isManager = userRole === "manager";
+  const isEmployee = userRole === "employee" || userRole === "user";
+
   useEffect(() => {
     if (existingPermissions) {
       setSelectedSections(existingPermissions);
@@ -26,10 +29,10 @@ export function UserPermissionsEditor({ userId, userRole, onClose }: UserPermiss
     }
   }, [existingPermissions]);
 
-  if (userRole !== "employee") {
+  if (userRole === "admin") {
     return (
       <div className="text-sm text-muted-foreground p-4 bg-muted/30 rounded-lg">
-        Admins and Managers have full access to all sections. Permission customization is only available for employees.
+        Admins have full access to all sections. No permission customization is available.
       </div>
     );
   }
@@ -68,7 +71,7 @@ export function UserPermissionsEditor({ userId, userRole, onClose }: UserPermiss
 
   const handleSave = async () => {
     try {
-      // If custom permissions disabled, clear all permissions (full access)
+      // If custom permissions disabled, clear all permissions (full access for employee; all non-admin for manager)
       const sectionsToSave = hasCustomPermissions ? selectedSections : [];
       await updatePermissions.mutateAsync({ userId, sections: sectionsToSave });
       toast.success("Permissions updated successfully");
@@ -78,7 +81,12 @@ export function UserPermissionsEditor({ userId, userRole, onClose }: UserPermiss
     }
   };
 
-  const parentSections = SIDEBAR_SECTIONS.filter((s) => s.parent === null);
+  // For managers: only show categories they are allowed to have (no Commissions, OPS Compliance, or admin-only)
+  const parentSections = SIDEBAR_SECTIONS.filter((s) => {
+    if (s.parent !== null) return false;
+    if (isManager) return MANAGER_ALLOWED_SECTION_KEYS.includes(s.key as any);
+    return true;
+  });
 
   return (
     <div className="space-y-4">
@@ -94,7 +102,9 @@ export function UserPermissionsEditor({ userId, userRole, onClose }: UserPermiss
           }}
         />
         <Label htmlFor="custom-permissions" className="text-sm font-medium cursor-pointer">
-          Enable custom permissions (restrict access to specific sections)
+          {isManager
+            ? "Restrict to selected categories only (unchecked = hidden; e.g. Tools & Systems, Subs & Vendors)"
+            : "Enable custom permissions (restrict access to specific sections)"}
         </Label>
       </div>
 
@@ -161,7 +171,9 @@ export function UserPermissionsEditor({ userId, userRole, onClose }: UserPermiss
 
       {!hasCustomPermissions && (
         <p className="text-sm text-muted-foreground">
-          This employee has access to all sections. Enable custom permissions above to restrict access.
+          {isManager
+            ? "This manager can see all non-admin sections (no Commissions accounting, OPS Compliance). Enable the option above to restrict to specific categories only."
+            : "This employee has access to all sections. Enable custom permissions above to restrict access."}
         </p>
       )}
 

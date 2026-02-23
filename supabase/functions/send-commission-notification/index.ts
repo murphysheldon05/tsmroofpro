@@ -11,7 +11,7 @@ const corsHeaders = {
 };
 
 interface CommissionNotification {
-  notification_type: "submitted" | "manager_approved" | "accounting_approved" | "paid" | "rejected" | "denied" | "status_change";
+  notification_type: "submitted" | "manager_approved" | "accounting_approved" | "paid" | "rejected" | "denied" | "status_change" | "rejected_commission_revised";
   commission_id: string;
   job_name: string;
   job_address: string;
@@ -187,91 +187,35 @@ const handler = async (req: Request): Promise<Response> => {
 
     switch (payload.notification_type) {
       case "submitted":
-        subject = `📋 New Commission Submitted: ${payload.job_name}`;
+        // COMPLIANCE ONLY (Manny + Sheldon): "New commission submitted by [Rep Name]"
+        subject = `New commission submitted by ${payload.submitter_name || repName}`;
         heading = "New Commission Submitted";
-        introText = `A new commission has been submitted by <strong>${payload.submitter_name || repName}</strong> and is awaiting review.`;
+        introText = `New commission submitted by <strong>${payload.submitter_name || repName}</strong>.`;
         headerColor = "#d97706";
-
-        // Check if this is a manager/sales manager submission
-        let isManagerSub = false;
-        if (payload.commission_id) {
-          const { data: commSub } = await supabaseClient
-            .from("commission_submissions")
-            .select("is_manager_submission")
-            .eq("id", payload.commission_id)
-            .single();
-          isManagerSub = commSub?.is_manager_submission === true;
-        }
-
-        if (isManagerSub) {
-          // Manager/SM submissions: notify all admins (Sheldon) + compliance routing
-          introText = `A <strong>manager/sales manager commission</strong> has been submitted by <strong>${payload.submitter_name || repName}</strong> and is awaiting admin review.`;
-          const { data: adminUsers } = await supabaseClient
-            .from("user_roles")
-            .select("user_id")
-            .eq("role", "admin");
-          if (adminUsers) {
-            for (const au of adminUsers) {
-              const { data: adminProfile } = await supabaseClient
-                .from("profiles")
-                .select("email")
-                .eq("id", au.user_id)
-                .single();
-              if (adminProfile?.email) {
-                recipientEmails.push(adminProfile.email);
-                console.log("Added admin email for manager submission:", adminProfile.email);
-              }
-            }
-          }
-          // Also notify via compliance routing
-          const complianceRecipients = await resolveRecipients(supabaseClient, "commission_submission");
-          recipientEmails.push(...complianceRecipients);
-        } else {
-          // Regular rep submission: notify assigned manager + routing fallback
-          recipientEmails = await resolveRecipients(supabaseClient, "commission_submission");
-          if (payload.commission_id) {
-            const { data: commDoc } = await supabaseClient
-              .from("commission_documents")
-              .select("manager_id")
-              .eq("id", payload.commission_id)
-              .single();
-            if (commDoc?.manager_id) {
-              const { data: mgrProfile } = await supabaseClient
-                .from("profiles")
-                .select("email")
-                .eq("id", commDoc.manager_id)
-                .single();
-              if (mgrProfile?.email) {
-                recipientEmails.push(mgrProfile.email);
-                console.log("Added assigned manager email:", mgrProfile.email);
-              }
-            }
-          }
-        }
-        additionalPlainText = `Job Name: ${payload.job_name}\nJob Address: ${payload.job_address}\nRep/Subcontractor: ${repName}\nContract Amount: ${formatCurrency(payload.contract_amount)}\nNet Commission: ${formatCurrency(payload.net_commission_owed)}`;
+        recipientEmails = await resolveRecipients(supabaseClient, "commission_submission");
+        additionalPlainText = `Job: ${payload.job_name}\nRep: ${payload.submitter_name || repName}\nAmount: ${formatCurrency(payload.net_commission_owed)}`;
         additionalContent = `
-          <tr><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;"><strong>Job Name:</strong></td><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">${payload.job_name}</td></tr>
-          <tr><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;"><strong>Job Address:</strong></td><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">${payload.job_address}</td></tr>
-          <tr><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;"><strong>Rep/Subcontractor:</strong></td><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">${repName}</td></tr>
-          <tr><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;"><strong>Contract Amount:</strong></td><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">${formatCurrency(payload.contract_amount)}</td></tr>
-          <tr><td style="padding: 10px 0;"><strong>Net Commission:</strong></td><td style="padding: 10px 0; color: #16a34a; font-weight: bold;">${formatCurrency(payload.net_commission_owed)}</td></tr>
+          <tr><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;"><strong>Job:</strong></td><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">${payload.job_name}</td></tr>
+          <tr><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;"><strong>Rep:</strong></td><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">${payload.submitter_name || repName}</td></tr>
+          <tr><td style="padding: 10px 0;"><strong>Net Commission:</strong></td><td style="padding: 10px 0; font-weight: bold;">${formatCurrency(payload.net_commission_owed)}</td></tr>
         `;
+        buttonText = "Review Commission";
         break;
 
       case "manager_approved":
-        subject = `✅ Commission Manager Approved: ${payload.job_name}`;
-        heading = "Manager Approved - Pending Accounting";
-        introText = `The commission for ${payload.job_name} has been approved by the manager and is now awaiting accounting review.`;
+        // ACCOUNTING ONLY (Courtney): "Commission ready for accounting review — [Rep Name] [Job]"
+        subject = `Commission ready for accounting review — ${payload.submitter_name || repName} ${payload.job_name}`;
+        heading = "Commission Ready for Accounting Review";
+        introText = `Commission ready for accounting review — <strong>${payload.submitter_name || repName}</strong> — <strong>${payload.job_name}</strong>.`;
         headerColor = "#1d4ed8";
         recipientEmails = await resolveRecipients(supabaseClient, "commission_accounting");
-        if (payload.submitter_email) recipientEmails.push(payload.submitter_email);
-        additionalPlainText = `Job: ${payload.job_name}\nRep: ${repName}\nCommission Amount: ${formatCurrency(payload.net_commission_owed)}\nStatus: Waiting for accounting review and final approval.`;
+        additionalPlainText = `Rep: ${payload.submitter_name || repName}\nJob: ${payload.job_name}\nAmount: ${formatCurrency(payload.net_commission_owed)}`;
         additionalContent = `
+          <tr><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;"><strong>Rep:</strong></td><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">${payload.submitter_name || repName}</td></tr>
           <tr><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;"><strong>Job:</strong></td><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">${payload.job_name}</td></tr>
-          <tr><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;"><strong>Rep:</strong></td><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">${repName}</td></tr>
           <tr><td style="padding: 10px 0;"><strong>Commission Amount:</strong></td><td style="padding: 10px 0; color: #3b82f6; font-weight: bold;">${formatCurrency(payload.net_commission_owed)}</td></tr>
-          <tr><td colspan="2" style="padding: 15px; background: #dbeafe; border-radius: 8px; margin-top: 10px;"><strong>Status:</strong> Waiting for accounting review and final approval.</td></tr>
         `;
+        buttonText = "Review Commission";
         break;
 
       case "accounting_approved":
@@ -317,7 +261,7 @@ const handler = async (req: Request): Promise<Response> => {
       case "rejected":
         subject = `⚠️ Commission Rejected: ${payload.job_name}`;
         heading = "Commission Rejected";
-        introText = `The commission submission for <strong>${payload.job_name}</strong> has been rejected. Please review the notes below and resubmit.`;
+        introText = `Your commission for <strong>${payload.job_name}</strong> was rejected.${payload.notes ? ` Rejection reason: ${payload.notes}` : " Please review the notes below and resubmit."}`;
         headerColor = "#dc2626";
         recipientEmails = payload.submitter_email ? [payload.submitter_email] : [];
         additionalPlainText = `Job: ${payload.job_name}${payload.notes ? `\nRejection Reason: ${payload.notes}` : ""}`;
@@ -333,6 +277,21 @@ const handler = async (req: Request): Promise<Response> => {
           </td></tr>` : ""}
         `;
         buttonText = "View & Resubmit";
+        break;
+
+      case "rejected_commission_revised":
+        subject = `Rejected Commission Revised by ${payload.submitter_name || repName}`;
+        heading = "Rejected Commission Revised";
+        introText = `A previously rejected commission for <strong>${payload.job_name}</strong> has been revised and resubmitted by <strong>${payload.submitter_name || repName}</strong>. It is back in the compliance review queue.`;
+        headerColor = "#d97706";
+        recipientEmails = await resolveRecipients(supabaseClient, "commission_submission");
+        additionalPlainText = `Job: ${payload.job_name}\nRep: ${payload.submitter_name || repName}\nAmount: ${formatCurrency(payload.net_commission_owed)}`;
+        additionalContent = `
+          <tr><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;"><strong>Job:</strong></td><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">${payload.job_name}</td></tr>
+          <tr><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;"><strong>Revised by:</strong></td><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">${payload.submitter_name || repName}</td></tr>
+          <tr><td style="padding: 10px 0;"><strong>Commission Amount:</strong></td><td style="padding: 10px 0;">${formatCurrency(payload.net_commission_owed)}</td></tr>
+        `;
+        buttonText = "Review Commission";
         break;
 
       case "denied":
@@ -377,7 +336,8 @@ const handler = async (req: Request): Promise<Response> => {
     // Filter out empty emails and deduplicate
     recipientEmails = [...new Set(recipientEmails.filter(email => email && email.trim()))];
 
-    if (recipientEmails.length === 0) {
+    const hasRepConfirmation = payload.notification_type === "submitted" && payload.submitter_email;
+    if (recipientEmails.length === 0 && !hasRepConfirmation) {
       console.warn("No recipients resolved for commission notification:", payload.notification_type, "commission_id:", payload.commission_id);
       return new Response(
         JSON.stringify({ success: false, warning: "No recipients resolved", notification_type: payload.notification_type }),
@@ -450,16 +410,42 @@ If you have questions, please contact your supervisor or the accounting team.
 
     console.log("Sending commission notification to:", recipientEmails);
 
-    const emailResponse = await resend.emails.send({
-      from: "TSM Hub <notifications@tsmroofpro.com>",
-      reply_to: "sheldonmurphy@tsmroofs.com",
-      to: recipientEmails,
-      subject,
-      text: plainText,
-      html: emailHtml,
-    });
+    let emailResponse: unknown = null;
+    if (recipientEmails.length > 0) {
+      emailResponse = await resend.emails.send({
+        from: "TSM Hub <notifications@tsmroofpro.com>",
+        reply_to: "sheldonmurphy@tsmroofs.com",
+        to: recipientEmails,
+        subject,
+        text: plainText,
+        html: emailHtml,
+      });
+      console.log("Commission notification sent successfully:", emailResponse);
+    }
 
-    console.log("Commission notification sent successfully:", emailResponse);
+    // REP TRIGGER 1: Commission successfully submitted — rep gets confirmation email (separate from compliance email)
+    if (payload.notification_type === "submitted" && payload.submitter_email) {
+      const repConfirmSubject = "Commission successfully submitted";
+      const repConfirmHtml = `
+        <!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background-color: #059669; padding: 24px; border-radius: 12px 12px 0 0; text-align: center;">
+            <h1 style="color: white; margin: 0; font-size: 22px;">Commission successfully submitted</h1>
+          </div>
+          <div style="background: #fff; padding: 24px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px;">
+            <p style="font-size: 16px;">Your commission for <strong>${payload.job_name}</strong> has been submitted and is in the compliance review queue.</p>
+            <p style="font-size: 14px; color: #6b7280;">You will be notified when it is rejected, approved by accounting, or marked as paid.</p>
+            <p style="text-align: center; margin-top: 24px;"><a href="${commissionUrl}" style="display: inline-block; background: #111827; color: #fff; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600;">View Commission</a></p>
+          </div>
+        </body></html>`;
+      await resend.emails.send({
+        from: "TSM Hub <notifications@tsmroofpro.com>",
+        reply_to: "sheldonmurphy@tsmroofs.com",
+        to: [payload.submitter_email],
+        subject: repConfirmSubject,
+        text: `Your commission for ${payload.job_name} has been submitted and is in the compliance review queue. View: ${commissionUrl}`,
+        html: repConfirmHtml,
+      }).catch((e) => console.error("Rep confirmation email failed:", e));
+    }
 
     // Create in-app notifications — check both commission_submissions and commission_documents tables
     let submittedBy: string | null = null;
@@ -494,37 +480,15 @@ If you have questions, please contact your supervisor or the accounting team.
     }
 
     if (submittedBy || managerId) {
-      // For submitted notifications - notify the assigned manager directly
+      // SUBMITTED: Compliance (Manny + Sheldon) get in-app "New commission submitted by [Rep Name]"; Rep gets confirmation
       if (payload.notification_type === "submitted") {
-        // Look up the assigned manager from the commission document
-        let docManagerId = managerId;
-        if (!docManagerId) {
-          const { data: commDoc } = await supabaseClient
-            .from("commission_documents")
-            .select("manager_id")
-            .eq("id", payload.commission_id)
-            .single();
-          docManagerId = commDoc?.manager_id || null;
-        }
-
-        if (docManagerId) {
-          await createInAppNotification(
-            supabaseClient,
-            docManagerId,
-            "commission_submitted",
-            `📋 New Commission: ${payload.job_name}`,
-            `A commission has been submitted by ${payload.submitter_name || salesRepName} for your review.`,
-            "commission",
-            payload.commission_id
-          );
-        }
-
-        // Also notify commission reviewers
+        const complianceTitle = `New commission submitted by ${payload.submitter_name || salesRepName || "Rep"}`;
+        const complianceMessage = `New commission submitted by ${payload.submitter_name || salesRepName || "Rep"} — ${payload.job_name}.`;
+        // Notify compliance officers (commission_reviewers table + admins for compliance role)
         const { data: reviewers } = await supabaseClient
           .from("commission_reviewers")
           .select("user_email")
           .eq("is_active", true);
-
         if (reviewers) {
           for (const reviewer of reviewers) {
             const { data: profile } = await supabaseClient
@@ -532,50 +496,106 @@ If you have questions, please contact your supervisor or the accounting team.
               .select("id")
               .eq("email", reviewer.user_email)
               .single();
-
-            if (profile?.id && profile.id !== docManagerId) {
+            if (profile?.id) {
               await createInAppNotification(
                 supabaseClient,
                 profile.id,
                 "commission_submitted",
-                `📋 New Commission: ${payload.job_name}`,
-                `A commission has been submitted by ${payload.submitter_name || salesRepName} for review.`,
-                "commission",
+                complianceTitle,
+                complianceMessage,
+                "commission_submission",
                 payload.commission_id
               );
             }
           }
         }
+        const { data: adminUsers } = await supabaseClient
+          .from("user_roles")
+          .select("user_id")
+          .eq("role", "admin");
+        if (adminUsers) {
+          for (const au of adminUsers) {
+            await createInAppNotification(
+              supabaseClient,
+              au.user_id,
+              "commission_submitted",
+              complianceTitle,
+              complianceMessage,
+              "commission_submission",
+              payload.commission_id
+            );
+          }
+        }
+        // Rep: in-app confirmation (TRIGGER 1)
+        if (submittedBy) {
+          await createInAppNotification(
+            supabaseClient,
+            submittedBy,
+            "commission_submitted",
+            "Commission successfully submitted",
+            `Your commission for ${payload.job_name} has been submitted and is in the compliance review queue.`,
+            "commission_submission",
+            payload.commission_id
+          );
+        }
+      }
 
-        // For self-submissions (no manager_id), notify all admins
-        if (!docManagerId) {
-          const { data: adminUsers } = await supabaseClient
-            .from("user_roles")
-            .select("user_id")
-            .eq("role", "admin");
-          if (adminUsers) {
-            for (const au of adminUsers) {
+      // For rejected_commission_revised — notify compliance officers (same recipients as new submission, different copy)
+      if (payload.notification_type === "rejected_commission_revised") {
+        const { data: reviewers } = await supabaseClient
+          .from("commission_reviewers")
+          .select("user_email")
+          .eq("is_active", true);
+        const title = `Rejected Commission Revised by ${payload.submitter_name || salesRepName || "Rep"}`;
+        const message = `A previously rejected commission for ${payload.job_name} has been revised and resubmitted. It is back in the compliance review queue.`;
+        if (reviewers) {
+          for (const reviewer of reviewers) {
+            const { data: profile } = await supabaseClient
+              .from("profiles")
+              .select("id")
+              .eq("email", reviewer.user_email)
+              .single();
+            if (profile?.id) {
               await createInAppNotification(
                 supabaseClient,
-                au.user_id,
-                "commission_submitted",
-                `📋 Self-Submitted Commission: ${payload.job_name}`,
-                `A sales manager has self-submitted a commission for ${payload.job_name}. Admin approval required.`,
-                "commission",
+                profile.id,
+                "rejected_commission_revised",
+                title,
+                message,
+                "commission_submission",
                 payload.commission_id
               );
             }
+          }
+        }
+        // Also notify admins
+        const { data: adminUsers } = await supabaseClient
+          .from("user_roles")
+          .select("user_id")
+          .eq("role", "admin");
+        if (adminUsers) {
+          for (const au of adminUsers) {
+            await createInAppNotification(
+              supabaseClient,
+              au.user_id,
+              "rejected_commission_revised",
+              title,
+              message,
+              "commission_submission",
+              payload.commission_id
+            );
           }
         }
       }
 
-      // For manager_approved - notify accounting users
+      // MANAGER_APPROVED (compliance approved): Accounting (Courtney) only — "Commission ready for accounting review — [Rep Name] [Job]"
       if (payload.notification_type === "manager_approved") {
+        const accountingTitle = `Commission ready for accounting review — ${payload.submitter_name || salesRepName || "Rep"} ${payload.job_name}`;
+        const accountingMessage = `Commission ready for accounting review — ${payload.submitter_name || salesRepName || "Rep"} — ${payload.job_name}.`;
         const { data: accountingUsers } = await supabaseClient
           .from("commission_reviewers")
           .select("user_email")
           .eq("is_active", true);
-
         if (accountingUsers) {
           for (const reviewer of accountingUsers) {
             const { data: profile } = await supabaseClient
@@ -583,15 +603,14 @@ If you have questions, please contact your supervisor or the accounting team.
               .select("id")
               .eq("email", reviewer.user_email)
               .single();
-
             if (profile?.id) {
               await createInAppNotification(
                 supabaseClient,
                 profile.id,
                 "commission_approved_for_accounting",
-                `✅ Ready for Review: ${payload.job_name}`,
-                `Commission for ${payload.job_name} has been manager approved and is ready for accounting review.`,
-                "commission",
+                accountingTitle,
+                accountingMessage,
+                "commission_submission",
                 payload.commission_id
               );
             }
@@ -599,22 +618,20 @@ If you have questions, please contact your supervisor or the accounting team.
         }
       }
 
-      // For rejected, accounting_approved, paid, denied - notify submitter
-      if (["rejected", "accounting_approved", "paid", "denied", "manager_approved"].includes(payload.notification_type)) {
+      // REP: rejected (TRIGGER 2), accounting_approved (TRIGGER 3), paid (TRIGGER 4), denied — no notification at compliance approval
+      if (["rejected", "accounting_approved", "paid", "denied"].includes(payload.notification_type)) {
         if (submittedBy) {
-          const notificationTitle = 
+          const notificationTitle =
             payload.notification_type === "rejected" ? `⚠️ Commission Rejected: ${payload.job_name}` :
             payload.notification_type === "accounting_approved" ? `🎉 Commission Approved: ${payload.job_name}` :
             payload.notification_type === "paid" ? `💰 Commission Paid: ${payload.job_name}` :
-            payload.notification_type === "denied" ? `🚫 Commission Denied: ${payload.job_name}` :
-            `✅ Manager Approved: ${payload.job_name}`;
+            `🚫 Commission Denied: ${payload.job_name}`;
 
-          const notificationMessage = 
+          const notificationMessage =
             payload.notification_type === "rejected" ? (payload.notes || "Your commission has been rejected. Please resubmit with the requested changes.") :
             payload.notification_type === "accounting_approved" ? `Your commission has been approved! Payment scheduled for ${formatPayDateFn(payload.scheduled_pay_date)}.` :
             payload.notification_type === "paid" ? `Your commission of ${formatCurrency(payload.net_commission_owed)} has been paid!` :
-            payload.notification_type === "denied" ? (payload.notes || "Your commission has been denied.") :
-            "Your commission has been approved by your manager and is awaiting accounting review.";
+            (payload.notes || "Your commission has been denied.");
 
           await createInAppNotification(
             supabaseClient,
@@ -622,7 +639,7 @@ If you have questions, please contact your supervisor or the accounting team.
             payload.notification_type,
             notificationTitle,
             notificationMessage,
-            "commission",
+            "commission_submission",
             payload.commission_id
           );
         }

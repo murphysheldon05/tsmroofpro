@@ -271,7 +271,7 @@ export function useLeaderboardSetting(key: string = "show_sales_leaderboard") {
         .eq("setting_key", key)
         .maybeSingle();
       if (error) throw error;
-      if (!data) return true; // Default to enabled if no row exists
+      if (!data) return false; // Default OFF (leaderboard hidden until AccuLynx API is confirmed)
       return data.setting_value === true || data.setting_value === "true";
     },
   });

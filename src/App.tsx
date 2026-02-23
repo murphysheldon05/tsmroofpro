@@ -15,6 +15,7 @@ const Auth = lazy(() => import("./pages/Auth"));
 const Signup = lazy(() => import("./pages/Signup"));
 const SOPLibrary = lazy(() => import("./pages/SOPLibrary"));
 const MasterPlaybook = lazy(() => import("./pages/MasterPlaybook"));
+const EmployeeHandbook = lazy(() => import("./pages/EmployeeHandbook"));
 const ResourceDetail = lazy(() => import("./pages/ResourceDetail"));
 const Training = lazy(() => import("./pages/Training"));
 const ShingleIdentification = lazy(() => import("./pages/ShingleIdentification"));
@@ -39,6 +40,7 @@ const MyCommissionTracker = lazy(() => import("./pages/MyCommissionTracker"));
 const BuildSchedule = lazy(() => import("./pages/BuildSchedule"));
 const DeliverySchedule = lazy(() => import("./pages/DeliverySchedule"));
 const CommandCenter = lazy(() => import("./pages/CommandCenter"));
+const MessageCenter = lazy(() => import("./pages/MessageCenter"));
 const PendingReview = lazy(() => import("./pages/PendingReview"));
 const OpsCompliance = lazy(() => import("./pages/OpsCompliance"));
 const Accounting = lazy(() => import("./pages/Accounting"));
@@ -80,6 +82,14 @@ const App = () => (
               }
             />
             <Route
+              path="/message-center"
+              element={
+                <ProtectedRoute>
+                  <MessageCenter />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/pending-review"
               element={
                 <ProtectedRoute>
@@ -106,6 +116,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <MasterPlaybook />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/playbook-library/employee-handbook"
+              element={
+                <ProtectedRoute>
+                  <EmployeeHandbook />
                 </ProtectedRoute>
               }
             />

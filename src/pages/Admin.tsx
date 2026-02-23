@@ -682,8 +682,8 @@ export default function Admin() {
                         </td>
                         <td className="px-4 py-3 text-right">
                           <div className="flex items-center justify-end gap-1">
-                            {/* Permissions button - only show for employees */}
-                            {(user.role === "employee" || user.role === "user") && (
+                            {/* Permissions button - employees (restrict sections) and managers (category visibility e.g. Tools & Systems, Subs & Vendors) */}
+                            {(user.role === "employee" || user.role === "user" || user.role === "manager") && (
                               <Dialog
                                 open={editingUserPermissions?.id === user.id}
                                 onOpenChange={(open) => {

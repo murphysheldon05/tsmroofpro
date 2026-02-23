@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 // All available sidebar sections - employees with no permissions get access to all by default
 export const SIDEBAR_SECTIONS = [
   { key: "command-center", label: "Command Center", parent: null },
+  { key: "message-center", label: "Message Center", parent: null },
   { key: "dashboard", label: "Dashboard", parent: null },
   { key: "sops", label: "SOP Library", parent: null },
   { key: "sops/sales", label: "Sales", parent: "sops" },
@@ -105,13 +106,34 @@ export function useUpdateUserPermissions() {
   });
 }
 
+// Sections that managers with custom visibility can be granted (no Commissions accounting, no OPS Compliance)
+export const MANAGER_ALLOWED_SECTION_KEYS = [
+  "command-center", "dashboard", "sops", "training", "production", "production-calendar",
+  "tools", "requests", "company", "directory", "vendors",
+] as const;
+
 // Helper: check if a section should be visible based on permissions
-// If no permissions are set (empty array), all sections are visible
+// If no permissions are set (empty array), all sections are visible (employees) or managers see all non-admin
 // If permissions are set, only those sections are visible
 export function isSectionVisible(sectionKey: string, permissions: string[] | null | undefined, role: string | null): boolean {
-  // Admins and managers see everything
-  if (role === "admin" || role === "manager") return true;
-  
+  // Admins see everything
+  if (role === "admin") return true;
+
+  // Managers: if they have custom category visibility (permissions set), only show those sections
+  if (role === "manager" && permissions && permissions.length > 0) {
+    const section = SIDEBAR_SECTIONS.find((s) => s.key === sectionKey);
+    if (!section) return false;
+    if (section.parent)
+      return permissions.includes(sectionKey) || permissions.includes(section.parent);
+    const children = SIDEBAR_SECTIONS.filter((s) => s.parent === sectionKey);
+    if (children.length > 0)
+      return permissions.includes(sectionKey) || children.some((c) => permissions.includes(c.key));
+    return permissions.includes(sectionKey);
+  }
+
+  // Managers with no custom permissions see all non-admin sections (admin-only filtered in sidebar)
+  if (role === "manager") return true;
+
   // If permissions is null/undefined or empty, employee sees everything (default)
   if (!permissions || permissions.length === 0) return true;
   

@@ -30,7 +30,7 @@ import {
   PermissionKey,
 } from '@/lib/permissions';
 
-// Map the existing app_role enum values to the 3-tier UserRole
+// Map user_roles.app_role (Supabase enum) to the 3-tier UserRole
 function mapToUserRole(dbRole: string | null | undefined): UserRole {
   if (!dbRole) return 'user';
   switch (dbRole) {
@@ -39,6 +39,7 @@ function mapToUserRole(dbRole: string | null | undefined): UserRole {
     case 'manager':
     case 'sales_manager':
       return 'manager';
+    case 'user':
     case 'employee':
     case 'sales_rep':
     case 'ops_compliance':

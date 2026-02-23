@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState, useCallback, use
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { PasswordResetPrompt } from '@/components/auth/PasswordResetPrompt';
+import { DisplayNamePrompt } from '@/components/auth/DisplayNamePrompt';
 
 type AppRole = 'admin' | 'manager' | 'employee' | 'sales_rep' | 'sales_manager' | 'ops_compliance' | 'accounting';
 type EmployeeStatus = 'active' | 'pending' | 'rejected' | 'inactive';
@@ -35,6 +36,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [role, setRole] = useState<AppRole | null>(null);
   const [employeeStatus, setEmployeeStatus] = useState<EmployeeStatus | null>(null);
   const [mustResetPassword, setMustResetPassword] = useState(false);
+  const [mustCompleteName, setMustCompleteName] = useState(false);
   const [userDepartment, setUserDepartment] = useState<string | null>(null);
   const isMounted = useRef(true);
 
@@ -55,7 +57,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const checkProfileStatus = useCallback(async (userId: string) => {
     const { data } = await supabase
       .from('profiles')
-      .select('must_reset_password, employee_status, is_approved, department')
+      .select('must_reset_password, employee_status, is_approved, department, full_name')
       .eq('id', userId)
       .maybeSingle();
     
@@ -65,6 +67,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (data.must_reset_password) {
         setMustResetPassword(true);
       }
+
+      const hasName =
+        !!data.full_name &&
+        data.full_name.trim().split(/\s+/).length >= 2;
+      setMustCompleteName(!hasName);
       
       setUserDepartment(data.department || null);
       
@@ -81,6 +88,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } else {
       setEmployeeStatus('pending');
       setUserDepartment(null);
+      setMustCompleteName(false);
     }
   }, []);
 
@@ -109,6 +117,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setRole(null);
         setEmployeeStatus(null);
         setMustResetPassword(false);
+        setMustCompleteName(false);
         setUserDepartment(null);
         }
       }
@@ -188,6 +197,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setRole(null);
     setEmployeeStatus(null);
     setMustResetPassword(false);
+    setMustCompleteName(false);
     setUserDepartment(null);
   };
 
@@ -223,6 +233,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       <PasswordResetPrompt 
         open={mustResetPassword && !!user && isActive} 
         onPasswordReset={handlePasswordReset} 
+      />
+      <DisplayNamePrompt
+        open={mustCompleteName && !!user && isActive && !mustResetPassword}
+        onCompleted={() => setMustCompleteName(false)}
       />
     </AuthContext.Provider>
   );

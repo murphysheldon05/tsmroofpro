@@ -6,6 +6,7 @@ import { RejectedScreen } from "@/components/auth/RejectedScreen";
 import { InactiveScreen } from "@/components/auth/InactiveScreen";
 import { AccessHoldScreen } from "@/components/compliance/AccessHoldScreen";
 import { MasterPlaybookGate } from "@/components/compliance/MasterPlaybookGate";
+import { EmployeeHandbookGate } from "@/components/compliance/EmployeeHandbookGate";
 import { useAccessHoldCheck } from "@/hooks/useComplianceHoldCheck";
 import { AppLoadingScreen } from "@/components/AppLoadingScreen";
 interface ProtectedRouteProps {
@@ -79,9 +80,13 @@ export function ProtectedRoute({
         return <Navigate to="/command-center" replace />;
       }
 
-      // If not on exempt route, wrap with Master Playbook gate
+      // If not on exempt route, wrap with Master Playbook gate then Employee Handbook gate
       if (!isExemptRoute) {
-        return <MasterPlaybookGate>{children}</MasterPlaybookGate>;
+        return (
+          <MasterPlaybookGate>
+            <EmployeeHandbookGate>{children}</EmployeeHandbookGate>
+          </MasterPlaybookGate>
+        );
       }
 
       // Exempt routes pass through directly

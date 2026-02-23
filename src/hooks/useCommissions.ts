@@ -71,6 +71,10 @@ export interface CommissionSubmission {
   
   created_at: string;
   updated_at: string;
+
+  // Rejected flow: tag persists to payout; snapshot used for change highlighting on resubmit
+  was_rejected: boolean;
+  previous_submission_snapshot: Record<string, unknown> | null;
 }
 
 export interface CommissionAttachment {
@@ -414,6 +418,7 @@ export function useUpdateCommissionStatus() {
       
       if (rejection_reason) {
         updateData.rejection_reason = rejection_reason;
+        updateData.was_rejected = true; // Persist Rejected tag through to payout; never cleared
         // Reset approval stage when rejecting (sending back to rep)
         // Manager submissions restart at pending_admin, regular at pending_manager
         const { data: submissionCheck } = await supabase
@@ -455,7 +460,7 @@ export function useUpdateCommissionStatus() {
       try {
         const notificationType = 
           approval_stage === "pending_accounting" ? "manager_approved" :
-          (approval_stage === "completed" && status === "approved") ? "approved" :
+          (approval_stage === "completed" && status === "approved") ? "accounting_approved" :
           status === "paid" ? "paid" :
           status === "rejected" ? "rejected" : 
           status === "denied" ? "denied" :
@@ -470,6 +475,13 @@ export function useUpdateCommissionStatus() {
               .maybeSingle()
           : { data: null };
 
+        let scheduled_pay_date: string | undefined;
+        if (notificationType === "accounting_approved") {
+          try {
+            const { calculateScheduledPayDate } = await import("@/lib/commissionPayDateCalculations");
+            scheduled_pay_date = calculateScheduledPayDate(new Date()).toISOString().split("T")[0];
+          } catch (_) {}
+        }
         await supabase.functions.invoke("send-commission-notification", {
           body: {
             notification_type: notificationType,
@@ -487,6 +499,7 @@ export function useUpdateCommissionStatus() {
             status,
             previous_status: current?.status,
             notes: notes || rejection_reason,
+            scheduled_pay_date,
           },
         });
       } catch (notifyError) {
@@ -657,6 +670,19 @@ export function useUpdateCommission() {
       if (current.submitted_by !== user.id) throw new Error("You can only edit your own submissions");
       if (current.status !== "rejected" && current.status !== "denied") throw new Error("You can only edit submissions that have been rejected or denied");
       
+      // Snapshot of previous submission for compliance change highlighting (only for rejected resubmits)
+      const snapshotFields = [
+        "job_name", "job_address", "acculynx_job_id", "job_type", "roof_type", "contract_date", "install_completion_date",
+        "sales_rep_name", "rep_role", "commission_tier", "custom_commission_percentage", "subcontractor_name",
+        "is_flat_fee", "flat_fee_amount", "contract_amount", "supplements_approved", "commission_percentage",
+        "advances_paid", "net_commission_owed", "total_job_revenue", "gross_commission",
+      ];
+      const previousSnapshot: Record<string, unknown> = {};
+      snapshotFields.forEach((key) => {
+        if (current[key] !== undefined && current[key] !== null) previousSnapshot[key] = current[key];
+      });
+      if (Object.keys(previousSnapshot).length === 0) snapshotFields.forEach((key) => { previousSnapshot[key] = current[key]; });
+
       // Update the submission and set status back to pending_review
       // Manager submissions go back to pending_admin (Sheldon/Manny), regular ones to pending_manager
       const updateData = {
@@ -664,6 +690,7 @@ export function useUpdateCommission() {
         status: "pending_review",
         approval_stage: current.is_manager_submission ? "pending_admin" : "pending_manager",
         rejection_reason: null, // Clear rejection reason on resubmit (rejected = sent back to rep)
+        previous_submission_snapshot: previousSnapshot,
       };
       
       const { data: result, error } = await supabase
@@ -685,11 +712,18 @@ export function useUpdateCommission() {
         notes: `Commission resubmitted — previously ${previousStatus === 'denied' ? 'denied' : 'rejected'}`,
       });
       
-      // Send notification
+      // Notify compliance: "Rejected Commission Revised by [Rep Name]" — NOT "New Commission Submitted"
+      const { data: submitterProfile } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("id", user.id)
+        .maybeSingle();
+      const repDisplayName = submitterProfile?.full_name || result.sales_rep_name || "Rep";
       try {
         await supabase.functions.invoke("send-commission-notification", {
           body: {
-            notification_type: "submitted",
+            notification_type: "rejected_commission_revised",
+            document_type: "commission_submission",
             commission_id: id,
             job_name: result.job_name,
             job_address: result.job_address,
@@ -698,10 +732,11 @@ export function useUpdateCommission() {
             submission_type: result.submission_type,
             contract_amount: result.contract_amount,
             net_commission_owed: result.net_commission_owed,
+            submitter_name: repDisplayName,
           },
         });
       } catch (notifyError) {
-        console.error("Failed to send notification:", notifyError);
+        console.error("Failed to send resubmission notification:", notifyError);
       }
       
       return result as CommissionSubmission;

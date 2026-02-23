@@ -7,9 +7,9 @@ import { QuickActionLinks } from "@/components/command-center/QuickActionLinks";
 import { CommissionSummaryWidget } from "@/components/command-center/CommissionSummaryWidget";
 import { SalesLeaderboardWidget } from "@/components/command-center/SalesLeaderboardWidget";
 import { QuickStatsWidget } from "@/components/command-center/QuickStatsWidget";
+import { useLeaderboardSetting } from "@/hooks/useSalesLeaderboard";
 import { CompanyInfoWidget } from "@/components/command-center/CompanyInfoWidget";
 import { WeatherWidget } from "@/components/command-center/WeatherWidget";
-import { ActionRequiredWidget } from "@/components/command-center/ActionRequiredWidget";
 import { NeedsAttentionWidget } from "@/components/command-center/NeedsAttentionWidget";
 import { CommandCenterSettings } from "@/components/command-center/CommandCenterSettings";
 import { useCommandCenterPreferences } from "@/hooks/useCommandCenterPreferences";
@@ -20,6 +20,7 @@ import { commandCenterSteps } from "@/components/tutorial/tutorialSteps";
 export default function CommandCenter() {
   const { user } = useAuth();
   const { widgets, widgetOrder, toggleWidget, reorderWidgets, resetToDefaults } = useCommandCenterPreferences();
+  const { data: showSalesLeaderboard = false } = useLeaderboardSetting();
   const firstName = user?.user_metadata?.full_name?.split(" ")[0] || "there";
 
   return (
@@ -60,10 +61,12 @@ export default function CommandCenter() {
         {/* 2. Core Focus + Core Values (locked) */}
         <CompactCoreIdentity />
 
-        {/* 3. Sales Leaderboard (moved up) */}
-        <div data-tutorial="sales-leaderboard">
-          <SalesLeaderboardWidget />
-        </div>
+        {/* 3. Sales Leaderboard — only when admin has enabled it (default OFF during AccuLynx debug) */}
+        {showSalesLeaderboard && (
+          <div data-tutorial="sales-leaderboard">
+            <SalesLeaderboardWidget />
+          </div>
+        )}
 
         {/* 4. Commission summary cards */}
         <div data-tutorial="commission-summary">
@@ -89,11 +92,6 @@ export default function CommandCenter() {
         {/* 8. Weather widget */}
         <div data-tutorial="weather-widget">
           <WeatherWidget />
-        </div>
-
-        {/* 9. Pending Review (compacted) */}
-        <div data-tutorial="pending-review-widget">
-          <ActionRequiredWidget />
         </div>
 
         <GuidedTour pageName="command-center" pageTitle="Command Center" steps={commandCenterSteps} />
