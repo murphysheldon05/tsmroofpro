@@ -83,6 +83,9 @@ export interface CommissionSubmission {
 
   // Draw request: advance against future commission; flows through same approval chain
   is_draw?: boolean;
+  // Draw-to-final: when rep closes out a paid draw and submits final commission
+  draw_amount_paid?: number | null;
+  draw_closed_out?: boolean | null;
 }
 
 export interface CommissionAttachment {
@@ -779,6 +782,18 @@ export function useDeleteCommission() {
     mutationFn: async (id: string) => {
       if (!user || !isAdmin) throw new Error("Only admins can delete commissions");
 
+      // Remove from tracker: delete commission_entries created from this submission (notes contain "commission submission {id}")
+      const { data: entries } = await supabase
+        .from("commission_entries")
+        .select("id")
+        .ilike("notes", `%commission submission ${id}%`);
+      if (entries && entries.length > 0) {
+        await supabase
+          .from("commission_entries")
+          .delete()
+          .in("id", entries.map((e) => e.id));
+      }
+
       const { error } = await supabase
         .from("commission_submissions")
         .delete()
@@ -795,10 +810,122 @@ export function useDeleteCommission() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["commission-submissions"] });
       queryClient.invalidateQueries({ queryKey: ["cc-commission-summary"] });
+      queryClient.invalidateQueries({ queryKey: ["commission-entries"] });
+      queryClient.invalidateQueries({ queryKey: ["pay-run-leaderboard"] });
       toast.success("Commission deleted successfully");
     },
     onError: (error: Error) => {
       toast.error("Failed to delete commission: " + error.message);
+    },
+  });
+}
+
+// Rep closes out a paid draw: convert to final commission submission (full approval chain)
+export function useCloseOutDraw() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  return useMutation({
+    mutationFn: async ({
+      id,
+      data,
+    }: {
+      id: string;
+      data: {
+        contract_amount: number;
+        supplements_approved: number;
+        commission_percentage: number;
+        advances_paid: number;
+        install_completion_date?: string | null;
+        [key: string]: unknown;
+      };
+    }) => {
+      if (!user) throw new Error("Not authenticated");
+
+      const { data: current, error: fetchError } = await supabase
+        .from("commission_submissions")
+        .select("*")
+        .eq("id", id)
+        .single();
+
+      if (fetchError || !current) throw new Error("Commission not found");
+      if (current.submitted_by !== user.id) throw new Error("You can only close out your own draws");
+      if (!current.is_draw) throw new Error("This is not a draw request");
+      if (current.status !== "paid") throw new Error("Draw must be paid before closing out");
+      if (current.draw_closed_out) throw new Error("This draw has already been closed out");
+
+      const drawAmountPaid = current.commission_requested ?? current.net_commission_owed ?? 0;
+      const totalJobRevenue = data.contract_amount + data.supplements_approved;
+      const grossCommission = totalJobRevenue * (data.commission_percentage / 100);
+      const netCommissionOwed = grossCommission - data.advances_paid;
+
+      const updatePayload = {
+        contract_amount: data.contract_amount,
+        supplements_approved: data.supplements_approved,
+        commission_percentage: data.commission_percentage,
+        advances_paid: data.advances_paid,
+        total_job_revenue: totalJobRevenue,
+        gross_commission: grossCommission,
+        net_commission_owed: netCommissionOwed,
+        commission_requested: netCommissionOwed,
+        install_completion_date: data.install_completion_date ?? current.install_completion_date,
+        draw_amount_paid: drawAmountPaid,
+        draw_closed_out: true,
+        status: "pending_review",
+        approval_stage: current.is_manager_submission ? "pending_admin" : "pending_manager",
+      };
+
+      const { data: result, error } = await supabase
+        .from("commission_submissions")
+        .update(updatePayload)
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      await supabase.from("commission_status_log").insert({
+        commission_id: id,
+        previous_status: current.status,
+        new_status: "pending_review",
+        changed_by: user.id,
+        notes: "Draw closed out — final commission submitted for approval",
+      });
+
+      try {
+        await supabase.functions.invoke("send-commission-notification", {
+          body: {
+            notification_type: "submitted",
+            document_type: "commission_submission",
+            commission_id: id,
+            job_name: current.job_name,
+            job_address: current.job_address,
+            sales_rep_name: current.sales_rep_name,
+            subcontractor_name: current.subcontractor_name,
+            submission_type: current.submission_type,
+            contract_amount: data.contract_amount,
+            net_commission_owed: netCommissionOwed,
+            submitter_email: user.email,
+            submitter_name: "",
+          },
+        });
+      } catch (notifyError) {
+        console.error("Failed to send close-out notification:", notifyError);
+      }
+
+      return result as CommissionSubmission;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["commission-submissions"] });
+      queryClient.invalidateQueries({ queryKey: ["cc-commission-summary"] });
+      queryClient.invalidateQueries({ queryKey: ["commission-submission", variables.id] });
+      queryClient.invalidateQueries({ queryKey: ["commission-status-log", variables.id] });
+      queryClient.invalidateQueries({ queryKey: ["pending-review"] });
+      queryClient.invalidateQueries({ queryKey: ["compliance-commission-oversight"] });
+      toast.success("Final commission submitted. It will go through the full approval chain.");
+    },
+    onError: (error: Error) => {
+      toast.error("Failed to close out draw: " + error.message);
     },
   });
 }

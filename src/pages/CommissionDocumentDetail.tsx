@@ -1,12 +1,23 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { ArrowLeft, Printer, Edit, Check, X, FileText, Calendar, CheckCircle2, RotateCcw, SendHorizonal } from "lucide-react";
-import { useCommissionDocument, useUpdateCommissionDocumentStatus } from "@/hooks/useCommissionDocuments";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { ArrowLeft, Printer, Edit, Check, X, FileText, Calendar, CheckCircle2, RotateCcw, SendHorizonal, Trash2, Loader2 } from "lucide-react";
+import { useCommissionDocument, useUpdateCommissionDocumentStatus, useDeleteCommissionDocument } from "@/hooks/useCommissionDocuments";
 import { useAuth } from "@/contexts/AuthContext";
 import { CommissionDocumentForm } from "@/components/commissions/CommissionDocumentForm";
 import { CommissionDocumentPrintView } from "@/components/commissions/CommissionDocumentPrintView";
@@ -18,11 +29,15 @@ import { supabase } from "@/integrations/supabase/client";
 export default function CommissionDocumentDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user, role, isAdmin, userDepartment } = useAuth();
   const { data: document, isLoading } = useCommissionDocument(id);
   const updateStatusMutation = useUpdateCommissionDocumentStatus();
+  const deleteDocument = useDeleteCommissionDocument();
 
-  const [isEditing, setIsEditing] = useState(false);
+  // Auto-open edit mode for drafts when ?edit=true (e.g. from "Continue Draft" button)
+  const editParam = searchParams.get("edit") === "true";
+  const [isEditing, setIsEditing] = useState(editParam);
   const [showPrint, setShowPrint] = useState(false);
   const [showApprovalDialog, setShowApprovalDialog] = useState(false);
   const [approvalAction, setApprovalAction] = useState<
@@ -133,6 +148,13 @@ export default function CommissionDocumentDetail() {
     );
   }
 
+  // For drafts with ?edit=true, open edit form immediately (Continue Draft flow)
+  useEffect(() => {
+    if (document?.status === 'draft' && editParam) {
+      setIsEditing(true);
+    }
+  }, [document?.status, editParam]);
+
   if (showPrint) {
     return (
       <div>
@@ -176,6 +198,7 @@ export default function CommissionDocumentDetail() {
       paid: "Paid",
     };
     const colors: Record<string, string> = {
+      draft: 'bg-slate-200 text-slate-700 border-slate-400 dark:bg-slate-700 dark:text-slate-300 dark:border-slate-500',
       approved: 'bg-green-100 text-green-800 border-green-300',
       manager_approved: 'bg-blue-100 text-blue-800 border-blue-300',
       accounting_approved: 'bg-green-100 text-green-800 border-green-300',
@@ -326,6 +349,45 @@ export default function CommissionDocumentDetail() {
               <CheckCircle2 className="h-4 w-4 mr-2" />
               Mark as Paid
             </Button>
+          )}
+          {isAdmin && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="ghost" size="sm" className="gap-2 text-destructive hover:text-destructive hover:bg-destructive/10">
+                  <Trash2 className="h-4 w-4" />
+                  Delete
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle className="text-destructive">Delete Commission</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Are you sure you want to permanently delete this commission? This cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => {
+                      deleteDocument.mutate(id!, {
+                        onSuccess: () => navigate('/commission-documents'),
+                      });
+                    }}
+                    disabled={deleteDocument.isPending}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90 gap-2"
+                  >
+                    {deleteDocument.isPending ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Deleting...
+                      </>
+                    ) : (
+                      "Delete Permanently"
+                    )}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           )}
         </div>
       </div>

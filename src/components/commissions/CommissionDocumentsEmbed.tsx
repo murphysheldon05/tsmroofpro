@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Search, FileText, Eye, Clock, CheckCircle, XCircle, Wallet, DollarSign, TrendingUp } from "lucide-react";
+import { Plus, Search, FileText, Eye, Clock, CheckCircle, XCircle, Wallet, DollarSign, TrendingUp, Pencil } from "lucide-react";
 import { useCommissionDocuments, type CommissionDocument } from "@/hooks/useCommissionDocuments";
 import { formatCurrency } from "@/lib/commissionDocumentCalculations";
 import { format, parseISO } from "date-fns";
@@ -59,7 +59,7 @@ export function CommissionDocumentsEmbed() {
       manager_approved: "bg-blue-100 text-blue-800 border-blue-300",
       rejected: "bg-red-100 text-red-800 border-red-300",
       submitted: "bg-amber-100 text-amber-800 border-amber-300",
-      draft: "bg-muted text-muted-foreground",
+      draft: "bg-slate-200 text-slate-700 border-slate-400 dark:bg-slate-700 dark:text-slate-300 dark:border-slate-500",
     };
     return (
       <Badge variant="outline" className={`gap-1 ${colors[status] || ""}`}>
@@ -120,21 +120,35 @@ export function CommissionDocumentsEmbed() {
           {/* Mobile */}
           <div className="sm:hidden space-y-3">
             {filtered.map((doc) => (
-              <button
+              <div
                 key={doc.id}
-                onClick={() => navigate(`/commission-documents/${doc.id}`)}
                 className="w-full text-left p-4 bg-card border border-border rounded-lg hover:border-primary/30 transition-all"
               >
-                <div className="flex items-start justify-between gap-2 mb-2">
-                  <div className="font-medium truncate flex-1">{doc.job_name_id}</div>
-                  {getStatusBadge(doc.status)}
-                </div>
-                <div className="text-sm text-muted-foreground">{doc.sales_rep}</div>
-                <div className="flex justify-between text-sm mt-1">
-                  <span className="font-mono text-green-600">{formatCurrency(doc.rep_commission)}</span>
-                  <span className="text-xs text-muted-foreground">{doc.job_date ? format(parseISO(doc.job_date), "MMM d, yyyy") : "—"}</span>
-                </div>
-              </button>
+                <button
+                  onClick={() => navigate(doc.status === 'draft' ? `/commission-documents/${doc.id}?edit=true` : `/commission-documents/${doc.id}`)}
+                  className="w-full text-left"
+                >
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <div className="font-medium truncate flex-1">{doc.job_name_id}</div>
+                    {getStatusBadge(doc.status)}
+                  </div>
+                  <div className="text-sm text-muted-foreground">{doc.sales_rep}</div>
+                  <div className="flex justify-between text-sm mt-1">
+                    <span className="font-mono text-green-600">{formatCurrency(doc.rep_commission)}</span>
+                    <span className="text-xs text-muted-foreground">{doc.job_date ? format(parseISO(doc.job_date), "MMM d, yyyy") : "—"}</span>
+                  </div>
+                </button>
+                {doc.status === 'draft' && doc.created_by === user?.id && (
+                  <Button
+                    size="sm"
+                    className="mt-3 w-full gap-2"
+                    onClick={() => navigate(`/commission-documents/${doc.id}?edit=true`)}
+                  >
+                    <Pencil className="h-4 w-4" />
+                    Continue Draft
+                  </Button>
+                )}
+              </div>
             ))}
           </div>
 
@@ -153,16 +167,23 @@ export function CommissionDocumentsEmbed() {
               </TableHeader>
               <TableBody>
                 {filtered.map((doc) => (
-                  <TableRow key={doc.id} className="cursor-pointer hover:bg-muted/50" onClick={() => navigate(`/commission-documents/${doc.id}`)}>
+                  <TableRow key={doc.id} className="cursor-pointer hover:bg-muted/50" onClick={() => navigate(doc.status === 'draft' ? `/commission-documents/${doc.id}?edit=true` : `/commission-documents/${doc.id}`)}>
                     <TableCell className="font-medium">{doc.job_name_id}</TableCell>
                     <TableCell>{doc.job_date ? format(parseISO(doc.job_date), "MM/dd/yyyy") : "—"}</TableCell>
                     <TableCell>{doc.sales_rep}</TableCell>
                     <TableCell className="text-right font-mono font-semibold text-green-600">{formatCurrency(doc.rep_commission)}</TableCell>
                     <TableCell>{getStatusBadge(doc.status)}</TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); navigate(`/commission-documents/${doc.id}`); }}>
-                        <Eye className="h-4 w-4" />
-                      </Button>
+                      {doc.status === 'draft' && doc.created_by === user?.id ? (
+                        <Button size="sm" className="gap-1.5" onClick={(e) => { e.stopPropagation(); navigate(`/commission-documents/${doc.id}?edit=true`); }}>
+                          <Pencil className="h-4 w-4" />
+                          Continue Draft
+                        </Button>
+                      ) : (
+                        <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); navigate(`/commission-documents/${doc.id}`); }}>
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}

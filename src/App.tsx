@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { WalkthroughProvider } from "@/contexts/WalkthroughContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { PageTransition } from "@/components/PageTransition";
 import { Loader2 } from "lucide-react";
@@ -64,6 +65,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
+          <WalkthroughProvider>
           <Suspense fallback={<PageLoader />}>
           <PageTransition>
           <Routes>
@@ -380,6 +382,7 @@ const App = () => (
           </Routes>
           </PageTransition>
           </Suspense>
+          </WalkthroughProvider>
         </BrowserRouter>
       </TooltipProvider>
     </AuthProvider>

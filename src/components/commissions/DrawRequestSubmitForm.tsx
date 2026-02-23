@@ -9,8 +9,11 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Building2, User, Send, Loader2, AlertTriangle, Ban, ClipboardCheck } from "lucide-react";
+import { Building2, User, Send, Loader2, AlertTriangle, Ban, ClipboardCheck, Paperclip } from "lucide-react";
 import { CommissionWorksheet } from "./CommissionWorksheet";
 import { CommissionAttachments } from "./CommissionAttachments";
 import { useCreateCommission, useSalesReps, COMMISSION_TIERS } from "@/hooks/useCommissions";
@@ -40,24 +43,42 @@ const formSchema = z.object({
   roof_type: z.enum(["shingle", "tile", "flat", "foam", "other"]),
   contract_date: z.string().min(1, "Contract date is required"),
   install_completion_date: z.string().optional(),
-  sales_rep_name: z.string().min(1, "Sales rep name is required"),
+  sales_rep_name: z.string().optional(),
   rep_role: z.enum(["setter", "closer", "hybrid"]),
   commission_tier: z.enum(["15_40_60", "15_45_55", "15_50_50", "custom"]),
   custom_commission_percentage: z.number().optional(),
+  submission_type: z.enum(["employee", "subcontractor"]).default("employee"),
+  subcontractor_name: z.string().optional(),
+  is_flat_fee: z.boolean().default(false),
+  flat_fee_amount: z.number().optional(),
   contract_amount: z.number().min(0),
   supplements_approved: z.number().min(0).default(0),
   commission_percentage: z.number().min(0).max(100),
   advances_paid: z.number().min(0).default(0),
   draw_amount_requested: z.number().min(0.01, "Draw amount is required"),
-});
+  draw_request_notes: z.string().optional(),
+}).refine(
+  (data) => {
+    if (data.submission_type === "employee") return !!(data.sales_rep_name && data.sales_rep_name.trim());
+    return true;
+  },
+  { message: "Sales rep name is required", path: ["sales_rep_name"] }
+).refine(
+  (data) => {
+    if (data.submission_type === "subcontractor") return !!(data.subcontractor_name && data.subcontractor_name.trim());
+    return true;
+  },
+  { message: "Subcontractor name is required", path: ["subcontractor_name"] }
+);
 
 type FormData = z.infer<typeof formSchema>;
 
 interface DrawRequestSubmitFormProps {
   onCancel?: () => void;
+  variant?: "employee" | "subcontractor";
 }
 
-export function DrawRequestSubmitForm({ onCancel }: DrawRequestSubmitFormProps) {
+export function DrawRequestSubmitForm({ onCancel, variant = "employee" }: DrawRequestSubmitFormProps) {
   const navigate = useNavigate();
   const { user, role } = useAuth();
   const createCommission = useCreateCommission();
@@ -72,10 +93,12 @@ export function DrawRequestSubmitForm({ onCancel }: DrawRequestSubmitFormProps) 
   const [enteredJobNumber, setEnteredJobNumber] = useState<string>("");
   const { data: isJobDenied } = useIsJobNumberDenied(enteredJobNumber);
   const isManagerSubmission = role === "manager" || role === "admin" || role === "sales_manager";
+  const isSubcontractor = variant === "subcontractor";
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      submission_type: variant,
       job_name: "",
       job_address: "",
       acculynx_job_id: "",
@@ -84,11 +107,13 @@ export function DrawRequestSubmitForm({ onCancel }: DrawRequestSubmitFormProps) 
       sales_rep_name: "",
       rep_role: "hybrid",
       commission_tier: "15_40_60",
+      is_flat_fee: false,
       contract_amount: 0,
       supplements_approved: 0,
       commission_percentage: 15,
       advances_paid: 0,
       draw_amount_requested: 0,
+      draw_request_notes: "",
     },
   });
 
@@ -100,26 +125,28 @@ export function DrawRequestSubmitForm({ onCancel }: DrawRequestSubmitFormProps) 
   }, [watchJobNumber]);
 
   const watchCommissionTier = form.watch("commission_tier");
+  const watchIsFlatFee = form.watch("is_flat_fee");
   useEffect(() => {
-    if (watchCommissionTier && watchCommissionTier !== "custom") {
+    if (!isSubcontractor && watchCommissionTier && watchCommissionTier !== "custom") {
       const percentage = COMMISSION_TIERS[watchCommissionTier] || 15;
       form.setValue("commission_percentage", percentage);
     }
-  }, [watchCommissionTier, form]);
+  }, [watchCommissionTier, form, isSubcontractor]);
 
   const worksheetData = {
     contract_amount: form.watch("contract_amount"),
     supplements_approved: form.watch("supplements_approved"),
     commission_percentage: form.watch("commission_percentage"),
     advances_paid: form.watch("advances_paid"),
-    is_flat_fee: false,
-    flat_fee_amount: undefined,
+    is_flat_fee: form.watch("is_flat_fee"),
+    flat_fee_amount: form.watch("flat_fee_amount"),
   };
 
   const totalJobRevenue = (worksheetData.contract_amount || 0) + (worksheetData.supplements_approved || 0);
-  const grossCommission = totalJobRevenue * ((worksheetData.commission_percentage || 0) / 100);
+  const grossCommission = worksheetData.is_flat_fee
+    ? (worksheetData.flat_fee_amount || 0)
+    : totalJobRevenue * ((worksheetData.commission_percentage || 0) / 100);
   const estimatedCommission = grossCommission - (worksheetData.advances_paid || 0);
-  // Max draw = 50% of estimated commission; over $1,500 requires manager approval
   const maxDrawFromEstimate = estimatedCommission > 0 ? estimatedCommission * 0.5 : 1500;
   const drawAmount = form.watch("draw_amount_requested") || 0;
   const exceedsCap = estimatedCommission > 0 && drawAmount > maxDrawFromEstimate;
@@ -155,15 +182,15 @@ export function DrawRequestSubmitForm({ onCancel }: DrawRequestSubmitFormProps) 
     }
 
     const drawAmountVal = data.draw_amount_requested;
-    // net_commission_owed is a GENERATED column: gross_commission - advances_paid
-    // Set advances_paid so that net_commission_owed = draw amount
     const totalRev = (data.contract_amount || 0) + (data.supplements_approved || 0);
-    const gross = totalRev * (data.commission_percentage / 100);
+    const gross = data.is_flat_fee
+      ? (data.flat_fee_amount || 0)
+      : totalRev * (data.commission_percentage / 100);
     const advancesForDraw = Math.max(0, gross - drawAmountVal);
 
     try {
       await createCommission.mutateAsync({
-        submission_type: "employee",
+        submission_type: variant,
         is_draw: true,
         job_name: data.job_name,
         job_address: data.job_address,
@@ -172,18 +199,19 @@ export function DrawRequestSubmitForm({ onCancel }: DrawRequestSubmitFormProps) 
         roof_type: data.roof_type,
         contract_date: data.contract_date,
         install_completion_date: data.install_completion_date || null,
-        sales_rep_name: data.sales_rep_name,
-        rep_role: data.rep_role,
-        commission_tier: data.commission_tier,
+        sales_rep_name: isSubcontractor ? null : (data.sales_rep_name || null),
+        rep_role: isSubcontractor ? null : data.rep_role,
+        commission_tier: isSubcontractor ? null : data.commission_tier,
         custom_commission_percentage: data.commission_tier === "custom" ? data.custom_commission_percentage : null,
-        subcontractor_name: null,
-        is_flat_fee: false,
-        flat_fee_amount: null,
+        subcontractor_name: isSubcontractor ? data.subcontractor_name : null,
+        is_flat_fee: isSubcontractor ? data.is_flat_fee : false,
+        flat_fee_amount: isSubcontractor && data.is_flat_fee ? data.flat_fee_amount : null,
         contract_amount: data.contract_amount,
         supplements_approved: data.supplements_approved,
         commission_percentage: data.commission_percentage,
         advances_paid: advancesForDraw,
         commission_requested: drawAmountVal,
+        reviewer_notes: data.draw_request_notes?.trim() || null,
         is_manager_submission: isManagerSubmission,
         ...(isManagerSubmission ? { approval_stage: "pending_admin" } : {}),
       } as any);
@@ -197,7 +225,7 @@ export function DrawRequestSubmitForm({ onCancel }: DrawRequestSubmitFormProps) 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        {/* Eligibility Checklist - at top */}
+        {/* 1. Eligibility Checklist — at top */}
         <Card className="border-amber-500/30 bg-amber-500/5">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-amber-700 dark:text-amber-400">
@@ -243,14 +271,14 @@ export function DrawRequestSubmitForm({ onCancel }: DrawRequestSubmitFormProps) 
           </Alert>
         )}
 
-        {/* Job Information */}
+        {/* 2. Job Information — identical to CommissionSubmitForm */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Building2 className="h-5 w-5" />
               Job Information
             </CardTitle>
-            <CardDescription>Enter the job details for this draw request</CardDescription>
+            <CardDescription>Enter the job details for this commission</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-2">
             <FormField
@@ -260,7 +288,7 @@ export function DrawRequestSubmitForm({ onCancel }: DrawRequestSubmitFormProps) 
                 <FormItem>
                   <FormLabel>Job Name / Customer Name *</FormLabel>
                   <FormControl>
-                    <Input placeholder="Enter job or customer name" {...field} />
+                    <Input placeholder="Enter job or customer name" autoFocus {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -293,6 +321,7 @@ export function DrawRequestSubmitForm({ onCancel }: DrawRequestSubmitFormProps) 
                       className={isJobDenied ? "border-destructive" : ""}
                     />
                   </FormControl>
+                  <FormDescription>Enter the 4-digit AccuLynx Job Number (required)</FormDescription>
                   {isJobDenied && (
                     <Alert variant="destructive" className="mt-2">
                       <Ban className="h-4 w-4" />
@@ -374,123 +403,188 @@ export function DrawRequestSubmitForm({ onCancel }: DrawRequestSubmitFormProps) 
           </CardContent>
         </Card>
 
-        {/* Sales Rep Information */}
+        {/* 3. Sales Rep / Subcontractor Information — identical to CommissionSubmitForm */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <User className="h-5 w-5" />
-              Sales Rep Information
+              {isSubcontractor ? "Subcontractor / Referral Partner Information" : "Sales Rep Information"}
             </CardTitle>
+            <CardDescription>
+              {isSubcontractor
+                ? "Enter the subcontractor or referral partner details"
+                : "Enter the sales representative details"
+              }
+            </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-2">
-            <FormField
-              control={form.control}
-              name="sales_rep_name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Sales Rep Name *</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select sales rep" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {salesReps?.map((rep) => (
-                        <SelectItem key={rep.id} value={rep.full_name}>{rep.full_name}</SelectItem>
-                      ))}
-                      {(!salesReps || salesReps.length === 0) && (
-                        <SelectItem value="manual">Enter manually</SelectItem>
-                      )}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="rep_role"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Rep Role *</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select role" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="setter">Setter</SelectItem>
-                      <SelectItem value="closer">Closer</SelectItem>
-                      <SelectItem value="hybrid">Hybrid</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="commission_tier"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Commission Tier *</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select tier" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="15_40_60">15 / 40 / 60</SelectItem>
-                      <SelectItem value="15_45_55">15 / 45 / 55</SelectItem>
-                      <SelectItem value="15_50_50">15 / 50 / 50</SelectItem>
-                      <SelectItem value="custom">Custom</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            {watchCommissionTier === "custom" && (
-              <FormField
-                control={form.control}
-                name="custom_commission_percentage"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Custom Commission % *</FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <Input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          max="100"
-                          className="pr-7"
-                          placeholder="0.00"
-                          {...field}
-                          onChange={(e) => {
-                            const value = parseFloat(e.target.value) || 0;
-                            field.onChange(value);
-                            form.setValue("commission_percentage", value);
-                          }}
-                        />
-                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">%</span>
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
+            {isSubcontractor ? (
+              <>
+                <FormField
+                  control={form.control}
+                  name="subcontractor_name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Subcontractor / Referral Partner Name *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter name" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <div className="flex items-center space-x-4 md:col-span-2">
+                  <FormField
+                    control={form.control}
+                    name="is_flat_fee"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center space-x-2">
+                        <FormControl>
+                          <Switch checked={field.value} onCheckedChange={field.onChange} />
+                        </FormControl>
+                        <Label>Use Flat Fee (instead of percentage)</Label>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                {watchIsFlatFee && (
+                  <FormField
+                    control={form.control}
+                    name="flat_fee_amount"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Flat Fee Amount *</FormLabel>
+                        <FormControl>
+                          <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              className="pl-7"
+                              placeholder="0.00"
+                              {...field}
+                              onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                            />
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 )}
-              />
+              </>
+            ) : (
+              <>
+                <FormField
+                  control={form.control}
+                  name="sales_rep_name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Sales Rep Name *</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select sales rep" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {salesReps?.map((rep) => (
+                            <SelectItem key={rep.id} value={rep.full_name}>{rep.full_name}</SelectItem>
+                          ))}
+                          {(!salesReps || salesReps.length === 0) && (
+                            <SelectItem value="manual">Enter manually</SelectItem>
+                          )}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="rep_role"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Rep Role *</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select role" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="setter">Setter</SelectItem>
+                          <SelectItem value="closer">Closer</SelectItem>
+                          <SelectItem value="hybrid">Hybrid</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="commission_tier"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Commission Tier *</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select tier" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="15_40_60">15 / 40 / 60</SelectItem>
+                          <SelectItem value="15_45_55">15 / 45 / 55</SelectItem>
+                          <SelectItem value="15_50_50">15 / 50 / 50</SelectItem>
+                          <SelectItem value="custom">Custom</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                {watchCommissionTier === "custom" && (
+                  <FormField
+                    control={form.control}
+                    name="custom_commission_percentage"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Custom Commission % *</FormLabel>
+                        <FormControl>
+                          <div className="relative">
+                            <Input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              max="100"
+                              className="pr-7"
+                              placeholder="0.00"
+                              {...field}
+                              onChange={(e) => {
+                                const value = parseFloat(e.target.value) || 0;
+                                field.onChange(value);
+                                form.setValue("commission_percentage", value);
+                              }}
+                            />
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">%</span>
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+              </>
             )}
           </CardContent>
         </Card>
 
-        {/* Commission Worksheet (for estimated commission) */}
+        {/* 4. Commission Worksheet — identical to CommissionSubmitForm */}
         <CommissionWorksheet data={worksheetData} onChange={handleWorksheetChange} readOnly={false} />
 
-        {/* Draw Amount Requested */}
+        {/* 5. Draw Amount Requested — draw-specific */}
         <Card className="border-amber-500/30">
           <CardHeader>
             <CardTitle className="text-amber-700 dark:text-amber-400">Draw Amount Requested *</CardTitle>
@@ -548,16 +642,47 @@ export function DrawRequestSubmitForm({ onCancel }: DrawRequestSubmitFormProps) 
           </CardContent>
         </Card>
 
-        {/* Document Attachments */}
+        {/* 6. Document Attachments — identical to CommissionSubmitForm */}
         <Card>
           <CardHeader>
-            <CardTitle>Document Attachments</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Paperclip className="h-5 w-5" />
+              Document Attachments
+            </CardTitle>
             <CardDescription>
               Upload required documents: Signed Contract, Approved Supplements, Final Invoice
             </CardDescription>
           </CardHeader>
           <CardContent>
             <CommissionAttachments attachments={attachments} onAttachmentsChange={setAttachments} />
+          </CardContent>
+        </Card>
+
+        {/* 7. Request / Notes — at bottom */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Request / Notes</CardTitle>
+            <CardDescription>
+              Optional notes or context for this draw request
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <FormField
+              control={form.control}
+              name="draw_request_notes"
+              render={({ field }) => (
+                <FormItem>
+                  <FormControl>
+                    <Textarea
+                      placeholder="Add any notes or context for this draw request..."
+                      className="min-h-[100px]"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
           </CardContent>
         </Card>
 
@@ -584,7 +709,7 @@ export function DrawRequestSubmitForm({ onCancel }: DrawRequestSubmitFormProps) 
             )}
           </Button>
         </div>
-        {!allEligibilityChecked && canSubmit === false && (
+        {!allEligibilityChecked && (
           <p className="text-center text-sm text-amber-600">
             Please confirm all eligibility requirements before submitting a draw request
           </p>

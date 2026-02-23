@@ -426,6 +426,32 @@ export function useUpdateCommissionDocumentStatus() {
   });
 }
 
+// Admin-only: delete commission document. Non-admin users cannot delete.
+export function useDeleteCommissionDocument() {
+  const queryClient = useQueryClient();
+  const { user, isAdmin } = useAuth();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      if (!user || !isAdmin) throw new Error('Only admins can delete commission documents');
+
+      const { error } = await supabase
+        .from('commission_documents')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['commission-documents'] });
+      toast.success('Commission document deleted successfully');
+    },
+    onError: (error: Error) => {
+      toast.error('Failed to delete commission document: ' + error.message);
+    },
+  });
+}
+
 // Helper function to send notifications based on status
 async function sendCommissionDocumentNotification(
   doc: CommissionDocument,

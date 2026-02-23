@@ -6,10 +6,11 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ChevronLeft, ChevronRight, Share2, BarChart3, FileText, Eye, Clock, CheckCircle, XCircle, Wallet, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, Share2, BarChart3, FileText, Eye, Clock, CheckCircle, XCircle, Wallet, Plus, Pencil } from "lucide-react";
 import { PayTypeBadge } from "./PayTypeBadge";
 import { formatUSD, getRepInitials, type EnrichedEntry } from "@/hooks/useCommissionEntries";
 import { useCommissionDocuments } from "@/hooks/useCommissionDocuments";
+import { useAuth } from "@/contexts/AuthContext";
 import { formatCurrency } from "@/lib/commissionDocumentCalculations";
 import { format, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -26,6 +27,7 @@ interface RepDetailViewProps {
 
 export function RepDetailView({ repName, repColor, entries, readOnly, hideBackButton }: RepDetailViewProps) {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [expandedDates, setExpandedDates] = useState<Set<string>>(new Set());
   const [showShareModal, setShowShareModal] = useState(false);
   const isPrestonStuart = repName.toUpperCase().includes("PRESTON STUART");
@@ -110,7 +112,7 @@ export function RepDetailView({ repName, repColor, entries, readOnly, hideBackBu
       manager_approved: "bg-blue-100 text-blue-800 border-blue-300",
       rejected: "bg-red-100 text-red-800 border-red-300",
       submitted: "bg-amber-100 text-amber-800 border-amber-300",
-      draft: "bg-muted text-muted-foreground",
+      draft: "bg-slate-200 text-slate-700 border-slate-400 dark:bg-slate-700 dark:text-slate-300 dark:border-slate-500",
       rejected: "bg-orange-100 text-orange-800 border-orange-300",
     };
     return (
@@ -311,15 +313,22 @@ export function RepDetailView({ repName, repColor, entries, readOnly, hideBackBu
                   </TableHeader>
                   <TableBody>
                     {repDocs.map((doc) => (
-                      <TableRow key={doc.id} className="cursor-pointer hover:bg-muted/50" onClick={() => navigate(`/commission-documents/${doc.id}`)}>
+                      <TableRow key={doc.id} className="cursor-pointer hover:bg-muted/50" onClick={() => navigate(doc.status === 'draft' ? `/commission-documents/${doc.id}?edit=true` : `/commission-documents/${doc.id}`)}>
                         <TableCell className="font-medium">{doc.job_name_id}</TableCell>
                         <TableCell>{doc.job_date ? format(parseISO(doc.job_date), "MM/dd/yyyy") : "—"}</TableCell>
                         <TableCell className="text-right font-mono font-semibold text-green-600">{formatCurrency(doc.rep_commission)}</TableCell>
                         <TableCell>{getDocStatusBadge(doc.status)}</TableCell>
                         <TableCell className="text-right">
-                          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); navigate(`/commission-documents/${doc.id}`); }}>
-                            <Eye className="h-4 w-4" />
-                          </Button>
+                          {doc.status === 'draft' && doc.created_by === user?.id ? (
+                            <Button size="sm" className="gap-1.5" onClick={(e) => { e.stopPropagation(); navigate(`/commission-documents/${doc.id}?edit=true`); }}>
+                              <Pencil className="h-4 w-4" />
+                              Continue Draft
+                            </Button>
+                          ) : (
+                            <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); navigate(`/commission-documents/${doc.id}`); }}>
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          )}
                         </TableCell>
                       </TableRow>
                     ))}

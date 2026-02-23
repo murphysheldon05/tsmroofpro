@@ -25,12 +25,14 @@ import {
   Ban,
   Trash2,
   RotateCcw,
+  CheckCircle2,
 } from "lucide-react";
 import { formatDisplayName } from "@/lib/displayName";
 import { cn } from "@/lib/utils";
 import { CommissionWorksheet } from "@/components/commissions/CommissionWorksheet";
 import { CommissionStatusTimeline } from "@/components/commissions/CommissionStatusTimeline";
 import { CommissionEditForm } from "@/components/commissions/CommissionEditForm";
+import { DrawCloseOutForm } from "@/components/commissions/DrawCloseOutForm";
 import { OverrideDetailSection } from "@/components/commissions/OverrideDetailSection";
 import {
   useCommissionSubmission,
@@ -92,12 +94,15 @@ export default function CommissionDetail() {
   // Support ?edit=true URL param to auto-open edit mode
   const editParam = searchParams.get("edit") === "true";
   const [isEditing, setIsEditing] = useState(editParam);
+  const [isClosingOut, setIsClosingOut] = useState(false);
 
   const isAdmin = role === "admin";
   
   // Check if the current user is the submitter and can edit
   const isSubmitter = submission && user && submission.submitted_by === user.id;
   const canEdit = isSubmitter && (submission?.status === "rejected" || submission?.status === "denied");
+  // Draw-to-final: rep can close out a paid draw to submit final commission
+  const canCloseOutDraw = isSubmitter && !!submission?.is_draw && submission?.status === "paid" && !(submission as { draw_closed_out?: boolean }).draw_closed_out;
 
   if (isLoading) {
     return (
@@ -270,6 +275,31 @@ export default function CommissionDetail() {
     refetch();
   };
 
+  // If closing out a draw, show the close-out form
+  if (isClosingOut && submission) {
+    return (
+      <AppLayout>
+        <div className="max-w-4xl mx-auto space-y-6">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={() => { setIsClosingOut(false); refetch(); }}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div>
+              <h1 className="text-2xl font-bold">Close Out Job — Request Final Commission</h1>
+              <p className="text-muted-foreground">{submission.job_name}</p>
+            </div>
+          </div>
+          
+          <DrawCloseOutForm
+            submission={submission}
+            onSuccess={() => { setIsClosingOut(false); refetch(); }}
+            onCancel={() => { setIsClosingOut(false); refetch(); }}
+          />
+        </div>
+      </AppLayout>
+    );
+  }
+
   // If editing, show the edit form
   if (isEditing && submission) {
     return (
@@ -311,6 +341,19 @@ export default function CommissionDetail() {
                   {statusConfig?.icon}
                   {statusConfig?.label}
                 </Badge>
+                {submission.is_draw && (
+                  (submission as { draw_closed_out?: boolean }).draw_closed_out ? (
+                    <Badge variant="outline" className="gap-1 border-emerald-500/50 text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30">
+                      <CheckCircle2 className="h-4 w-4" />
+                      Final Commission
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="gap-1 border-amber-500/50 text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30">
+                      <DollarSign className="h-4 w-4" />
+                      Draw
+                    </Badge>
+                  )
+                )}
                 {submission.was_rejected && (
                   <Badge variant="outline" className="gap-1 border-amber-500/50 text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30">
                     <AlertCircle className="h-4 w-4" />
@@ -322,12 +365,20 @@ export default function CommissionDetail() {
             </div>
           </div>
           
-          {canEdit && (
-            <Button onClick={() => setIsEditing(true)} className="gap-2">
-              <Edit className="h-4 w-4" />
-              Edit & Resubmit
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            {canCloseOutDraw && (
+              <Button onClick={() => setIsClosingOut(true)} className="gap-2 bg-emerald-600 hover:bg-emerald-700">
+                <CheckCircle2 className="h-4 w-4" />
+                Close Out & Request Final Commission
+              </Button>
+            )}
+            {canEdit && (
+              <Button onClick={() => setIsEditing(true)} className="gap-2">
+                <Edit className="h-4 w-4" />
+                Edit & Resubmit
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Pay Run / Scheduled Pay Date — visible to rep so they know which week they'll be paid */}
@@ -682,8 +733,7 @@ export default function CommissionDetail() {
                       <AlertDialogHeader>
                         <AlertDialogTitle className="text-destructive">Delete Commission</AlertDialogTitle>
                         <AlertDialogDescription>
-                          This will permanently delete this commission submission for <strong>{submission.job_name}</strong>.
-                          This action cannot be undone.
+                          Are you sure you want to permanently delete this commission? This cannot be undone.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
@@ -838,6 +888,37 @@ export default function CommissionDetail() {
             </dl>
           </CardContent>
         </Card>
+
+        {/* Draw + Final Commission amounts (for closed-out draws) */}
+        {submission.is_draw && (submission as { draw_closed_out?: boolean; draw_amount_paid?: number }).draw_closed_out && (
+          <Card className="border-emerald-200/50 bg-emerald-50/30 dark:bg-emerald-950/20 dark:border-emerald-800/50">
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                Draw + Final Commission
+              </CardTitle>
+              <CardDescription>
+                This job had a draw advance; both amounts are shown for accounting.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <dl className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <dt className="text-muted-foreground">Draw paid</dt>
+                  <dd className="font-semibold text-amber-700 dark:text-amber-400">
+                    {formatCurrency((submission as { draw_amount_paid?: number }).draw_amount_paid ?? 0)}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground">Final commission</dt>
+                  <dd className="font-semibold text-emerald-700 dark:text-emerald-400">
+                    {formatCurrency(submission.net_commission_owed ?? 0)}
+                  </dd>
+                </div>
+              </dl>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Sales Manager Override Section */}
         <OverrideDetailSection commission={submission} />

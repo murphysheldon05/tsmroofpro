@@ -15,7 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Plus, Search, FileText, Eye, Download, FileSpreadsheet, 
   Filter, Calendar, DollarSign, TrendingUp, 
-  CheckCircle, Clock, XCircle, X, Wallet, CalendarCheck
+  CheckCircle, Clock, XCircle, X, Wallet, CalendarCheck, Pencil
 } from "lucide-react";
 import { useCommissionDocuments, type CommissionDocument } from "@/hooks/useCommissionDocuments";
 import { formatCurrency } from "@/lib/commissionDocumentCalculations";
@@ -186,6 +186,7 @@ export default function CommissionDocuments() {
       manager_approved: <CheckCircle className="h-3 w-3" />,
     };
     const colors: Record<string, string> = {
+      draft: 'bg-slate-200 text-slate-700 border-slate-400 dark:bg-slate-700 dark:text-slate-300 dark:border-slate-500',
       approved: 'bg-green-100 text-green-800 border-green-300',
       paid: 'bg-emerald-100 text-emerald-800 border-emerald-300',
       accounting_approved: 'bg-green-100 text-green-800 border-green-300',
@@ -414,31 +415,42 @@ export default function CommissionDocuments() {
 
   // Mobile card component for documents
   const DocumentCard = ({ doc }: { doc: CommissionDocument }) => (
-    <button
-      onClick={() => navigate(`/commission-documents/${doc.id}`)}
-      className="w-full text-left p-4 bg-card border border-border rounded-lg hover:border-primary/30 hover:bg-muted/30 transition-all"
-    >
-      <div className="flex items-start justify-between gap-2 mb-2">
-        <div className="font-medium text-foreground truncate flex-1">{doc.job_name_id}</div>
-        {getStatusBadge(doc.status)}
-      </div>
-      <div className="text-sm text-muted-foreground mb-2">{doc.sales_rep}</div>
-      <div className="grid grid-cols-2 gap-2 text-sm">
-        <div>
-          <span className="text-muted-foreground">Gross:</span>
-          <span className="ml-1 font-mono">{formatCurrency(doc.gross_contract_total)}</span>
+    <div className="w-full text-left p-4 bg-card border border-border rounded-lg hover:border-primary/30 hover:bg-muted/30 transition-all">
+      <button
+        onClick={() => navigate(doc.status === 'draft' ? `/commission-documents/${doc.id}?edit=true` : `/commission-documents/${doc.id}`)}
+        className="w-full text-left"
+      >
+        <div className="flex items-start justify-between gap-2 mb-2">
+          <div className="font-medium text-foreground truncate flex-1">{doc.job_name_id}</div>
+          {getStatusBadge(doc.status)}
         </div>
-        <div>
-          <span className="text-muted-foreground">Commission:</span>
-          <span className="ml-1 font-mono font-semibold text-green-600">{formatCurrency(doc.rep_commission)}</span>
+        <div className="text-sm text-muted-foreground mb-2">{doc.sales_rep}</div>
+        <div className="grid grid-cols-2 gap-2 text-sm">
+          <div>
+            <span className="text-muted-foreground">Gross:</span>
+            <span className="ml-1 font-mono">{formatCurrency(doc.gross_contract_total)}</span>
+          </div>
+          <div>
+            <span className="text-muted-foreground">Commission:</span>
+            <span className="ml-1 font-mono font-semibold text-green-600">{formatCurrency(doc.rep_commission)}</span>
+          </div>
         </div>
-      </div>
-      {doc.job_date && (
-        <div className="text-xs text-muted-foreground mt-2">
-          {format(parseISO(doc.job_date), 'MMM d, yyyy')}
-        </div>
+        {doc.job_date && (
+          <div className="text-xs text-muted-foreground mt-2">
+            {format(parseISO(doc.job_date), 'MMM d, yyyy')}
+          </div>
+        )}
+      </button>
+      {doc.status === 'draft' && doc.created_by === user?.id && (
+        <Button
+          size="sm"
+          className="mt-3 w-full gap-2"
+          onClick={(e) => { e.stopPropagation(); navigate(`/commission-documents/${doc.id}?edit=true`); }}
+        >
+          Continue Draft
+        </Button>
       )}
-    </button>
+    </div>
   );
 
   // Paid document card for mobile
@@ -768,16 +780,30 @@ export default function CommissionDocuments() {
                               </TableCell>
                               <TableCell>{getStatusBadge(doc.status)}</TableCell>
                               <TableCell className="text-right">
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm" 
-                                  onClick={(e) => { 
-                                    e.stopPropagation(); 
-                                    navigate(`/commission-documents/${doc.id}`); 
-                                  }}
-                                >
-                                  <Eye className="h-4 w-4" />
-                                </Button>
+                                {doc.status === 'draft' && doc.created_by === user?.id ? (
+                                  <Button 
+                                    size="sm" 
+                                    className="gap-1.5"
+                                    onClick={(e) => { 
+                                      e.stopPropagation(); 
+                                      navigate(`/commission-documents/${doc.id}?edit=true`); 
+                                    }}
+                                  >
+                                    <Pencil className="h-4 w-4" />
+                                    Continue Draft
+                                  </Button>
+                                ) : (
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    onClick={(e) => { 
+                                      e.stopPropagation(); 
+                                      navigate(`/commission-documents/${doc.id}`); 
+                                    }}
+                                  >
+                                    <Eye className="h-4 w-4" />
+                                  </Button>
+                                )}
                               </TableCell>
                             </TableRow>
                           ))}

@@ -36,7 +36,9 @@ export function PayrollCutoffBanner() {
   }, []);
 
   return (
-    <div className={`rounded-2xl border p-4 flex flex-col sm:flex-row sm:items-center gap-3 ${
+    <div
+      data-tutorial="pay-run-cutoff"
+      className={`rounded-2xl border p-4 flex flex-col sm:flex-row sm:items-center gap-3 ${
       isBeforeDeadline 
         ? "bg-emerald-500/10 border-emerald-500/30" 
         : "bg-amber-500/10 border-amber-500/30"

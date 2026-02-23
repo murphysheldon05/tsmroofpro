@@ -955,6 +955,8 @@ export type Database = {
           id: string
           install_completion_date: string | null
           is_draw: boolean | null
+          draw_amount_paid: number | null
+          draw_closed_out: boolean | null
           is_flat_fee: boolean | null
           is_manager_submission: boolean | null
           job_address: string
@@ -1011,6 +1013,8 @@ export type Database = {
           id?: string
           install_completion_date?: string | null
           is_draw?: boolean | null
+          draw_amount_paid?: number | null
+          draw_closed_out?: boolean | null
           is_flat_fee?: boolean | null
           is_manager_submission?: boolean | null
           job_address: string
@@ -1067,6 +1071,8 @@ export type Database = {
           id?: string
           install_completion_date?: string | null
           is_draw?: boolean | null
+          draw_amount_paid?: number | null
+          draw_closed_out?: boolean | null
           is_flat_fee?: boolean | null
           is_manager_submission?: boolean | null
           job_address?: string
@@ -2499,6 +2505,7 @@ export type Database = {
           role_title: string | null
           start_date: string | null
           updated_at: string
+          walkthrough_completed: boolean | null
           weather_location_lat: number | null
           weather_location_lon: number | null
           weather_location_name: string | null
@@ -2535,6 +2542,7 @@ export type Database = {
           role_title?: string | null
           start_date?: string | null
           updated_at?: string
+          walkthrough_completed?: boolean | null
           weather_location_lat?: number | null
           weather_location_lon?: number | null
           weather_location_name?: string | null
@@ -2571,6 +2579,7 @@ export type Database = {
           role_title?: string | null
           start_date?: string | null
           updated_at?: string
+          walkthrough_completed?: boolean | null
           weather_location_lat?: number | null
           weather_location_lon?: number | null
           weather_location_name?: string | null

@@ -57,7 +57,7 @@ const DEPARTMENT_LABELS: Record<string, string> = {
 const ASSIGNABLE_ROLES = [
   { value: "employee", label: "Employee", description: "Base access — view data, submit forms, access training" },
   { value: "sales_rep", label: "Sales Rep", description: "Submit commissions, request draws, sales leaderboard" },
-  { value: "sales_manager", label: "Sales Manager", description: "Approve commissions, manage team, override on deals" },
+  { value: "sales_manager", label: "Sales Manager", description: "View team commissions (read-only), submit commissions, request draws" },
   { value: "manager", label: "Manager", description: "Department oversight, manage schedules & vendors" },
   { value: "admin", label: "Admin", description: "Full system access — all pages, settings, user management" },
 ] as const;

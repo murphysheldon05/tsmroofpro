@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TSM Roof Pro Hub — Team Training</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --neon: #39FF14;
+      --black: #0A0A0A;
+      --white: #FFFFFF;
+    }
+
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+      background: var(--black);
+      color: var(--white);
+    }
+
+    .slideshow {
+      width: 100%;
+      height: 100%;
+      position: relative;
+    }
+
+    .slide {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 4rem 6rem;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.4s ease, visibility 0.4s ease;
+    }
+
+    .slide.active {
+      opacity: 1;
+      visibility: visible;
+      z-index: 1;
+    }
+
+    .slide h1 {
+      font-size: clamp(2.5rem, 5vw, 4rem);
+      font-weight: 900;
+      text-align: center;
+      line-height: 1.2;
+      margin-bottom: 1rem;
+      text-transform: uppercase;
+      letter-spacing: -0.02em;
+    }
+
+    .slide h2 {
+      font-size: clamp(1.5rem, 3vw, 2.25rem);
+      font-weight: 800;
+      text-align: center;
+      margin-bottom: 2rem;
+      color: var(--neon);
+    }
+
+    .slide .subtext {
+      font-size: clamp(1.1rem, 2vw, 1.5rem);
+      font-weight: 700;
+      text-align: center;
+      opacity: 0.9;
+      max-width: 600px;
+    }
+
+    .slide ul {
+      list-style: none;
+      text-align: left;
+      max-width: 560px;
+    }
+
+    .slide ul li {
+      font-size: clamp(1.1rem, 2vw, 1.4rem);
+      font-weight: 700;
+      margin-bottom: 1rem;
+      padding-left: 2rem;
+      position: relative;
+    }
+
+    .slide ul li::before {
+      content: "▸";
+      position: absolute;
+      left: 0;
+      color: var(--neon);
+      font-weight: 900;
+    }
+
+    .slide .big-text {
+      font-size: clamp(3rem, 8vw, 6rem);
+      font-weight: 900;
+      text-align: center;
+      color: var(--neon);
+      text-transform: uppercase;
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+      margin-bottom: 1.5rem;
+    }
+
+    .slide .accent-box {
+      background: var(--neon);
+      color: var(--black);
+      padding: 3rem 4rem;
+      border-radius: 8px;
+      text-align: center;
+      max-width: 700px;
+    }
+
+    .slide .accent-box .big-text {
+      color: var(--black);
+    }
+
+    .slide .accent-box .subtext {
+      color: var(--black);
+      opacity: 0.9;
+    }
+
+    .slide .url-box {
+      font-size: clamp(1.25rem, 2.5vw, 1.75rem);
+      font-weight: 800;
+      color: var(--neon);
+      background: rgba(57, 255, 20, 0.1);
+      padding: 1rem 2rem;
+      border: 2px solid var(--neon);
+      border-radius: 8px;
+      margin: 1rem 0;
+    }
+
+    .slide .logo {
+      font-size: clamp(2rem, 4vw, 3rem);
+      font-weight: 900;
+      color: var(--neon);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 2rem;
+    }
+
+    .slide .cutoff-highlight {
+      font-size: clamp(2.5rem, 6vw, 4.5rem);
+      font-weight: 900;
+      color: var(--neon);
+      text-align: center;
+      margin: 1rem 0;
+    }
+
+    .slide .contact-list {
+      font-size: clamp(1.2rem, 2vw, 1.5rem);
+      font-weight: 700;
+    }
+
+    .slide .contact-list li {
+      margin-bottom: 0.75rem;
+    }
+
+    .slide-counter {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 2rem;
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--neon);
+      opacity: 0.8;
+      z-index: 100;
+    }
+
+    .slide-number {
+      font-weight: 900;
+    }
+
+    .full-accent {
+      background: var(--neon);
+      color: var(--black);
+    }
+
+    .full-accent h1,
+    .full-accent .big-text {
+      color: var(--black);
+    }
+
+    .full-accent .subtext {
+      color: var(--black);
+      opacity: 0.85;
+    }
+  </style>
+</head>
+<body>
+  <div class="slideshow">
+    <!-- Slide 1: Title -->
+    <div class="slide active" data-slide="1">
+      <div class="logo">TSM Roof Pro Hub</div>
+      <h1>Welcome to TSM Roof Pro Hub</h1>
+      <p class="subtext">Your commission. Your career. All in one place.</p>
+    </div>
+
+    <!-- Slide 2: What Is This? -->
+    <div class="slide" data-slide="2">
+      <h2>This is your command center.</h2>
+      <ul>
+        <li>Track your commissions</li>
+        <li>Submit draw requests</li>
+        <li>See your pay status</li>
+        <li>Connect with the team</li>
+      </ul>
+    </div>
+
+    <!-- Slide 3: Logging In -->
+    <div class="slide" data-slide="3">
+      <h2>Logging In</h2>
+      <p class="subtext" style="margin-bottom: 1rem;">Go to:</p>
+      <div class="url-box">[your app URL]</div>
+      <p class="subtext" style="margin-top: 2rem;">Sign up with your work email.</p>
+      <p class="subtext" style="margin-top: 1rem;">You'll land as a User — your manager will upgrade your access as needed.</p>
+    </div>
+
+    <!-- Slide 4: Your Profile -->
+    <div class="slide" data-slide="4">
+      <h2>First thing — set up your profile.</h2>
+      <ul>
+        <li>Upload your photo</li>
+        <li>Add your bio</li>
+        <li>Add your cell number</li>
+      </ul>
+      <p class="subtext" style="margin-top: 2rem;">Your team wants to know who you are.</p>
+    </div>
+
+    <!-- Slide 5: Commissions -->
+    <div class="slide" data-slide="5">
+      <h2>This is where the money lives.</h2>
+      <ul>
+        <li>Every deal you close — submit it here</li>
+        <li>Fill out the commission form completely</li>
+        <li>It goes: You → Compliance → Accounting → Paid</li>
+      </ul>
+    </div>
+
+    <!-- Slide 6: The Pay Run Cutoff -->
+    <div class="slide" data-slide="6">
+      <h2>The Pay Run Cutoff</h2>
+      <div class="cutoff-highlight">TUESDAY. 3PM. MST.</div>
+      <p class="subtext">Submit by then = this week's pay run.</p>
+      <p class="subtext">Submit after = next week's pay run.</p>
+      <p class="subtext" style="margin-top: 1.5rem; color: var(--neon); font-weight: 800;">No exceptions. No overrides.</p>
+    </div>
+
+    <!-- Slide 7: Draw Requests -->
+    <div class="slide" data-slide="7">
+      <h2>Need a draw? We got you.</h2>
+      <ul>
+        <li>Hit Request a Draw</li>
+        <li>Check every eligibility box</li>
+        <li>Missing even one = form won't submit</li>
+        <li>Same approval chain as commissions</li>
+      </ul>
+    </div>
+
+    <!-- Slide 8: Your Pipeline -->
+    <div class="slide" data-slide="8">
+      <h2>Always know where your money is.</h2>
+      <ul>
+        <li><strong>Submitted</strong> — waiting on compliance</li>
+        <li><strong>Compliance Approved</strong> — heading to accounting</li>
+        <li><strong>Accounting Approved</strong> — getting paid Friday</li>
+        <li><strong>Paid</strong> — it's in your account</li>
+      </ul>
+    </div>
+
+    <!-- Slide 9: Message Center -->
+    <div class="slide" data-slide="9">
+      <h2>This is our team feed.</h2>
+      <ul>
+        <li>Post your wins 🏆</li>
+        <li>See company announcements</li>
+        <li>Tag teammates with @</li>
+      </ul>
+      <p class="subtext" style="margin-top: 2rem;">Keep it professional. Keep it fired up.</p>
+    </div>
+
+    <!-- Slide 10: Playbook Library -->
+    <div class="slide" data-slide="10">
+      <h2>The rulebook lives here.</h2>
+      <ul>
+        <li>Read the Master SOP</li>
+        <li>Know the sales playbooks</li>
+        <li>New versions = you must acknowledge before accessing the app</li>
+      </ul>
+    </div>
+
+    <!-- Slide 11: Questions? -->
+    <div class="slide" data-slide="11">
+      <h2>Your managers are here to help.</h2>
+      <ul class="contact-list">
+        <li>Jordan Pollei</li>
+        <li>Conrad Demecs</li>
+      </ul>
+      <p class="subtext" style="margin-top: 2rem;">Or reach out to Paul Santiano for IT help.</p>
+    </div>
+
+    <!-- Slide 12: Let's Go -->
+    <div class="slide full-accent" data-slide="12">
+      <h1 class="big-text">GO CLOSE DEALS.</h1>
+      <p class="subtext">TSM Roofing LLC — The Authority in Roofing</p>
+      <div class="logo" style="margin-top: 2rem; color: var(--black);">TSM Roof Pro Hub</div>
+    </div>
+  </div>
+
+  <div class="slide-counter">
+    <span class="slide-number" id="current">1</span> of <span id="total">12</span>
+  </div>
+
+  <script>
+    (function() {
+      const slides = document.querySelectorAll('.slide');
+      const total = slides.length;
+      let current = 0;
+
+      const totalEl = document.getElementById('total');
+      const currentEl = document.getElementById('current');
+      totalEl.textContent = total;
+
+      function showSlide(index) {
+        if (index < 0) index = 0;
+        if (index >= total) index = total - 1;
+        current = index;
+
+        slides.forEach((slide, i) => {
+          slide.classList.toggle('active', i === current);
+        });
+
+        currentEl.textContent = current + 1;
+      }
+
+      function next() {
+        if (current < total - 1) showSlide(current + 1);
+      }
+
+      function prev() {
+        if (current > 0) showSlide(current - 1);
+      }
+
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'ArrowRight' || e.key === ' ') {
+          e.preventDefault();
+          next();
+        } else if (e.key === 'ArrowLeft') {
+          e.preventDefault();
+          prev();
+        }
+      });
+
+      document.addEventListener('click', function(e) {
+        const w = window.innerWidth;
+        if (e.clientX > w / 2) next();
+        else prev();
+      });
+
+      showSlide(0);
+    })();
+  </script>
+</body>
+</html>

@@ -42,6 +42,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useRolePermissions } from "@/hooks/useRolePermissions";
 import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
@@ -108,6 +109,7 @@ const TYPE_FROM_URL: Record<string, string> = { it: "it_access", hr: "hr" };
 export default function Requests() {
   const [searchParams] = useSearchParams();
   const { user, isManager, isAdmin } = useAuth();
+  const { canReviewRequests } = useRolePermissions();
   const queryClient = useQueryClient();
   const { data: requestTypes = [] } = useRequestTypes();
   const { logAction } = useAdminAuditLog();
@@ -169,7 +171,7 @@ export default function Requests() {
 
   // Fetch all requests for managers/admins (excluding commission type)
   const { data: allRequests, refetch: refetchAll } = useQuery({
-    queryKey: ["all-requests", user?.id, isManager, isAdmin],
+    queryKey: ["all-requests", user?.id, canReviewRequests],
     queryFn: async () => {
       const { data: requestsData, error } = await supabase
         .from("requests")
@@ -188,7 +190,7 @@ export default function Requests() {
         profiles: profilesMap.get(request.submitted_by) || null,
       })) as Request[];
     },
-    enabled: isManager,
+    enabled: canReviewRequests,
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -330,7 +332,7 @@ export default function Requests() {
 
   const pendingCount = activeRequests.filter(r => r.status === "pending").length;
 
-  const canSubmitNewHire = isManager || isAdmin;
+  const canSubmitNewHire = canReviewRequests || isAdmin;
   const isNewHireFlow = type === "hr" && hrSubType === "new-hire" && canSubmitNewHire;
 
   return (
@@ -351,7 +353,7 @@ export default function Requests() {
           </div>
         </header>
 
-        {isManager ? (
+        {canReviewRequests ? (
           <Tabs defaultValue="submit" className="space-y-6">
             <TabsList className="bg-secondary/50">
               <TabsTrigger value="submit" className="gap-2">

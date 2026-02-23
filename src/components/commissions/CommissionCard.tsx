@@ -56,6 +56,8 @@ interface CommissionCardProps {
     created_at: string;
     was_rejected?: boolean;
     is_draw?: boolean;
+    draw_closed_out?: boolean | null;
+    draw_amount_paid?: number | null;
     scheduled_pay_date?: string | null;
   };
 }
@@ -101,9 +103,15 @@ export function CommissionCard({ submission }: CommissionCardProps) {
             {config.label}
           </Badge>
           {submission.is_draw && (
-            <Badge variant="outline" className="gap-1 px-2 py-1 rounded-xl font-medium text-xs border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30">
-              Draw
-            </Badge>
+            submission.draw_closed_out ? (
+              <Badge variant="outline" className="gap-1 px-2 py-1 rounded-xl font-medium text-xs border-emerald-500/40 text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30">
+                Final Commission
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="gap-1 px-2 py-1 rounded-xl font-medium text-xs border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30">
+                Draw
+              </Badge>
+            )
           )}
           {submission.was_rejected && (
             <Badge variant="outline" className="gap-1 px-2 py-1 rounded-xl font-medium text-xs border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30">
@@ -162,6 +170,11 @@ export function CommissionCard({ submission }: CommissionCardProps) {
           <p className="text-xs text-muted-foreground">
             of {formatFullCurrency(submission.contract_amount)}
           </p>
+          {submission.draw_closed_out && submission.draw_amount_paid != null && submission.draw_amount_paid > 0 && (
+            <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">
+              Draw paid: {formatFullCurrency(submission.draw_amount_paid)}
+            </p>
+          )}
         </div>
       </div>
     </button>

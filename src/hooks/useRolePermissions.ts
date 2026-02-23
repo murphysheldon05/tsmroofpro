@@ -150,14 +150,14 @@ export function useRolePermissions(): RolePermissions {
       return {
         ...NO_PERMISSIONS,
         canSubmitCommissions: true,
-        canApproveCommissions: true, canDenyCommissions: true, canRequestRevisions: true,
+        canApproveCommissions: false, canDenyCommissions: false, canRequestRevisions: false,
         canViewTeamCommissions: true, canViewOwnCommissionsOnly: false,
         canExportTeamData: true, canExportOwnData: true,
-        canReviewRequests: true, canApproveRequests: true,
+        canReviewRequests: false, canApproveRequests: false,
         canDraftSOPs: true,
         canViewReports: true, canViewTeamReports: true,
         canRequestDraws: true,
-        canApproveDraws: true,
+        canApproveDraws: false,
         canUploadTraining: true,
       };
 
@@ -202,7 +202,7 @@ export function useCanEditSystem() {
 
 export function useCanApproveCommissions() {
   const { role } = useAuth();
-  return role === 'admin' || role === 'sales_manager';
+  return role === 'admin';
 }
 
 export function useCanViewAllData() {

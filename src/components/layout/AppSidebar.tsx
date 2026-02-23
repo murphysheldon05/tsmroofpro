@@ -52,6 +52,7 @@ import {
   Ruler,
   BarChart3,
   MessageCircle,
+  Compass,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -63,6 +64,7 @@ import { useCurrentUserPermissions, isSectionVisible } from "@/hooks/useUserPerm
 import { useUserCommissionTier } from "@/hooks/useCommissionTiers";
 import { useMasterSOPAcknowledgments } from "@/hooks/useMasterSOPAcknowledgments";
 import { useSidebarOrder } from "@/hooks/useSidebarOrder";
+import { useWalkthroughContext } from "@/contexts/WalkthroughContext";
 import { usePendingComplianceCount, useNewWarrantyCount, useMessageCenterBadgeCount, useSheldonPendingCount } from "@/hooks/useNavBadgeCounts";
 import { formatDisplayName } from "@/lib/displayName";
 import { supabase } from "@/integrations/supabase/client";
@@ -87,6 +89,7 @@ interface NavItem {
   sectionKey: string;
   children?: NavChild[];
   requiresPlaybook?: boolean;
+  tutorialTarget?: string; // data-tutorial for app walkthrough
 }
 
 // Main navigation items
@@ -102,11 +105,13 @@ const navigationItems: NavItem[] = [
     href: "/message-center",
     icon: MessageCircle,
     sectionKey: "message-center",
+    tutorialTarget: "sidebar-message-center",
   },
   {
     title: "Commissions",
     icon: DollarSign,
     sectionKey: "commissions",
+    tutorialTarget: "sidebar-commissions",
     requiresPlaybook: true,
     children: [
       { title: "Submissions", href: "/commissions", icon: DollarSign, sectionKey: "commissions", requiresPlaybook: true },
@@ -129,6 +134,7 @@ const navigationItems: NavItem[] = [
     title: "Playbook Library",
     icon: BookOpen,
     sectionKey: "sops",
+    tutorialTarget: "sidebar-playbook-library",
     children: [
       { title: "Master Playbook", href: "/playbook-library/master-playbook", icon: BookOpen, sectionKey: "sops/master-playbook" },
       { title: "Employee Handbook", href: "/playbook-library/employee-handbook", icon: FileText, sectionKey: "sops/employee-handbook" },
@@ -174,6 +180,20 @@ const navigationItems: NavItem[] = [
     ],
   },
 ];
+
+// Take the Tour button — uses WalkthroughContext
+function TakeTheTourButton() {
+  const { startTour } = useWalkthroughContext();
+  return (
+    <button
+      onClick={startTour}
+      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-sidebar-foreground/70 hover:bg-primary/5 hover:text-primary/80 transition-all duration-150"
+    >
+      <Compass className="w-4 h-4" />
+      Take the Tour
+    </button>
+  );
+}
 
 // Red numeric badge for nav items
 function NavBadge({ count }: { count: number }) {
@@ -243,6 +263,7 @@ function SortableNavItem({
             </button>
             <CollapsibleTrigger asChild>
               <button
+                data-tutorial={item.tutorialTarget}
                 className={cn(
                   "flex-1 flex items-center justify-between px-2 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 relative",
                   isParentActive(item.children)
@@ -302,6 +323,7 @@ function SortableNavItem({
             <GripVertical className="w-3 h-3" />
           </button>
           <button
+            data-tutorial={item.tutorialTarget}
             onClick={() => handleNavClick(item.href!, item.requiresPlaybook)}
             className={cn(
               "flex-1 flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium transition-all duration-150 relative min-h-[44px]",
@@ -562,8 +584,12 @@ export function AppSidebar() {
       </nav>
 
       <div className="p-3 border-t border-border/50 space-y-1">
+        {/* Take the Tour */}
+        <TakeTheTourButton />
+
         {/* User info with avatar and role badge */}
         <button
+          data-tutorial="sidebar-profile"
           onClick={() => handleNavClick("/profile")}
           className={cn(
             "w-full flex items-center justify-between px-3 py-2.5 rounded-lg transition-all duration-150",
