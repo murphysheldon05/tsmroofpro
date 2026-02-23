@@ -20,17 +20,22 @@ export default function CommissionTracker() {
   const { data: allEntries, isLoading, reps, payTypes } = useEnrichedEntries();
   const { data: payRuns } = useCommissionPayRuns();
 
+  const entries = allEntries ?? [];
+  const repList = reps ?? [];
+  const types = payTypes ?? [];
+  const runs = payRuns ?? [];
+
   const repGroups = useMemo(() => {
-    const map = new Map<string, { name: string; color: string; items: typeof allEntries }>();
-    allEntries.forEach((e) => {
+    const map = new Map<string, { name: string; color: string; items: typeof entries }>();
+    entries.forEach((e) => {
       if (!map.has(e.rep_id)) map.set(e.rep_id, { name: e.rep_name, color: e.rep_color, items: [] });
       map.get(e.rep_id)!.items.push(e);
     });
     return Array.from(map.values())
       .sort((a, b) => b.items.reduce((s, e) => s + e.amount_paid, 0) - a.items.reduce((s, e) => s + e.amount_paid, 0));
-  }, [allEntries]);
+  }, [entries]);
 
-  const totalPaid = allEntries.reduce((s, e) => s + e.amount_paid, 0);
+  const totalPaid = entries.reduce((s, e) => s + e.amount_paid, 0);
 
   if (isLoading) {
     return (
@@ -60,7 +65,7 @@ export default function CommissionTracker() {
           </div>
         </div>
 
-        <TrackerSummaryCards entries={allEntries} repCount={reps.length} />
+        <TrackerSummaryCards entries={entries} repCount={repList.length} />
 
         <Tabs defaultValue="overview" className="space-y-4">
           <TabsList className="bg-card/60 border border-border/40 rounded-2xl p-1 h-auto">
@@ -97,7 +102,7 @@ export default function CommissionTracker() {
           </TabsContent>
 
           <TabsContent value="all" className="mt-0">
-            <AllTransactionsTable entries={allEntries} reps={reps} payTypes={payTypes} payRuns={payRuns} readOnly={trackerReadOnly} />
+            <AllTransactionsTable entries={entries} reps={repList} payTypes={types} payRuns={runs} readOnly={trackerReadOnly} />
           </TabsContent>
 
           <TabsContent value="pay-runs" className="mt-0">
