@@ -954,6 +954,7 @@ export type Database = {
           gross_commission: number | null
           id: string
           install_completion_date: string | null
+          is_draw: boolean | null
           is_flat_fee: boolean | null
           is_manager_submission: boolean | null
           job_address: string
@@ -968,8 +969,7 @@ export type Database = {
           paid_at: string | null
           paid_by: string | null
           payout_batch_id: string | null
-          pay_run_id: string | null
-          scheduled_pay_date: string | null
+          previous_submission_snapshot: Json | null
           rejection_reason: string | null
           rep_role: string | null
           reviewer_notes: string | null
@@ -985,7 +985,6 @@ export type Database = {
           total_job_revenue: number | null
           updated_at: string
           was_rejected: boolean
-          previous_submission_snapshot: unknown | null
         }
         Insert: {
           acculynx_job_id?: string | null
@@ -1011,6 +1010,7 @@ export type Database = {
           gross_commission?: number | null
           id?: string
           install_completion_date?: string | null
+          is_draw?: boolean | null
           is_flat_fee?: boolean | null
           is_manager_submission?: boolean | null
           job_address: string
@@ -1025,9 +1025,7 @@ export type Database = {
           paid_at?: string | null
           paid_by?: string | null
           payout_batch_id?: string | null
-          pay_run_id?: string | null
-          scheduled_pay_date?: string | null
-          previous_submission_snapshot?: unknown | null
+          previous_submission_snapshot?: Json | null
           rejection_reason?: string | null
           rep_role?: string | null
           reviewer_notes?: string | null
@@ -1068,6 +1066,7 @@ export type Database = {
           gross_commission?: number | null
           id?: string
           install_completion_date?: string | null
+          is_draw?: boolean | null
           is_flat_fee?: boolean | null
           is_manager_submission?: boolean | null
           job_address?: string
@@ -1082,8 +1081,7 @@ export type Database = {
           paid_at?: string | null
           paid_by?: string | null
           payout_batch_id?: string | null
-          pay_run_id?: string | null
-          scheduled_pay_date?: string | null
+          previous_submission_snapshot?: Json | null
           rejection_reason?: string | null
           rep_role?: string | null
           reviewer_notes?: string | null
@@ -1099,16 +1097,8 @@ export type Database = {
           total_job_revenue?: number | null
           updated_at?: string
           was_rejected?: boolean
-          previous_submission_snapshot?: unknown | null
         }
         Relationships: [
-          {
-            foreignKeyName: "commission_submissions_pay_run_id_fkey"
-            columns: ["pay_run_id"]
-            isOneToOne: false
-            referencedRelation: "commission_pay_runs"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "commission_submissions_override_manager_id_fkey"
             columns: ["override_manager_id"]
@@ -1816,6 +1806,172 @@ export type Database = {
         }
         Relationships: []
       }
+      employee_handbook_acknowledgments: {
+        Row: {
+          acknowledged_at: string
+          handbook_version_id: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          acknowledged_at?: string
+          handbook_version_id: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          acknowledged_at?: string
+          handbook_version_id?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_handbook_acknowledgments_handbook_version_id_fkey"
+            columns: ["handbook_version_id"]
+            isOneToOne: false
+            referencedRelation: "employee_handbook_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      employee_handbook_versions: {
+        Row: {
+          bucket: string
+          file_path: string
+          id: string
+          uploaded_at: string
+          uploaded_by: string
+          version: string
+        }
+        Insert: {
+          bucket?: string
+          file_path: string
+          id?: string
+          uploaded_at?: string
+          uploaded_by: string
+          version: string
+        }
+        Update: {
+          bucket?: string
+          file_path?: string
+          id?: string
+          uploaded_at?: string
+          uploaded_by?: string
+          version?: string
+        }
+        Relationships: []
+      }
+      feed_comments: {
+        Row: {
+          author_id: string
+          content: string
+          created_at: string
+          id: string
+          post_id: string
+        }
+        Insert: {
+          author_id: string
+          content: string
+          created_at?: string
+          id?: string
+          post_id: string
+        }
+        Update: {
+          author_id?: string
+          content?: string
+          created_at?: string
+          id?: string
+          post_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feed_comments_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feed_comments_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "feed_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      feed_posts: {
+        Row: {
+          author_id: string
+          content: string
+          created_at: string
+          id: string
+          image_url: string | null
+          post_type: Database["public"]["Enums"]["feed_post_type"]
+        }
+        Insert: {
+          author_id: string
+          content: string
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          post_type?: Database["public"]["Enums"]["feed_post_type"]
+        }
+        Update: {
+          author_id?: string
+          content?: string
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          post_type?: Database["public"]["Enums"]["feed_post_type"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feed_posts_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      feed_reactions: {
+        Row: {
+          created_at: string
+          emoji: Database["public"]["Enums"]["feed_reaction_emoji"]
+          post_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          emoji: Database["public"]["Enums"]["feed_reaction_emoji"]
+          post_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          emoji?: Database["public"]["Enums"]["feed_reaction_emoji"]
+          post_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feed_reactions_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "feed_posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feed_reactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       it_requests: {
         Row: {
           app_id: string | null
@@ -1880,74 +2036,6 @@ export type Database = {
           },
         ]
       }
-      employee_handbook_acknowledgments: {
-        Row: {
-          acknowledged_at: string
-          handbook_version_id: string
-          id: string
-          user_id: string
-        }
-        Insert: {
-          acknowledged_at?: string
-          handbook_version_id: string
-          id?: string
-          user_id: string
-        }
-        Update: {
-          acknowledged_at?: string
-          handbook_version_id?: string
-          id?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "employee_handbook_acknowledgments_handbook_version_id_fkey"
-            columns: ["handbook_version_id"]
-            isOneToOne: false
-            referencedRelation: "employee_handbook_versions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "employee_handbook_acknowledgments_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      employee_handbook_versions: {
-        Row: {
-          file_path: string
-          id: string
-          uploaded_at: string
-          uploaded_by: string | null
-          version: string
-        }
-        Insert: {
-          file_path: string
-          id?: string
-          uploaded_at?: string
-          uploaded_by?: string | null
-          version: string
-        }
-        Update: {
-          file_path?: string
-          id?: string
-          uploaded_at?: string
-          uploaded_by?: string | null
-          version?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "employee_handbook_versions_uploaded_by_fkey"
-            columns: ["uploaded_by"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       master_sop_acknowledgments: {
         Row: {
           acknowledged_at: string
@@ -1971,6 +2059,29 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      message_center_last_visit: {
+        Row: {
+          last_visited_at: string
+          user_id: string
+        }
+        Insert: {
+          last_visited_at?: string
+          user_id: string
+        }
+        Update: {
+          last_visited_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_center_last_visit_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       new_hire_access_credentials: {
         Row: {
@@ -2360,9 +2471,11 @@ export type Database = {
           approved_at: string | null
           approved_by: string | null
           avatar_url: string | null
+          background_info: string | null
           commission_admin_only: boolean
           commission_tier_id: string | null
           company_name: string | null
+          company_phone: string | null
           created_at: string
           data_consent_given: boolean | null
           data_consent_given_at: string | null
@@ -2378,7 +2491,9 @@ export type Database = {
           last_login_at: string | null
           manager_id: string | null
           must_reset_password: boolean | null
+          personal_hobbies: string | null
           phone_number: string | null
+          playbook_acknowledged: boolean
           requested_department: string | null
           requested_role: string | null
           role_title: string | null
@@ -2392,9 +2507,11 @@ export type Database = {
           approved_at?: string | null
           approved_by?: string | null
           avatar_url?: string | null
+          background_info?: string | null
           commission_admin_only?: boolean
           commission_tier_id?: string | null
           company_name?: string | null
+          company_phone?: string | null
           created_at?: string
           data_consent_given?: boolean | null
           data_consent_given_at?: string | null
@@ -2410,7 +2527,9 @@ export type Database = {
           last_login_at?: string | null
           manager_id?: string | null
           must_reset_password?: boolean | null
+          personal_hobbies?: string | null
           phone_number?: string | null
+          playbook_acknowledged?: boolean
           requested_department?: string | null
           requested_role?: string | null
           role_title?: string | null
@@ -2424,9 +2543,11 @@ export type Database = {
           approved_at?: string | null
           approved_by?: string | null
           avatar_url?: string | null
+          background_info?: string | null
           commission_admin_only?: boolean
           commission_tier_id?: string | null
           company_name?: string | null
+          company_phone?: string | null
           created_at?: string
           data_consent_given?: boolean | null
           data_consent_given_at?: string | null
@@ -2442,7 +2563,9 @@ export type Database = {
           last_login_at?: string | null
           manager_id?: string | null
           must_reset_password?: boolean | null
+          personal_hobbies?: string | null
           phone_number?: string | null
+          playbook_acknowledged?: boolean
           requested_department?: string | null
           requested_role?: string | null
           role_title?: string | null
@@ -4036,6 +4159,8 @@ export type Database = {
       doc_status: "received" | "missing"
       employee_status: "active" | "pending" | "inactive"
       entity_status: "active" | "on_hold" | "do_not_use"
+      feed_post_type: "win" | "announcement" | "update"
+      feed_reaction_emoji: "thumbs_up" | "fire"
       it_request_priority: "cant_work" | "workaround" | "nice_to_have"
       it_request_status:
         | "new"
@@ -4268,6 +4393,8 @@ export const Constants = {
       doc_status: ["received", "missing"],
       employee_status: ["active", "pending", "inactive"],
       entity_status: ["active", "on_hold", "do_not_use"],
+      feed_post_type: ["win", "announcement", "update"],
+      feed_reaction_emoji: ["thumbs_up", "fire"],
       it_request_priority: ["cant_work", "workaround", "nice_to_have"],
       it_request_status: [
         "new",
