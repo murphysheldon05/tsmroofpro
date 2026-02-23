@@ -68,15 +68,20 @@ export type CommissionDocumentInsert = Omit<CommissionDocument,
 >;
 
 export function useCommissionDocuments(statusFilter?: string) {
-  const { user } = useAuth();
+  const { user, isAdmin, isManager } = useAuth();
 
   return useQuery({
-    queryKey: ['commission-documents', statusFilter],
+    queryKey: ['commission-documents', statusFilter, user?.id, isAdmin, isManager],
     queryFn: async () => {
       let query = supabase
         .from('commission_documents')
         .select('*')
         .order('created_at', { ascending: false });
+
+      // User-level data isolation: return only documents created by the logged-in user
+      if (!isAdmin && !isManager && user) {
+        query = query.eq('created_by', user.id);
+      }
 
       if (statusFilter && statusFilter !== 'all') {
         query = query.eq('status', statusFilter);
@@ -92,10 +97,10 @@ export function useCommissionDocuments(statusFilter?: string) {
 }
 
 export function useCommissionDocument(id: string | undefined) {
-  const { user } = useAuth();
+  const { user, isAdmin, isManager } = useAuth();
 
   return useQuery({
-    queryKey: ['commission-document', id],
+    queryKey: ['commission-document', id, user?.id],
     queryFn: async () => {
       if (!id) return null;
       
@@ -106,6 +111,10 @@ export function useCommissionDocument(id: string | undefined) {
         .single();
 
       if (error) throw error;
+      // User-level data isolation: do not return another user's document
+      if (data && !isAdmin && !isManager && data.created_by !== user!.id) {
+        return null;
+      }
       return data as CommissionDocument;
     },
     enabled: !!user && !!id,
@@ -405,8 +414,8 @@ export function useUpdateCommissionDocumentStatus() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['commission-documents'] });
       queryClient.invalidateQueries({ queryKey: ['commission-document', variables.id] });
-      const statusLabel = variables.status === 'revision_required' 
-        ? 'returned for revision' 
+      const statusLabel = variables.status === 'revision_required' || variables.status === 'rejected' 
+        ? 'rejected' 
         : variables.status.replace(/_/g, ' ');
       toast.success(`Commission document ${statusLabel}`);
     },

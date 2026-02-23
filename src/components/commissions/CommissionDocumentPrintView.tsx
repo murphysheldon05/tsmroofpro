@@ -1,4 +1,4 @@
-import { formatCurrency } from "@/lib/commissionDocumentCalculations";
+import { formatCurrency, formatTierPercent } from "@/lib/commissionDocumentCalculations";
 import type { CommissionDocument } from "@/hooks/useCommissionDocuments";
 import { format } from "date-fns";
 
@@ -130,7 +130,7 @@ export function CommissionDocumentPrintView({ document, isAdmin = false }: Commi
             </tr>
             <tr className="border-b">
               <td className="py-2 font-semibold">Profit Split</td>
-              <td className="py-2 text-right font-mono">{document.profit_split_label || `${(document.rep_profit_percent * 100).toFixed(0)}%`}</td>
+              <td className="py-2 text-right font-mono">{document.profit_split_label || formatTierPercent(document.rep_profit_percent)}</td>
             </tr>
             <tr className="border-b bg-green-100">
               <td className="py-2 font-bold text-lg">Rep Commission</td>

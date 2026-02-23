@@ -1,4 +1,5 @@
-import { useState, useRef, useMemo } from "react";
+import { useState, useRef, useMemo, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -101,7 +102,10 @@ interface Request {
   } | null;
 }
 
+const TYPE_FROM_URL: Record<string, string> = { it: "it_access", hr: "hr" };
+
 export default function Requests() {
+  const [searchParams] = useSearchParams();
   const { user, isManager, isAdmin } = useAuth();
   const queryClient = useQueryClient();
   const { data: requestTypes = [] } = useRequestTypes();
@@ -116,6 +120,16 @@ export default function Requests() {
   const [isUpdating, setIsUpdating] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const urlType = searchParams.get("type");
+    const urlSubtype = searchParams.get("subtype");
+    if (urlType && TYPE_FROM_URL[urlType]) {
+      setType(TYPE_FROM_URL[urlType]);
+      if (TYPE_FROM_URL[urlType] === "hr" && urlSubtype === "simple") setHrSubType("simple");
+      if (TYPE_FROM_URL[urlType] === "hr" && urlSubtype === "new-hire") setHrSubType("new-hire");
+    }
+  }, [searchParams]);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -612,7 +626,13 @@ function SubmitRequestForm({
 }) {
   const canSubmitNewHire = isManager || isAdmin;
   const isNewHireFlow = type === "hr" && hrSubType === "new-hire" && canSubmitNewHire;
-  const filteredRequestTypes = requestTypes.filter(rt => rt.value !== "commission" && rt.is_active);
+  const filteredRequestTypes = requestTypes.filter(
+    (rt) =>
+      rt.value !== "commission" &&
+      rt.value !== "sop_update" &&
+      !rt.label?.toLowerCase().includes("sop update") &&
+      rt.is_active
+  );
 
   return (
     <div className="glass-card rounded-xl p-6 space-y-6">

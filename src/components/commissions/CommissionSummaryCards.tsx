@@ -2,11 +2,14 @@ import { DollarSign, Clock, CheckCircle, Wallet } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface CommissionSummaryCardsProps {
-  total: number;
-  pending: number;
-  approved: number;
-  paid: number;
-  totalOwed: number;
+  total?: number;
+  pending?: number;
+  approved?: number;
+  paid?: number;
+  totalSubmittedAmount: number;
+  complianceApprovedAmount: number;
+  accountingApprovedAmount: number;
+  paidAmount: number;
 }
 
 const formatRounded = (value: number) => {
@@ -15,27 +18,32 @@ const formatRounded = (value: number) => {
   return `$${value.toFixed(0)}`;
 };
 
-export function CommissionSummaryCards({ total, pending, approved, paid, totalOwed }: CommissionSummaryCardsProps) {
+export function CommissionSummaryCards({
+  totalSubmittedAmount,
+  complianceApprovedAmount,
+  accountingApprovedAmount,
+  paidAmount,
+}: CommissionSummaryCardsProps) {
   const cards = [
     {
-      label: "Total Owed",
-      value: formatRounded(totalOwed),
+      label: "Total Submitted",
+      value: formatRounded(totalSubmittedAmount),
       icon: <Wallet className="h-5 w-5" />,
       colorClass: "text-primary",
       bgClass: "bg-primary/10",
       borderClass: "border-primary/20",
     },
     {
-      label: "Pending",
-      value: pending.toString(),
+      label: "Compliance Approved",
+      value: formatRounded(complianceApprovedAmount),
       icon: <Clock className="h-5 w-5" />,
       colorClass: "text-amber-400",
       bgClass: "bg-amber-500/10",
       borderClass: "border-amber-500/20",
     },
     {
-      label: "Approved",
-      value: approved.toString(),
+      label: "Accounting Approved",
+      value: formatRounded(accountingApprovedAmount),
       icon: <CheckCircle className="h-5 w-5" />,
       colorClass: "text-emerald-400",
       bgClass: "bg-emerald-500/10",
@@ -43,7 +51,7 @@ export function CommissionSummaryCards({ total, pending, approved, paid, totalOw
     },
     {
       label: "Paid",
-      value: paid.toString(),
+      value: formatRounded(paidAmount),
       icon: <DollarSign className="h-5 w-5" />,
       colorClass: "text-sky-400",
       bgClass: "bg-sky-500/10",

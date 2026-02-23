@@ -51,28 +51,28 @@ export function CommissionStatusStepper({
     date: formatDate(submittedAt),
   });
 
-  // Step 2: Manager Review
+  // Step 2: Compliance Review (completed by Compliance Officer / Manny Madrid; Admin/Sheldon can action as backup)
   const isManagerApproved = ["manager_approved", "accounting_approved", "approved", "paid"].includes(documentStatus);
-  const isRevision = documentStatus === "revision_required";
-  const isDenied = documentStatus === "rejected" || documentStatus === "denied";
+  const isRejected = documentStatus === "revision_required" || documentStatus === "rejected"; // rejected = sent back to rep
+  const isDenied = documentStatus === "denied";
   steps.push({
-    label: "Manager Review",
+    label: "Compliance Review",
     status: isManagerApproved
       ? "completed"
-      : isRevision || isDenied
+      : isRejected || isDenied
         ? "rejected"
         : documentStatus === "submitted"
           ? "active"
           : "upcoming",
     actor: managerApprovedBy,
     date: formatDate(managerApprovedAt),
-    notes: isRevision ? revisionReason : isDenied ? approvalComment : null,
+    notes: isRejected ? revisionReason : isDenied ? approvalComment : null,
   });
 
-  // Step 3: Accounting Approval
+  // Step 3: Accounting Approved (actioned by Courtney Murphy)
   const isAccountingApproved = ["accounting_approved", "approved", "paid"].includes(documentStatus);
   steps.push({
-    label: "Accounting",
+    label: "Accounting Approved",
     status: isAccountingApproved
       ? "completed"
       : documentStatus === "manager_approved"
@@ -82,9 +82,9 @@ export function CommissionStatusStepper({
     date: formatDate(accountingApprovedAt),
   });
 
-  // Step 4: Paid
+  // Step 4: Mark Paid
   steps.push({
-    label: "Paid",
+    label: "Mark Paid",
     status: documentStatus === "paid"
       ? "completed"
       : documentStatus === "accounting_approved"

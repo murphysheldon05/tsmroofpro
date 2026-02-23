@@ -30,7 +30,10 @@ export const SIDEBAR_SECTIONS = [
   { key: "company", label: "Company", parent: null },
   { key: "directory", label: "Team Directory", parent: null },
   { key: "vendors", label: "Subs & Vendors", parent: null },
+  { key: "vendors/subcontractors", label: "Sub-Contractors", parent: "vendors" },
+  { key: "vendors/contact-list", label: "Contact List", parent: "vendors" },
   { key: "accounting", label: "Accounting", parent: null },
+  { key: "training/requests", label: "IT Request", parent: "training" },
   { key: "ops-compliance", label: "Ops Compliance", parent: null },
 ] as const;
 

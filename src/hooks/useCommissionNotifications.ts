@@ -2,7 +2,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { CommissionSubmission } from "./useCommissions";
 
 interface NotificationPayload {
-  notification_type: "submitted" | "manager_approved" | "accounting_approved" | "paid" | "revision_required" | "status_change";
+  notification_type: "submitted" | "manager_approved" | "accounting_approved" | "paid" | "rejected" | "status_change";
   document_type?: 'commission_document' | 'commission_submission';
   commission_id: string;
   job_name: string;

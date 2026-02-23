@@ -64,9 +64,34 @@ export interface EnrichedEntry extends CommissionEntry {
 // ——— Hooks ———
 
 export function useCommissionReps() {
+  const { user, isAdmin, isManager } = useAuth();
+
   return useQuery({
-    queryKey: ["commission-reps"],
+    queryKey: ["commission-reps", user?.id, isAdmin, isManager],
     queryFn: async () => {
+      // Manager-level: only reps assigned to this manager (team_assignments) + self
+      if (isManager && !isAdmin && user) {
+        const { data: assignments } = await supabase
+          .from("team_assignments")
+          .select("employee_id")
+          .eq("manager_id", user.id);
+        const assignedUserIds = new Set<string>([user.id]);
+        assignments?.forEach((a: { employee_id: string }) => assignedUserIds.add(a.employee_id));
+        const { data: profilesWithManager } = await supabase
+          .from("profiles")
+          .select("id")
+          .eq("manager_id", user.id);
+        profilesWithManager?.forEach((p: { id: string }) => assignedUserIds.add(p.id));
+
+        const { data, error } = await supabase
+          .from("commission_reps")
+          .select("*")
+          .in("user_id", Array.from(assignedUserIds))
+          .order("name");
+        if (error) throw error;
+        return (data as CommissionRep[]) || [];
+      }
+
       const { data, error } = await supabase
         .from("commission_reps")
         .select("*")
@@ -74,6 +99,7 @@ export function useCommissionReps() {
       if (error) throw error;
       return data as CommissionRep[];
     },
+    enabled: !!user,
   });
 }
 
@@ -111,7 +137,7 @@ export function useCommissionEntries() {
   return useQuery({
     queryKey: ["commission-entries", user?.id, isAdmin, isManager],
     queryFn: async () => {
-      // For non-admin/non-manager, only show their linked rep's entries
+      // User-level: only their linked rep's entries (data isolation)
       if (!isAdmin && !isManager && user) {
         const { data: linkedRep } = await supabase
           .from("commission_reps")
@@ -128,11 +154,40 @@ export function useCommissionEntries() {
           if (error) throw error;
           return data as CommissionEntry[];
         }
-        // No linked rep — return empty
         return [] as CommissionEntry[];
       }
 
-      // Admins/managers see all entries
+      // Manager-level: only entries for reps assigned to this manager + self (never other managers or unassigned)
+      if (isManager && !isAdmin && user) {
+        const { data: assignments } = await supabase
+          .from("team_assignments")
+          .select("employee_id")
+          .eq("manager_id", user.id);
+        const assignedUserIds = new Set<string>([user.id]);
+        assignments?.forEach((a: { employee_id: string }) => assignedUserIds.add(a.employee_id));
+        const { data: profilesWithManager } = await supabase
+          .from("profiles")
+          .select("id")
+          .eq("manager_id", user.id);
+        profilesWithManager?.forEach((p: { id: string }) => assignedUserIds.add(p.id));
+
+        const { data: reps } = await supabase
+          .from("commission_reps")
+          .select("id")
+          .in("user_id", Array.from(assignedUserIds));
+        const repIds = (reps || []).map((r: { id: string }) => r.id);
+        if (repIds.length === 0) return [] as CommissionEntry[];
+
+        const { data, error } = await supabase
+          .from("commission_entries")
+          .select("*")
+          .in("rep_id", repIds)
+          .order("paid_date", { ascending: true });
+        if (error) throw error;
+        return data as CommissionEntry[];
+      }
+
+      // Admin: all entries
       const { data, error } = await supabase
         .from("commission_entries")
         .select("*")

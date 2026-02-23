@@ -23,10 +23,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { GuidedTour } from "@/components/tutorial/GuidedTour";
 import { commissionsSteps } from "@/components/tutorial/tutorialSteps";
 
-const STATUS_ORDER = ["pending_review", "revision_required", "denied", "approved", "paid"];
+const STATUS_ORDER = ["pending_review", "rejected", "denied", "approved", "paid"];
 const STATUS_LABELS: Record<string, string> = {
   pending_review: "Pending Review",
-  revision_required: "Revision Required",
+  rejected: "Rejected",
   denied: "Denied",
   approved: "Approved",
   paid: "Paid",
@@ -61,19 +61,32 @@ export default function Commissions() {
     return counts;
   }, [submissions]);
 
-  // Summary stats
-  const summaryStats = useMemo(() => ({
-    total: submissions?.length || 0,
-    pending: submissions?.filter((s) => s.status === "pending_review").length || 0,
-    approved: submissions?.filter((s) => s.status === "approved").length || 0,
-    paid: submissions?.filter((s) => s.status === "paid").length || 0,
-    totalOwed: submissions?.reduce((sum, s) => {
-      if (s.status !== "paid" && s.status !== "denied") {
-        return sum + (s.net_commission_owed || 0);
-      }
-      return sum;
-    }, 0) || 0,
-  }), [submissions]);
+  // Summary stats for USER VIEW: Total Submitted $, Compliance Approved $, Accounting Approved $, Paid $ (cumulative)
+  const summaryStats = useMemo(() => {
+    const list = submissions || [];
+    const totalSubmittedAmount = list
+      .filter((s) => s.status === "pending_review" && s.approval_stage === "pending_manager")
+      .reduce((sum, s) => sum + (s.net_commission_owed || 0), 0);
+    const complianceApprovedAmount = list
+      .filter((s) => s.status === "pending_review" && s.approval_stage === "pending_accounting")
+      .reduce((sum, s) => sum + (s.net_commission_owed || 0), 0);
+    const accountingApprovedAmount = list
+      .filter((s) => s.status === "approved")
+      .reduce((sum, s) => sum + (s.commission_approved ?? s.net_commission_owed ?? 0), 0);
+    const paidAmount = list
+      .filter((s) => s.status === "paid")
+      .reduce((sum, s) => sum + (s.commission_approved ?? s.net_commission_owed ?? 0), 0);
+    return {
+      total: list.length,
+      pending: list.filter((s) => s.status === "pending_review").length,
+      approved: list.filter((s) => s.status === "approved").length,
+      paid: list.filter((s) => s.status === "paid").length,
+      totalSubmittedAmount,
+      complianceApprovedAmount,
+      accountingApprovedAmount,
+      paidAmount,
+    };
+  }, [submissions]);
 
   // Filtered & grouped submissions
   const filteredSubmissions = useMemo(() => {
@@ -90,7 +103,7 @@ export default function Commissions() {
     }
 
     if (activeStatus === "needs_action") {
-      filtered = filtered.filter((s) => s.status === "revision_required" || s.status === "denied");
+      filtered = filtered.filter((s) => s.status === "rejected" || s.status === "denied");
     } else if (activeStatus !== "all") {
       filtered = filtered.filter((s) => s.status === activeStatus);
     }

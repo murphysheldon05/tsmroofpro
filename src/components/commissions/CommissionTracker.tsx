@@ -31,7 +31,7 @@ interface CommissionTrackerProps {
 
 const STATUS_COLORS: Record<string, string> = {
   pending_review: "#f59e0b",
-  revision_required: "#ef4444",
+  rejected: "#ef4444",
   approved_for_payment: "#22c55e",
   paid: "#3b82f6",
   on_hold: "#6b7280",
@@ -39,7 +39,7 @@ const STATUS_COLORS: Record<string, string> = {
 
 const STATUS_LABELS: Record<string, string> = {
   pending_review: "Pending Review",
-  revision_required: "Revision Required",
+  rejected: "Rejected",
   approved_for_payment: "Approved",
   paid: "Paid",
   on_hold: "On Hold",

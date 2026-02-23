@@ -30,9 +30,9 @@ export function CommissionStatusPipeline({ statusCounts, activeStatus, onStatusC
       borderClass: "border-amber-500/30",
     },
     {
-      key: "revision_required",
-      label: "Revision",
-      count: statusCounts["revision_required"] || 0,
+      key: "rejected",
+      label: "Rejected",
+      count: statusCounts["rejected"] || 0,
       icon: <AlertCircle className="h-5 w-5" />,
       colorClass: "text-orange-400",
       bgClass: "bg-orange-500/10",

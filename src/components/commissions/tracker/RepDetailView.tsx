@@ -111,7 +111,7 @@ export function RepDetailView({ repName, repColor, entries, readOnly, hideBackBu
       rejected: "bg-red-100 text-red-800 border-red-300",
       submitted: "bg-amber-100 text-amber-800 border-amber-300",
       draft: "bg-muted text-muted-foreground",
-      revision_required: "bg-orange-100 text-orange-800 border-orange-300",
+      rejected: "bg-orange-100 text-orange-800 border-orange-300",
     };
     return (
       <Badge variant="outline" className={`gap-1 ${colors[status] || ""}`}>

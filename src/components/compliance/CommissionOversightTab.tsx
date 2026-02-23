@@ -161,7 +161,7 @@ export function CommissionOversightTab() {
           <SelectContent>
             <SelectItem value="all">All Statuses</SelectItem>
             <SelectItem value="pending_review">Pending Review</SelectItem>
-            <SelectItem value="revision_required">Revision Required</SelectItem>
+            <SelectItem value="rejected">Rejected</SelectItem>
             <SelectItem value="approved">Approved</SelectItem>
             <SelectItem value="denied">Denied</SelectItem>
             <SelectItem value="paid">Paid</SelectItem>

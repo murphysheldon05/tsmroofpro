@@ -7,19 +7,19 @@ interface StatusTimelineProps {
   isManagerSubmission?: boolean;
 }
 
+// Phase labels: Submitted → Compliance Review (Manny/Sheldon) → Accounting Approved (Courtney) → Mark Paid
 const STEPS = [
   { key: "submitted", label: "Submitted" },
-  { key: "manager_review", label: "Manager Review" },
-  { key: "accounting", label: "Accounting" },
-  { key: "approved", label: "Approved" },
-  { key: "paid", label: "Paid" },
+  { key: "compliance_review", label: "Compliance Review" },
+  { key: "accounting_approved", label: "Accounting Approved" },
+  { key: "mark_paid", label: "Mark Paid" },
 ];
 
 function getActiveStep(status: string, approvalStage: string | null): number {
   if (status === "paid") return 5;
   if (status === "approved") return 4;
   if (status === "denied") return -1; // special
-  if (status === "revision_required") return 1; // back to start
+  if (status === "rejected") return 1; // back to start (rejected = sent back to rep)
   if (approvalStage === "pending_accounting" || approvalStage === "pending_admin") return 3;
   if (approvalStage === "pending_manager") return 2;
   return 1; // submitted

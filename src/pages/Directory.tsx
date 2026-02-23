@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useLocation } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -285,6 +286,8 @@ function CsvImportDialog({ open, onOpenChange, type }: { open: boolean; onOpenCh
 }
 
 export default function Directory() {
+  const { pathname } = useLocation();
+  const subcontractorsOnly = pathname === "/vendors/subcontractors";
   const { role } = useAuth();
   const isAdmin = role === "admin";
   const isManager = role === "manager";
@@ -314,16 +317,17 @@ export default function Directory() {
   const deleteVendor = useDeleteVendor();
   const deleteProspect = useDeleteProspect();
 
-  // Combined entities for unified view
+  // Sub-Contractors view: only subs (W9/insurance). Contact List is a separate page.
   const allEntities = useMemo(() => {
     const subs = subcontractors.map(s => ({
       ...s, entityType: "sub" as const, displayName: s.company_name, tradeLabel: TRADE_TYPES.find(t => t.value === s.trade_type)?.label || s.trade_type,
     }));
+    if (subcontractorsOnly) return subs;
     const vends = vendors.map(v => ({
       ...v, entityType: "vendor" as const, displayName: v.vendor_name, primary_contact_name: v.primary_contact_name, tradeLabel: VENDOR_TYPES.find(t => t.value === v.vendor_type)?.label || v.vendor_type,
     }));
     return [...subs, ...vends];
-  }, [subcontractors, vendors]);
+  }, [subcontractors, vendors, subcontractorsOnly]);
 
   const filteredEntities = useMemo(() => {
     let filtered = allEntities;
@@ -362,8 +366,12 @@ export default function Directory() {
         {/* Header */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Subs & Vendors</h1>
-            <p className="text-sm text-muted-foreground mt-0.5">Manage your directory and compliance</p>
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
+              {subcontractorsOnly ? "Sub-Contractors" : "Subs & Vendors"}
+            </h1>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              {subcontractorsOnly ? "Crews requiring W9 and insurance docs" : "Manage your directory and compliance"}
+            </p>
           </div>
           <div className="flex gap-2 flex-wrap">
             {canImport && (
@@ -381,9 +389,11 @@ export default function Directory() {
                 <Button className="gap-2 rounded-xl" onClick={() => { setEditingSub(null); setSubFormOpen(true); }}>
                   <Plus className="h-4 w-4" /> Add Sub
                 </Button>
-                <Button variant="secondary" className="gap-2 rounded-xl" onClick={() => { setEditingVendor(null); setVendorFormOpen(true); }}>
-                  <Plus className="h-4 w-4" /> Add Vendor
-                </Button>
+                {!subcontractorsOnly && (
+                  <Button variant="secondary" className="gap-2 rounded-xl" onClick={() => { setEditingVendor(null); setVendorFormOpen(true); }}>
+                    <Plus className="h-4 w-4" /> Add Vendor
+                  </Button>
+                )}
               </>
             )}
           </div>

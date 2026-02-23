@@ -59,6 +59,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { useCurrentUserPermissions, isSectionVisible } from "@/hooks/useUserPermissions";
+import { useUserCommissionTier } from "@/hooks/useCommissionTiers";
 import { useMasterSOPAcknowledgments } from "@/hooks/useMasterSOPAcknowledgments";
 import { useSidebarOrder } from "@/hooks/useSidebarOrder";
 import { supabase } from "@/integrations/supabase/client";
@@ -100,8 +101,8 @@ const navigationItems: NavItem[] = [
     requiresPlaybook: true,
     children: [
       { title: "Submissions", href: "/commissions", icon: DollarSign, sectionKey: "commissions", requiresPlaybook: true },
-      { title: "Commissions", href: "/my-commissions", icon: BarChart3, sectionKey: "commissions", requiresPlaybook: true },
       { title: "Tracker", href: "/commission-tracker", icon: TrendingUp, sectionKey: "commissions", requiresPlaybook: true, managerOnly: true },
+      { title: "Accounting", href: "/accounting", icon: Calculator, sectionKey: "accounting", requiresPlaybook: true, adminOnly: true },
     ],
   },
   {
@@ -141,14 +142,8 @@ const navigationItems: NavItem[] = [
       { title: "Video Library", href: "/training/video-library", icon: Video, sectionKey: "training/video-library", requiresPlaybook: true },
       { title: "Shingle ID Guide", href: "/training/shingle-identification", icon: Ruler, sectionKey: "training/shingle-id", requiresPlaybook: true },
       { title: "New Hires", href: "/training/new-hire", icon: UserPlus, sectionKey: "training/new-hire", requiresPlaybook: true, adminOnly: true },
+      { title: "IT Request", href: "/training/requests/it", icon: Send, sectionKey: "training/requests", requiresPlaybook: true },
     ],
-  },
-  {
-    title: "Who to Contact",
-    href: "/directory",
-    icon: Users,
-    sectionKey: "directory",
-    requiresPlaybook: true,
   },
   {
     title: "Tools & Systems",
@@ -158,25 +153,14 @@ const navigationItems: NavItem[] = [
     requiresPlaybook: true,
   },
   {
-    title: "Forms & Requests",
-    href: "/requests",
-    icon: Send,
-    sectionKey: "requests",
-    requiresPlaybook: true,
-  },
-  {
     title: "Subs & Vendors",
-    href: "/vendors",
     icon: Truck,
     sectionKey: "vendors",
     requiresPlaybook: true,
-  },
-  {
-    title: "Accounting",
-    href: "/accounting",
-    icon: Calculator,
-    sectionKey: "accounting",
-    requiresPlaybook: true,
+    children: [
+      { title: "Sub-Contractors", href: "/vendors/subcontractors", icon: Wrench, sectionKey: "vendors/subcontractors", requiresPlaybook: true },
+      { title: "Contact List", href: "/vendors/contact-list", icon: Users, sectionKey: "vendors/contact-list", requiresPlaybook: true },
+    ],
   },
   {
     title: "Ops Compliance",
@@ -321,7 +305,9 @@ export function AppSidebar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [openSections, setOpenSections] = useState<string[]>([]);
   const { data: userPermissions } = useCurrentUserPermissions();
+  const { data: userTier } = useUserCommissionTier(user?.id);
   const { allCompleted: playbookComplete, isLoading: playbookLoading } = useMasterSOPAcknowledgments();
+  const hasCommissionTier = !!userTier?.tier_id || !!userTier?.tier;
   const { order, reorder } = useSidebarOrder();
   const [profile, setProfile] = useState<{ avatar_url: string | null; full_name: string | null } | null>(null);
 
@@ -404,6 +390,23 @@ export function AppSidebar() {
     );
   };
 
+  // Keep parent dropdown open when navigating to any of its subcategories
+  useEffect(() => {
+    const pathname = location.pathname;
+    navigationItems.forEach((item) => {
+      if (item.children?.length) {
+        const childActive = item.children.some(
+          (c) => pathname === c.href || (c.href !== "/" && pathname.startsWith(c.href))
+        );
+        if (childActive) {
+          setOpenSections((prev) =>
+            prev.includes(item.title) ? prev : [...prev, item.title]
+          );
+        }
+      }
+    });
+  }, [location.pathname]);
+
   const isActive = (href: string) => location.pathname === href;
   const isParentActive = (children?: { href: string }[]) =>
     children?.some((child) => location.pathname.startsWith(child.href));
@@ -427,14 +430,13 @@ export function AppSidebar() {
   const filteredNavigation = useMemo(() => {
     return navigationItems
       .filter((item) => {
-        // Ops Compliance: visible to admin or users granted ops-compliance permission
-        if (item.sectionKey === "ops-compliance" && !isAdmin) {
-          if (!userPermissions || !userPermissions.includes("ops-compliance")) return false;
+        // Commissions category: hidden from User/Manager who do NOT have a commission tier (e.g. production, office, VAs)
+        if (item.sectionKey === "commissions") {
+          if (isAdmin) return true;
+          if (!hasCommissionTier) return false;
         }
-        // Accounting: visible to Accounting dept, admin, or users granted accounting permission
-        if (item.sectionKey === "accounting" && userDepartment !== "Accounting" && !isAdmin) {
-          if (!userPermissions || !userPermissions.includes("accounting")) return false;
-        }
+        // Ops Compliance: Admin only — hide from Manager and User
+        if (item.sectionKey === "ops-compliance") return isAdmin;
         return isSectionVisible(item.sectionKey, userPermissions, role);
       })
       .map((item) => {
@@ -450,7 +452,7 @@ export function AppSidebar() {
         return item;
       })
       .filter(Boolean) as NavItem[];
-  }, [userPermissions, role, isManager, isAdmin]);
+  }, [userPermissions, role, isManager, isAdmin, hasCommissionTier]);
 
   // Sort navigation by user's preferred order
   const sortedNavigation = useMemo(() => {
@@ -570,20 +572,6 @@ export function AppSidebar() {
             <span className="text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-[1px] px-3 mb-1 block">
               {isAdmin ? 'Admin Panel' : 'Manager Panel'}
             </span>
-            {(isAdmin || role === 'sales_manager') && (
-              <button
-                onClick={() => handleNavClick("/pending-review")}
-                className={cn(
-                  "w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm transition-all duration-150 relative min-h-[44px]",
-                  isActive("/pending-review")
-                    ? "nav-item-active font-medium"
-                    : "text-sidebar-foreground/70 hover:bg-primary/5 hover:text-primary/80"
-                )}
-              >
-                <ClipboardCheck className={cn("w-5 h-5", isActive("/pending-review") && "nav-icon-glow")} />
-                Pending Review
-              </button>
-            )}
             {isAdmin && (
               <button
                 onClick={() => handleNavClick("/admin")}

@@ -1,92 +1,80 @@
 import { useMemo } from "react";
-import { DollarSign, CheckCircle, Clock, Calculator } from "lucide-react";
+import { DollarSign, CheckCircle, Clock } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { useAccountingCommissions } from "@/hooks/useAccountingCommissions";
+import { useCommissionSubmissions } from "@/hooks/useCommissions";
 
 function formatCurrency(val: number) {
+  if (val >= 1000000) return `$${(val / 1000000).toFixed(1)}M`;
   if (val >= 1000) return `$${(val / 1000).toFixed(1)}K`;
   return `$${val.toFixed(0)}`;
 }
 
+/** Admin/Accounting view: 3 boxes — Total Submitted (awaiting compliance), Compliance Approved (awaiting accounting), Accounting Approved (ready for payment). */
 export function AccountingSummaryCards() {
-  const { data: commissions } = useAccountingCommissions();
+  const { data: submissions } = useCommissionSubmissions();
 
   const stats = useMemo(() => {
-    if (!commissions) return { paidThisRun: 0, owedNextRun: 0, totalPending: 0, taxEstimate: 0 };
+    const list = submissions || [];
+    const totalSubmitted = list.filter(
+      (s) => s.status === "pending_review" && s.approval_stage === "pending_manager"
+    );
+    const complianceApproved = list.filter(
+      (s) => s.status === "pending_review" && s.approval_stage === "pending_accounting"
+    );
+    const accountingApproved = list.filter((s) => s.status === "approved");
 
-    const now = new Date();
-    const mstOffset = -7 * 60;
-    const utcTime = now.getTime() + (now.getTimezoneOffset() * 60000);
-    const mstTime = new Date(utcTime + (mstOffset * 60000));
-    const dayOfWeek = mstTime.getDay();
-    const hour = mstTime.getHours();
-    const isBeforeDeadline = dayOfWeek < 2 || (dayOfWeek === 2 && hour < 15);
-
-    // Get current week boundaries (Sunday to Saturday)
-    const weekStart = new Date(mstTime);
-    weekStart.setDate(weekStart.getDate() - weekStart.getDay());
-    weekStart.setHours(0, 0, 0, 0);
-
-    const paid = commissions.filter(c => c.status === 'paid');
-    const approved = commissions.filter(c => c.status === 'approved');
-
-    // Paid this week/run
-    const paidThisRun = paid
-      .filter(c => c.paid_at && new Date(c.paid_at) >= weekStart)
-      .reduce((sum, c) => sum + (c.rep_commission || 0), 0);
-
-    // Owed next run = all approved not yet paid
-    const owedNextRun = approved.reduce((sum, c) => sum + (c.rep_commission || 0), 0);
-
-    // Total pending (approved waiting to be marked paid)
-    const totalPending = approved.length;
-
-    // Rough payroll tax estimate (~15.3% FICA for employers)
-    const taxEstimate = owedNextRun * 0.153;
-
-    return { paidThisRun, owedNextRun, totalPending, taxEstimate };
-  }, [commissions]);
+    return {
+      totalSubmittedCount: totalSubmitted.length,
+      totalSubmittedAmount: totalSubmitted.reduce((sum, s) => sum + (s.net_commission_owed || 0), 0),
+      complianceApprovedCount: complianceApproved.length,
+      complianceApprovedAmount: complianceApproved.reduce((sum, s) => sum + (s.net_commission_owed || 0), 0),
+      accountingApprovedCount: accountingApproved.length,
+      accountingApprovedAmount: accountingApproved.reduce(
+        (sum, s) => sum + (s.commission_approved ?? s.net_commission_owed ?? 0),
+        0
+      ),
+    };
+  }, [submissions]);
 
   const cards = [
     {
-      label: "Paid This Run",
-      value: formatCurrency(stats.paidThisRun),
-      icon: CheckCircle,
-      color: "text-emerald-600 dark:text-emerald-400",
-      border: "border-t-emerald-500",
-    },
-    {
-      label: "Owed Next Run",
-      value: formatCurrency(stats.owedNextRun),
-      icon: DollarSign,
-      color: "text-blue-600 dark:text-blue-400",
-      border: "border-t-blue-500",
-    },
-    {
-      label: "Pending Payouts",
-      value: String(stats.totalPending),
+      label: "Total Submitted",
+      sublabel: "Awaiting compliance review",
+      value: `${stats.totalSubmittedCount} · ${formatCurrency(stats.totalSubmittedAmount)}`,
       icon: Clock,
       color: "text-amber-600 dark:text-amber-400",
       border: "border-t-amber-500",
     },
     {
-      label: "Est. Payroll Taxes",
-      value: formatCurrency(stats.taxEstimate),
-      icon: Calculator,
-      color: "text-purple-600 dark:text-purple-400",
-      border: "border-t-purple-500",
+      label: "Compliance Approved",
+      sublabel: "Awaiting accounting",
+      value: `${stats.complianceApprovedCount} · ${formatCurrency(stats.complianceApprovedAmount)}`,
+      icon: CheckCircle,
+      color: "text-blue-600 dark:text-blue-400",
+      border: "border-t-blue-500",
+    },
+    {
+      label: "Accounting Approved",
+      sublabel: "Ready for payment",
+      value: `${stats.accountingApprovedCount} · ${formatCurrency(stats.accountingApprovedAmount)}`,
+      icon: DollarSign,
+      color: "text-emerald-600 dark:text-emerald-400",
+      border: "border-t-emerald-500",
     },
   ];
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
       {cards.map((card) => (
         <Card key={card.label} className={`border-t-4 ${card.border} bg-card/60`}>
           <CardContent className="p-4">
-            <div className="flex items-center gap-2 mb-2">
+            <div className="flex items-center gap-2 mb-1">
               <card.icon className={`h-4 w-4 ${card.color}`} />
               <span className="text-xs font-medium text-muted-foreground">{card.label}</span>
             </div>
+            {card.sublabel && (
+              <p className="text-xs text-muted-foreground mb-1">{card.sublabel}</p>
+            )}
             <p className="text-2xl font-extrabold">{card.value}</p>
           </CardContent>
         </Card>

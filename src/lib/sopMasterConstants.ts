@@ -61,7 +61,7 @@ export const SOPMASTER_CONTENT: MasterPlaybookContent[] = [
     flowSteps: [
       { label: "Sales Rep Submits Commission", type: "start", owner: "Sales Rep", note: "At assigned tier" },
       { label: "Margin Validation Gate", type: "decision", owner: "System", branches: ["Meets Minimum → Continue", "Below Minimum → Auto Tier Drop"] },
-      { label: "Sales Manager Review", type: "decision", owner: "Sales Manager", branches: ["Reject → Back to Rep", "Approve → Continue", "Override (Deals 1–10 Only)"] },
+      { label: "Compliance Review", type: "decision", owner: "Compliance Officer (Manny) / Admin backup", branches: ["Reject → Back to Rep", "Approve → Continue", "Override (Deals 1–10 Only)"] },
       { label: "Accounting Executes", type: "process", owner: "Accounting" },
       { label: "Commission Processed", type: "end", owner: "System" }
     ],
@@ -69,7 +69,7 @@ export const SOPMASTER_CONTENT: MasterPlaybookContent[] = [
       "Commission paid at assigned tier — margin is a gate, not the calculator",
       "Tier drop: every 5% below minimum = drop one full tier (automatic)",
       "Overrides allowed ONLY on deals 1–10; beyond requires executive approval",
-      "Routing MUST go: Sales Rep → Sales Manager → Accounting (never direct)",
+      "Routing MUST go: Sales Rep → Compliance Officer (Manny) → Accounting (Courtney) (managers read-only)",
       "Accounting executes only — cannot approve or modify",
       "Draw requests: maximum 50% of the commission on the stated future job, not to exceed $1,500 without Sales Manager approval"
     ],

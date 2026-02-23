@@ -1,14 +1,18 @@
 import { useMemo } from "react";
 import { useParams, useLocation } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { useAuth } from "@/contexts/AuthContext";
 import { useEnrichedEntries, slugifyRep } from "@/hooks/useCommissionEntries";
 import { RepDetailView } from "@/components/commissions/tracker/RepDetailView";
 
 export default function CommissionTrackerDetail() {
   const { repSlug } = useParams();
   const location = useLocation();
+  const { isAdmin, role } = useAuth();
+  const isManagerView = (role === "manager" || role === "sales_manager") && !isAdmin;
   const { data: allEntries, isLoading } = useEnrichedEntries();
   const isShared = location.hash === "#share";
+  const readOnly = isShared || isManagerView;
 
   const { repName, repColor, repEntries } = useMemo(() => {
     const match = allEntries.find((e) => slugifyRep(e.rep_name) === repSlug);
@@ -47,7 +51,7 @@ export default function CommissionTrackerDetail() {
   return (
     <AppLayout>
       <div className="pb-8">
-        <RepDetailView repName={repName} repColor={repColor} entries={repEntries} readOnly={isShared} />
+        <RepDetailView repName={repName} repColor={repColor} entries={repEntries} readOnly={readOnly} />
       </div>
     </AppLayout>
   );

@@ -4,6 +4,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ClipboardList, CheckCircle2, Award, Percent, DollarSign } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserCommissionTier } from "@/hooks/useCommissionTiers";
+import { formatTierPercent } from "@/lib/commissionDocumentCalculations";
 
 export function ProfileAssignmentsTab() {
   const { user } = useAuth();
@@ -74,7 +75,7 @@ export function ProfileAssignmentsTab() {
                     <div className="flex flex-wrap gap-1.5 mt-2">
                       {userTier.tier.allowed_profit_splits.map((p) => (
                         <Badge key={p} variant="outline" className="text-xs font-financial">
-                          {(p * 100).toFixed(0)}%
+                          {formatTierPercent(p)}
                         </Badge>
                       ))}
                     </div>

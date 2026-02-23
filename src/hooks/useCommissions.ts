@@ -7,8 +7,8 @@ export interface CommissionSubmission {
   id: string;
   submitted_by: string;
   submission_type: "employee" | "subcontractor";
-  // Governed states: approved, revision_required, denied (plus pending_review for in-flight)
-  status: "pending_review" | "revision_required" | "approved" | "denied" | "paid";
+  // Governed states: approved, rejected, denied (plus pending_review for in-flight) — renamed from revision_required
+  status: "pending_review" | "rejected" | "approved" | "denied" | "paid";
   approval_stage: "pending_manager" | "pending_accounting" | "pending_admin" | "completed" | null;
   
   // Job Information
@@ -120,18 +120,19 @@ export const COMMISSION_TIERS: Record<string, number> = {
 };
 
 export function useCommissionSubmissions() {
-  const { user, role, isAdmin, isManager } = useAuth();
+  const { user, role, isAdmin, isManager, userDepartment } = useAuth();
 
   return useQuery({
-    queryKey: ["commission-submissions", user?.id, role],
+    queryKey: ["commission-submissions", user?.id, role, userDepartment],
     queryFn: async () => {
       let query = supabase
         .from("commission_submissions")
         .select("*")
         .order("created_at", { ascending: false });
 
-      // Data isolation: sales reps & employees only see their own submissions
-      if (!isAdmin && !isManager) {
+      // User-level data isolation: only admin, manager, or Accounting department see all submissions
+      const canSeeAll = isAdmin || isManager || userDepartment === "Accounting";
+      if (!canSeeAll) {
         query = query.eq("submitted_by", user!.id);
       }
 
@@ -156,7 +157,7 @@ export function useCommissionSubmission(id: string) {
         .maybeSingle();
 
       if (error) throw error;
-      // Ownership check: non-admin/non-manager can only view their own
+      // User-level data isolation: non-admin/non-manager must never see another user's commission
       if (data && !isAdmin && !isManager && data.submitted_by !== user!.id) {
         return null;
       }
@@ -290,7 +291,7 @@ export function useUpdateCommissionStatus() {
         updateData.approval_stage = approval_stage;
       }
       
-      // Handle manager approval -> move to accounting stage
+      // Handle Compliance Review approval (Phase 2) -> move to accounting stage; managers no longer in chain
       if (approval_stage === "pending_accounting") {
         updateData.manager_approved_at = new Date().toISOString();
         updateData.manager_approved_by = user.id;
@@ -413,7 +414,7 @@ export function useUpdateCommissionStatus() {
       
       if (rejection_reason) {
         updateData.rejection_reason = rejection_reason;
-        // Reset approval stage when requesting revision
+        // Reset approval stage when rejecting (sending back to rep)
         // Manager submissions restart at pending_admin, regular at pending_manager
         const { data: submissionCheck } = await supabase
           .from("commission_submissions")
@@ -437,7 +438,7 @@ export function useUpdateCommissionStatus() {
       
       // Log the status change
       const logNotes = approval_stage === "pending_accounting" 
-        ? "Manager approved - sent to accounting"
+        ? "Compliance approved - sent to accounting"
         : approval_stage === "completed" && status === "approved"
         ? "🎉 Approved - ready for payment"
         : notes || rejection_reason || `Status changed to ${status}`;
@@ -456,7 +457,7 @@ export function useUpdateCommissionStatus() {
           approval_stage === "pending_accounting" ? "manager_approved" :
           (approval_stage === "completed" && status === "approved") ? "approved" :
           status === "paid" ? "paid" :
-          status === "revision_required" ? "revision_required" : 
+          status === "rejected" ? "rejected" : 
           status === "denied" ? "denied" :
           "status_change";
 
@@ -507,10 +508,10 @@ export function useUpdateCommissionStatus() {
       }
 
       const message =
-        variables.approval_stage === "pending_accounting" ? "Approved by manager - sent to accounting" :
+        variables.approval_stage === "pending_accounting" ? "Compliance approved - sent to accounting" :
         (variables.approval_stage === "completed" && variables.status === "approved") ? "🎉 Commission Approved!" :
         variables.status === "paid" ? "Marked as paid" :
-        variables.status === "revision_required" ? "Revision requested" :
+        variables.status === "rejected" ? "Rejected — submitter notified" :
         variables.status === "denied" ? "Commission denied" :
         "Commission status updated";
       
@@ -654,7 +655,7 @@ export function useUpdateCommission() {
       
       if (fetchError) throw fetchError;
       if (current.submitted_by !== user.id) throw new Error("You can only edit your own submissions");
-      if (current.status !== "revision_required" && current.status !== "denied") throw new Error("You can only edit submissions that require revision or have been denied");
+      if (current.status !== "rejected" && current.status !== "denied") throw new Error("You can only edit submissions that have been rejected or denied");
       
       // Update the submission and set status back to pending_review
       // Manager submissions go back to pending_admin (Sheldon/Manny), regular ones to pending_manager
@@ -662,7 +663,7 @@ export function useUpdateCommission() {
         ...data,
         status: "pending_review",
         approval_stage: current.is_manager_submission ? "pending_admin" : "pending_manager",
-        rejection_reason: null, // Clear rejection reason on resubmit
+        rejection_reason: null, // Clear rejection reason on resubmit (rejected = sent back to rep)
       };
       
       const { data: result, error } = await supabase
@@ -681,7 +682,7 @@ export function useUpdateCommission() {
         previous_status: previousStatus,
         new_status: "pending_review",
         changed_by: user.id,
-        notes: `Commission resubmitted — previously ${previousStatus === 'denied' ? 'denied' : 'revision required'}`,
+        notes: `Commission resubmitted — previously ${previousStatus === 'denied' ? 'denied' : 'rejected'}`,
       });
       
       // Send notification
@@ -717,6 +718,7 @@ export function useUpdateCommission() {
   });
 }
 
+// Admin-only: delete commission record. Non-admin users cannot delete.
 export function useDeleteCommission() {
   const queryClient = useQueryClient();
   const { user, isAdmin } = useAuth();
@@ -744,6 +746,80 @@ export function useDeleteCommission() {
     },
     onError: (error: Error) => {
       toast.error("Failed to delete commission: " + error.message);
+    },
+  });
+}
+
+// Admin-only: revert a commission to a previous approval phase. Non-admin users cannot revert; Mark Paid is one-time for them.
+export function useRevertCommission() {
+  const queryClient = useQueryClient();
+  const { user, isAdmin } = useAuth();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      if (!user || !isAdmin) throw new Error("Only admins can revert a commission to a previous phase");
+
+      const { data: current, error: fetchError } = await supabase
+        .from("commission_submissions")
+        .select("status, approval_stage")
+        .eq("id", id)
+        .single();
+
+      if (fetchError || !current) throw new Error("Commission not found");
+
+      let updateData: Record<string, unknown> = {};
+
+      if (current.status === "paid") {
+        updateData = {
+          status: "approved",
+          approval_stage: "completed",
+          paid_at: null,
+          paid_by: null,
+        };
+      } else if (current.status === "approved" && current.approval_stage === "completed") {
+        updateData = {
+          status: "pending_review",
+          approval_stage: "pending_accounting",
+          approved_at: null,
+          approved_by: null,
+          commission_approved_at: null,
+          commission_approved_by: null,
+        };
+      } else if (current.status === "pending_review" && current.approval_stage === "pending_accounting") {
+        updateData = {
+          approval_stage: "pending_manager",
+          manager_approved_at: null,
+          manager_approved_by: null,
+        };
+      } else {
+        throw new Error("This commission cannot be reverted further");
+      }
+
+      const { error: updateError } = await supabase
+        .from("commission_submissions")
+        .update(updateData)
+        .eq("id", id);
+
+      if (updateError) throw updateError;
+
+      await supabase.from("commission_status_log").insert({
+        commission_id: id,
+        previous_status: current.status,
+        new_status: (updateData.status as string) ?? current.status,
+        changed_by: user.id,
+        notes: `Admin reverted to previous phase. Was: ${current.status} / ${current.approval_stage}.`,
+      });
+    },
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries({ queryKey: ["commission-submissions"] });
+      queryClient.invalidateQueries({ queryKey: ["commission-submission", id] });
+      queryClient.invalidateQueries({ queryKey: ["commission-status-log", id] });
+      queryClient.invalidateQueries({ queryKey: ["pending-review"] });
+      queryClient.invalidateQueries({ queryKey: ["accounting-commissions"] });
+      toast.success("Commission reverted to previous phase");
+    },
+    onError: (error: Error) => {
+      toast.error("Failed to revert commission: " + error.message);
     },
   });
 }

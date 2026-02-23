@@ -11,7 +11,7 @@ const corsHeaders = {
 };
 
 interface CommissionNotification {
-  notification_type: "submitted" | "manager_approved" | "accounting_approved" | "paid" | "revision_required" | "denied" | "status_change";
+  notification_type: "submitted" | "manager_approved" | "accounting_approved" | "paid" | "rejected" | "denied" | "status_change";
   commission_id: string;
   job_name: string;
   job_address: string;
@@ -314,25 +314,25 @@ const handler = async (req: Request): Promise<Response> => {
         `;
         break;
 
-      case "revision_required":
-        subject = `⚠️ Commission Needs Revision: ${payload.job_name}`;
-        heading = "Commission Revision Required";
-        introText = `The commission submission for <strong>${payload.job_name}</strong> requires revisions before it can be approved. Please review the notes below and resubmit.`;
+      case "rejected":
+        subject = `⚠️ Commission Rejected: ${payload.job_name}`;
+        heading = "Commission Rejected";
+        introText = `The commission submission for <strong>${payload.job_name}</strong> has been rejected. Please review the notes below and resubmit.`;
         headerColor = "#dc2626";
         recipientEmails = payload.submitter_email ? [payload.submitter_email] : [];
-        additionalPlainText = `Job: ${payload.job_name}${payload.notes ? `\nRevision Reason: ${payload.notes}` : ""}`;
+        additionalPlainText = `Job: ${payload.job_name}${payload.notes ? `\nRejection Reason: ${payload.notes}` : ""}`;
         additionalContent = `
           <tr><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;"><strong>Job:</strong></td><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">${payload.job_name}</td></tr>
           <tr><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;"><strong>Rep:</strong></td><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">${repName}</td></tr>
           <tr><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;"><strong>Commission Amount:</strong></td><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">${formatCurrency(payload.net_commission_owed)}</td></tr>
           ${payload.notes ? `
           <tr><td colspan="2" style="padding: 20px; background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); border: 1px solid #fecaca; border-radius: 12px; margin-top: 15px;">
-            <div style="font-size: 16px; font-weight: bold; color: #991b1b; margin-bottom: 8px;">📝 Revision Notes:</div>
+            <div style="font-size: 16px; font-weight: bold; color: #991b1b; margin-bottom: 8px;">📝 Rejection Reason:</div>
             <div style="font-size: 14px; color: #dc2626; line-height: 1.6;">${payload.notes}</div>
-            <div style="font-size: 13px; color: #9ca3af; margin-top: 12px;">Please make the requested changes and resubmit your commission document.</div>
+            <div style="font-size: 13px; color: #9ca3af; margin-top: 12px;">Please make the requested changes and resubmit your commission.</div>
           </td></tr>` : ""}
         `;
-        buttonText = "View & Revise";
+        buttonText = "View & Resubmit";
         break;
 
       case "denied":
@@ -599,18 +599,18 @@ If you have questions, please contact your supervisor or the accounting team.
         }
       }
 
-      // For revision_required, accounting_approved, paid, denied - notify submitter
-      if (["revision_required", "accounting_approved", "paid", "denied", "manager_approved"].includes(payload.notification_type)) {
+      // For rejected, accounting_approved, paid, denied - notify submitter
+      if (["rejected", "accounting_approved", "paid", "denied", "manager_approved"].includes(payload.notification_type)) {
         if (submittedBy) {
           const notificationTitle = 
-            payload.notification_type === "revision_required" ? `⚠️ Revision Required: ${payload.job_name}` :
+            payload.notification_type === "rejected" ? `⚠️ Commission Rejected: ${payload.job_name}` :
             payload.notification_type === "accounting_approved" ? `🎉 Commission Approved: ${payload.job_name}` :
             payload.notification_type === "paid" ? `💰 Commission Paid: ${payload.job_name}` :
             payload.notification_type === "denied" ? `🚫 Commission Denied: ${payload.job_name}` :
             `✅ Manager Approved: ${payload.job_name}`;
 
           const notificationMessage = 
-            payload.notification_type === "revision_required" ? (payload.notes || "Your commission needs revision before it can be approved.") :
+            payload.notification_type === "rejected" ? (payload.notes || "Your commission has been rejected. Please resubmit with the requested changes.") :
             payload.notification_type === "accounting_approved" ? `Your commission has been approved! Payment scheduled for ${formatPayDateFn(payload.scheduled_pay_date)}.` :
             payload.notification_type === "paid" ? `Your commission of ${formatCurrency(payload.net_commission_owed)} has been paid!` :
             payload.notification_type === "denied" ? (payload.notes || "Your commission has been denied.") :

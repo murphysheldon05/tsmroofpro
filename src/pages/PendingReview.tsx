@@ -74,7 +74,7 @@ const typeLabels = {
 
 const actionLabels = {
   review: "Needs Review",
-  revision: "Needs Revision",
+  revision: "Rejected",
   info_needed: "Info Requested",
 };
 
@@ -161,7 +161,7 @@ export default function PendingReview() {
         await updateCommissionStatus.mutateAsync({
           id: item.id,
           status: "pending_review",
-          approval_stage: "pending_accounting", // Manager approved -> to accounting
+          approval_stage: "pending_accounting", // Compliance approved -> to accounting
           notes: "Approved via Pending Review page",
         });
         refetch();
@@ -235,7 +235,7 @@ export default function PendingReview() {
       if (selectedItem.type === "commission") {
         await updateCommissionStatus.mutateAsync({
           id: selectedItem.id,
-          status: "revision_required",
+          status: "rejected",
           rejection_reason: rejectionReason,
         });
       }
@@ -634,15 +634,15 @@ export default function PendingReview() {
       <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Request Revision</DialogTitle>
+            <DialogTitle>Reject</DialogTitle>
             <DialogDescription>
-              Please provide a reason for returning this {selectedItem?.type} for revision.
-              This will be visible to the submitter.
+              Please provide a reason for rejecting this {selectedItem?.type}.
+              This will be visible to the submitter so they can resubmit.
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
             <Textarea
-              placeholder="Enter reason for revision (required)..."
+              placeholder="Enter reason for rejection (required)..."
               value={rejectionReason}
               onChange={(e) => setRejectionReason(e.target.value)}
               rows={4}
@@ -662,7 +662,7 @@ export default function PendingReview() {
               disabled={!rejectionReason.trim() || isSubmitting}
             >
               {isSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              Request Revision
+              Reject
             </Button>
           </DialogFooter>
         </DialogContent>

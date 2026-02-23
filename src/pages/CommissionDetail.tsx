@@ -22,7 +22,8 @@ import {
   Send,
   Edit,
   Ban,
-  Trash2
+  Trash2,
+  RotateCcw,
 } from "lucide-react";
 import { CommissionWorksheet } from "@/components/commissions/CommissionWorksheet";
 import { CommissionStatusTimeline } from "@/components/commissions/CommissionStatusTimeline";
@@ -34,7 +35,8 @@ import {
   useUpdateCommissionStatus,
   useIsCommissionReviewer,
   useCanProcessPayouts,
-  useDeleteCommission
+  useDeleteCommission,
+  useRevertCommission,
 } from "@/hooks/useCommissions";
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
@@ -53,15 +55,16 @@ import {
 
 const STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; icon: React.ReactNode; color: string }> = {
   pending_review: { label: "Pending Review", variant: "secondary", icon: <Clock className="h-4 w-4" />, color: "text-amber-600" },
-  revision_required: { label: "Revision Required", variant: "destructive", icon: <AlertCircle className="h-4 w-4" />, color: "text-red-600" },
+  rejected: { label: "Rejected", variant: "destructive", icon: <AlertCircle className="h-4 w-4" />, color: "text-red-600" },
   approved: { label: "Approved", variant: "default", icon: <CheckCircle className="h-4 w-4" />, color: "text-green-600" },
   denied: { label: "Denied", variant: "destructive", icon: <XCircle className="h-4 w-4" />, color: "text-red-800" },
   paid: { label: "Paid", variant: "outline", icon: <DollarSign className="h-4 w-4" />, color: "text-blue-600" },
 };
 
+// Approval stage labels: Phase 2 = Compliance Review (Manny Madrid / Sheldon backup), Phase 3 = Accounting (Courtney)
 const APPROVAL_STAGE_CONFIG: Record<string, { label: string; icon: React.ReactNode; color: string }> = {
-  pending_manager: { label: "Awaiting Manager Approval", icon: <UserCheck className="h-4 w-4" />, color: "text-amber-600" },
-  pending_accounting: { label: "Manager Approved - Awaiting Accounting", icon: <Calculator className="h-4 w-4" />, color: "text-blue-600" },
+  pending_manager: { label: "Awaiting Compliance Review", icon: <UserCheck className="h-4 w-4" />, color: "text-amber-600" },
+  pending_accounting: { label: "Compliance Approved — Awaiting Accounting", icon: <Calculator className="h-4 w-4" />, color: "text-blue-600" },
   pending_admin: { label: "Awaiting Admin Review (Sheldon/Manny)", icon: <UserCheck className="h-4 w-4" />, color: "text-purple-600" },
   completed: { label: "Fully Approved", icon: <CheckCircle className="h-4 w-4" />, color: "text-green-600" },
 };
@@ -77,6 +80,7 @@ export default function CommissionDetail() {
   const { data: canPayout } = useCanProcessPayouts();
   const updateStatus = useUpdateCommissionStatus();
   const deleteCommission = useDeleteCommission();
+  const revertCommission = useRevertCommission();
 
   const [rejectionReason, setRejectionReason] = useState("");
   const [reviewerNotes, setReviewerNotes] = useState("");
@@ -89,7 +93,7 @@ export default function CommissionDetail() {
   
   // Check if the current user is the submitter and can edit
   const isSubmitter = submission && user && submission.submitted_by === user.id;
-  const canEdit = isSubmitter && (submission?.status === "revision_required" || submission?.status === "denied");
+  const canEdit = isSubmitter && (submission?.status === "rejected" || submission?.status === "denied");
 
   if (isLoading) {
     return (
@@ -124,19 +128,21 @@ export default function CommissionDetail() {
   const isPendingAdmin = submission.status === "pending_review" && submission.approval_stage === "pending_admin";
   const isApproved = submission.status === "approved";
   const isDenied = submission.status === "denied";
-  
-  // Manager can approve if pending_manager stage
-  const canManagerApprove = isReviewer && isPendingManager;
-  // Accounting can approve if pending_accounting stage
+
+  // Phase 2 (Compliance Review): only Compliance Officer (Manny) or Admin (Sheldon) can action — managers removed from chain
+  const canDoComplianceReview = (role === "admin" || role === "ops_compliance") && isPendingManager;
+  // Accounting can approve if pending_accounting stage (Courtney; reviewers in commission_reviewers)
   const canAccountingApprove = isReviewer && isPendingAccounting;
   // Admin can approve if pending_admin stage (manager submissions only)
   const canAdminApprove = isAdmin && isPendingAdmin;
-  // Can request revision at any pending stage (except denied)
-  const canRequestRevision = isReviewer && (isPendingManager || isPendingAccounting || isPendingAdmin);
-  // Can deny at any pending stage
-  const canDeny = isReviewer && (isPendingManager || isPendingAccounting || isPendingAdmin);
-  // Can mark paid only if approved and has payout permission
+  // Can request revision at any pending stage (except denied): Compliance, Accounting, or Admin
+  const canRequestRevision = (canDoComplianceReview || canAccountingApprove || canAdminApprove);
+  // Can deny at any pending stage: same roles
+  const canDeny = (canDoComplianceReview || canAccountingApprove || canAdminApprove);
+  // Can mark paid only if approved and has payout permission; once marked paid, only admin can revert
   const canMarkPaid = canPayout && isApproved;
+  // Admin-only: revert to previous phase (e.g. paid → approved, or approved → pending accounting)
+  const canRevert = isAdmin && (submission.status === "paid" || (submission.status === "approved" && submission.approval_stage === "completed") || (submission.status === "pending_review" && submission.approval_stage === "pending_accounting"));
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("en-US", {
@@ -145,12 +151,12 @@ export default function CommissionDetail() {
     }).format(value);
   };
 
-  const handleManagerApprove = async () => {
+  const handleComplianceApprove = async () => {
     await updateStatus.mutateAsync({
       id: submission.id,
       status: "pending_review",
-      approval_stage: "pending_accounting", // Move to accounting
-      notes: reviewerNotes || "Manager approved - forwarded to accounting",
+      approval_stage: "pending_accounting", // Compliance Review complete — forward to Accounting (Courtney)
+      notes: reviewerNotes || "Compliance approved - forwarded to accounting",
     });
     setReviewerNotes("");
   };
@@ -181,7 +187,7 @@ export default function CommissionDetail() {
     if (!rejectionReason.trim()) return;
     await updateStatus.mutateAsync({
       id: submission.id,
-      status: "revision_required",
+      status: "rejected",
       rejection_reason: rejectionReason,
     });
     setRejectionReason("");
@@ -307,7 +313,7 @@ export default function CommissionDetail() {
                   <AlertCircle className="h-5 w-5" />
                 </div>
                 <div className="flex-1">
-                  <p className="font-medium text-amber-800 dark:text-amber-400">Revision Requested</p>
+                  <p className="font-medium text-amber-800 dark:text-amber-400">Rejected</p>
                   <p className="text-sm text-amber-700 dark:text-amber-300/80 mt-1">
                     {submission.rejection_reason}
                   </p>
@@ -366,8 +372,8 @@ export default function CommissionDetail() {
                   <p className="font-medium">{approvalStageConfig.label}</p>
                   <p className="text-sm text-muted-foreground">
                     {submission.approval_stage === "pending_manager" 
-                      ? "This commission needs manager approval before going to accounting."
-                      : "Manager has approved. Waiting for accounting to review and approve."
+                      ? "This commission needs compliance review before going to accounting."
+                      : "Compliance has approved. Waiting for accounting to review and approve."
                     }
                   </p>
                 </div>
@@ -385,17 +391,17 @@ export default function CommissionDetail() {
                 Reviewer Actions
               </CardTitle>
               <CardDescription>
-                {isPendingManager && "This commission is awaiting manager approval."}
-                {isPendingAccounting && "Manager approved. Please review and approve for accounting."}
+                {isPendingManager && "This commission is awaiting compliance review (Compliance Officer or Admin)."}
+                {isPendingAccounting && "Compliance approved. Please review and approve for accounting."}
                 {isPendingAdmin && "Awaiting admin approval for this manager submission."}
                 {isApproved && "This commission is approved and ready for payout."}
                 {submission.status === "paid" && "This commission has been paid."}
-                {submission.status === "revision_required" && "This commission requires revision from the submitter."}
+                {submission.status === "rejected" && "This commission has been rejected and requires resubmission from the submitter."}
                 {isDenied && "This commission has been denied. The job number is permanently locked."}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {(canManagerApprove || canAccountingApprove || canAdminApprove) && (
+              {(canDoComplianceReview || canAccountingApprove || canAdminApprove) && (
                 <div className="space-y-2">
                   <Label>Reviewer Notes (Optional)</Label>
                   <Textarea
@@ -407,10 +413,10 @@ export default function CommissionDetail() {
               )}
               
               <div className="flex flex-wrap gap-2">
-                {/* Manager Approve Button */}
-                {canManagerApprove && (
+                {/* Compliance Review Approve (Phase 2): Compliance Officer or Admin only — managers not in chain */}
+                {canDoComplianceReview && (
                   <Button 
-                    onClick={handleManagerApprove}
+                    onClick={handleComplianceApprove}
                     disabled={updateStatus.isPending}
                     className="gap-2 bg-blue-600 hover:bg-blue-700"
                   >
@@ -455,25 +461,25 @@ export default function CommissionDetail() {
                   </Button>
                 )}
                 
-                {/* Request Revision Button */}
+                {/* Reject: send back to submitter (status = rejected) */}
                 {canRequestRevision && (
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <Button variant="outline" className="gap-2 border-amber-500 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-500/10">
                         <AlertCircle className="h-4 w-4" />
-                        Request Revision
+                        Reject
                       </Button>
                     </AlertDialogTrigger>
                     <AlertDialogContent>
                       <AlertDialogHeader>
-                        <AlertDialogTitle>Request Revision</AlertDialogTitle>
+                        <AlertDialogTitle>Reject Commission</AlertDialogTitle>
                         <AlertDialogDescription>
-                          Please provide a reason for requesting revision. This will be sent to the submitter.
+                          Please provide a reason for rejecting. This will be sent to the submitter so they can resubmit.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <div className="py-4 space-y-2">
                         <Textarea
-                          placeholder="Enter reason for revision (required)..."
+                          placeholder="Enter reason for rejection (required)..."
                           value={rejectionReason}
                           onChange={(e) => setRejectionReason(e.target.value)}
                           rows={4}
@@ -490,7 +496,7 @@ export default function CommissionDetail() {
                           disabled={!rejectionReason.trim() || updateStatus.isPending}
                           className="bg-amber-600 hover:bg-amber-700"
                         >
-                          Request Revision
+                          Reject
                         </AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>
@@ -584,7 +590,36 @@ export default function CommissionDetail() {
                   </AlertDialog>
                 )}
 
-                {/* Admin Delete Button */}
+                {/* Admin-only: Revert to previous phase (record locked for non-admins once marked paid) */}
+                {canRevert && (
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="outline" size="sm" className="gap-2" disabled={revertCommission.isPending}>
+                        {revertCommission.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
+                        Revert to Previous Phase
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Revert Commission</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Move this commission back one approval phase. Only admins can revert. This will unlock the record for editing or re-approval.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => revertCommission.mutate(submission.id, { onSuccess: () => refetch(); })}
+                          disabled={revertCommission.isPending}
+                        >
+                          Revert
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                )}
+
+                {/* Admin-only: Delete commission record. Non-admins cannot delete. */}
                 {isAdmin && (
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
@@ -623,7 +658,7 @@ export default function CommissionDetail() {
               {/* Show rejection reason if exists */}
               {submission.rejection_reason && (
                 <div className="p-3 bg-destructive/10 rounded-lg border border-destructive/20">
-                  <p className="text-sm font-medium text-destructive">Revision Required:</p>
+                  <p className="text-sm font-medium text-destructive">Rejected:</p>
                   <p className="text-sm text-destructive/80">{submission.rejection_reason}</p>
                 </div>
               )}

@@ -4,12 +4,12 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
 // Governed Commission Status - ONLY these 3 states allowed
-export type CommissionStatus = "approved" | "revision_required" | "denied";
+export type CommissionStatus = "approved" | "rejected" | "denied";
 
-// Approval stages for workflow routing
+// Approval stages for workflow routing (managers removed from chain: Rep → Compliance → Accounting)
 export type ApprovalStage = 
-  | "pending_manager"       // Rep submission awaiting manager
-  | "pending_accounting"    // Manager approved, awaiting accounting
+  | "pending_manager"       // Rep submission awaiting Compliance Review (Manny/Sheldon)
+  | "pending_accounting"    // Compliance approved, awaiting Accounting (Courtney)
   | "pending_admin"         // Manager submission awaiting admin (Sheldon)
   | "completed";            // Final approval reached
 
@@ -245,7 +245,7 @@ export function useRequestRevision() {
       previousAmount?: number;
     }) => {
       if (!user) throw new Error("Not authenticated");
-      if (!reason.trim()) throw new Error("Revision reason is required");
+      if (!reason.trim()) throw new Error("Rejection reason is required");
       
       // Get current revision count and status
       const { data: current } = await supabase
@@ -260,7 +260,7 @@ export function useRequestRevision() {
       const { error: updateError } = await supabase
         .from("commission_submissions")
         .update({
-          status: "revision_required",
+          status: "rejected",
           approval_stage: "pending_manager",
           rejection_reason: reason,
           revision_count: newRevisionCount,
@@ -291,9 +291,9 @@ export function useRequestRevision() {
       await supabase.from("commission_status_log").insert({
         commission_id: commissionId,
         previous_status: current?.status || "pending_review",
-        new_status: "revision_required",
+        new_status: "rejected",
         changed_by: user.id,
-        notes: `Revision #${newRevisionCount} requested: ${reason}`,
+        notes: `Rejected #${newRevisionCount}: ${reason}`,
       });
       
       // Send notification
@@ -312,7 +312,7 @@ export function useRequestRevision() {
 
         await supabase.functions.invoke("send-commission-notification", {
           body: {
-            notification_type: "revision_required",
+            notification_type: "rejected",
             document_type: "commission_submission",
             commission_id: commissionId,
             job_name: commission?.job_name,
@@ -325,7 +325,7 @@ export function useRequestRevision() {
             submitter_email: submitterProfile?.email,
             submitter_name: submitterProfile?.full_name,
             notes: reason,
-            status: "revision_required",
+            status: "rejected",
           },
         });
       } catch (notifyError) {
@@ -339,8 +339,8 @@ export function useRequestRevision() {
       queryClient.invalidateQueries({ queryKey: ["commission-submission", variables.commissionId] });
       queryClient.invalidateQueries({ queryKey: ["commission-revision-log", variables.commissionId] });
       queryClient.invalidateQueries({ queryKey: ["pending-review"] });
-      toast.warning("Revision Requested", {
-        description: "The submitter has been notified to revise their commission.",
+      toast.warning("Commission Rejected", {
+        description: "The submitter has been notified to resubmit.",
       });
     },
     onError: (error: Error) => {
@@ -392,7 +392,7 @@ export function useApproveCommission() {
       
       // Determine next stage based on current stage and submission type
       if (currentStage === "pending_manager") {
-        // Manager approval - move to accounting
+        // Compliance Review approval (Compliance Officer or Admin) — move to Accounting; managers do not action this phase
         updateData.approval_stage = "pending_accounting";
         updateData.manager_approved_at = new Date().toISOString();
         updateData.manager_approved_by = user.id;
@@ -430,7 +430,7 @@ export function useApproveCommission() {
       
       // Log status change
       const logMessage = 
-        currentStage === "pending_manager" ? "Manager approved - forwarded to accounting" :
+        currentStage === "pending_manager" ? "Compliance approved - forwarded to accounting" :
         currentStage === "pending_accounting" && isManagerSubmission ? "Accounting approved - awaiting admin final approval" :
         currentStage === "pending_accounting" ? "🎉 APPROVED! Commission ready for payout" :
         currentStage === "pending_admin" ? "🎉 APPROVED by Admin! Manager commission ready for payout" :
@@ -476,7 +476,7 @@ export function useApproveCommission() {
         };
 
         if (currentStage === "pending_manager") {
-          // Manager approved — notify accounting
+          // Compliance approved — notify accounting (manager_approved type kept for email template compatibility)
           notifPayload.notification_type = "manager_approved";
         } else if (updateData.status === "approved") {
           // Final approval — celebratory email
@@ -501,7 +501,7 @@ export function useApproveCommission() {
       queryClient.invalidateQueries({ queryKey: ["accounting-commissions"] });
 
       const message =
-        variables.currentStage === "pending_manager" ? "Approved by manager - sent to accounting" :
+        variables.currentStage === "pending_manager" ? "Compliance approved - sent to accounting" :
         variables.currentStage === "pending_accounting" && variables.isManagerSubmission ? "Approved by accounting - sent to admin" :
         "🎉 Commission Approved!";
       

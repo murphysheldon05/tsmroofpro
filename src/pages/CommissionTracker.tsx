@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LayoutGrid, List, ClipboardList } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 import { useEnrichedEntries, useCommissionPayRuns, slugifyRep } from "@/hooks/useCommissionEntries";
 import { TrackerSummaryCards } from "@/components/commissions/tracker/TrackerSummaryCards";
 import { RepCard } from "@/components/commissions/tracker/RepCard";
@@ -13,6 +14,9 @@ import { BulkImportDialog } from "@/components/commissions/tracker/BulkImportDia
 
 export default function CommissionTracker() {
   const navigate = useNavigate();
+  const { isAdmin, role } = useAuth();
+  const isManagerView = role === "manager" || role === "sales_manager";
+  const trackerReadOnly = isManagerView && !isAdmin;
   const { data: allEntries, isLoading, reps, payTypes } = useEnrichedEntries();
   const { data: payRuns } = useCommissionPayRuns();
 
@@ -93,11 +97,11 @@ export default function CommissionTracker() {
           </TabsContent>
 
           <TabsContent value="all" className="mt-0">
-            <AllTransactionsTable entries={allEntries} reps={reps} payTypes={payTypes} payRuns={payRuns} />
+            <AllTransactionsTable entries={allEntries} reps={reps} payTypes={payTypes} payRuns={payRuns} readOnly={trackerReadOnly} />
           </TabsContent>
 
           <TabsContent value="pay-runs" className="mt-0">
-            <PayRunsTab />
+            <PayRunsTab readOnly={trackerReadOnly} />
           </TabsContent>
         </Tabs>
       </div>

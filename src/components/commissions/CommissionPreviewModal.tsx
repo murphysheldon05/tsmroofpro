@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Send, ArrowLeft, FileText, DollarSign, Calculator, Percent } from "lucide-react";
-import { formatCurrency } from "@/lib/commissionDocumentCalculations";
+import { formatCurrency, formatTierPercent } from "@/lib/commissionDocumentCalculations";
 
 interface CommissionPreviewModalProps {
   open: boolean;
@@ -110,7 +110,7 @@ export function CommissionPreviewModal({
                   <span className="font-mono font-medium">{formatCurrency(formData.gross_contract_total)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">O&P ({(formData.op_percent * 100).toFixed(0)}%)</span>
+                  <span className="text-muted-foreground">O&P ({formatTierPercent(formData.op_percent)})</span>
                   <span className="font-mono text-destructive">−{formatCurrency(calculated.op_amount)}</span>
                 </div>
                 <div className="flex justify-between font-medium bg-muted/50 p-2 rounded">
@@ -169,7 +169,7 @@ export function CommissionPreviewModal({
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Rep Profit %</span>
-                  <span className="font-mono font-medium">{(formData.rep_profit_percent * 100).toFixed(0)}%</span>
+                  <span className="font-mono font-medium">{formatTierPercent(formData.rep_profit_percent)}</span>
                 </div>
               </div>
             </section>

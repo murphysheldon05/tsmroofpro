@@ -166,12 +166,12 @@ export default function CommissionDocumentDetail() {
     };
     const labels: Record<string, string> = {
       draft: "Draft",
-      submitted: "Pending — Awaiting Manager Review",
+      submitted: "Pending — Awaiting Compliance Review",
       manager_approved: "Manager Approved — Awaiting Accounting",
       accounting_approved: "Approved — Payment Scheduled",
       approved: "Approved",
       rejected: "Denied",
-      revision_required: "Revision Required",
+      revision_required: "Rejected",
       paid: "Paid",
     };
     const colors: Record<string, string> = {
@@ -224,7 +224,7 @@ export default function CommissionDocumentDetail() {
     accounting_approved: 'Accounting Approve Commission',
     approved: 'Approve Commission',
     rejected: 'Deny Commission',
-    revision_required: 'Request Revision',
+    revision_required: 'Reject',
     submitted: 'Send Back to Manager',
     paid: 'Mark as Paid',
   }[approvalAction] || 'Commission Action';
@@ -234,7 +234,7 @@ export default function CommissionDocumentDetail() {
     accounting_approved: 'Approve for Payment',
     approved: 'Approve',
     rejected: 'Deny',
-    revision_required: 'Request Revision',
+    revision_required: 'Reject',
     submitted: 'Send Back',
     paid: 'Confirm Paid',
   }[approvalAction] || 'Confirm';
@@ -283,7 +283,7 @@ export default function CommissionDocumentDetail() {
                 onClick={() => { setApprovalAction('revision_required'); setShowApprovalDialog(true); }}
               >
                 <RotateCcw className="h-4 w-4 mr-2" />
-                Request Revision
+                Reject
               </Button>
               <Button
                 variant="destructive"
@@ -355,7 +355,7 @@ export default function CommissionDocumentDetail() {
             <div className="flex items-start gap-2">
               <RotateCcw className="h-5 w-5 text-amber-600 mt-0.5" />
               <div>
-                <p className="font-medium text-amber-800 dark:text-amber-400">Revision Requested</p>
+                <p className="font-medium text-amber-800 dark:text-amber-400">Rejected</p>
                 <p className="text-sm text-amber-700 dark:text-amber-300/80 mt-1">{document.revision_reason}</p>
               </div>
             </div>

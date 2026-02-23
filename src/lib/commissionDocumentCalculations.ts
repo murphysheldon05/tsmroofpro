@@ -76,9 +76,9 @@ export function generateProfitSplitOptions(
   for (const op of allowedOpPercentages) {
     for (const rep of allowedProfitSplits) {
       const company = 1 - rep;
-      const opLabel = op === 0.125 ? "12.5" : (op * 100).toString();
-      const repLabel = (rep * 100).toFixed(0);
-      const companyLabel = (company * 100).toFixed(0);
+      const opLabel = op === 0.125 ? "12.5" : String(Math.round(op * 100));
+      const repLabel = String(Math.round(rep * 100));
+      const companyLabel = String(Math.round(company * 100));
       options.push({
         label: `${opLabel}/${repLabel}/${companyLabel}`,
         op,
@@ -220,10 +220,18 @@ export function formatCurrency(value: number): string {
 }
 
 /**
- * Format percent for display
+ * Format percent for display (general, 2 decimals)
  */
 export function formatPercent(value: number): string {
   return `${(value * 100).toFixed(2)}%`;
+}
+
+/**
+ * Format tier/commission percentage for display. Rounds to whole number to avoid float noise (e.g. 50.00000001 -> 50%).
+ * Cosmetic only; do not use for calculations.
+ */
+export function formatTierPercent(value: number): string {
+  return `${Math.round(value * 100)}%`;
 }
 
 /**

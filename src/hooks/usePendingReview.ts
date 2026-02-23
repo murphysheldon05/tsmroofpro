@@ -8,7 +8,7 @@ export const SLA_DEFAULTS = {
   approval: 1,      // Approvals due in 1 business day
   request: 2,       // Requests due in 2 business days  
   commission: 2,    // Commissions due in 2 business days
-  revision: 3,      // User revisions due in 3 business days
+  revision: 3,      // User rejected (resubmit) due in 3 business days
 };
 
 export type SlaStatus = "overdue" | "due_today" | "due_tomorrow" | "on_track";
@@ -23,7 +23,7 @@ export interface PendingItem {
   updated_at: string;
   created_at: string;
   submitted_at: string;
-  requires_action: "review" | "revision" | "info_needed";
+  requires_action: "review" | "revision" | "info_needed"; // revision = rejected, needs resubmit
   rejection_reason?: string | null;
   submitted_by?: string;
   // SLA/Aging fields
@@ -98,24 +98,24 @@ function getSlaDays(type: PendingItem["type"], requiresAction: PendingItem["requ
 
 /**
  * Hook that returns role-appropriate pending review items.
- * - Managers/Admins: Items requiring their review/approval
- * - Standard Users: Items requiring THEIR action (revisions, info needed)
+ * - Compliance/Admin: Phase 2 (pending_manager) commission items only for Compliance Officer or Admin — managers removed from chain
+ * - Accounting/Admin: Phase 3 (pending_accounting) for reviewers; Phase 4 (pending_admin) for admin only
+ * - Standard Users: Items requiring THEIR action (rejected, info needed)
  */
 export function usePendingReview() {
-  const { user, isAdmin, isManager } = useAuth();
+  const { user, isAdmin, isManager, role } = useAuth();
   const isReviewer = isAdmin || isManager;
+  const canDoComplianceReview = isAdmin || role === "ops_compliance";
 
   return useQuery({
-    queryKey: ["pending-review", user?.id, isReviewer],
+    queryKey: ["pending-review", user?.id, isReviewer, role, canDoComplianceReview],
     queryFn: async () => {
       if (!user) return { items: [], counts: { commissions: 0, requests: 0, warranties: 0, total: 0 } };
 
       const items: PendingItem[] = [];
 
-      if (isReviewer) {
-        // MANAGERS/ADMINS: Show items needing their review
-        
-        // Pending commission submissions needing review
+      if (isReviewer || canDoComplianceReview) {
+        // Only show commission items this user can action: Phase 2 = Compliance/Admin only; Phase 3 = reviewers; Phase 4 = Admin only
         const { data: pendingCommissions } = await supabase
           .from("commission_submissions")
           .select("id, job_name, job_address, status, approval_stage, updated_at, created_at, submitted_by")
@@ -123,7 +123,12 @@ export function usePendingReview() {
           .order("created_at", { ascending: true })
           .limit(20);
 
-        pendingCommissions?.forEach((c) => {
+        const canAction = (c: { approval_stage: string | null }) =>
+          (c.approval_stage === "pending_manager" && canDoComplianceReview) ||
+          (c.approval_stage === "pending_accounting" && isReviewer) ||
+          (c.approval_stage === "pending_admin" && isAdmin);
+
+        pendingCommissions?.filter(canAction).forEach((c) => {
           const submittedAt = new Date(c.created_at);
           const slaDays = getSlaDays("commission", "review");
           const slaDueAt = calculateSlaDueDate(submittedAt, slaDays);
@@ -217,7 +222,7 @@ export function usePendingReview() {
           .from("commission_submissions")
           .select("id, job_name, job_address, status, rejection_reason, updated_at, created_at")
           .eq("submitted_by", user.id)
-          .eq("status", "revision_required")
+          .eq("status", "rejected")
           .order("updated_at", { ascending: true });
 
         revisionCommissions?.forEach((c) => {

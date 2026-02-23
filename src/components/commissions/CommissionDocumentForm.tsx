@@ -20,6 +20,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   calculateAllFields,
   formatCurrency,
+  formatTierPercent,
   validateCommissionDocument,
   PROFIT_SPLIT_OPTIONS,
   OP_PERCENT_OPTIONS,
@@ -698,7 +699,7 @@ export function CommissionDocumentForm({ document: existingDoc, readOnly = false
                   </Select>
                 </EnhancedFormRow>
                 <EnhancedFormRow label="Rep Profit %" variant="calculated">
-                  <Input value={`${(formData.rep_profit_percent * 100).toFixed(0)}%`} disabled className={calculatedInputClasses} />
+                  <Input value={formatTierPercent(formData.rep_profit_percent)} disabled className={calculatedInputClasses} />
                 </EnhancedFormRow>
               </div>
             </CollapsibleContent>

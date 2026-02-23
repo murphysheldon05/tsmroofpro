@@ -97,8 +97,8 @@ const MASTER_SOPS = [
       },
       {
         number: 3,
-        title: "Sales Manager Review",
-        owner: "Sales Manager",
+        title: "Compliance Review",
+        owner: "Compliance Officer (Manny) / Admin",
         mayDo: [
           "Approve",
           "Reject with reason",
@@ -450,7 +450,7 @@ function CommissionFlowchart() {
         {/* Step 3 */}
         <div className="flex items-start gap-2">
           <div className="px-3 py-2 bg-blue-500/10 border border-blue-500/30 rounded-lg text-xs font-medium">
-            Sales Manager Review
+            Compliance Review
           </div>
         </div>
         <div className="ml-6 grid grid-cols-3 gap-2 border-l-2 border-primary/30 pl-4 py-2">

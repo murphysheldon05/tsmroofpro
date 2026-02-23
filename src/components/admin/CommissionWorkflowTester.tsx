@@ -377,7 +377,7 @@ export function CommissionWorkflowTester() {
                   <SelectItem value="manager_review">
                     <div className="flex items-center gap-2">
                       <Badge variant="outline" className="bg-amber-500/10 text-amber-500">Step 1</Badge>
-                      Manager Review
+                      Compliance Review
                     </div>
                   </SelectItem>
                   <SelectItem value="accounting_review">
@@ -481,7 +481,7 @@ export function CommissionWorkflowTester() {
               <div className="w-12 h-12 rounded-full bg-blue-500/20 flex items-center justify-center">
                 <UserCheck className="w-6 h-6 text-blue-500" />
               </div>
-              <span className="text-sm font-medium">Manager Reviews</span>
+              <span className="text-sm font-medium">Compliance Reviews</span>
               <Badge variant="outline" className="text-xs">Step 2</Badge>
             </div>
             <ArrowRight className="w-5 h-5 text-muted-foreground flex-shrink-0" />

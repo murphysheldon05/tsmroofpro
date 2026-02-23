@@ -14,7 +14,7 @@ interface NotificationItemProps {
 
 const notificationIcons: Record<string, React.ReactNode> = {
   commission_submitted: <FileText className="h-4 w-4 text-blue-500" />,
-  revision_required: <RefreshCw className="h-4 w-4 text-amber-500" />,
+  rejected: <RefreshCw className="h-4 w-4 text-amber-500" />,
   manager_approved: <CheckCircle className="h-4 w-4 text-green-500" />,
   accounting_approved: <CheckCircle className="h-4 w-4 text-emerald-500" />,
   paid: <DollarSign className="h-4 w-4 text-green-600" />,

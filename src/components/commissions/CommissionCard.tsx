@@ -13,8 +13,8 @@ const STATUS_CONFIG: Record<string, { label: string; icon: React.ReactNode; colo
     colorClass: "text-amber-400",
     bgClass: "bg-amber-500/10 border-amber-500/20"
   },
-  revision_required: { 
-    label: "Revision Required", 
+  rejected: { 
+    label: "Rejected", 
     icon: <AlertCircle className="h-3.5 w-3.5" />, 
     colorClass: "text-orange-400",
     bgClass: "bg-orange-500/10 border-orange-500/20"
@@ -110,7 +110,7 @@ export function CommissionCard({ submission }: CommissionCardProps) {
             <Calendar className="h-3.5 w-3.5" />
             {format(new Date(submission.created_at), "MMM d")}
           </span>
-          {submission.status === "revision_required" && (
+          {submission.status === "rejected" && (
             <span
               role="button"
               onClick={(e) => { e.stopPropagation(); navigate(`/commissions/${submission.id}?edit=true`); }}

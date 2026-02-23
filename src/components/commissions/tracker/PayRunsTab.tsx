@@ -14,7 +14,11 @@ import {
   useCommissionEntries, formatUSD, type CommissionPayRun,
 } from "@/hooks/useCommissionEntries";
 
-export function PayRunsTab() {
+interface PayRunsTabProps {
+  readOnly?: boolean;
+}
+
+export function PayRunsTab({ readOnly }: PayRunsTabProps) {
   const { data: payRuns = [] } = useCommissionPayRuns();
   const { data: entries = [] } = useCommissionEntries();
   const createPayRun = useCreatePayRun();
@@ -42,9 +46,11 @@ export function PayRunsTab() {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h3 className="font-semibold text-sm text-muted-foreground">{payRuns.length} pay runs</h3>
-        <Button size="sm" className="gap-1" onClick={() => setShowNewRun(true)}>
-          <Plus className="h-4 w-4" /> New Pay Run
-        </Button>
+        {!readOnly && (
+          <Button size="sm" className="gap-1" onClick={() => setShowNewRun(true)}>
+            <Plus className="h-4 w-4" /> New Pay Run
+          </Button>
+        )}
       </div>
 
       <div className="rounded-xl border border-border overflow-x-auto">
@@ -77,7 +83,7 @@ export function PayRunsTab() {
                     {run.completed_at ? format(parseISO(run.completed_at), "MM/dd/yyyy h:mm a") : "—"}
                   </TableCell>
                   <TableCell className="text-right">
-                    {run.status === "open" && (
+                    {run.status === "open" && !readOnly && (
                       <Button size="sm" variant="outline" className="gap-1 h-7 text-xs" onClick={() => setConfirmComplete(run)}>
                         <CheckCircle2 className="h-3 w-3" /> Mark Complete
                       </Button>

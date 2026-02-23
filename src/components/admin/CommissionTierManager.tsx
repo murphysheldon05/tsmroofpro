@@ -14,6 +14,7 @@ import {
   useDeleteCommissionTier,
   type CommissionTier 
 } from "@/hooks/useCommissionTiers";
+import { formatTierPercent } from "@/lib/commissionDocumentCalculations";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface TierFormData {
@@ -196,7 +197,7 @@ export function CommissionTierManager() {
                       <span className="text-muted-foreground">O&P:</span>{' '}
                       {tier.allowed_op_percentages.map((p) => (
                         <Badge key={p} variant="outline" className="mr-1">
-                          {(p * 100)}%
+                          {formatTierPercent(p)}
                         </Badge>
                       ))}
                     </div>
@@ -204,7 +205,7 @@ export function CommissionTierManager() {
                       <span className="text-muted-foreground">Profit Split:</span>{' '}
                       {tier.allowed_profit_splits.map((p) => (
                         <Badge key={p} variant="secondary" className="mr-1">
-                          {(p * 100)}%
+                          {formatTierPercent(p)}
                         </Badge>
                       ))}
                     </div>

@@ -84,7 +84,7 @@ export function useActionRequired() {
       let commQuery = supabase
         .from("commission_submissions")
         .select("id, job_name, job_address, status, updated_at")
-        .in("status", ["pending_review", "revision_required"])
+        .in("status", ["pending_review", "rejected"])
         .order("updated_at", { ascending: true })
         .limit(5);
 
@@ -172,7 +172,7 @@ export function useQuickStats() {
       let commQuery = supabase
         .from("commission_submissions")
         .select("*", { count: "exact", head: true })
-        .in("status", ["pending_review", "revision_required"]);
+        .in("status", ["pending_review", "rejected"]);
 
       // Sales reps only see their own pending commissions
       if (isScopedUser) {

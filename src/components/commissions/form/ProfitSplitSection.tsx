@@ -2,6 +2,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { CommissionDocumentFormRow as FormRow } from "../CommissionDocumentFormRow";
 import { FormSection } from "./FormSection";
 import { CalculatedField } from "./CalculatedField";
+import { formatTierPercent } from "@/lib/commissionDocumentCalculations";
 
 const inputClasses = "transition-all duration-200 ease-out hover:border-primary/50 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:shadow-md text-base";
 
@@ -47,7 +48,7 @@ export function ProfitSplitSection({
 
       <CalculatedField 
         label="Rep Profit %" 
-        value={`${(repProfitPercent * 100).toFixed(0)}%`}
+        value={formatTierPercent(repProfitPercent)}
       />
     </FormSection>
   );

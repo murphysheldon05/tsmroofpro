@@ -42,6 +42,7 @@ const CommandCenter = lazy(() => import("./pages/CommandCenter"));
 const PendingReview = lazy(() => import("./pages/PendingReview"));
 const OpsCompliance = lazy(() => import("./pages/OpsCompliance"));
 const Accounting = lazy(() => import("./pages/Accounting"));
+const ContactList = lazy(() => import("./pages/ContactList"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 function PageLoader() {
@@ -184,6 +185,9 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+            {/* Training request forms (migrated from Forms & Requests) */}
+            <Route path="/training/requests/it" element={<Navigate to="/requests?type=it_access" replace />} />
+            <Route path="/training/requests/hr" element={<Navigate to="/requests?type=hr" replace />} />
             {/* Redirect /company to /command-center */}
             <Route
               path="/company"
@@ -205,19 +209,21 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+            <Route path="/directory" element={<Navigate to="/vendors/contact-list" replace />} />
+            <Route path="/vendors" element={<Navigate to="/vendors/subcontractors" replace />} />
             <Route
-              path="/directory"
+              path="/vendors/subcontractors"
               element={
                 <ProtectedRoute>
-                  <UserDirectory />
+                  <Directory />
                 </ProtectedRoute>
               }
             />
             <Route
-              path="/vendors"
+              path="/vendors/contact-list"
               element={
                 <ProtectedRoute>
-                  <Directory />
+                  <ContactList />
                 </ProtectedRoute>
               }
             />
@@ -332,7 +338,7 @@ const App = () => (
             <Route
               path="/accounting"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute requireAdmin>
                   <Accounting />
                 </ProtectedRoute>
               }

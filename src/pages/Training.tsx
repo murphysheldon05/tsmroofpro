@@ -1,15 +1,17 @@
-import { useParams, Navigate } from "react-router-dom";
+import { useParams, Navigate, Link } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { SearchBar } from "@/components/SearchBar";
 import { ResourceCard } from "@/components/dashboard/ResourceCard";
 import { useResources } from "@/hooks/useResources";
 import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
-import { UserPlus, GraduationCap, Video } from "lucide-react";
+import { UserPlus, GraduationCap, Video, Send, HelpCircle } from "lucide-react";
 import { VideoCard } from "@/components/training/VideoCard";
 import { NewHireList } from "@/components/training/NewHireList";
 import { GuidedTour } from "@/components/tutorial/GuidedTour";
 import { trainingSteps } from "@/components/tutorial/tutorialSteps";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 const categoryConfig: Record<string, { title: string; description: string; icon: React.ElementType }> = {
   "new-hire": {
@@ -68,6 +70,33 @@ export default function Training() {
           {(isAdmin || isManager) && (
             <NewHireList />
           )}
+
+          {/* HR Request Forms - migrated from Forms & Requests */}
+          <Card className="border-primary/20 bg-card/60">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Send className="h-5 w-5 text-primary" />
+                Request Forms
+              </CardTitle>
+              <CardDescription>
+                Submit HR requests and general HR questions
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-wrap gap-3">
+              <Button variant="outline" className="gap-2" asChild>
+                <Link to="/requests?type=hr&subtype=simple">
+                  <HelpCircle className="h-4 w-4" />
+                  General HR Request
+                </Link>
+              </Button>
+              <Button variant="outline" className="gap-2" asChild>
+                <Link to="/requests?type=hr">
+                  <UserPlus className="h-4 w-4" />
+                  HR Request (New Hire onboarding)
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
 
           {/* Orientation Resources - visible to all */}
           {isLoading ? (
