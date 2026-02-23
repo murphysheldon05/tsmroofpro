@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ClipboardCheck, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
+import { formatDisplayName } from "@/lib/displayName";
 import { formatDistanceToNow } from "date-fns";
 
 const requestTypeLabels: Record<string, string> = {
@@ -43,15 +44,18 @@ export function PendingApprovalsWidget() {
       const submitterIds = [...new Set(requests?.map((r) => r.submitted_by) || [])];
       const { data: profiles } = await supabase
         .from("profiles")
-        .select("id, full_name")
+        .select("id, full_name, email")
         .in("id", submitterIds);
 
-      const profileMap = new Map(profiles?.map((p) => [p.id, p.full_name]) || []);
+      const profileMap = new Map(profiles?.map((p) => [p.id, p]) || []);
 
-      return requests?.map((r) => ({
-        ...r,
-        submitter_name: profileMap.get(r.submitted_by) || "Unknown",
-      }));
+      return requests?.map((r) => {
+        const p = profileMap.get(r.submitted_by);
+        return {
+          ...r,
+          submitter_name: formatDisplayName(p?.full_name, p?.email) || "Unknown",
+        };
+      });
     },
     enabled: userRole === "admin" || userRole === "manager",
   });

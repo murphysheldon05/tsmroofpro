@@ -11,6 +11,7 @@ import { Hammer, Truck, Shield, Clock, MapPin, ChevronRight } from "lucide-react
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { formatDisplayName } from "@/lib/displayName";
 import { cn } from "@/lib/utils";
 
 export function QuickStatsWidget() {
@@ -243,7 +244,7 @@ function ApprovalsModal({ open, onClose }: { open: boolean; onClose: () => void 
       return {
         users: (usersRes.data || []).map(u => {
           const profile = profiles.find(p => p.id === u.entity_id);
-          return { ...u, name: profile?.full_name || "Unknown", email: profile?.email || "" };
+          return { ...u, name: formatDisplayName(profile?.full_name, profile?.email) || "Unknown", email: profile?.email || "" };
         }),
         commissions: commissionsRes.data || [],
       };
@@ -285,7 +286,7 @@ function ApprovalsModal({ open, onClose }: { open: boolean; onClose: () => void 
                     {data.commissions.map(c => (
                       <div key={c.id} className="p-2.5 rounded-lg border border-border/50 bg-card/50">
                         <p className="font-medium text-sm truncate">{c.job_name}</p>
-                        <p className="text-xs text-muted-foreground">{c.sales_rep_name}</p>
+                        <p className="text-xs text-muted-foreground">{formatDisplayName(c.sales_rep_name)}</p>
                       </div>
                     ))}
                   </div>

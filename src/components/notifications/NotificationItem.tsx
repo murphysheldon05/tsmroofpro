@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { UserNotification } from "@/hooks/useNotifications";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface NotificationItemProps {
   notification: UserNotification;
@@ -39,7 +40,7 @@ const notificationIcons: Record<string, React.ReactNode> = {
   default: <AlertCircle className="h-4 w-4 text-muted-foreground" />,
 };
 
-function getNavigationPath(notification: UserNotification): string | null {
+function getNavigationPath(notification: UserNotification, isAdmin: boolean): string | null {
   const { entity_type, entity_id } = notification;
   if (!entity_type) return null;
 
@@ -54,11 +55,11 @@ function getNavigationPath(notification: UserNotification): string | null {
     case 'it_request':
       return '/requests';
     case 'compliance':
-      return '/ops-compliance';
+      return '/admin?tab=ops-compliance';
     case 'warranty':
       return '/warranties';
     case 'training':
-      return '/training/new-hire';
+      return isAdmin ? '/training/new-hire' : '/training/documents';
     case 'playbook':
       return '/playbook-library/master-playbook';
     case 'feed_post':
@@ -72,13 +73,14 @@ function getNavigationPath(notification: UserNotification): string | null {
 
 export function NotificationItem({ notification, onMarkRead }: NotificationItemProps) {
   const navigate = useNavigate();
+  const { isAdmin } = useAuth();
 
   const handleClick = () => {
     if (!notification.is_read) {
       onMarkRead(notification.id);
     }
 
-    const path = getNavigationPath(notification);
+    const path = getNavigationPath(notification, isAdmin ?? false);
     if (path) {
       navigate(path);
     }

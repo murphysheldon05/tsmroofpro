@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/contexts/AuthContext";
+import { formatDisplayName } from "@/lib/displayName";
 import {
   useCurrentHandbook,
   useHandbookPdfUrl,
@@ -245,7 +246,7 @@ export default function EmployeeHandbook() {
                       {report.map((row) => (
                         <TableRow key={row.user_id}>
                           <TableCell className="font-medium">
-                            {row.full_name || "—"}
+                            {formatDisplayName(row.full_name, row.email) || "—"}
                           </TableCell>
                           <TableCell className="text-muted-foreground">
                             {row.email || "—"}

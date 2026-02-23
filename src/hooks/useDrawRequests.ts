@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { formatDisplayName } from "@/lib/displayName";
 import { toast } from "sonner";
 
 // ─── Types ───
@@ -78,11 +79,14 @@ export function useTeamDrawRequests() {
         .in("id", userIds);
       
       const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
-      return ((data || []) as unknown as DrawRequest[]).map(d => ({
-        ...d,
-        user_name: profileMap.get(d.user_id)?.full_name || "Unknown",
-        user_email: profileMap.get(d.user_id)?.email || "",
-      }));
+      return ((data || []) as unknown as DrawRequest[]).map(d => {
+        const p = profileMap.get(d.user_id);
+        return {
+          ...d,
+          user_name: formatDisplayName(p?.full_name, p?.email) || "Unknown",
+          user_email: p?.email || "",
+        };
+      });
     },
     enabled: !!user && (role === "sales_manager" || role === "admin"),
   });
@@ -107,11 +111,14 @@ export function useAllDrawRequests() {
         .in("id", userIds.length ? userIds : ["no-id"]);
       
       const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
-      return ((data || []) as unknown as DrawRequest[]).map(d => ({
-        ...d,
-        user_name: profileMap.get(d.user_id)?.full_name || "Unknown",
-        user_email: profileMap.get(d.user_id)?.email || "",
-      }));
+      return ((data || []) as unknown as DrawRequest[]).map(d => {
+        const p = profileMap.get(d.user_id);
+        return {
+          ...d,
+          user_name: formatDisplayName(p?.full_name, p?.email) || "Unknown",
+          user_email: p?.email || "",
+        };
+      });
     },
     enabled: !!user && isAdmin,
   });

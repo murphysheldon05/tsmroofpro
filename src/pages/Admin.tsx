@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -62,14 +63,22 @@ import { useAdminAuditLog, AUDIT_ACTIONS, OBJECT_TYPES } from "@/hooks/useAdminA
 import { DrawSettingsManager } from "@/components/admin/DrawSettingsManager";
 import { OverrideReportPanel } from "@/components/admin/OverrideReportPanel";
 import { LeaderboardSettingsPanel } from "@/components/admin/LeaderboardSettingsPanel";
+import { formatDisplayName } from "@/lib/displayName";
 import { PlaybookCompletionStatus } from "@/components/admin/PlaybookCompletionStatus";
 import { RoleOnboardingAdmin } from "@/components/admin/RoleOnboardingAdmin";
-import { BookOpen, GraduationCap, ShieldCheck } from "lucide-react";
+import { BookOpen, GraduationCap, ShieldCheck, Shield } from "lucide-react";
 import { GuidedTour } from "@/components/tutorial/GuidedTour";
 import { adminSteps } from "@/components/tutorial/tutorialSteps";
 import { RoleAssignment } from "@/components/admin/RoleAssignment";
+import { PendingActionsSection } from "@/components/admin/PendingActionsSection";
+import OpsCompliance from "@/pages/OpsCompliance";
+
+const ADMIN_TAB_VALUES = ["users", "tiers", "sops", "categories", "tools", "notifications", "routing", "audit", "draws", "overrides", "leaderboard", "playbook-status", "role-onboarding", "roles-departments", "ops-compliance"] as const;
 
 export default function Admin() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get("tab");
+  const activeTab = ADMIN_TAB_VALUES.includes(tabParam as any) ? tabParam : "users";
   const queryClient = useQueryClient();
   const { data: departments } = useDepartments();
   const { data: commissionTiers } = useCommissionTiers();
@@ -425,7 +434,7 @@ export default function Admin() {
         </header>
 
         {/* Admin Panel Tabs - Centralized Control Plane */}
-        <Tabs defaultValue="users" className="space-y-6">
+        <Tabs value={activeTab} onValueChange={(v) => setSearchParams(v === "users" ? {} : { tab: v })} className="space-y-6">
           <TabsList className="bg-secondary/50 flex-wrap h-auto gap-1 p-1">
             <TabsTrigger value="users" className="gap-2" data-tutorial="admin-users-tab">
               <Users className="w-4 h-4" />
@@ -483,10 +492,17 @@ export default function Admin() {
               <ShieldCheck className="w-4 h-4" />
               Roles & Depts
             </TabsTrigger>
+            <TabsTrigger value="ops-compliance" className="gap-2">
+              <Shield className="w-4 h-4" />
+              Ops Compliance
+            </TabsTrigger>
           </TabsList>
 
           {/* Users Tab */}
           <TabsContent value="users" className="space-y-6">
+            {/* Pending Actions - Sheldon only (admin with management department) */}
+            <PendingActionsSection />
+
             {/* Pending Invites Section - Users invited but haven't logged in */}
             <div>
               <h2 className="text-lg font-semibold text-foreground mb-4">Pending Invites</h2>
@@ -612,7 +628,7 @@ export default function Admin() {
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2">
                             <p className="font-medium text-foreground">
-                              {user.full_name || "—"}
+                              {formatDisplayName(user.full_name, user.email) || "—"}
                             </p>
                             {isSalesWithoutManager && (
                               <Badge variant="destructive" className="text-xs">No Manager</Badge>
@@ -636,7 +652,7 @@ export default function Admin() {
                           {managerName ? (
                             <Badge variant="outline" className="gap-1">
                               <Users className="w-3 h-3" />
-                              {managerName}
+                              {formatDisplayName(managerName)}
                             </Badge>
                           ) : (
                             <span className="text-muted-foreground text-sm">—</span>
@@ -701,7 +717,7 @@ export default function Admin() {
                                 </DialogTrigger>
                                 <DialogContent className="max-w-md">
                                   <DialogHeader>
-                                    <DialogTitle>Edit Permissions - {user.full_name || user.email}</DialogTitle>
+                                    <DialogTitle>Edit Permissions - {formatDisplayName(user.full_name, user.email) || user.email}</DialogTitle>
                                   </DialogHeader>
                                   <div className="mt-4">
                                     <UserPermissionsEditor
@@ -716,7 +732,7 @@ export default function Admin() {
                             {/* Reset Password */}
                             <ResetPasswordDialog
                               userId={user.id}
-                              userName={user.full_name || ""}
+                              userName={formatDisplayName(user.full_name, user.email) || ""}
                               userEmail={user.email || ""}
                             />
                             {/* Edit User - Full configuration */}
@@ -796,7 +812,7 @@ export default function Admin() {
                                         <SelectItem value="none">No manager assigned</SelectItem>
                                         {managers?.filter((m) => m.id !== user.id).map((manager) => (
                                           <SelectItem key={manager.id} value={manager.id}>
-                                            {manager.full_name || manager.email}
+                                            {formatDisplayName(manager.full_name, manager.email) || manager.email}
                                           </SelectItem>
                                         ))}
                                       </SelectContent>
@@ -835,7 +851,7 @@ export default function Admin() {
                               variant="ghost"
                               size="icon"
                               className="h-8 w-8 text-destructive hover:text-destructive"
-                              onClick={() => handleDeleteUser(user.id, user.full_name || user.email || "this user")}
+                              onClick={() => handleDeleteUser(user.id, formatDisplayName(user.full_name, user.email) || user.email || "this user")}
                             >
                               <Trash2 className="w-4 h-4" />
                             </Button>
@@ -921,6 +937,11 @@ export default function Admin() {
           {/* Roles & Departments Tab */}
           <TabsContent value="roles-departments" className="space-y-4">
             <RoleAssignment />
+          </TabsContent>
+
+          {/* Ops Compliance Tab - Admin only (Admin route is already protected) */}
+          <TabsContent value="ops-compliance" className="space-y-4">
+            <OpsCompliance embedded />
           </TabsContent>
         </Tabs>
         <GuidedTour pageName="admin" pageTitle="Admin Panel" steps={adminSteps} />

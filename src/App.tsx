@@ -30,6 +30,7 @@ const Directory = lazy(() => import("./pages/Directory"));
 const Warranties = lazy(() => import("./pages/Warranties"));
 const Commissions = lazy(() => import("./pages/Commissions"));
 const CommissionNew = lazy(() => import("./pages/CommissionNew"));
+const CommissionDrawNew = lazy(() => import("./pages/CommissionDrawNew"));
 const CommissionDetail = lazy(() => import("./pages/CommissionDetail"));
 const CommissionDocuments = lazy(() => import("./pages/CommissionDocuments"));
 const CommissionDocumentNew = lazy(() => import("./pages/CommissionDocumentNew"));
@@ -42,7 +43,6 @@ const DeliverySchedule = lazy(() => import("./pages/DeliverySchedule"));
 const CommandCenter = lazy(() => import("./pages/CommandCenter"));
 const MessageCenter = lazy(() => import("./pages/MessageCenter"));
 const PendingReview = lazy(() => import("./pages/PendingReview"));
-const OpsCompliance = lazy(() => import("./pages/OpsCompliance"));
 const Accounting = lazy(() => import("./pages/Accounting"));
 const ContactList = lazy(() => import("./pages/ContactList"));
 const NotFound = lazy(() => import("./pages/NotFound"));
@@ -228,6 +228,14 @@ const App = () => (
               }
             />
             <Route path="/directory" element={<Navigate to="/vendors/contact-list" replace />} />
+            <Route
+              path="/user-directory"
+              element={
+                <ProtectedRoute>
+                  <UserDirectory />
+                </ProtectedRoute>
+              }
+            />
             <Route path="/vendors" element={<Navigate to="/vendors/subcontractors" replace />} />
             <Route
               path="/vendors/subcontractors"
@@ -282,6 +290,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <CommissionNew />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/commissions/draw/new"
+              element={
+                <ProtectedRoute>
+                  <CommissionDrawNew />
                 </ProtectedRoute>
               }
             />
@@ -345,13 +361,10 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+            {/* Ops Compliance moved to Admin Panel — redirect old route for backwards compatibility */}
             <Route
               path="/ops-compliance"
-              element={
-                <ProtectedRoute>
-                  <OpsCompliance />
-                </ProtectedRoute>
-              }
+              element={<Navigate to="/admin?tab=ops-compliance" replace />}
             />
             <Route
               path="/accounting"

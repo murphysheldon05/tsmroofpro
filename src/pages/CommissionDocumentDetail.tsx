@@ -11,6 +11,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { CommissionDocumentForm } from "@/components/commissions/CommissionDocumentForm";
 import { CommissionDocumentPrintView } from "@/components/commissions/CommissionDocumentPrintView";
 import { formatPayDateShort, getEstimatedPayDate } from "@/lib/commissionPayDateCalculations";
+import { formatDisplayName } from "@/lib/displayName";
 import { CommissionStatusStepper } from "@/components/commissions/CommissionStatusStepper";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -39,9 +40,9 @@ export default function CommissionDocumentDetail() {
     const fetchNames = async () => {
       const ids = [document.manager_approved_by, document.accounting_approved_by, document.paid_by].filter(Boolean);
       if (ids.length === 0) return;
-      const { data } = await supabase.from("profiles").select("id, full_name").in("id", ids);
+      const { data } = await supabase.from("profiles").select("id, full_name, email").in("id", ids);
       if (data) {
-        const map = Object.fromEntries(data.map(p => [p.id, p.full_name]));
+        const map = Object.fromEntries(data.map(p => [p.id, formatDisplayName(p.full_name, p.email)]));
         setManagerName(map[document.manager_approved_by!] || null);
         setAccountingName(map[document.accounting_approved_by!] || null);
         setPaidByName(map[document.paid_by!] || null);

@@ -10,10 +10,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { 
-  Search, Flag, AlertTriangle, Clock, Download, Eye, ShieldAlert 
+  Search, Flag, AlertTriangle, Clock, Download, Eye, ShieldAlert, AlertCircle 
 } from "lucide-react";
 import { format, parseISO, differenceInHours } from "date-fns";
 import { toast } from "sonner";
+import { formatDisplayName } from "@/lib/displayName";
 import { useAuth } from "@/contexts/AuthContext";
 
 export function CommissionOversightTab() {
@@ -101,7 +102,7 @@ export function CommissionOversightTab() {
     const headers = ["Job Name", "Rep", "Status", "Amount", "Created", "Revision Count"];
     const rows = filtered.map(c => [
       c.job_name,
-      c.sales_rep_name || "N/A",
+      formatDisplayName(c.sales_rep_name) || "N/A",
       c.status,
       (c.net_commission_owed || 0).toFixed(2),
       format(parseISO(c.created_at), "yyyy-MM-dd"),
@@ -196,10 +197,11 @@ export function CommissionOversightTab() {
                 filtered.slice(0, 50).map(c => {
                   const isStale = c.status === "pending_review" && differenceInHours(new Date(), new Date(c.created_at)) > 48;
                   const isMultiRevision = (c.revision_count || 0) > 1;
+                  const wasRejected = c.was_rejected === true;
                   return (
                     <TableRow key={c.id}>
                       <TableCell className="font-medium max-w-[200px] truncate">{c.job_name}</TableCell>
-                      <TableCell className="text-sm">{c.sales_rep_name || "N/A"}</TableCell>
+                      <TableCell className="text-sm">{formatDisplayName(c.sales_rep_name) || "N/A"}</TableCell>
                       <TableCell>
                         <Badge variant={c.status === "denied" ? "destructive" : c.status === "paid" ? "outline" : "secondary"} className="text-xs">
                           {c.status?.replace(/_/g, " ")}
@@ -209,7 +211,8 @@ export function CommissionOversightTab() {
                         ${(c.net_commission_owed || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}
                       </TableCell>
                       <TableCell>
-                        <div className="flex gap-1">
+                        <div className="flex gap-1 flex-wrap">
+                          {wasRejected && <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-500/40 dark:bg-amber-950/30 dark:text-amber-400"><AlertCircle className="h-3 w-3 mr-1" />Rejected</Badge>}
                           {isStale && <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-300"><Clock className="h-3 w-3 mr-1" />48h+</Badge>}
                           {isMultiRevision && <Badge variant="outline" className="text-xs bg-red-50 text-red-700 border-red-300"><AlertTriangle className="h-3 w-3 mr-1" />Rev×{c.revision_count}</Badge>}
                         </div>

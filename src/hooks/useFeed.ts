@@ -13,7 +13,7 @@ export interface FeedPost {
   content: string;
   image_url: string | null;
   created_at: string;
-  author?: { id: string; full_name: string | null; avatar_url: string | null };
+  author?: { id: string; full_name: string | null; email: string | null; avatar_url: string | null };
   author_role?: string;
   reaction_counts?: { thumbs_up: number; fire: number };
   user_reaction?: FeedReactionEmoji | null;
@@ -26,7 +26,7 @@ export interface FeedComment {
   author_id: string;
   content: string;
   created_at: string;
-  author?: { id: string; full_name: string | null; avatar_url: string | null };
+  author?: { id: string; full_name: string | null; email: string | null; avatar_url: string | null };
 }
 
 /** Fetch all feed posts (newest first) with author and reaction counts */
@@ -51,7 +51,7 @@ export function useFeedPosts() {
       const authorIds = [...new Set(posts.map((p) => p.author_id))];
       const { data: profiles } = await supabase
         .from("profiles")
-        .select("id, full_name, avatar_url")
+        .select("id, full_name, email, avatar_url")
         .in("id", authorIds);
       const { data: roles } = await supabase
         .from("user_roles")
@@ -114,7 +114,7 @@ export function useFeedComments(postId: string | null) {
       const authorIds = [...new Set(data.map((c) => c.author_id))];
       const { data: profiles } = await supabase
         .from("profiles")
-        .select("id, full_name, avatar_url")
+        .select("id, full_name, email, avatar_url")
         .in("id", authorIds);
       const profileMap = new Map((profiles || []).map((p) => [p.id, p]));
       return data.map((c) => ({

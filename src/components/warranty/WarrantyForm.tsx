@@ -25,6 +25,7 @@ import {
 } from "@/hooks/useWarranties";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { formatDisplayName } from "@/lib/displayName";
 
 interface WarrantyFormProps {
   open: boolean;
@@ -35,6 +36,7 @@ interface WarrantyFormProps {
 interface ProductionMember {
   id: string;
   full_name: string | null;
+  email?: string | null;
 }
 
 export function WarrantyForm({ open, onOpenChange, warranty }: WarrantyFormProps) {
@@ -49,7 +51,7 @@ export function WarrantyForm({ open, onOpenChange, warranty }: WarrantyFormProps
       // GOVERNANCE: employee_status='active' is the canonical access check
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, full_name")
+        .select("id, full_name, email")
         .eq("employee_status", "active");
 
       if (error) throw error;
@@ -322,7 +324,7 @@ export function WarrantyForm({ open, onOpenChange, warranty }: WarrantyFormProps
                       <SelectContent>
                         <SelectItem value="none">Unassigned</SelectItem>
                         {productionMembers.map((m) => (
-                          <SelectItem key={m.id} value={m.id}>{m.full_name || m.id}</SelectItem>
+                          <SelectItem key={m.id} value={m.id}>{formatDisplayName(m.full_name, m.email) || m.id}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -337,7 +339,7 @@ export function WarrantyForm({ open, onOpenChange, warranty }: WarrantyFormProps
                       <SelectContent>
                         <SelectItem value="none">None</SelectItem>
                         {productionMembers.map((m) => (
-                          <SelectItem key={m.id} value={m.id}>{m.full_name || m.id}</SelectItem>
+                          <SelectItem key={m.id} value={m.id}>{formatDisplayName(m.full_name, m.email) || m.id}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>

@@ -18,5 +18,5 @@ CREATE POLICY "Admins can manage app settings" ON public.app_settings FOR ALL US
 );
 
 -- Insert default leaderboard setting
-INSERT INTO public.app_settings (setting_key, setting_value) VALUES ('show_sales_leaderboard', 'true'::jsonb)
+INSERT INTO public.app_settings (setting_key, setting_value) VALUES ('show_sales_leaderboard', 'false'::jsonb)
 ON CONFLICT (setting_key) DO NOTHING;

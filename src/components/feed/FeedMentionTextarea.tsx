@@ -2,11 +2,13 @@ import { useState, useRef, useEffect } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { formatDisplayName } from "@/lib/displayName";
 import { cn } from "@/lib/utils";
 
 export interface MentionOption {
   id: string;
-  full_name: string;
+  full_name: string | null;
+  email: string | null;
 }
 
 interface FeedMentionTextareaProps {
@@ -46,7 +48,7 @@ export function FeedMentionTextarea({
     queryFn: async () => {
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, full_name")
+        .select("id, full_name, email")
         .eq("employee_status", "active")
         .not("full_name", "is", null)
         .order("full_name");
@@ -56,7 +58,10 @@ export function FeedMentionTextarea({
   });
 
   const filtered = profiles
-    .filter((p) => p.full_name?.toLowerCase().includes(mentionQuery.toLowerCase()))
+    .filter((p) => {
+      const display = formatDisplayName(p.full_name, p.email);
+      return display.toLowerCase().includes(mentionQuery.toLowerCase());
+    })
     .slice(0, 8);
 
   useEffect(() => {
@@ -132,7 +137,8 @@ export function FeedMentionTextarea({
     const rawEnd = displayPosToRawPos(cursorDisplay);
     const before = value.slice(0, rawStart);
     const after = value.slice(rawEnd);
-    const token = `@[${profile.full_name}](${profile.id}) `;
+    const displayName = formatDisplayName(profile.full_name, profile.email);
+    const token = `@[${displayName}](${profile.id}) `;
     onChange(before + token + after);
     setShowSuggestions(false);
     setTimeout(() => textareaRef.current?.focus(), 0);
@@ -177,7 +183,7 @@ export function FeedMentionTextarea({
                 i === selectedIndex && "bg-accent"
               )}
             >
-              {profile.full_name}
+              {formatDisplayName(profile.full_name, profile.email)}
             </button>
           ))}
         </div>

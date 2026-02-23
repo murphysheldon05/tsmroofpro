@@ -19,49 +19,57 @@ export function CommissionSummaryWidget() {
   const { data, isLoading } = useQuery({
     queryKey: ["cc-commission-summary", user?.id, role],
     queryFn: async () => {
-      let pendingQuery = supabase
+      // Exclude draws from commission totals — draws tracked separately in draw_requests
+      const commissionBase = supabase
         .from("commission_submissions")
-        .select("net_commission_owed")
-        .eq("status", "pending_review");
+        .select("net_commission_owed, status, approval_stage, paid_at")
+        .or("is_draw.is.null,is_draw.eq.false");
 
-      let approvedQuery = supabase
-        .from("commission_submissions")
-        .select("net_commission_owed")
-        .eq("status", "approved");
+      let allQuery = commissionBase;
+      if (isScopedUser) {
+        allQuery = allQuery.eq("submitted_by", user!.id);
+      }
+
+      const { data: allRows } = await allQuery;
 
       const monthStart = format(startOfMonth(new Date()), "yyyy-MM-dd");
-      let paidQuery = supabase
-        .from("commission_submissions")
-        .select("net_commission_owed, paid_at")
-        .eq("status", "paid")
-        .gte("paid_at", monthStart);
+      const sum = (arr: any[] | null, field: string) =>
+        (arr || []).reduce((s, r) => s + (r[field] || 0), 0);
+
+      // Pending Review = $ submitted awaiting compliance (pending_manager, pending_admin)
+      const pendingReview = (allRows || []).filter(
+        (r) =>
+          r.status === "pending_review" &&
+          (r.approval_stage === "pending_manager" || r.approval_stage === "pending_admin" || r.approval_stage == null)
+      );
+
+      // Ready for Payment = $ compliance approved, awaiting accounting (pending_accounting) + $ accounting approved (status=approved)
+      const readyForPayment = (allRows || []).filter(
+        (r) =>
+          (r.status === "pending_review" && r.approval_stage === "pending_accounting") ||
+          r.status === "approved"
+      );
+
+      // Paid This Month = $ marked paid this month
+      const paidThisMonth = (allRows || []).filter(
+        (r) => r.status === "paid" && r.paid_at && r.paid_at >= monthStart
+      );
 
       // Draw balance from draw_requests table
       let drawQuery = supabase
         .from("draw_requests" as any)
         .select("remaining_balance")
         .in("status", ["approved", "paid"]);
-
-      // Data isolation: sales reps & employees only see their own data
       if (isScopedUser) {
-        pendingQuery = pendingQuery.eq("submitted_by", user!.id);
-        approvedQuery = approvedQuery.eq("submitted_by", user!.id);
-        paidQuery = paidQuery.eq("submitted_by", user!.id);
         drawQuery = drawQuery.eq("user_id", user!.id);
       }
-
-      const [pendingRes, approvedRes, paidRes, drawRes] = await Promise.all([
-        pendingQuery, approvedQuery, paidQuery, drawQuery,
-      ]);
-
-      const sum = (arr: any[] | null, field: string) =>
-        (arr || []).reduce((s, r) => s + (r[field] || 0), 0);
+      const { data: drawData } = await drawQuery;
 
       return {
-        pending: sum(pendingRes.data, "net_commission_owed"),
-        approved: sum(approvedRes.data, "net_commission_owed"),
-        paid: sum(paidRes.data, "net_commission_owed"),
-        draw: sum(drawRes.data, "remaining_balance"),
+        pending: sum(pendingReview, "net_commission_owed"),
+        approved: sum(readyForPayment, "net_commission_owed"),
+        paid: sum(paidThisMonth, "net_commission_owed"),
+        draw: sum(drawData, "remaining_balance"),
       };
     },
     enabled: !!user,
@@ -70,14 +78,14 @@ export function CommissionSummaryWidget() {
 
   const cards = [
     {
-      label: "Pending",
+      label: "Pending Review",
       value: data?.pending || 0,
       icon: Clock,
       color: "text-amber-600 dark:text-amber-400",
       border: "border-t-[4px] border-t-amber-500",
     },
     {
-      label: "Approved",
+      label: "Ready for Payment",
       value: data?.approved || 0,
       icon: CheckCircle,
       color: "text-blue-600 dark:text-blue-400",

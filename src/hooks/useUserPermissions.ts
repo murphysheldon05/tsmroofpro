@@ -35,7 +35,6 @@ export const SIDEBAR_SECTIONS = [
   { key: "vendors/contact-list", label: "Contact List", parent: "vendors" },
   { key: "accounting", label: "Accounting", parent: null },
   { key: "training/requests", label: "IT Request", parent: "training" },
-  { key: "ops-compliance", label: "Ops Compliance", parent: null },
 ] as const;
 
 export type SectionKey = (typeof SIDEBAR_SECTIONS)[number]["key"];

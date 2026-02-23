@@ -161,7 +161,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     const colors = severityColors[payload.severity];
     const appUrl = "https://tsmroofpro.com";
-    const violationUrl = `${appUrl}/ops-compliance`;
+    const violationUrl = `${appUrl}/admin?tab=ops-compliance`;
     const logDate = new Date().toLocaleDateString("en-US", {
       weekday: "long",
       year: "numeric",

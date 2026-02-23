@@ -16,12 +16,15 @@ import { useCommandCenterPreferences } from "@/hooks/useCommandCenterPreferences
 import { LayoutGrid } from "lucide-react";
 import { GuidedTour } from "@/components/tutorial/GuidedTour";
 import { commandCenterSteps } from "@/components/tutorial/tutorialSteps";
+import { formatDisplayName } from "@/lib/displayName";
 
 export default function CommandCenter() {
   const { user } = useAuth();
   const { widgets, widgetOrder, toggleWidget, reorderWidgets, resetToDefaults } = useCommandCenterPreferences();
   const { data: showSalesLeaderboard = false } = useLeaderboardSetting();
-  const firstName = user?.user_metadata?.full_name?.split(" ")[0] || "there";
+  const fullName = user?.user_metadata?.full_name as string | undefined;
+  const displayName = formatDisplayName(fullName, user?.email);
+  const firstName = displayName !== "Unknown" ? displayName.trim().split(/\s+/)[0] : "there";
 
   return (
     <AppLayout>

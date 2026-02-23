@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { formatDisplayName } from "@/lib/displayName";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useWarranties, WARRANTY_STATUSES, PRIORITY_LEVELS, WarrantyRequest } from "@/hooks/useWarranties";
@@ -20,7 +21,7 @@ export function WarrantyDashboard({ onSelectWarranty }: DashboardProps) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, full_name");
+        .select("id, full_name, email");
       if (error) throw error;
       return data;
     },
@@ -29,7 +30,7 @@ export function WarrantyDashboard({ onSelectWarranty }: DashboardProps) {
   const profilesMap = useMemo(() => {
     const map: Record<string, string> = {};
     profiles.forEach((p) => {
-      map[p.id] = p.full_name || "Unknown";
+      map[p.id] = formatDisplayName(p.full_name, p.email) || "Unknown";
     });
     return map;
   }, [profiles]);

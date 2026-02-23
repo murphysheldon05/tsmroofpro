@@ -22,6 +22,7 @@ import {
   ChartTooltipContent 
 } from "@/components/ui/chart";
 import { format, parseISO, getMonth, getQuarter, getYear } from "date-fns";
+import { formatDisplayName } from "@/lib/displayName";
 import { CommissionSubmission } from "@/hooks/useCommissions";
 import { DollarSign, TrendingUp, Users, FileSpreadsheet, Calendar } from "lucide-react";
 
@@ -167,7 +168,7 @@ export function CommissionTracker({ submissions }: CommissionTrackerProps) {
     yearSubmissions.forEach((s) => {
       const repName = s.submission_type === "subcontractor" 
         ? `SUB: ${s.subcontractor_name}` 
-        : s.sales_rep_name || "Unknown";
+        : formatDisplayName(s.sales_rep_name) || "Unknown";
 
       if (!reps[repName]) {
         reps[repName] = { count: 0, revenue: 0, grossCommission: 0, netOwed: 0, paid: 0, pending: 0 };

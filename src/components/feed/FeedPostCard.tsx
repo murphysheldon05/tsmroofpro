@@ -13,6 +13,7 @@ import {
 } from "@/hooks/useFeed";
 import { FeedMentionTextarea, renderFeedMentionText, extractMentionIds } from "@/components/feed/FeedMentionTextarea";
 import { formatDistanceToNow } from "date-fns";
+import { formatDisplayName } from "@/lib/displayName";
 import { Trophy, Megaphone, RefreshCw, ThumbsUp, Flame, MessageCircle, Trash2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -43,7 +44,7 @@ export function FeedPostCard({ post }: { post: FeedPostType }) {
 
   const config = POST_TYPE_CONFIG[post.post_type] ?? POST_TYPE_CONFIG.win;
   const canDelete = isAdmin || post.author_id === user?.id;
-  const authorName = post.author?.full_name ?? "Unknown";
+  const authorName = formatDisplayName(post.author?.full_name, post.author?.email ?? undefined);
   const authorInitials = authorName
     .split(" ")
     .map((n) => n[0])
@@ -183,7 +184,7 @@ export function FeedPostCard({ post }: { post: FeedPostType }) {
                   <Avatar className="h-7 w-7 shrink-0">
                     <AvatarImage src={c.author?.avatar_url ?? undefined} />
                     <AvatarFallback className="text-[10px]">
-                      {(c.author?.full_name ?? "?")
+                      {formatDisplayName(c.author?.full_name, c.author?.email)
                         .split(" ")
                         .map((n) => n[0])
                         .join("")
@@ -193,7 +194,7 @@ export function FeedPostCard({ post }: { post: FeedPostType }) {
                   </Avatar>
                   <div className="flex-1 min-w-0">
                     <p className="text-xs text-muted-foreground">
-                      {c.author?.full_name ?? "Unknown"} · {formatDistanceToNow(new Date(c.created_at), { addSuffix: true })}
+                      {formatDisplayName(c.author?.full_name, c.author?.email)} · {formatDistanceToNow(new Date(c.created_at), { addSuffix: true })}
                     </p>
                     <p className="text-sm">{renderFeedMentionText(c.content)}</p>
                   </div>

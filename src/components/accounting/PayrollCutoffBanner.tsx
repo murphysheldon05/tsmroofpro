@@ -55,8 +55,8 @@ export function PayrollCutoffBanner() {
           </p>
           <p className="text-xs text-muted-foreground">
             {isBeforeDeadline
-              ? `Cutoff: Tuesday 3:00 PM MST · ${timeUntilCutoff} remaining`
-              : "Approvals now route to next Friday's payroll cycle"}
+              ? `Cutoff: Tuesday 3:00 PM MST · ${timeUntilCutoff} remaining · Submit anytime — pay run assigned automatically`
+              : "Submissions now assigned to next Friday's pay run · You can always submit"}
           </p>
         </div>
       </div>

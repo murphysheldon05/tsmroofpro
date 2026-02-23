@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { formatDisplayName } from "@/lib/displayName";
 
 export interface TrainingDocumentCategory {
   id: string;
@@ -64,9 +65,11 @@ export function useTrainingDocuments(categoryId?: string) {
       if (uploaderIds.length > 0) {
         const { data: profiles } = await supabase
           .from("profiles")
-          .select("id, full_name")
+          .select("id, full_name, email")
           .in("id", uploaderIds);
-        profiles?.forEach(p => { profileMap[p.id] = p.full_name || "Unknown"; });
+        profiles?.forEach(p => {
+          profileMap[p.id] = formatDisplayName(p.full_name, p.email) || "Unknown";
+        });
       }
 
       return (data || []).map(d => ({

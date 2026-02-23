@@ -13,6 +13,7 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { formatDisplayName } from "@/lib/displayName";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -290,7 +291,7 @@ export function CommissionWorkflowTester() {
                 <SelectContent>
                   {users?.map((user) => (
                     <SelectItem key={user.id} value={user.id}>
-                      {user.full_name || user.email}
+                      {formatDisplayName(user.full_name, user.email) || user.email}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -321,7 +322,7 @@ export function CommissionWorkflowTester() {
                 <SelectContent>
                   {managers?.map((manager) => (
                     <SelectItem key={manager.id} value={manager.id}>
-                      {manager.full_name || manager.email}
+                      {formatDisplayName(manager.full_name, manager.email) || manager.email}
                     </SelectItem>
                   ))}
                 </SelectContent>

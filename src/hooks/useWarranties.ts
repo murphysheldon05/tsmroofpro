@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { formatDisplayName } from "@/lib/displayName";
 import { toast } from "sonner";
 
 export type RoofType = "shingle" | "tile" | "foam" | "coating" | "other";
@@ -432,10 +433,10 @@ export function useCreateWarrantyNote() {
       // Get commenter name
       const { data: commenterProfile } = await supabase
         .from("profiles")
-        .select("full_name")
+        .select("full_name, email")
         .eq("id", userId || "")
         .single();
-      const commenterName = commenterProfile?.full_name || "Someone";
+      const commenterName = formatDisplayName(commenterProfile?.full_name, commenterProfile?.email) || "Someone";
 
       // Notify @mentioned users (in-app)
       if (mentioned_user_ids.length > 0 && warranty) {

@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { formatDisplayName } from "@/lib/displayName";
 import { startOfWeek, startOfMonth, startOfYear, format } from "date-fns";
 
 export type LeaderboardTab = "sales" | "profit" | "commissions";
@@ -224,7 +225,7 @@ export function useSalesLeaderboard(tab: LeaderboardTab, range: TimeRange, custo
 
       const { data: allReps, error: repsError } = await supabase
         .from("profiles")
-        .select("id, full_name")
+        .select("id, full_name, email")
         .eq("employee_status", "active");
       if (repsError) throw repsError;
 
@@ -235,7 +236,7 @@ export function useSalesLeaderboard(tab: LeaderboardTab, range: TimeRange, custo
       const repTotals = new Map<string, { name: string; total: number }>();
       (allReps || []).forEach(rep => {
         if (salesRepIds.has(rep.id)) {
-          repTotals.set(rep.id, { name: rep.full_name || "Unknown", total: 0 });
+          repTotals.set(rep.id, { name: formatDisplayName(rep.full_name, rep.email) || "Unknown", total: 0 });
         }
       });
 
@@ -247,7 +248,11 @@ export function useSalesLeaderboard(tab: LeaderboardTab, range: TimeRange, custo
         if (existing) {
           existing.total += Number(value);
         } else {
-          repTotals.set(repId, { name: doc.sales_rep || "Unknown", total: Number(value) });
+          const repProfile = allReps?.find(r => r.id === repId);
+          repTotals.set(repId, {
+            name: formatDisplayName(repProfile?.full_name ?? doc.sales_rep, repProfile?.email) || "Unknown",
+            total: Number(value),
+          });
         }
       });
 

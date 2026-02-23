@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useDepartments } from "@/hooks/useDepartments";
 import { useAuth } from "@/contexts/AuthContext";
 import { useMyManager } from "@/hooks/useTeamAssignments";
+import { formatDisplayName } from "@/lib/displayName";
 import { useVendors } from "@/hooks/useVendors";
 import { useProspects } from "@/hooks/useProspects";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -65,7 +66,7 @@ function ManagerCard({ manager }: { manager: { id: string; full_name: string | n
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-xs font-medium text-primary uppercase tracking-wider mb-1">Your Manager</p>
-            <h3 className="font-bold text-lg text-foreground">{manager.full_name || "Unknown"}</h3>
+            <h3 className="font-bold text-lg text-foreground">{formatDisplayName(manager.full_name, manager.email) || "Unknown"}</h3>
             {manager.email && <p className="text-sm text-muted-foreground truncate">{manager.email}</p>}
           </div>
           {manager.email && (
@@ -226,10 +227,10 @@ export default function ContactList() {
                           <CardContent className="p-4">
                             <div className="flex items-start gap-3">
                               <div className="w-11 h-11 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                                {u.avatar_url ? <img src={u.avatar_url} alt={u.full_name || "User"} className="w-11 h-11 rounded-full object-cover" /> : <User className="w-5 h-5 text-primary" />}
+                                {u.avatar_url ? <img src={u.avatar_url} alt={formatDisplayName(u.full_name, u.email) || "User"} className="w-11 h-11 rounded-full object-cover" /> : <User className="w-5 h-5 text-primary" />}
                               </div>
                               <div className="flex-1 min-w-0">
-                                <h3 className="font-semibold text-foreground truncate">{u.full_name || "Unknown"}</h3>
+                                <h3 className="font-semibold text-foreground truncate">{formatDisplayName(u.full_name, u.email) || "Unknown"}</h3>
                                 <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                                   <Badge variant="outline" className={`text-xs ${ROLE_COLORS[u.role] || ""}`}>{ROLE_LABELS[u.role] || u.role}</Badge>
                                   {u.id === user?.id && <Badge variant="outline" className="text-xs">You</Badge>}

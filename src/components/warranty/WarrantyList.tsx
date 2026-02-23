@@ -17,6 +17,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { formatDisplayName } from "@/lib/displayName";
 import { Pencil, Trash2, Eye, Filter, X } from "lucide-react";
 import { format, parseISO, isAfter, isBefore, differenceInDays } from "date-fns";
 import {
@@ -60,7 +61,7 @@ export function WarrantyList({ onEdit, onView }: WarrantyListProps) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, full_name");
+        .select("id, full_name, email");
       if (error) throw error;
       return data;
     },
@@ -69,7 +70,7 @@ export function WarrantyList({ onEdit, onView }: WarrantyListProps) {
   const profilesMap = useMemo(() => {
     const map: Record<string, string> = {};
     profiles.forEach((p) => {
-      map[p.id] = p.full_name || "Unknown";
+      map[p.id] = formatDisplayName(p.full_name, p.email) || "Unknown";
     });
     return map;
   }, [profiles]);
@@ -237,7 +238,7 @@ export function WarrantyList({ onEdit, onView }: WarrantyListProps) {
           <SelectContent>
             <SelectItem value="all">All Members</SelectItem>
             {profiles.map((p) => (
-              <SelectItem key={p.id} value={p.id}>{p.full_name || "Unknown"}</SelectItem>
+              <SelectItem key={p.id} value={p.id}>{formatDisplayName(p.full_name, p.email) || "Unknown"}</SelectItem>
             ))}
           </SelectContent>
         </Select>

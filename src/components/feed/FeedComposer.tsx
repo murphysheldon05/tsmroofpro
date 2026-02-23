@@ -56,12 +56,12 @@ export function FeedComposer() {
     if (imageFile && user) {
       const ext = imageFile.name.split(".").pop() || "jpg";
       const path = `${user.id}/${Date.now()}.${ext}`;
-      const { error: upErr } = await supabase.storage.from("feed-images").upload(path, imageFile, { upsert: true });
+      const { error: upErr } = await supabase.storage.from("message-center-images").upload(path, imageFile, { upsert: true });
       if (upErr) {
         toast.error("Failed to upload image");
         return;
       }
-      const { data: { publicUrl } } = supabase.storage.from("feed-images").getPublicUrl(path);
+      const { data: { publicUrl } } = supabase.storage.from("message-center-images").getPublicUrl(path);
       imageUrl = publicUrl;
     }
 

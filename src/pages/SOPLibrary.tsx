@@ -33,6 +33,7 @@ import {
   Grid,
   ArrowLeft,
   BookOpen,
+  Upload,
 } from "lucide-react";
 
 const categoryIcons: Record<string, React.ElementType> = {
@@ -364,33 +365,44 @@ export default function SOPLibrary() {
                 </Badge>
               </Link>
 
-              <Link
-                to="/playbook-library/employee-handbook"
-                className="p-3 sm:p-4 rounded-lg border text-center transition-all bg-card/50 border-border/50 hover:border-primary/20 hover:bg-primary/5 relative"
-              >
-                <FileText className="w-5 h-5 sm:w-6 sm:h-6 mx-auto mb-1.5 text-muted-foreground" />
-                <p className="text-xs sm:text-sm font-medium">
-                  Employee Handbook
-                </p>
-                <p className="text-[10px] text-muted-foreground mt-0.5">
-                  Required acknowledgment
-                </p>
-                {handbookVersion ? (
-                  <Badge
-                    variant={handbookAcknowledged ? "default" : "secondary"}
-                    className={cn(
-                      "mt-1.5 text-[10px]",
-                      handbookAcknowledged && "bg-primary text-primary-foreground"
-                    )}
+              <div className="relative">
+                <Link
+                  to="/playbook-library/employee-handbook"
+                  className="p-3 sm:p-4 rounded-lg border text-center transition-all bg-card/50 border-border/50 hover:border-primary/20 hover:bg-primary/5 relative block"
+                >
+                  <FileText className="w-5 h-5 sm:w-6 sm:h-6 mx-auto mb-1.5 text-muted-foreground" />
+                  <p className="text-xs sm:text-sm font-medium">
+                    Employee Handbook
+                  </p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">
+                    Required acknowledgment
+                  </p>
+                  {handbookVersion ? (
+                    <Badge
+                      variant={handbookAcknowledged ? "default" : "secondary"}
+                      className={cn(
+                        "mt-1.5 text-[10px]",
+                        handbookAcknowledged && "bg-primary text-primary-foreground"
+                      )}
+                    >
+                      {handbookAcknowledged ? "✓ Acknowledged" : "Action required"}
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="mt-1.5 text-[10px]">
+                      No version yet
+                    </Badge>
+                  )}
+                </Link>
+                {isAdmin && (
+                  <Link
+                    to="/playbook-library/employee-handbook"
+                    className="absolute top-1.5 right-1.5 inline-flex h-7 w-7 items-center justify-center rounded-md border bg-background hover:bg-accent hover:text-accent-foreground"
+                    title="Upload handbook"
                   >
-                    {handbookAcknowledged ? "✓ Acknowledged" : "Action required"}
-                  </Badge>
-                ) : (
-                  <Badge variant="outline" className="mt-1.5 text-[10px]">
-                    No version yet
-                  </Badge>
+                    <Upload className="w-3.5 h-3.5" />
+                  </Link>
                 )}
-              </Link>
+              </div>
               
               {categories?.filter(cat => cat.slug !== 'master-playbook' && cat.slug !== 'employee-handbook').map((cat) => {
                 const CatIcon = categoryIcons[cat.slug] || FileText;

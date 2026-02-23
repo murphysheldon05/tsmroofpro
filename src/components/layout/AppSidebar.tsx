@@ -63,7 +63,8 @@ import { useCurrentUserPermissions, isSectionVisible } from "@/hooks/useUserPerm
 import { useUserCommissionTier } from "@/hooks/useCommissionTiers";
 import { useMasterSOPAcknowledgments } from "@/hooks/useMasterSOPAcknowledgments";
 import { useSidebarOrder } from "@/hooks/useSidebarOrder";
-import { usePendingComplianceCount, useNewWarrantyCount, useMessageCenterBadgeCount } from "@/hooks/useNavBadgeCounts";
+import { usePendingComplianceCount, useNewWarrantyCount, useMessageCenterBadgeCount, useSheldonPendingCount } from "@/hooks/useNavBadgeCounts";
+import { formatDisplayName } from "@/lib/displayName";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
@@ -119,8 +120,8 @@ const navigationItems: NavItem[] = [
     sectionKey: "production",
     requiresPlaybook: true,
     children: [
-      { title: "Build Schedule", href: "/build-schedule", icon: Calendar, sectionKey: "production/build", requiresPlaybook: true },
-      { title: "Delivery Schedule", href: "/delivery-schedule", icon: Truck, sectionKey: "production/delivery", requiresPlaybook: true },
+      { title: "Build Schedule", href: "/build-schedule", icon: Calendar, sectionKey: "production-calendar/build", requiresPlaybook: true },
+      { title: "Delivery Schedule", href: "/delivery-schedule", icon: Truck, sectionKey: "production-calendar/delivery", requiresPlaybook: true },
       { title: "Warranty Tracker", href: "/warranties", icon: Shield, sectionKey: "production/warranties", requiresPlaybook: true },
     ],
   },
@@ -169,14 +170,8 @@ const navigationItems: NavItem[] = [
     children: [
       { title: "Sub-Contractors", href: "/vendors/subcontractors", icon: Wrench, sectionKey: "vendors/subcontractors", requiresPlaybook: true },
       { title: "Contact List", href: "/vendors/contact-list", icon: Users, sectionKey: "vendors/contact-list", requiresPlaybook: true },
+      { title: "Team Directory", href: "/user-directory", icon: Users, sectionKey: "directory", requiresPlaybook: true },
     ],
-  },
-  {
-    title: "Ops Compliance",
-    href: "/ops-compliance",
-    icon: Shield,
-    sectionKey: "ops-compliance",
-    requiresPlaybook: true,
   },
 ];
 
@@ -342,7 +337,9 @@ export function AppSidebar() {
   const { data: pendingComplianceCount = 0 } = usePendingComplianceCount();
   const { data: newWarrantyCount = 0 } = useNewWarrantyCount();
   const { data: messageCenterBadgeCount = 0 } = useMessageCenterBadgeCount();
+  const { data: sheldonPendingCount = 0 } = useSheldonPendingCount();
   const showCommissionsBadge = (isAdmin || role === "ops_compliance") && pendingComplianceCount > 0;
+  const showAdminPanelBadge = sheldonPendingCount > 0;
   const showProductionBadge = isSectionVisible("production", userPermissions, role) && newWarrantyCount > 0;
   const showMessageCenterBadge = messageCenterBadgeCount > 0;
 
@@ -470,8 +467,6 @@ export function AppSidebar() {
           if (isAdmin) return true;
           if (!hasCommissionTier) return false;
         }
-        // Ops Compliance: Admin only — hide from Manager and User
-        if (item.sectionKey === "ops-compliance") return isAdmin;
         // Message Center: visible to all users
         if (item.sectionKey === "message-center") return true;
         return isSectionVisible(item.sectionKey, userPermissions, role);
@@ -579,15 +574,18 @@ export function AppSidebar() {
         >
           <div className="flex items-center gap-2 min-w-0">
             <Avatar className="w-8 h-8 flex-shrink-0 border border-primary/30 ring-1 ring-primary/20">
-              <AvatarImage src={profile?.avatar_url || undefined} alt={profile?.full_name || "Profile"} />
+              <AvatarImage src={profile?.avatar_url || undefined} alt={formatDisplayName(profile?.full_name, user?.email) || "Profile"} />
               <AvatarFallback className="text-xs bg-primary/10 text-primary">
-                {profile?.full_name ? getInitials(profile.full_name) : <User className="w-4 h-4" />}
+                {(() => {
+                  const name = formatDisplayName(profile?.full_name, user?.email);
+                  return name && name !== "Unknown" ? getInitials(name) : <User className="w-4 h-4" />;
+                })()}
               </AvatarFallback>
             </Avatar>
             <div className="flex flex-col items-start min-w-0">
-              {profile?.full_name && (
+              {user && (
                 <span className="text-sm font-medium truncate max-w-[120px] text-foreground/90">
-                  {profile.full_name}
+                  {formatDisplayName(profile?.full_name, user?.email)}
                 </span>
               )}
               <span className="text-xs text-muted-foreground truncate max-w-[120px]">
@@ -624,7 +622,12 @@ export function AppSidebar() {
                 )}
               >
                 <Settings className={cn("w-5 h-5", isActive("/admin") && "nav-icon-glow")} />
-                Admin Panel
+                <span className="truncate flex-1 text-left">Admin Panel</span>
+                {showAdminPanelBadge && (
+                  <span className="flex items-center justify-center min-w-[18px] h-[18px] px-1.5 rounded-full bg-destructive text-destructive-foreground text-[11px] font-semibold">
+                    {sheldonPendingCount > 99 ? "99+" : sheldonPendingCount}
+                  </span>
+                )}
               </button>
             )}
           </div>

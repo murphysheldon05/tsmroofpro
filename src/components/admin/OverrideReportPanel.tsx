@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Download, Edit, Save, TrendingUp, CheckCircle, DollarSign, Users, Calendar } from "lucide-react";
 import { toast } from "sonner";
 import { format, startOfMonth, startOfYear, parseISO } from "date-fns";
+import { formatDisplayName } from "@/lib/displayName";
 
 export function OverrideReportPanel() {
   const { data: trackings = [] } = useAllOverrideTrackings();
@@ -59,7 +60,8 @@ export function OverrideReportPanel() {
 
   const getName = (id: string | null) => {
     if (!id) return "Unknown";
-    return profiles?.find(p => p.id === id)?.full_name || "Unknown";
+    const p = profiles?.find(pr => pr.id === id);
+    return formatDisplayName(p?.full_name, p?.email) || "Unknown";
   };
   const getEmail = (id: string | null) => {
     if (!id) return "";
@@ -125,7 +127,7 @@ export function OverrideReportPanel() {
       rows.push([
         getName(c.override_manager_id),
         getEmail(c.override_manager_id),
-        c.sales_rep_name || getName(c.sales_rep_id),
+        formatDisplayName(c.sales_rep_name) || getName(c.sales_rep_id),
         String(c.override_commission_number || ""),
         c.acculynx_job_id || "",
         c.contract_date ? format(parseISO(c.contract_date), "MM/dd/yyyy") : "",
@@ -315,7 +317,7 @@ export function OverrideReportPanel() {
                   {filteredCommissions.map(c => (
                     <TableRow key={c.id}>
                       <TableCell className="text-sm">{getName(c.override_manager_id)}</TableCell>
-                      <TableCell className="text-sm">{c.sales_rep_name || getName(c.sales_rep_id)}</TableCell>
+                      <TableCell className="text-sm">{formatDisplayName(c.sales_rep_name) || getName(c.sales_rep_id)}</TableCell>
                       <TableCell>
                         {c.override_commission_number ? `#${c.override_commission_number}` : "—"}
                       </TableCell>

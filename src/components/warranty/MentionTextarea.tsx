@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { formatDisplayName } from "@/lib/displayName";
 import { cn } from "@/lib/utils";
 
 interface MentionTextareaProps {
@@ -15,7 +16,8 @@ interface MentionTextareaProps {
 
 interface ProfileOption {
   id: string;
-  full_name: string;
+  full_name: string | null;
+  email?: string | null;
 }
 
 export function MentionTextarea({
@@ -38,7 +40,7 @@ export function MentionTextarea({
     queryFn: async () => {
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, full_name")
+        .select("id, full_name, email")
         .eq("is_approved", true)
         .not("full_name", "is", null)
         .order("full_name");
@@ -47,9 +49,11 @@ export function MentionTextarea({
     },
   });
 
-  const filteredProfiles = profiles.filter(p =>
-    p.full_name?.toLowerCase().includes(mentionQuery.toLowerCase())
-  ).slice(0, 6);
+  const filteredProfiles = profiles.filter(p => {
+    const displayName = formatDisplayName(p.full_name, p.email);
+    return displayName?.toLowerCase().includes(mentionQuery.toLowerCase()) ||
+      p.full_name?.toLowerCase().includes(mentionQuery.toLowerCase());
+  }).slice(0, 6);
 
   // Parse @mentions from text and extract user IDs
   const extractMentionedUserIds = useCallback((text: string): string[] => {
@@ -93,7 +97,8 @@ export function MentionTextarea({
   const insertMention = (profile: ProfileOption) => {
     const before = value.slice(0, mentionStart);
     const after = value.slice(textareaRef.current?.selectionStart || mentionStart);
-    const mention = `@[${profile.full_name}](${profile.id}) `;
+    const displayName = formatDisplayName(profile.full_name, profile.email);
+    const mention = `@[${displayName}](${profile.id}) `;
     const newValue = before + mention + after;
     onChange(newValue);
     setShowSuggestions(false);
@@ -159,7 +164,7 @@ export function MentionTextarea({
                 index === selectedIndex && "bg-accent"
               )}
             >
-              {profile.full_name}
+              {formatDisplayName(profile.full_name, profile.email)}
             </button>
           ))}
         </div>

@@ -10,6 +10,7 @@ import { useQuery } from "@tanstack/react-query";
 import { format, subMonths, startOfMonth, endOfMonth, eachMonthOfInterval, parseISO } from "date-fns";
 import { Loader2, TrendingUp, TrendingDown, DollarSign, Users, FileCheck, Clock, Download, FileSpreadsheet, FileText } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { formatDisplayName } from "@/lib/displayName";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
 
@@ -60,15 +61,18 @@ export function CommissionReportDashboard() {
       // Fetch profiles for all submitters
       const { data: profiles } = await supabase
         .from("profiles")
-        .select("id, full_name")
+        .select("id, full_name, email")
         .in("id", submitterIds);
 
-      const profilesMap = new Map(profiles?.map(p => [p.id, p.full_name]) || []);
+      const profilesMap = new Map(profiles?.map(p => [p.id, { full_name: p.full_name, email: p.email }]) || []);
 
-      return requests.map(r => ({
-        ...r,
-        submitter_name: profilesMap.get(r.submitted_by) || "Unknown",
-      })) as CommissionData[];
+      return requests.map(r => {
+        const p = profilesMap.get(r.submitted_by);
+        return {
+          ...r,
+          submitter_name: formatDisplayName(p?.full_name, p?.email) || "Unknown",
+        };
+      }) as CommissionData[];
     },
   });
 

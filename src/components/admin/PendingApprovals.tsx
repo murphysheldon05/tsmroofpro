@@ -23,6 +23,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Check, X, Loader2, UserPlus, Clock, Building2, Percent, Users } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { formatDisplayName } from "@/lib/displayName";
 import { useCommissionTiers } from "@/hooks/useCommissionTiers";
 
 interface PendingUser {
@@ -350,7 +351,7 @@ export function PendingApprovals() {
                 <td className="px-4 py-3">
                   <div>
                     <p className="font-medium text-foreground">
-                      {pendingUser.full_name || "—"}
+                      {formatDisplayName(pendingUser.full_name, pendingUser.email) || "—"}
                     </p>
                     {pendingUser.company_name && (
                       <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
@@ -408,7 +409,7 @@ export function PendingApprovals() {
                       size="sm"
                       variant="outline"
                       className="gap-1 text-destructive border-destructive/30 hover:bg-destructive/10"
-                      onClick={() => handleReject(pendingUser.id, pendingUser.full_name || pendingUser.email || "")}
+                      onClick={() => handleReject(pendingUser.id, formatDisplayName(pendingUser.full_name, pendingUser.email) || pendingUser.email || "")}
                       disabled={approvingId === pendingUser.id || rejectingId === pendingUser.id}
                     >
                       {rejectingId === pendingUser.id ? (
@@ -432,7 +433,7 @@ export function PendingApprovals() {
           <DialogHeader>
             <DialogTitle>Approve User</DialogTitle>
             <DialogDescription>
-              Configure {approvalDialog.user?.full_name || approvalDialog.user?.email}'s account settings.
+              Configure {formatDisplayName(approvalDialog.user?.full_name, approvalDialog.user?.email) || approvalDialog.user?.email}'s account settings.
             </DialogDescription>
           </DialogHeader>
           
@@ -521,7 +522,7 @@ export function PendingApprovals() {
                 <SelectContent>
                   {managers?.map((manager) => (
                     <SelectItem key={manager.id} value={manager.id}>
-                      {manager.full_name || manager.email}
+                      {formatDisplayName(manager.full_name, manager.email) || manager.email}
                     </SelectItem>
                   ))}
                 </SelectContent>

@@ -13,13 +13,13 @@ const quickLinks = [
     title: "SOPs",
     description: "Access procedures",
     icon: FileText,
-    href: "/sops/sales",
+    href: "/playbook-library/sales",
   },
   {
     title: "Training",
     description: "Learning resources",
     icon: GraduationCap,
-    href: "/training/new-hire",
+    href: "/training/documents",
   },
   {
     title: "Submit Request",
@@ -31,7 +31,7 @@ const quickLinks = [
     title: "Company Info",
     description: "Values & policies",
     icon: Building2,
-    href: "/company",
+    href: "/command-center",
   },
   {
     title: "Tools",
@@ -43,7 +43,7 @@ const quickLinks = [
     title: "Safety",
     description: "Safety & HR",
     icon: Shield,
-    href: "/sops/safety-hr",
+    href: "/playbook-library/safety-hr",
   },
 ];
 

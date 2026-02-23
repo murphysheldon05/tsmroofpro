@@ -2,7 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { Zap, AlertCircle, DollarSign, Wrench, UserPlus } from "lucide-react";
+import { Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface AttentionItem {
@@ -48,20 +48,6 @@ export function NeedsAttentionWidget() {
         href: "/commissions",
       });
 
-      // IT Requests Awaiting Assignment
-      const { count: unassignedIT } = await supabase
-        .from("it_requests")
-        .select("*", { count: "exact", head: true })
-        .is("assigned_to_id", null)
-        .neq("status", "resolved");
-
-      results.push({
-        label: "IT Requests Awaiting Assignment",
-        count: unassignedIT || 0,
-        color: "amber",
-        href: "/requests",
-      });
-
       // Commissions Ready for Payment
       const { count: readyForPayment } = await supabase
         .from("commission_submissions")
@@ -74,21 +60,6 @@ export function NeedsAttentionWidget() {
         color: "blue",
         href: "/commissions",
       });
-
-      // Pending User Approvals (admin only)
-      if (isAdmin) {
-        const { count: pendingApprovals } = await supabase
-          .from("pending_approvals")
-          .select("*", { count: "exact", head: true })
-          .eq("status", "pending");
-
-        results.push({
-          label: "Pending User Approvals",
-          count: pendingApprovals || 0,
-          color: "green",
-          href: "/admin",
-        });
-      }
 
       return results;
     },

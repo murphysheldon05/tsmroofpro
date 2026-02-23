@@ -1,14 +1,17 @@
 /**
- * Pay Date Calculation Utility for Commission Documents
+ * Pay Date Calculation Utility for Commission Submissions
  * 
- * Business Rule:
- * - If approved by Tuesday 3 PM MST → Paid on that Friday
- * - If approved after Tuesday 3 PM MST → Paid on next Friday
+ * Business Rule (Tuesday 3:00 PM MST cutoff):
+ * - Submitted/approved by Tuesday 3:00 PM MST → This week's Friday pay run
+ * - Submitted/approved after Tuesday 3:00 PM MST → Next week's Friday pay run
+ * 
+ * Reps can ALWAYS submit; pay run is assigned automatically based on submission timestamp.
  */
 
 /**
- * Calculate the scheduled Friday pay date based on approval time
- * @param approvalDate - The date/time when the commission was approved
+ * Calculate the scheduled Friday pay date based on a timestamp (submission or approval).
+ * Uses MST timezone for the cutoff calculation.
+ * @param timestamp - The date/time (e.g. submission time or approval time)
  * @returns The calculated Friday pay date
  */
 export function calculateScheduledPayDate(approvalDate: Date): Date {
@@ -86,4 +89,16 @@ export function formatPayDateShort(date: Date | string): string {
  */
 export function getEstimatedPayDate(): Date {
   return calculateScheduledPayDate(new Date());
+}
+
+/**
+ * Get the scheduled pay date as YYYY-MM-DD string for database storage.
+ * Used when assigning pay run at commission submission time.
+ */
+export function getScheduledPayDateString(timestamp: Date): string {
+  const d = calculateScheduledPayDate(timestamp);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }

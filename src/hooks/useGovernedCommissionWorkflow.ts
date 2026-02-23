@@ -143,6 +143,7 @@ export function useDenyCommission() {
           status: "denied",
           approval_stage: "completed",
           rejection_reason: reason,
+          was_rejected: true, // Persist Rejected tag; never cleared
           denied_at: new Date().toISOString(),
           denied_by: user.id,
         })
@@ -215,6 +216,7 @@ export function useDenyCommission() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["commission-submissions"] });
+      queryClient.invalidateQueries({ queryKey: ["cc-commission-summary"] });
       queryClient.invalidateQueries({ queryKey: ["commission-submission", variables.commissionId] });
       queryClient.invalidateQueries({ queryKey: ["denied-job-numbers"] });
       queryClient.invalidateQueries({ queryKey: ["pending-review"] });
@@ -263,6 +265,7 @@ export function useRequestRevision() {
           status: "rejected",
           approval_stage: "pending_manager",
           rejection_reason: reason,
+          was_rejected: true, // Persist Rejected tag; never cleared
           revision_count: newRevisionCount,
         })
         .eq("id", commissionId);
@@ -336,6 +339,7 @@ export function useRequestRevision() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["commission-submissions"] });
+      queryClient.invalidateQueries({ queryKey: ["cc-commission-summary"] });
       queryClient.invalidateQueries({ queryKey: ["commission-submission", variables.commissionId] });
       queryClient.invalidateQueries({ queryKey: ["commission-revision-log", variables.commissionId] });
       queryClient.invalidateQueries({ queryKey: ["pending-review"] });
@@ -496,6 +500,7 @@ export function useApproveCommission() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["commission-submissions"] });
+      queryClient.invalidateQueries({ queryKey: ["cc-commission-summary"] });
       queryClient.invalidateQueries({ queryKey: ["commission-submission", variables.commissionId] });
       queryClient.invalidateQueries({ queryKey: ["pending-review"] });
       queryClient.invalidateQueries({ queryKey: ["accounting-commissions"] });

@@ -65,7 +65,12 @@ const tabs = [
   { value: "acknowledgments", label: "Acknowledgments", icon: CheckCircle },
 ];
 
-export default function OpsCompliance() {
+interface OpsComplianceProps {
+  /** When true, renders content without AppLayout (for embedding in Admin Panel) */
+  embedded?: boolean;
+}
+
+export default function OpsCompliance({ embedded = false }: OpsComplianceProps) {
   const [searchParams, setSearchParams] = useSearchParams();
   const { isAdmin, user } = useAuth();
   
@@ -178,8 +183,11 @@ export default function OpsCompliance() {
   const { data: userPermissions } = useCurrentUserPermissions();
   const hasComplianceAccess = isAdmin || (userPermissions && userPermissions.includes("ops-compliance"));
 
-  // Users without compliance access get a limited reporting view
-  if (!hasComplianceAccess) {
+  // When embedded in Admin, skip permission check (Admin is already admin-only)
+  const showLimitedView = !embedded && !hasComplianceAccess;
+
+  // Users without compliance access get a limited reporting view (standalone only)
+  if (showLimitedView) {
     return (
       <AppLayout>
         <div className="space-y-6">
@@ -208,9 +216,9 @@ export default function OpsCompliance() {
     );
   }
 
-  return (
-    <AppLayout>
-      <div className="space-y-4 sm:space-y-6">
+  const content = (
+    <>
+    <div className="space-y-4 sm:space-y-6">
         {/* Header */}
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -341,6 +349,12 @@ export default function OpsCompliance() {
         onOpenChange={setHoldModalOpen} 
       />
       <GuidedTour pageName="ops-compliance" pageTitle="Ops Compliance" steps={opsComplianceSteps} />
-    </AppLayout>
+    </>
   );
+
+  if (embedded) {
+    return content;
+  }
+
+  return <AppLayout>{content}</AppLayout>;
 }

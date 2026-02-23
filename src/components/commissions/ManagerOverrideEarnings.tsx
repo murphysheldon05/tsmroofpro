@@ -7,6 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { TrendingUp, DollarSign } from "lucide-react";
 import { startOfMonth, startOfYear, format, parseISO } from "date-fns";
+import { formatDisplayName } from "@/lib/displayName";
 
 export function ManagerOverrideEarningsCard() {
   const { user } = useAuth();
@@ -161,7 +162,7 @@ export function ManagerOverridesTab() {
           <TableBody>
             {overrideCommissions.map(c => (
               <TableRow key={c.id}>
-                <TableCell className="font-medium text-sm">{c.sales_rep_name || "—"}</TableCell>
+                <TableCell className="font-medium text-sm">{formatDisplayName(c.sales_rep_name) || "—"}</TableCell>
                 <TableCell className="font-mono text-xs">{c.acculynx_job_id || "—"}</TableCell>
                 <TableCell>
                   {c.override_commission_number ? `#${c.override_commission_number}` : "—"}

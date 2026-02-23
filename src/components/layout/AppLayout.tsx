@@ -1,5 +1,5 @@
 import React, { ReactNode, useMemo, forwardRef } from "react";
-import { useLocation, Link, useNavigate } from "react-router-dom";
+import { useLocation, useSearchParams, Link, useNavigate } from "react-router-dom";
 import { AppSidebar } from "./AppSidebar";
 import { Home, ChevronRight, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -36,6 +36,14 @@ const routeHierarchy: Record<string, BreadcrumbItem[]> = {
     { label: "Commissions", href: "/commissions" },
     { label: "New Submission", href: "/commissions/new" },
   ],
+  "/commissions/draw/new": [
+    { label: "Commissions", href: "/commissions" },
+    { label: "Request a Draw", href: "/commissions/draw/new" },
+  ],
+  "/user-directory": [
+    { label: "Subs & Vendors", href: "/vendors/subcontractors" },
+    { label: "Team Directory", href: "/user-directory" },
+  ],
   "/commission-documents/new": [
     { label: "Commissions", href: "/commissions" },
     { label: "Documents", href: "/commission-documents" },
@@ -47,15 +55,27 @@ const routeHierarchy: Record<string, BreadcrumbItem[]> = {
   "/admin": [{ label: "Admin", href: "/admin" }],
 };
 
+function getAdminBreadcrumbs(searchParams: URLSearchParams): BreadcrumbItem[] {
+  const tab = searchParams.get("tab");
+  if (tab === "ops-compliance") {
+    return [
+      { label: "Admin", href: "/admin" },
+      { label: "Ops Compliance", href: "/admin?tab=ops-compliance" },
+    ];
+  }
+  return [{ label: "Admin", href: "/admin" }];
+}
+
 function getBreadcrumbs(pathname: string): BreadcrumbItem[] {
   if (routeHierarchy[pathname]) {
     return routeHierarchy[pathname];
   }
 
-  if (pathname.startsWith("/commissions/") && pathname !== "/commissions/new") {
+  if (pathname.startsWith("/commissions/") && pathname !== "/commissions/new" && pathname !== "/commissions/draw/new") {
+    const isDraw = pathname.includes("/draw/");
     return [
       { label: "Commissions", href: "/commissions" },
-      { label: "Submission Details", href: pathname },
+      { label: isDraw ? "Draw Details" : "Submission Details", href: pathname },
     ];
   }
 
@@ -102,13 +122,16 @@ interface AppLayoutProps {
 export const AppLayout = forwardRef<HTMLDivElement, AppLayoutProps>(
   ({ children }, ref) => {
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const isHome = location.pathname === "/command-center";
 
-  const breadcrumbs = useMemo(
-    () => getBreadcrumbs(location.pathname),
-    [location.pathname]
-  );
+  const breadcrumbs = useMemo(() => {
+    if (location.pathname === "/admin") {
+      return getAdminBreadcrumbs(searchParams);
+    }
+    return getBreadcrumbs(location.pathname);
+  }, [location.pathname, searchParams]);
 
   const handleBack = () => {
     navigate(-1);

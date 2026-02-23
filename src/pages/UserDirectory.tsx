@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useDepartments } from "@/hooks/useDepartments";
 import { useAuth } from "@/contexts/AuthContext";
 import { useMyManager } from "@/hooks/useTeamAssignments";
+import { formatDisplayName } from "@/lib/displayName";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface UserProfile {
@@ -67,7 +68,7 @@ function ManagerCard({ manager }: { manager: { id: string; full_name: string | n
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-xs font-medium text-primary uppercase tracking-wider mb-1">Your Manager</p>
-            <h3 className="font-bold text-lg text-foreground">{manager.full_name || "Unknown"}</h3>
+            <h3 className="font-bold text-lg text-foreground">{formatDisplayName(manager.full_name, manager.email) || "Unknown"}</h3>
             {manager.email && <p className="text-sm text-muted-foreground truncate">{manager.email}</p>}
           </div>
           <div className="flex gap-2">
@@ -228,13 +229,13 @@ export default function UserDirectory() {
                         <div className="flex items-start gap-3">
                           <div className="w-11 h-11 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
                             {userProfile.avatar_url ? (
-                              <img src={userProfile.avatar_url} alt={userProfile.full_name || "User"} className="w-11 h-11 rounded-full object-cover" />
+                              <img src={userProfile.avatar_url} alt={formatDisplayName(userProfile.full_name, userProfile.email) || "User"} className="w-11 h-11 rounded-full object-cover" />
                             ) : (
                               <User className="w-5 h-5 text-primary" />
                             )}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <h3 className="font-semibold text-foreground truncate">{userProfile.full_name || "Unknown"}</h3>
+                            <h3 className="font-semibold text-foreground truncate">{formatDisplayName(userProfile.full_name, userProfile.email) || "Unknown"}</h3>
                             <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                               <Badge variant="outline" className={`text-xs ${ROLE_COLORS[userProfile.role] || ""}`}>
                                 {ROLE_LABELS[userProfile.role] || userProfile.role}

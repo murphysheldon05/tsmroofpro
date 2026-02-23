@@ -7,6 +7,7 @@ export interface EmployeeHandbookVersion {
   id: string;
   version: string;
   file_path: string;
+  bucket?: string; // 'handbooks' (new) or 'employee-handbook' (legacy)
   uploaded_at: string;
   uploaded_by: string | null;
 }
@@ -34,8 +35,9 @@ export function useHandbookPdfUrl(version: EmployeeHandbookVersion | null) {
     queryKey: ["employee-handbook", "pdf-url", version?.id],
     queryFn: async () => {
       if (!version?.file_path) return null;
+      const bucket = version.bucket ?? "handbooks";
       const { data, error } = await supabase.storage
-        .from("employee-handbook")
+        .from(bucket)
         .createSignedUrl(version.file_path, 3600);
       if (error) throw error;
       return data?.signedUrl ?? null;
@@ -129,11 +131,12 @@ export function useUploadEmployeeHandbook() {
   return useMutation({
     mutationFn: async ({ file, version }: { file: File; version: string }) => {
       if (!user?.id) throw new Error("Not authenticated");
+      if (file.type !== "application/pdf") throw new Error("Only PDF files are allowed");
       const ext = file.name.split(".").pop() || "pdf";
       const filePath = `${Date.now()}_${version.replace(/\s+/g, "-")}.${ext}`;
 
       const { error: uploadError } = await supabase.storage
-        .from("employee-handbook")
+        .from("handbooks")
         .upload(filePath, file, { upsert: false });
       if (uploadError) throw uploadError;
 
@@ -142,6 +145,7 @@ export function useUploadEmployeeHandbook() {
         .insert({
           version,
           file_path: filePath,
+          bucket: "handbooks",
           uploaded_by: user.id,
         });
       if (insertError) throw insertError;

@@ -48,6 +48,7 @@ import { Badge } from "@/components/ui/badge";
 import { formatDistanceToNow, format } from "date-fns";
 import { useRequestTypes, type RequestType } from "@/hooks/useRequestTypes";
 import { NewHireForm } from "@/components/training/NewHireForm";
+import { formatDisplayName } from "@/lib/displayName";
 import { useAdminAuditLog, AUDIT_ACTIONS, OBJECT_TYPES } from "@/hooks/useAdminAuditLog";
 
 // Icon map for dynamic icon rendering
@@ -228,7 +229,7 @@ export default function Requests() {
             type,
             title: title.trim(),
             description: description.trim() || null,
-            submitter_name: profile?.full_name || user.email || "Unknown",
+            submitter_name: formatDisplayName(profile?.full_name, profile?.email || user.email),
             submitter_email: user.email || "",
             has_attachment: !!filePath,
           },
@@ -486,7 +487,7 @@ export default function Requests() {
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Submitted by:</span>
                     <span className="text-foreground">
-                      {selectedRequest.profiles?.full_name || selectedRequest.profiles?.email || "Unknown"}
+                      {formatDisplayName(selectedRequest.profiles?.full_name, selectedRequest.profiles?.email)}
                     </span>
                   </div>
                   <div className="flex justify-between text-sm">
@@ -919,7 +920,7 @@ function RequestsTable({
             <p className="text-sm font-medium text-foreground truncate">{request.title}</p>
             {showSubmitter && (
               <p className="text-xs text-muted-foreground">
-                {request.profiles?.full_name || "Unknown"}
+                {formatDisplayName(request.profiles?.full_name, request.profiles?.email)}
               </p>
             )}
             <p className="text-xs text-muted-foreground">
@@ -953,7 +954,7 @@ function RequestsTable({
                 <td className="p-3 text-sm text-foreground">{request.title}</td>
                 {showSubmitter && (
                   <td className="p-3 text-sm text-muted-foreground">
-                    {request.profiles?.full_name || request.profiles?.email || "Unknown"}
+                    {formatDisplayName(request.profiles?.full_name, request.profiles?.email)}
                   </td>
                 )}
                 <td className="p-3">

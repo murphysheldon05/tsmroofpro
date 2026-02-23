@@ -968,6 +968,8 @@ export type Database = {
           paid_at: string | null
           paid_by: string | null
           payout_batch_id: string | null
+          pay_run_id: string | null
+          scheduled_pay_date: string | null
           rejection_reason: string | null
           rep_role: string | null
           reviewer_notes: string | null
@@ -1023,6 +1025,8 @@ export type Database = {
           paid_at?: string | null
           paid_by?: string | null
           payout_batch_id?: string | null
+          pay_run_id?: string | null
+          scheduled_pay_date?: string | null
           previous_submission_snapshot?: unknown | null
           rejection_reason?: string | null
           rep_role?: string | null
@@ -1078,6 +1082,8 @@ export type Database = {
           paid_at?: string | null
           paid_by?: string | null
           payout_batch_id?: string | null
+          pay_run_id?: string | null
+          scheduled_pay_date?: string | null
           rejection_reason?: string | null
           rep_role?: string | null
           reviewer_notes?: string | null
@@ -1096,6 +1102,13 @@ export type Database = {
           previous_submission_snapshot?: unknown | null
         }
         Relationships: [
+          {
+            foreignKeyName: "commission_submissions_pay_run_id_fkey"
+            columns: ["pay_run_id"]
+            isOneToOne: false
+            referencedRelation: "commission_pay_runs"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "commission_submissions_override_manager_id_fkey"
             columns: ["override_manager_id"]

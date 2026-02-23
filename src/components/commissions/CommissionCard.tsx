@@ -1,9 +1,11 @@
 import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { 
-  Clock, CheckCircle, AlertCircle, XCircle, DollarSign, Users, MapPin, Calendar, Edit, RotateCcw
+  Clock, CheckCircle, AlertCircle, XCircle, DollarSign, Users, MapPin, Calendar, Edit, RotateCcw, CalendarCheck
 } from "lucide-react";
 import { format } from "date-fns";
+import { formatPayDateShort } from "@/lib/commissionPayDateCalculations";
+import { formatDisplayName } from "@/lib/displayName";
 import { cn } from "@/lib/utils";
 
 const STATUS_CONFIG: Record<string, { label: string; icon: React.ReactNode; colorClass: string; bgClass: string }> = {
@@ -53,6 +55,8 @@ interface CommissionCardProps {
     status: string;
     created_at: string;
     was_rejected?: boolean;
+    is_draw?: boolean;
+    scheduled_pay_date?: string | null;
   };
 }
 
@@ -96,6 +100,11 @@ export function CommissionCard({ submission }: CommissionCardProps) {
             {config.icon}
             {config.label}
           </Badge>
+          {submission.is_draw && (
+            <Badge variant="outline" className="gap-1 px-2 py-1 rounded-xl font-medium text-xs border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30">
+              Draw
+            </Badge>
+          )}
           {submission.was_rejected && (
             <Badge variant="outline" className="gap-1 px-2 py-1 rounded-xl font-medium text-xs border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30">
               Rejected
@@ -109,15 +118,21 @@ export function CommissionCard({ submission }: CommissionCardProps) {
           {submission.submission_type === "subcontractor" ? (
             <span className="flex items-center gap-1.5">
               <Users className="h-3.5 w-3.5" />
-              {submission.subcontractor_name}
+              {formatDisplayName(submission.subcontractor_name)}
             </span>
           ) : (
-            <span>{submission.sales_rep_name}</span>
+            <span>{formatDisplayName(submission.sales_rep_name)}</span>
           )}
           <span className="flex items-center gap-1.5">
             <Calendar className="h-3.5 w-3.5" />
             {format(new Date(submission.created_at), "MMM d")}
           </span>
+          {submission.scheduled_pay_date && (
+            <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
+              <CalendarCheck className="h-3.5 w-3.5" />
+              Pay: {formatPayDateShort(submission.scheduled_pay_date)}
+            </span>
+          )}
           {submission.status === "rejected" && (
             <span
               role="button"

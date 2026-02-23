@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { formatDisplayName } from "@/lib/displayName";
 import { toast } from "sonner";
 
 export interface CommissionSubmission {
@@ -63,6 +64,10 @@ export interface CommissionSubmission {
   paid_at: string | null;
   paid_by: string | null;
   payout_batch_id: string | null;
+
+  // Pay run assignment (set at submission based on Tue 3PM MST cutoff)
+  scheduled_pay_date: string | null;
+  pay_run_id: string | null;
   
   // Override tracking
   override_amount: number | null;
@@ -75,6 +80,9 @@ export interface CommissionSubmission {
   // Rejected flow: tag persists to payout; snapshot used for change highlighting on resubmit
   was_rejected: boolean;
   previous_submission_snapshot: Record<string, unknown> | null;
+
+  // Draw request: advance against future commission; flows through same approval chain
+  is_draw?: boolean;
 }
 
 export interface CommissionAttachment {
@@ -149,7 +157,7 @@ export function useCommissionSubmissions() {
 }
 
 export function useCommissionSubmission(id: string) {
-  const { user, role, isAdmin, isManager } = useAuth();
+  const { user, role, isAdmin, isManager, userDepartment } = useAuth();
 
   return useQuery({
     queryKey: ["commission-submission", id],
@@ -161,8 +169,9 @@ export function useCommissionSubmission(id: string) {
         .maybeSingle();
 
       if (error) throw error;
-      // User-level data isolation: non-admin/non-manager must never see another user's commission
-      if (data && !isAdmin && !isManager && data.submitted_by !== user!.id) {
+      // User-level data isolation: admin, manager, or Accounting dept can see all; others only their own
+      const canSeeAll = isAdmin || isManager || userDepartment === "Accounting";
+      if (data && !canSeeAll && data.submitted_by !== user!.id) {
         return null;
       }
       return data as CommissionSubmission | null;
@@ -236,7 +245,7 @@ export function useCreateCommission() {
             contract_amount: data.contract_amount || 0,
             net_commission_owed: data.net_commission_owed || data.commission_requested || 0,
             submitter_email: user.email,
-            submitter_name: profile?.full_name || user.email,
+            submitter_name: formatDisplayName(profile?.full_name, profile?.email || user.email),
           },
         });
       } catch (notifyError) {
@@ -245,9 +254,14 @@ export function useCreateCommission() {
       
       return result as CommissionSubmission;
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["commission-submissions"] });
-      toast.success("Commission submitted successfully");
+      queryClient.invalidateQueries({ queryKey: ["cc-commission-summary"] });
+      toast.success(
+        (result as CommissionSubmission)?.is_draw
+          ? "Draw request submitted. Your manager will review it."
+          : "Commission submitted successfully"
+      );
     },
     onError: (error: Error) => {
       if (error.message.includes("MANAGER_REQUIRED")) {
@@ -281,10 +295,10 @@ export function useUpdateCommissionStatus() {
     }) => {
       if (!user) throw new Error("Not authenticated");
       
-      // Get current submission for status log
+      // Get current submission for status log and pay run
       const { data: current } = await supabase
         .from("commission_submissions")
-        .select("status, approval_stage, submitted_by, job_name, job_address, sales_rep_name, subcontractor_name, submission_type, contract_amount, net_commission_owed")
+        .select("status, approval_stage, submitted_by, job_name, job_address, sales_rep_name, subcontractor_name, submission_type, contract_amount, net_commission_owed, pay_run_id, scheduled_pay_date")
         .eq("id", id)
         .single();
       
@@ -407,6 +421,7 @@ export function useUpdateCommissionStatus() {
                 pay_type_id: commPayType.id,
                 earned_comm: current.net_commission_owed || 0,
                 has_paid: true,
+                pay_run_id: current.pay_run_id || null,
               });
             }
           }
@@ -476,11 +491,8 @@ export function useUpdateCommissionStatus() {
           : { data: null };
 
         let scheduled_pay_date: string | undefined;
-        if (notificationType === "accounting_approved") {
-          try {
-            const { calculateScheduledPayDate } = await import("@/lib/commissionPayDateCalculations");
-            scheduled_pay_date = calculateScheduledPayDate(new Date()).toISOString().split("T")[0];
-          } catch (_) {}
+        if (notificationType === "accounting_approved" && current?.scheduled_pay_date) {
+          scheduled_pay_date = current.scheduled_pay_date;
         }
         await supabase.functions.invoke("send-commission-notification", {
           body: {
@@ -495,7 +507,7 @@ export function useUpdateCommissionStatus() {
             contract_amount: current?.contract_amount,
             net_commission_owed: current?.net_commission_owed,
             submitter_email: submitterProfile?.email,
-            submitter_name: submitterProfile?.full_name,
+            submitter_name: formatDisplayName(submitterProfile?.full_name, submitterProfile?.email),
             status,
             previous_status: current?.status,
             notes: notes || rejection_reason,
@@ -511,9 +523,11 @@ export function useUpdateCommissionStatus() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["commission-submissions"] });
+      queryClient.invalidateQueries({ queryKey: ["cc-commission-summary"] });
       queryClient.invalidateQueries({ queryKey: ["commission-submission", variables.id] });
       queryClient.invalidateQueries({ queryKey: ["commission-status-log", variables.id] });
       queryClient.invalidateQueries({ queryKey: ["pending-review"] });
+      queryClient.invalidateQueries({ queryKey: ["compliance-commission-oversight"] });
       // Refresh leaderboard data when commission is paid
       if (variables.status === "paid") {
         queryClient.invalidateQueries({ queryKey: ["commission-entries"] });
@@ -675,7 +689,7 @@ export function useUpdateCommission() {
         "job_name", "job_address", "acculynx_job_id", "job_type", "roof_type", "contract_date", "install_completion_date",
         "sales_rep_name", "rep_role", "commission_tier", "custom_commission_percentage", "subcontractor_name",
         "is_flat_fee", "flat_fee_amount", "contract_amount", "supplements_approved", "commission_percentage",
-        "advances_paid", "net_commission_owed", "total_job_revenue", "gross_commission",
+        "advances_paid", "net_commission_owed", "commission_requested", "total_job_revenue", "gross_commission",
       ];
       const previousSnapshot: Record<string, unknown> = {};
       snapshotFields.forEach((key) => {
@@ -715,10 +729,10 @@ export function useUpdateCommission() {
       // Notify compliance: "Rejected Commission Revised by [Rep Name]" — NOT "New Commission Submitted"
       const { data: submitterProfile } = await supabase
         .from("profiles")
-        .select("full_name")
+        .select("full_name, email")
         .eq("id", user.id)
         .maybeSingle();
-      const repDisplayName = submitterProfile?.full_name || result.sales_rep_name || "Rep";
+      const repDisplayName = formatDisplayName(submitterProfile?.full_name, submitterProfile?.email || user?.email) || result.sales_rep_name || "Rep";
       try {
         await supabase.functions.invoke("send-commission-notification", {
           body: {
@@ -743,8 +757,11 @@ export function useUpdateCommission() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["commission-submissions"] });
+      queryClient.invalidateQueries({ queryKey: ["cc-commission-summary"] });
       queryClient.invalidateQueries({ queryKey: ["commission-submission", variables.id] });
       queryClient.invalidateQueries({ queryKey: ["commission-status-log", variables.id] });
+      queryClient.invalidateQueries({ queryKey: ["pending-review"] });
+      queryClient.invalidateQueries({ queryKey: ["compliance-commission-oversight"] });
       toast.success("Commission revised and resubmitted successfully");
     },
     onError: (error: Error) => {
@@ -777,6 +794,7 @@ export function useDeleteCommission() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["commission-submissions"] });
+      queryClient.invalidateQueries({ queryKey: ["cc-commission-summary"] });
       toast.success("Commission deleted successfully");
     },
     onError: (error: Error) => {
@@ -847,6 +865,7 @@ export function useRevertCommission() {
     },
     onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: ["commission-submissions"] });
+      queryClient.invalidateQueries({ queryKey: ["cc-commission-summary"] });
       queryClient.invalidateQueries({ queryKey: ["commission-submission", id] });
       queryClient.invalidateQueries({ queryKey: ["commission-status-log", id] });
       queryClient.invalidateQueries({ queryKey: ["pending-review"] });

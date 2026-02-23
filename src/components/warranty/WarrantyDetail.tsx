@@ -20,6 +20,7 @@ import {
 import { useWarrantyWatchers, useIsWatching, useToggleWatch } from "@/hooks/useWarrantyWatchers";
 import { MentionTextarea, renderMentionText } from "./MentionTextarea";
 import { useAuth } from "@/contexts/AuthContext";
+import { formatDisplayName } from "@/lib/displayName";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format, parseISO, differenceInDays } from "date-fns";
@@ -56,7 +57,7 @@ export function WarrantyDetail({ open, onOpenChange, warranty, onEdit }: Warrant
     queryFn: async () => {
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, full_name");
+        .select("id, full_name, email");
       if (error) throw error;
       return data;
     },
@@ -65,7 +66,7 @@ export function WarrantyDetail({ open, onOpenChange, warranty, onEdit }: Warrant
   const getProfileName = (id: string | null) => {
     if (!id) return "Unknown";
     const profile = profiles.find((p) => p.id === id);
-    return profile?.full_name || "Unknown";
+    return formatDisplayName(profile?.full_name, profile?.email) || "Unknown";
   };
 
   const handleMentionedUsers = useCallback((ids: string[]) => {

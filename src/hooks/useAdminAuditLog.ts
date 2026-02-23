@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { formatDisplayName } from "@/lib/displayName";
 import type { Json } from "@/integrations/supabase/types";
 
 interface AuditLogEntry {
@@ -49,7 +50,7 @@ export function useAdminAuditLog() {
         new_value: params.new_value || null,
         performed_by: user.id,
         performed_by_email: profile?.email || user.email,
-        performed_by_name: profile?.full_name || null,
+        performed_by_name: profile ? formatDisplayName(profile.full_name, profile.email) : null,
         notes: params.notes || null,
       }]);
 

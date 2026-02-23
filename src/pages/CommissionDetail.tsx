@@ -26,6 +26,7 @@ import {
   Trash2,
   RotateCcw,
 } from "lucide-react";
+import { formatDisplayName } from "@/lib/displayName";
 import { cn } from "@/lib/utils";
 import { CommissionWorksheet } from "@/components/commissions/CommissionWorksheet";
 import { CommissionStatusTimeline } from "@/components/commissions/CommissionStatusTimeline";
@@ -42,6 +43,7 @@ import {
 } from "@/hooks/useCommissions";
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
+import { formatPayDateShort } from "@/lib/commissionPayDateCalculations";
 import { useState } from "react";
 import {
   AlertDialog,
@@ -133,7 +135,7 @@ export default function CommissionDetail() {
       "job_name", "job_address", "acculynx_job_id", "job_type", "roof_type", "contract_date", "install_completion_date",
       "sales_rep_name", "rep_role", "commission_tier", "custom_commission_percentage", "subcontractor_name",
       "is_flat_fee", "flat_fee_amount", "contract_amount", "supplements_approved", "commission_percentage",
-      "advances_paid", "net_commission_owed", "total_job_revenue", "gross_commission",
+      "advances_paid", "net_commission_owed", "commission_requested", "total_job_revenue", "gross_commission",
     ];
     keys.forEach((key) => {
       const prev = snap[key];
@@ -145,7 +147,7 @@ export default function CommissionDetail() {
     return set;
   }, [submission]);
   const showChangeHighlights = (isReviewer || isAdmin) && changedFields.size > 0;
-  const highlightClass = "bg-yellow-100/80 dark:bg-yellow-900/30 border-l-4 border-blue-500 pl-2 -ml-2 rounded-r";
+  const highlightClass = "bg-yellow-200/90 dark:bg-yellow-900/40 border-l-4 border-yellow-500 pl-2 -ml-2 rounded-r";
 
   // Determine available actions based on approval stage
   const isPendingManager = submission.status === "pending_review" && submission.approval_stage === "pending_manager";
@@ -327,6 +329,23 @@ export default function CommissionDetail() {
             </Button>
           )}
         </div>
+
+        {/* Pay Run / Scheduled Pay Date — visible to rep so they know which week they'll be paid */}
+        {submission.scheduled_pay_date && (
+          <Card className="border-emerald-200/50 bg-emerald-50/30 dark:bg-emerald-950/20 dark:border-emerald-800/50">
+            <CardContent className="py-3">
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-muted-foreground">Scheduled pay run:</span>
+                <span className="font-semibold text-emerald-700 dark:text-emerald-400">
+                  {formatPayDateShort(submission.scheduled_pay_date)}
+                </span>
+                <span className="text-muted-foreground text-xs">
+                  (assigned at submission based on Tuesday 3:00 PM MST cutoff)
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Status Timeline */}
         <CommissionStatusTimeline
@@ -640,7 +659,7 @@ export default function CommissionDetail() {
                       <AlertDialogFooter>
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
                         <AlertDialogAction
-                          onClick={() => revertCommission.mutate(submission.id, { onSuccess: () => refetch(); })}
+                          onClick={() => revertCommission.mutate(submission.id, { onSuccess: () => refetch() })}
                           disabled={revertCommission.isPending}
                         >
                           Revert
@@ -799,7 +818,7 @@ export default function CommissionDetail() {
                 <>
                   <div className={cn(showChangeHighlights && changedFields.has("sales_rep_name") && highlightClass)}>
                     <dt className="text-muted-foreground">Sales Rep</dt>
-                    <dd className="font-medium">{submission.sales_rep_name}</dd>
+                    <dd className="font-medium">{formatDisplayName(submission.sales_rep_name)}</dd>
                   </div>
                   <div className={cn(showChangeHighlights && changedFields.has("rep_role") && highlightClass)}>
                     <dt className="text-muted-foreground">Role</dt>
