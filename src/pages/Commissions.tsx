@@ -279,7 +279,7 @@ export default function Commissions() {
                   // For approved/paid: Accounting sees commissions grouped by pay run
                   const shouldGroupByPayRun = isAdminView && (status === "approved" || status === "paid") && items.some((s) => (s as { scheduled_pay_date?: string | null }).scheduled_pay_date);
                   const payRunGroups = shouldGroupByPayRun
-                    ? (items as { scheduled_pay_date?: string | null }[]).reduce<Record<string, typeof items>>((acc, s) => {
+                    ? (items as any[]).reduce<Record<string, typeof items>>((acc, s) => {
                         const key = s.scheduled_pay_date || "Unassigned";
                         if (!acc[key]) acc[key] = [];
                         acc[key].push(s);

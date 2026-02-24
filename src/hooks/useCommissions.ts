@@ -67,7 +67,6 @@ export interface CommissionSubmission {
 
   // Pay run assignment (set at submission based on Tue 3PM MST cutoff)
   scheduled_pay_date: string | null;
-  pay_run_id: string | null;
   
   // Override tracking
   override_amount: number | null;
@@ -194,7 +193,7 @@ export function useCreateCommission() {
       // GOVERNANCE RULE: Check if user has a manager assigned (required for routing)
       const { data: profile } = await supabase
         .from("profiles")
-        .select("manager_id, full_name")
+        .select("manager_id, full_name, email")
         .eq("id", user.id)
         .maybeSingle();
 
@@ -301,7 +300,7 @@ export function useUpdateCommissionStatus() {
       // Get current submission for status log and pay run
       const { data: current } = await supabase
         .from("commission_submissions")
-        .select("status, approval_stage, submitted_by, job_name, job_address, sales_rep_name, subcontractor_name, submission_type, contract_amount, net_commission_owed, pay_run_id, scheduled_pay_date")
+        .select("status, approval_stage, submitted_by, job_name, job_address, sales_rep_name, subcontractor_name, submission_type, contract_amount, net_commission_owed")
         .eq("id", id)
         .single();
       
@@ -424,7 +423,7 @@ export function useUpdateCommissionStatus() {
                 pay_type_id: commPayType.id,
                 earned_comm: current.net_commission_owed || 0,
                 has_paid: true,
-                pay_run_id: current.pay_run_id || null,
+                pay_run_id: null,
               });
             }
           }
@@ -494,8 +493,8 @@ export function useUpdateCommissionStatus() {
           : { data: null };
 
         let scheduled_pay_date: string | undefined;
-        if (notificationType === "accounting_approved" && current?.scheduled_pay_date) {
-          scheduled_pay_date = current.scheduled_pay_date;
+        if (notificationType === "accounting_approved" && (current as any)?.scheduled_pay_date) {
+          scheduled_pay_date = (current as any).scheduled_pay_date;
         }
         await supabase.functions.invoke("send-commission-notification", {
           body: {
@@ -707,7 +706,7 @@ export function useUpdateCommission() {
         status: "pending_review",
         approval_stage: current.is_manager_submission ? "pending_admin" : "pending_manager",
         rejection_reason: null, // Clear rejection reason on resubmit (rejected = sent back to rep)
-        previous_submission_snapshot: previousSnapshot,
+        previous_submission_snapshot: previousSnapshot as any,
       };
       
       const { data: result, error } = await supabase

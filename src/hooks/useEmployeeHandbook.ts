@@ -105,13 +105,17 @@ export function useAcknowledgeHandbook() {
         });
       if (error) throw error;
 
-      await supabase.from("compliance_audit_log").insert({
-        actor_user_id: user.id,
-        action: "acknowledge_employee_handbook",
-        target_type: "employee_handbook",
-        target_id: current.id,
-        metadata: { version: current.version },
-      }).then(() => {}).catch(() => { /* audit log may be admin-only; acknowledgment already saved */ });
+      try {
+        await supabase.from("compliance_audit_log").insert({
+          actor_user_id: user.id,
+          action: "acknowledge_employee_handbook",
+          target_type: "employee_handbook",
+          target_id: current.id,
+          metadata: { version: current.version },
+        });
+      } catch {
+        /* audit log may be admin-only; acknowledgment already saved */
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["employee-handbook"] });

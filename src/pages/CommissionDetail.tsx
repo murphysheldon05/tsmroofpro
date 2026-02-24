@@ -144,7 +144,7 @@ export default function CommissionDetail() {
     ];
     keys.forEach((key) => {
       const prev = snap[key];
-      const cur = (submission as Record<string, unknown>)[key];
+      const cur = (submission as unknown as Record<string, unknown>)[key];
       const prevVal = prev === null || prev === undefined ? "" : String(prev);
       const curVal = cur === null || cur === undefined ? "" : String(cur);
       if (prevVal !== curVal) set.add(key);
