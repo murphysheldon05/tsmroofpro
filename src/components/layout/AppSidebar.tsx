@@ -488,7 +488,7 @@ export function AppSidebar() {
       .filter((item) => {
         // Commissions category: hidden from User/Manager who do NOT have a commission tier (e.g. production, office, VAs)
         if (item.sectionKey === "commissions") {
-          if (isAdmin) return true;
+          if (isAdmin || isManager) return true;
           if (!hasCommissionTier) return false;
         }
         // Message Center: visible to all users
@@ -500,7 +500,7 @@ export function AppSidebar() {
           const filteredChildren = item.children.filter((child) => {
             if (child.managerOnly && !isManager && !isAdmin) return false;
             if (child.adminOnly && !isAdmin) return false;
-            if (child.salesRepOnly && (isManager || isAdmin || role !== "sales_rep")) return false;
+            if (child.salesRepOnly && role !== "sales_rep" && role !== "sales_manager") return false;
             return isSectionVisible(child.sectionKey, userPermissions, role);
           });
           if (filteredChildren.length === 0) return null;

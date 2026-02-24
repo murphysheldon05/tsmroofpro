@@ -389,6 +389,10 @@ export function useUpdateCommissionStatus() {
         }
       }
       
+      if (status === "paid" && current?.status !== "approved") {
+        throw new Error("Only approved commissions can be marked as paid");
+      }
+
       // Handle paid status — also bridge to commission_entries for leaderboard
       if (status === "paid") {
         updateData.paid_at = new Date().toISOString();
@@ -414,21 +418,29 @@ export function useUpdateCommissionStatus() {
               .maybeSingle();
 
             if (linkedRep && commPayType) {
-              await supabase.from("commission_entries").insert({
-                rep_id: linkedRep.id,
-                job: current.job_name || null,
-                customer: current.job_address || null,
-                approved_date: current.status === "approved" ? new Date().toISOString().split("T")[0] : null,
-                job_value: current.contract_amount || 0,
-                amount_paid: current.net_commission_owed || 0,
-                paid_date: new Date().toISOString().split("T")[0],
-                check_type: "Direct Deposit",
-                notes: `Auto-created from commission submission ${id}`,
-                pay_type_id: commPayType.id,
-                earned_comm: current.net_commission_owed || 0,
-                has_paid: true,
-                pay_run_id: current.pay_run_id || null,
-              });
+              const { data: existing } = await supabase
+                .from("commission_entries")
+                .select("id")
+                .ilike("notes", `%commission submission ${id}%`)
+                .limit(1)
+                .maybeSingle();
+              if (!existing) {
+                await supabase.from("commission_entries").insert({
+                  rep_id: linkedRep.id,
+                  job: current.job_name || null,
+                  customer: current.job_address || null,
+                  approved_date: current.status === "approved" ? new Date().toISOString().split("T")[0] : null,
+                  job_value: current.contract_amount || 0,
+                  amount_paid: current.net_commission_owed || 0,
+                  paid_date: new Date().toISOString().split("T")[0],
+                  check_type: "Direct Deposit",
+                  notes: `Auto-created from commission submission ${id}`,
+                  pay_type_id: commPayType.id,
+                  earned_comm: current.net_commission_owed || 0,
+                  has_paid: true,
+                  pay_run_id: current.pay_run_id || null,
+                });
+              }
             }
           }
         } catch (bridgeError) {
@@ -856,6 +868,16 @@ export function useCloseOutDraw() {
       if (!current.is_draw) throw new Error("This is not a draw request");
       if (current.status !== "paid") throw new Error("Draw must be paid before closing out");
       if (current.draw_closed_out) throw new Error("This draw has already been closed out");
+
+      // Clean up commission_entries created when the draw was paid
+      try {
+        await supabase
+          .from("commission_entries")
+          .delete()
+          .ilike("notes", `%commission submission ${id}%`);
+      } catch (cleanupErr) {
+        console.warn("Failed to clean up draw tracker entries:", cleanupErr);
+      }
 
       const drawAmountPaid = current.commission_requested ?? current.net_commission_owed ?? 0;
       const totalJobRevenue = data.contract_amount + data.supplements_approved;
