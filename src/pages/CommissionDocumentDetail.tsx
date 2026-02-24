@@ -70,10 +70,11 @@ export default function CommissionDocumentDetail() {
   const isSalesManager = role === 'sales_manager';
   const isAccountingUser = userDepartment === 'Accounting';
   
-  // Manager can approve submitted docs (but NOT their own)
+  // Manager can approve submitted docs (but NOT their own, and NOT if they're the assigned manager)
   const canApproveAsManager = (isAdmin || isSalesManager) && 
     document?.status === 'submitted' && 
-    document?.created_by !== user?.id; // Self-commission prevention
+    document?.created_by !== user?.id &&
+    document?.manager_id !== user?.id;
   
   // Self-submitted by a sales manager → needs admin approval
   const isSelfSubmission = isSalesManager && document?.created_by === user?.id && document?.status === 'submitted';

@@ -389,6 +389,11 @@ export function useUpdateCommissionStatus() {
         }
       }
       
+      // Guard: only approved commissions can be marked paid
+      if (status === "paid" && current?.status !== "approved") {
+        throw new Error("Only approved commissions can be marked as paid");
+      }
+
       // Handle paid status — also bridge to commission_entries for leaderboard
       if (status === "paid") {
         updateData.paid_at = new Date().toISOString();
@@ -414,6 +419,14 @@ export function useUpdateCommissionStatus() {
               .maybeSingle();
 
             if (linkedRep && commPayType) {
+              // Prevent duplicate entries if paid is triggered more than once
+              const { data: existing } = await supabase
+                .from("commission_entries")
+                .select("id")
+                .ilike("notes", `%commission submission ${id}%`)
+                .limit(1)
+                .maybeSingle();
+              if (!existing) {
               await supabase.from("commission_entries").insert({
                 rep_id: linkedRep.id,
                 job: current.job_name || null,
@@ -429,6 +442,7 @@ export function useUpdateCommissionStatus() {
                 has_paid: true,
                 pay_run_id: current.pay_run_id || null,
               });
+              }
             }
           }
         } catch (bridgeError) {
@@ -856,6 +870,16 @@ export function useCloseOutDraw() {
       if (!current.is_draw) throw new Error("This is not a draw request");
       if (current.status !== "paid") throw new Error("Draw must be paid before closing out");
       if (current.draw_closed_out) throw new Error("This draw has already been closed out");
+
+      // Clean up commission_entries from when the draw was paid
+      try {
+        await supabase
+          .from("commission_entries")
+          .delete()
+          .ilike("notes", `%commission submission ${id}%`);
+      } catch (e) {
+        console.warn("Failed to clean up draw entries:", e);
+      }
 
       const drawAmountPaid = current.commission_requested ?? current.net_commission_owed ?? 0;
       const totalJobRevenue = data.contract_amount + data.supplements_approved;
