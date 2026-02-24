@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDisplayName } from "@/lib/displayName";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
 
 export type RoofType = "shingle" | "tile" | "foam" | "coating" | "other";
 export type WarrantyType = "workmanship" | "manufacturer" | "combination";
@@ -116,11 +117,16 @@ export const WARRANTY_STATUSES: { value: WarrantyStatus; label: string; color: s
 ];
 
 export function useWarranties() {
+  const { user, isAdmin, isManager, userDepartment } = useAuth();
+  const userId = user?.id;
+  const isProductionDept = userDepartment === "Production";
+  const fullAccess = isAdmin || isManager;
+
   return useQuery({
-    queryKey: ["warranties"],
+    queryKey: ["warranties", userId, fullAccess, isProductionDept],
     queryFn: async () => {
       const { data: userData } = await supabase.auth.getUser();
-      const userId = userData.user?.id;
+      const uid = userData.user?.id;
 
       const { data, error } = await supabase
         .from("warranty_requests")
@@ -130,32 +136,35 @@ export function useWarranties() {
       if (error) throw error;
       const all = data as WarrantyRequest[];
 
-      // If no user, return empty
-      if (!userId) return [];
+      if (!uid) return [];
 
-      // Check role — admin/manager/sales_manager see all; others see only assigned/created
+      // Admin/manager see all warranties
       const { data: roleData } = await supabase
         .from("user_roles")
         .select("role")
-        .eq("user_id", userId)
+        .eq("user_id", uid)
         .limit(1)
         .maybeSingle();
-
       const userRole = roleData?.role;
       const fullAccessRoles = ["admin", "manager", "sales_manager"];
-
       if (userRole && fullAccessRoles.includes(userRole)) {
         return all;
       }
 
-      // Production / other roles: only assigned, secondary support, or created by them
+      // Production department users: only warranties assigned to them (not created_by or secondary_support)
+      if (userDepartment === "Production") {
+        return all.filter((w) => w.assigned_production_member === uid);
+      }
+
+      // Other roles (e.g. office, sales): assigned, secondary support, or created by them
       return all.filter(
         (w) =>
-          w.assigned_production_member === userId ||
-          w.secondary_support === userId ||
-          w.created_by === userId
+          w.assigned_production_member === uid ||
+          w.secondary_support === uid ||
+          w.created_by === uid
       );
     },
+    enabled: !!userId,
   });
 }
 
@@ -229,15 +238,29 @@ export function useCreateWarranty() {
 
 export function useUpdateWarranty() {
   const queryClient = useQueryClient();
+  const { user, role, isAdmin, isManager, userDepartment } = useAuth();
+  const isProductionDept = userDepartment === "Production";
 
   return useMutation({
     mutationFn: async ({ id, previousStatus, userRole, ...updates }: Partial<WarrantyRequest> & { id: string; previousStatus?: string; userRole?: string }) => {
-      // ENFORCEMENT: Only managers and admins can mark as completed, denied, or closed
+      const r = userRole ?? role;
+      // ENFORCEMENT: completed/denied/closed — manager/admin can do all; production users can mark completed and closed for warranties assigned to them
       const terminalStatuses: string[] = ["completed", "denied", "closed"];
       if (updates.status && terminalStatuses.includes(updates.status)) {
         const allowedRoles = ["admin", "manager", "sales_manager"];
-        if (!userRole || !allowedRoles.includes(userRole)) {
-          throw new Error("Only managers and admins can mark warranties as completed, denied, or closed.");
+        const canDoAsManager = r && allowedRoles.includes(r);
+        if (canDoAsManager) {
+          // Manager/admin: allow
+        } else if ((updates.status === "completed" || updates.status === "closed") && isProductionDept && user?.id) {
+          // Production user can complete or close only if they're the assigned user
+          const { data: current } = await supabase.from("warranty_requests").select("assigned_production_member").eq("id", id).single();
+          if (current?.assigned_production_member !== user.id) {
+            throw new Error(`You can only mark warranties assigned to you as ${updates.status === "closed" ? "closed" : "completed"}.`);
+          }
+        } else if (updates.status === "denied") {
+          throw new Error("Only managers and admins can mark warranties as denied.");
+        } else if (updates.status === "completed" || updates.status === "closed") {
+          throw new Error("Only managers and admins can mark warranties as completed or closed, or you can do so for warranties assigned to you.");
         }
       }
 

@@ -70,8 +70,10 @@ export default function DeliverySchedule() {
   const [newEvent, setNewEvent] = useState({ title: "", description: "", start_date: "", end_date: "", status: "scheduled" });
   const [overflowDate, setOverflowDate] = useState<Date | null>(null);
 
-  const { isManager, isAdmin } = useAuth();
-  const canEdit = isManager || isAdmin;
+  const { isManager, isAdmin, userDepartment } = useAuth();
+  const isProductionDept = userDepartment === "Production";
+  const canEdit = isManager || isAdmin || isProductionDept;
+  const canCreateDelete = isManager || isAdmin;
 
   const { data: events = [], isLoading } = useDeliveryCalendarEvents();
   const createEvent = useCreateDeliveryEvent();
@@ -225,7 +227,7 @@ export default function DeliverySchedule() {
               <p className="text-sm text-muted-foreground">Material delivery tracking</p>
             </div>
           </div>
-          {canEdit && (
+          {canCreateDelete && (
             <Button size="sm" onClick={() => setIsAddOpen(true)} className="bg-primary text-primary-foreground" data-tutorial="add-delivery">
               <Plus className="h-4 w-4 mr-1" />Add Delivery
             </Button>
@@ -355,7 +357,7 @@ export default function DeliverySchedule() {
         )}
 
         {/* Mobile FAB */}
-        {canEdit && (
+        {canCreateDelete && (
           <button onClick={() => setIsAddOpen(true)} className="md:hidden fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center hover:bg-primary/90 active:scale-95 transition-transform">
             <Plus className="h-6 w-6" />
           </button>
@@ -412,7 +414,7 @@ export default function DeliverySchedule() {
           )}
           <DialogFooter className="flex justify-between">
             <div>
-              {canEdit && editingEvent && (
+              {canCreateDelete && editingEvent && (
                 <Button variant="destructive" size="sm" onClick={() => { setDeleteConfirmId(editingEvent.id); setEditingEvent(null); }}>
                   <Trash2 className="h-4 w-4 mr-1" />Delete
                 </Button>

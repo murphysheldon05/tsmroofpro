@@ -64,20 +64,24 @@ export function useTodaysDeliveries() {
 
 // Action Required items
 export function useActionRequired() {
-  const { user, isAdmin, isManager } = useAuth();
+  const { user, isAdmin, isManager, userDepartment } = useAuth();
   const isScopedUser = !isAdmin && !isManager;
+  const isProductionDept = userDepartment === "Production";
 
   return useQuery({
-    queryKey: ["action-required", user?.id, isScopedUser],
+    queryKey: ["action-required", user?.id, isScopedUser, isProductionDept],
     queryFn: async () => {
-      // Get pending warranty requests
-      const { data: pendingWarranties, error: warrantyError } = await supabase
+      // Get pending warranty requests — production users see only assigned to them
+      let warrantyQuery = supabase
         .from("warranty_requests")
         .select("id, customer_name, job_address, status, updated_at, priority_level")
         .not("status", "in", '("completed","denied")')
         .order("updated_at", { ascending: true })
         .limit(5);
-
+      if (isProductionDept && user) {
+        warrantyQuery = warrantyQuery.eq("assigned_production_member", user.id);
+      }
+      const { data: pendingWarranties, error: warrantyError } = await warrantyQuery;
       if (warrantyError) throw warrantyError;
 
       // Get pending commission submissions — scoped for non-admins
@@ -131,11 +135,12 @@ export function useActionRequired() {
 
 // Quick Stats
 export function useQuickStats() {
-  const { user, isAdmin, isManager } = useAuth();
+  const { user, isAdmin, isManager, userDepartment } = useAuth();
   const isScopedUser = !isAdmin && !isManager;
+  const isProductionDept = userDepartment === "Production";
 
   return useQuery({
-    queryKey: ["command-center-stats", user?.id, isScopedUser],
+    queryKey: ["command-center-stats", user?.id, isScopedUser, isProductionDept],
     queryFn: async () => {
       const today = new Date();
       const todayStr = format(today, "yyyy-MM-dd");
@@ -153,11 +158,15 @@ export function useQuickStats() {
         .select("*", { count: "exact", head: true })
         .eq("start_date", todayStr);
 
-      // Open warranties
-      const { count: openWarranties } = await supabase
+      // Open warranties — production users count only assigned to them
+      let openWarrantyQuery = supabase
         .from("warranty_requests")
         .select("*", { count: "exact", head: true })
         .not("status", "in", '("completed","denied")');
+      if (isProductionDept && user) {
+        openWarrantyQuery = openWarrantyQuery.eq("assigned_production_member", user.id);
+      }
+      const { count: openWarranties } = await openWarrantyQuery;
 
       // Pending approvals - scoped for non-admins
       let pendingRequestsCount = 0;

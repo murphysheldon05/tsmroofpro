@@ -26,6 +26,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDisplayName } from "@/lib/displayName";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface WarrantyFormProps {
   open: boolean;
@@ -44,18 +45,27 @@ export function WarrantyForm({ open, onOpenChange, warranty }: WarrantyFormProps
   const createMutation = useCreateWarranty();
   const updateMutation = useUpdateWarranty();
 
-  // Fetch production team members (users with production permission or manager/admin role)
+  const { isAdmin, isManager, role } = useAuth();
+  const canAssign = isAdmin || isManager || role === "sales_manager";
+
+  // Fetch production department users only (for Assigned To dropdown)
   const { data: productionMembers = [] } = useQuery({
     queryKey: ["production-members"],
     queryFn: async () => {
-      // GOVERNANCE: employee_status='active' is the canonical access check
-      const { data, error } = await supabase
+      const { data: deptData } = await supabase.from("departments").select("id").eq("name", "Production").maybeSingle();
+      const deptId = deptData?.id;
+      let query = supabase
         .from("profiles")
         .select("id, full_name, email")
         .eq("employee_status", "active");
-
+      if (deptId) {
+        query = query.eq("department_id", deptId);
+      } else {
+        query = query.eq("department", "Production");
+      }
+      const { data, error } = await query;
       if (error) throw error;
-      return data as ProductionMember[];
+      return (data || []) as ProductionMember[];
     },
   });
 
@@ -310,17 +320,18 @@ export function WarrantyForm({ open, onOpenChange, warranty }: WarrantyFormProps
                 </div>
               </div>
 
-              {/* Assignment & Accountability */}
+              {/* Assignment & Accountability — admin/manager only can assign */}
+              {canAssign && (
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold border-b pb-2">Assignment & Accountability</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Assigned Production Member</Label>
+                    <Label>Assigned To</Label>
                     <Select
                       value={watch("assigned_production_member") || "none"}
                       onValueChange={(v) => setValue("assigned_production_member", v === "none" ? "" : v)}
                     >
-                      <SelectTrigger><SelectValue placeholder="Select member" /></SelectTrigger>
+                      <SelectTrigger><SelectValue placeholder="Select production member" /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="none">Unassigned</SelectItem>
                         {productionMembers.map((m) => (
@@ -363,6 +374,7 @@ export function WarrantyForm({ open, onOpenChange, warranty }: WarrantyFormProps
                   </div>
                 </div>
               </div>
+              )}
 
               {/* Status Tracking */}
               <div className="space-y-4">

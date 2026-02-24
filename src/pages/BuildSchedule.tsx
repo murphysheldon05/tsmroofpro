@@ -65,9 +65,11 @@ export default function BuildSchedule() {
   const [deleteCrewConfirm, setDeleteCrewConfirm] = useState<string | null>(null);
   const [newCrew, setNewCrew] = useState({ name: "", color: "#3b82f6" });
 
-  const { isManager, isAdmin } = useAuth();
+  const { isManager, isAdmin, userDepartment } = useAuth();
   const { data: userHolds } = useUserHoldsCheck();
-  const canEdit = isManager || isAdmin;
+  const isProductionDept = userDepartment === "Production";
+  const canEdit = isManager || isAdmin || isProductionDept;
+  const canCreateDelete = isManager || isAdmin;
   const schedulingHolds = userHolds?.filter(h => h.hold_type === "scheduling_hold") || [];
   const hasSchedulingHold = schedulingHolds.length > 0;
 
@@ -279,7 +281,7 @@ export default function BuildSchedule() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {canEdit && (
+            {canCreateDelete && (
               <Sheet open={crewPanelOpen} onOpenChange={setCrewPanelOpen}>
                 <SheetTrigger asChild>
                   <Button variant="outline" size="sm"><Users className="h-4 w-4 mr-1.5" />Crews</Button>
@@ -307,7 +309,7 @@ export default function BuildSchedule() {
                 </SheetContent>
               </Sheet>
             )}
-            {canEdit && (
+            {canCreateDelete && (
               <Button size="sm" onClick={() => setIsAddOpen(true)} disabled={hasSchedulingHold} className="bg-primary text-primary-foreground" data-tutorial="add-build">
                 <Plus className="h-4 w-4 mr-1" />Add Build
               </Button>
@@ -488,7 +490,7 @@ export default function BuildSchedule() {
         )}
 
         {/* Mobile FAB */}
-        {canEdit && (
+        {canCreateDelete && (
           <button
             onClick={() => setIsAddOpen(true)}
             className="md:hidden fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center hover:bg-primary/90 active:scale-95 transition-transform"
@@ -563,7 +565,7 @@ export default function BuildSchedule() {
           )}
           <DialogFooter className="flex justify-between">
             <div>
-              {canEdit && editingEvent && (
+              {canCreateDelete && editingEvent && (
                 <Button variant="destructive" size="sm" onClick={() => { setDeleteConfirmId(editingEvent.id); setEditingEvent(null); }}>
                   <Trash2 className="h-4 w-4 mr-1" />Delete
                 </Button>

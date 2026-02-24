@@ -103,12 +103,13 @@ function getSlaDays(type: PendingItem["type"], requiresAction: PendingItem["requ
  * - Standard Users: Items requiring THEIR action (rejected, info needed)
  */
 export function usePendingReview() {
-  const { user, isAdmin, isManager, role } = useAuth();
+  const { user, isAdmin, isManager, role, userDepartment } = useAuth();
   const isReviewer = isAdmin || isManager;
   const canDoComplianceReview = isAdmin || role === "ops_compliance";
+  const isProductionDept = userDepartment === "Production";
 
   return useQuery({
-    queryKey: ["pending-review", user?.id, isReviewer, role, canDoComplianceReview],
+    queryKey: ["pending-review", user?.id, isReviewer, role, canDoComplianceReview, isProductionDept],
     queryFn: async () => {
       if (!user) return { items: [], counts: { commissions: 0, requests: 0, warranties: 0, total: 0 } };
 
@@ -280,6 +281,40 @@ export function usePendingReview() {
             sla_status: calculateSlaStatus(slaDueAt),
           });
         });
+
+        // Production users: show their assigned warranties (needs their action to update status)
+        if (isProductionDept) {
+          const { data: assignedWarranties } = await supabase
+            .from("warranty_requests")
+            .select("id, customer_name, job_address, status, priority_level, updated_at, created_at, date_submitted")
+            .eq("assigned_production_member", user.id)
+            .in("status", ["new", "assigned", "in_review", "scheduled", "in_progress", "waiting_on_materials", "waiting_on_manufacturer"])
+            .order("created_at", { ascending: true })
+            .limit(20);
+
+          assignedWarranties?.forEach((w) => {
+            const priority = w.priority_level === "high" || w.priority_level === "emergency" ? "high" :
+                            w.priority_level === "medium" ? "medium" : "low";
+            const submittedAt = new Date(w.date_submitted || w.created_at);
+            const slaDays = getSlaDays("warranty", "review");
+            const slaDueAt = calculateSlaDueDate(submittedAt, slaDays);
+            items.push({
+              id: w.id,
+              type: "warranty",
+              title: w.customer_name,
+              subtitle: w.job_address,
+              status: w.status,
+              priority,
+              updated_at: w.updated_at,
+              created_at: w.created_at,
+              submitted_at: w.date_submitted || w.created_at,
+              requires_action: "review",
+              age_days: calculateAgeDays(submittedAt),
+              sla_due_at: slaDueAt,
+              sla_status: calculateSlaStatus(slaDueAt),
+            });
+          });
+        }
       }
 
       // Sort by: 1) SLA status (overdue first), 2) Priority, 3) Age (oldest first)

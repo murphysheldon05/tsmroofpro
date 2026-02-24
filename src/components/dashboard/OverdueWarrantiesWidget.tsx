@@ -9,13 +9,15 @@ import { formatDistanceToNow } from "date-fns";
 
 export function OverdueWarrantiesWidget() {
   const navigate = useNavigate();
-  const { isManager, isAdmin } = useAuth();
+  const { isManager, isAdmin, userDepartment } = useAuth();
   const { data: warranties, isLoading } = useWarranties();
+  const isProductionDept = userDepartment === "Production";
 
-  // Only show to managers and admins
-  if (!isManager && !isAdmin) return null;
+  // Show to managers, admins, and production users (production see only assigned)
+  if (!isManager && !isAdmin && !isProductionDept) return null;
 
   // Filter for overdue warranties (no status change in 7+ days, excluding completed/denied)
+  // Production users: useWarranties already returns only assigned, so no extra filter needed
   const overdueWarranties = warranties?.filter((warranty) => {
     const excludedStatuses = ["completed", "denied"];
     if (excludedStatuses.includes(warranty.status)) return false;
