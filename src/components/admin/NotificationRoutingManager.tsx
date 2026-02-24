@@ -10,6 +10,7 @@ import { Loader2, Save, Mail, Users, X } from "lucide-react";
 import { useNotificationRouting, useUpdateNotificationRouting, useRoleAssignments, useUpdateRoleAssignment } from "@/hooks/useNotificationRouting";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { formatDisplayName } from "@/lib/displayName";
 
 interface UserProfile {
   id: string;
@@ -142,11 +143,11 @@ export function NotificationRoutingManager() {
   const hasRoutingChanges = (id: string) => !!editingRouting[id];
   const hasAssignmentChanges = (id: string) => !!editingAssignment[id];
 
-  // Helper to get user display name
+  // Helper to get user display name (title-cased)
   const getUserDisplayName = (userId: string | null) => {
     if (!userId) return null;
     const user = userMap.get(userId);
-    return user?.full_name || user?.email || "Unknown User";
+    return user ? formatDisplayName(user.full_name, user.email) || user.email || "Unknown User" : "Unknown User";
   };
 
   if (routingsLoading || assignmentsLoading || usersLoading) {

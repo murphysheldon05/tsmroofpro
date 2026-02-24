@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useSearchParams, useLocation } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,6 +27,7 @@ import {
   Edit,
   Loader2,
   Shield,
+  ShieldCheck,
   Mail,
   CheckCircle,
   Clock,
@@ -41,6 +42,8 @@ import {
   FileText,
   DollarSign,
   Trophy,
+  BookOpen,
+  GraduationCap,
 } from "lucide-react";
 import { UserPermissionsEditor } from "@/components/admin/UserPermissionsEditor";
 import { PendingApprovals } from "@/components/admin/PendingApprovals";
@@ -66,7 +69,6 @@ import { LeaderboardSettingsPanel } from "@/components/admin/LeaderboardSettings
 import { formatDisplayName } from "@/lib/displayName";
 import { PlaybookCompletionStatus } from "@/components/admin/PlaybookCompletionStatus";
 import { RoleOnboardingAdmin } from "@/components/admin/RoleOnboardingAdmin";
-import { BookOpen, GraduationCap, ShieldCheck } from "lucide-react";
 import { GuidedTour } from "@/components/tutorial/GuidedTour";
 import { adminSteps } from "@/components/tutorial/tutorialSteps";
 import { RoleAssignment } from "@/components/admin/RoleAssignment";
@@ -77,8 +79,22 @@ const ADMIN_TAB_VALUES = ["users", "tiers", "sops", "categories", "tools", "noti
 
 export default function Admin() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
   const tabParam = searchParams.get("tab");
   const activeTab = ADMIN_TAB_VALUES.includes(tabParam as any) ? tabParam : "users";
+
+  // Scroll to Pending Approvals when navigating with #pending-approvals hash
+  useEffect(() => {
+    if (location.hash === "#pending-approvals") {
+      const scroll = () => {
+        const el = document.getElementById("pending-approvals");
+        el?.scrollIntoView({ behavior: "smooth", block: "start" });
+      };
+      // Brief delay so the tab content is rendered
+      const t = setTimeout(scroll, 100);
+      return () => clearTimeout(t);
+    }
+  }, [location.hash, activeTab]);
   const queryClient = useQueryClient();
   const { data: departments } = useDepartments();
   const { data: commissionTiers } = useCommissionTiers();
@@ -231,7 +247,7 @@ export default function Admin() {
       toast.success("Invite sent! User will appear in Pending Invites.");
       setIsInvitingUser(false);
       setInviteData({ email: "" });
-      queryClient.invalidateQueries({ queryKey: ["pending-invites"] });
+      queryClient.invalidateQueries({ queryKey: ["sent-invites"] });
     } catch (error: any) {
       toast.error("Failed to send invite: " + error.message);
     } finally {
@@ -503,14 +519,14 @@ export default function Admin() {
             {/* Pending Actions - Sheldon only (admin with management department) */}
             <PendingActionsSection />
 
-            {/* Pending Invites Section - Users invited but haven't logged in */}
+            {/* Sent Invites Section */}
             <div>
-              <h2 className="text-lg font-semibold text-foreground mb-4">Pending Invites</h2>
+              <h2 className="text-lg font-semibold text-foreground mb-4">Sent Invites</h2>
               <PendingInvites />
             </div>
 
             {/* Pending Approvals Section */}
-            <div data-tutorial="admin-pending">
+            <div id="pending-approvals" data-tutorial="admin-pending">
               <h2 className="text-lg font-semibold text-foreground mb-4">Pending Approvals</h2>
               <PendingApprovals />
             </div>

@@ -21,22 +21,22 @@ export function PendingActionsSection() {
   const { data: counts, isLoading } = useQuery({
     queryKey: ["pending-actions-sheldon"],
     queryFn: async () => {
-      const [itRes, approvalsRes] = await Promise.all([
+      const [itRes, profilesRes] = await Promise.all([
         supabase
           .from("requests")
           .select("*", { count: "exact", head: true })
           .eq("type", "it_access")
           .eq("status", "pending")
           .is("assigned_to", null),
+        // Count profiles that need approval (matches PendingApprovals list; avoids orphaned pending_approval rows)
         supabase
-          .from("pending_approvals")
-          .select("*", { count: "exact", head: true })
-          .eq("entity_type", "user")
-          .eq("status", "pending"),
+          .from("profiles")
+          .select("id", { count: "exact", head: true })
+          .eq("is_approved", false),
       ]);
       return {
         itRequests: itRes.count ?? 0,
-        pendingApprovals: approvalsRes.count ?? 0,
+        pendingApprovals: profilesRes.count ?? 0,
       };
     },
     enabled: isSheldon,
@@ -84,7 +84,7 @@ export function PendingActionsSection() {
             </Badge>
           </button>
           <button
-            onClick={() => navigate("/admin")}
+            onClick={() => navigate("/admin#pending-approvals")}
             className={cn(
               "w-full flex items-center justify-between px-4 py-3 text-left transition-all duration-150",
               "hover:bg-[rgba(0,0,0,0.02)] dark:hover:bg-white/[0.02] active:scale-[0.99]"

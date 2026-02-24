@@ -126,7 +126,7 @@ export default function Signup() {
     try {
       const trimmedEmail = email.trim().toLowerCase();
       
-      const { error } = await signUp(trimmedEmail, password, fullName);
+      const { data, error } = await signUp(trimmedEmail, password, fullName);
       if (error) {
         if (error.message.includes("already registered")) {
           toast.error("This email is already registered. Please sign in instead.");
@@ -140,6 +140,19 @@ export default function Signup() {
           .from("pending_invites")
           .update({ link_accessed_at: new Date().toISOString() })
           .eq("email", trimmedEmail);
+
+        // Notify admins of pending approval (fire-and-forget; don't block user flow)
+        if (data?.user) {
+          supabase.functions
+            .invoke("notify-new-signup", {
+              body: {
+                user_id: data.user.id,
+                email: data.user.email ?? trimmedEmail,
+                full_name: fullName,
+              },
+            })
+            .catch((err) => console.warn("Admin notification failed:", err));
+        }
 
         setSignupComplete(true);
         toast.success("Account created! Awaiting approval.");

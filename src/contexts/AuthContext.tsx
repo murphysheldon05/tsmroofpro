@@ -14,7 +14,7 @@ interface AuthContextType {
   role: AppRole | null;
   employeeStatus: EmployeeStatus | null;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
-  signUp: (email: string, password: string, fullName: string) => Promise<{ error: Error | null }>;
+  signUp: (email: string, password: string, fullName: string) => Promise<{ data: { user: User } | undefined; error: Error | null }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
   isAdmin: boolean;
@@ -189,7 +189,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .eq("id", data.user.id);
     }
 
-    return { error };
+    return { data: data?.user ? { user: data.user } : undefined, error };
   };
 
   const signOut = async () => {

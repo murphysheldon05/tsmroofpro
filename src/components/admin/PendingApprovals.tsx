@@ -75,49 +75,58 @@ export function PendingApprovals() {
   const [approvalDialog, setApprovalDialog] = useState<{ open: boolean; user: PendingUser | null }>({ open: false, user: null });
   const [customMessage, setCustomMessage] = useState("");
 
-  // CANONICAL: Query pending_approvals table as the SINGLE SOURCE OF TRUTH
-  // for users awaiting approval. This ensures consistency with the approval lifecycle.
+  // Query profiles that need approval (is_approved=false) and ensure they have pending_approval rows.
+  // Self-healing: if the DB trigger missed creating a pending_approval (e.g. race condition),
+  // we create it when an admin loads this page so users who signed up always appear.
   const { data: pendingUsers, isLoading, refetch: refetchPending } = useQuery({
     queryKey: ["pending-approvals"],
     queryFn: async () => {
-      // STEP 1: Get pending user approvals from canonical pending_approvals table
-      const { data: pendingApprovals, error: paError } = await supabase
-        .from("pending_approvals")
-        .select("entity_id, submitted_at, notes")
-        .eq("entity_type", "user")
-        .eq("status", "pending")
-        .order("submitted_at", { ascending: false });
-
-      if (paError) throw paError;
-      if (!pendingApprovals || pendingApprovals.length === 0) return [];
-
-      // STEP 2: Get profile details for these pending users
-      const userIds = pendingApprovals.map(pa => pa.entity_id);
-      const { data: profiles, error: profileError } = await supabase
+      // STEP 1: Get all profiles that need approval (canonical: is_approved=false)
+      const { data: pendingProfiles, error: profileError } = await supabase
         .from("profiles")
         .select("id, email, full_name, requested_role, requested_department, company_name, created_at")
-        .in("id", userIds);
+        .eq("is_approved", false)
+        .order("created_at", { ascending: false });
 
       if (profileError) throw profileError;
+      if (!pendingProfiles || pendingProfiles.length === 0) return [];
 
-      // Merge data - use pending_approval submission time for ordering
-      const profileMap = new Map((profiles || []).map(p => [p.id, p]));
-      
-      return pendingApprovals
-        .map(pa => {
-          const profile = profileMap.get(pa.entity_id);
-          if (!profile) return null;
-          return {
-            id: profile.id,
-            email: profile.email,
-            full_name: profile.full_name,
-            requested_role: profile.requested_role,
-            requested_department: profile.requested_department,
-            company_name: profile.company_name,
-            created_at: profile.created_at,
-          } as PendingUser;
-        })
-        .filter(Boolean) as PendingUser[];
+      // STEP 2: Get existing pending_approvals for these users
+      const userIds = pendingProfiles.map(p => p.id);
+      const { data: existingApprovals } = await supabase
+        .from("pending_approvals")
+        .select("entity_id")
+        .eq("entity_type", "user")
+        .eq("status", "pending")
+        .in("entity_id", userIds);
+
+      const hasApproval = new Set((existingApprovals || []).map(a => a.entity_id));
+
+      // STEP 3: Create missing pending_approval rows (self-healing for trigger failures)
+      for (const profile of pendingProfiles) {
+        if (!hasApproval.has(profile.id)) {
+          await supabase.from("pending_approvals").upsert(
+            {
+              entity_type: "user",
+              entity_id: profile.id,
+              status: "pending",
+              submitted_by: profile.id,
+              assigned_to_role: "admin",
+            },
+            { onConflict: "entity_type,entity_id" }
+          );
+        }
+      }
+
+      return pendingProfiles.map((p) => ({
+        id: p.id,
+        email: p.email,
+        full_name: p.full_name,
+        requested_role: p.requested_role,
+        requested_department: p.requested_department,
+        company_name: p.company_name,
+        created_at: p.created_at,
+      })) as PendingUser[];
     },
     refetchInterval: 10000,
     staleTime: 5000,

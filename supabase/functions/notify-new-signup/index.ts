@@ -34,6 +34,27 @@ serve(async (req: Request): Promise<Response> => {
       });
     }
 
+    // Require caller to be the new user (prevent abuse)
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Unauthorized: missing or invalid Authorization header" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const anon = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+      { global: { headers: { Authorization: authHeader } } }
+    );
+    const { data: { user: caller }, error: authError } = await anon.auth.getUser();
+    if (authError || !caller || caller.id !== user_id) {
+      return new Response(JSON.stringify({ error: "Unauthorized: caller must be the new user" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const admin = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""

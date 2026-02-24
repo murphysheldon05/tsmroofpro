@@ -13,6 +13,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Mail, Clock, RefreshCw, Loader2, Send, Trash2 } from "lucide-react";
+import { formatDisplayName } from "@/lib/displayName";
 import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
 import { useState } from "react";
@@ -32,15 +33,13 @@ export function PendingInvites() {
   const [resendingTo, setResendingTo] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  // Fetch pending invites from the pending_invites table
-  // Only show invites where the link has NOT been accessed (user hasn't signed up yet)
-  const { data: pendingInvites, isLoading, refetch } = useQuery({
-    queryKey: ["pending-invites"],
+  // Fetch all sent invites from the pending_invites table
+  const { data: sentInvites, isLoading, refetch } = useQuery({
+    queryKey: ["sent-invites"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("pending_invites")
         .select("id, email, full_name, invited_at, link_accessed_at")
-        .is("link_accessed_at", null) // Only show invites that haven't been used
         .order("invited_at", { ascending: false });
 
       if (error) throw error;
@@ -78,12 +77,28 @@ export function PendingInvites() {
   };
 
   const handleDeleteInvite = async (inviteId: string, email: string) => {
-    if (!confirm(`Are you sure you want to delete the pending invite for ${email}?`)) {
+    const confirmMsg = `Are you sure you want to delete the pending invite for ${email}? If this person already signed up, they will be removed so you can re-invite them.`;
+    if (!confirm(confirmMsg)) {
       return;
     }
 
     setDeletingId(inviteId);
     try {
+      // If user already signed up (has profile with is_approved=false), remove them entirely so admin can re-invite
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("id")
+        .ilike("email", email)
+        .eq("is_approved", false)
+        .maybeSingle();
+
+      if (profile?.id) {
+        const { error: deleteError } = await supabase.functions.invoke("admin-delete-user", {
+          body: { user_id: profile.id },
+        });
+        if (deleteError) throw deleteError;
+      }
+
       const { error } = await supabase
         .from("pending_invites")
         .delete()
@@ -97,11 +112,15 @@ export function PendingInvites() {
         object_type: OBJECT_TYPES.USER,
         object_id: email,
         previous_value: { email },
-        notes: `Pending invite deleted for ${email}`,
+        notes: profile?.id
+          ? `Invite and pending user removed for ${email} (can re-invite)`
+          : `Pending invite deleted for ${email}`,
       });
 
-      toast.success("Invite deleted");
-      queryClient.invalidateQueries({ queryKey: ["pending-invites"] });
+      toast.success(profile?.id ? "User removed — you can re-invite" : "Invite deleted");
+      queryClient.invalidateQueries({ queryKey: ["sent-invites"] });
+      queryClient.invalidateQueries({ queryKey: ["pending-approvals"] });
+      queryClient.invalidateQueries({ queryKey: ["pending-actions-sheldon"] });
     } catch (error: any) {
       toast.error("Failed to delete invite: " + error.message);
     } finally {
@@ -129,7 +148,7 @@ export function PendingInvites() {
     );
   }
 
-  const inviteCount = pendingInvites?.length || 0;
+  const inviteCount = sentInvites?.length || 0;
 
   if (inviteCount === 0) {
     return (
@@ -137,7 +156,7 @@ export function PendingInvites() {
         <CardContent className="py-6">
           <div className="flex items-center justify-center gap-2 text-muted-foreground">
             <Mail className="w-4 h-4" />
-            <span className="text-sm">No pending invites</span>
+            <span className="text-sm">No sent invites</span>
           </div>
         </CardContent>
       </Card>
@@ -165,7 +184,13 @@ export function PendingInvites() {
           </Button>
         </div>
         <p className="text-xs text-muted-foreground">
-          Users who received an invite but haven't created an account yet
+          All invites sent. When users create an account, they appear in{" "}
+          <a
+            href="#pending-approvals"
+            className="text-primary hover:underline font-medium"
+          >
+            Pending Approvals
+          </a>
         </p>
       </CardHeader>
       <CardContent>
@@ -174,16 +199,22 @@ export function PendingInvites() {
             <TableRow>
               <TableHead>Email</TableHead>
               <TableHead>Name</TableHead>
+              <TableHead>Status</TableHead>
               <TableHead>Invited</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {pendingInvites?.map((invite) => (
+            {sentInvites?.map((invite) => (
               <TableRow key={invite.id}>
                 <TableCell className="font-medium">{invite.email}</TableCell>
                 <TableCell className="text-muted-foreground">
-                  {invite.full_name || "—"}
+                  {formatDisplayName(invite.full_name, invite.email) || "—"}
+                </TableCell>
+                <TableCell>
+                  <Badge variant={invite.link_accessed_at ? "secondary" : "outline"}>
+                    {invite.link_accessed_at ? "Signed up" : "Awaiting signup"}
+                  </Badge>
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-1 text-xs text-muted-foreground">
@@ -193,19 +224,21 @@ export function PendingInvites() {
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex items-center justify-end gap-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleResendInvite(invite.email, invite.full_name)}
-                      disabled={resendingTo === invite.email}
-                      title="Resend invite"
-                    >
-                      {resendingTo === invite.email ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <Send className="w-4 h-4" />
-                      )}
-                    </Button>
+                    {!invite.link_accessed_at && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleResendInvite(invite.email, invite.full_name)}
+                        disabled={resendingTo === invite.email}
+                        title="Resend invite"
+                      >
+                        {resendingTo === invite.email ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Send className="w-4 h-4" />
+                        )}
+                      </Button>
+                    )}
                     <Button
                       variant="ghost"
                       size="sm"

@@ -49,18 +49,22 @@ export function useMasterSOPAcknowledgments() {
   const totalCount = SOPMASTER_CONTENT.length;
   const allCompleted = completedCount === totalCount;
 
-  // Acknowledge a single SOP
+  // Acknowledge a single SOP (upsert handles re-acknowledge without duplicate key error)
   const acknowledgeMutation = useMutation({
     mutationFn: async (sopNumber: number) => {
       if (!user?.id) throw new Error("User not authenticated");
 
       const { error } = await supabase
         .from("master_sop_acknowledgments")
-        .insert({
-          user_id: user.id,
-          sop_number: sopNumber,
-          sop_version: SOPMASTER_VERSION,
-        });
+        .upsert(
+          {
+            user_id: user.id,
+            sop_number: sopNumber,
+            sop_version: SOPMASTER_VERSION,
+            acknowledged_at: new Date().toISOString(),
+          },
+          { onConflict: "user_id,sop_number,sop_version" }
+        );
 
       if (error) throw error;
 

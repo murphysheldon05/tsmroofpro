@@ -25,6 +25,8 @@ import {
   useUpdateNotificationSetting,
   useDeleteNotificationSetting,
 } from "@/hooks/useNotificationSettings";
+import { UserPicker } from "@/components/admin/UserPicker";
+import { formatDisplayName } from "@/lib/displayName";
 
 const NOTIFICATION_TYPE_LABELS: Record<string, { label: string; description: string; icon: string }> = {
   request_submission: {
@@ -45,6 +47,11 @@ const NOTIFICATION_TYPE_LABELS: Record<string, { label: string; description: str
   new_hire: {
     label: "New Hire Onboarding",
     description: "HR receives notifications when managers submit new hire requests for account setup",
+    icon: "user-plus",
+  },
+  new_user_approval: {
+    label: "New User Approval",
+    description: "Admins notified when a new user signs up and is waiting for approval",
     icon: "user-plus",
   },
   warranty_submission: {
@@ -155,25 +162,24 @@ export function NotificationSettingsManager() {
             </DialogHeader>
             <div className="space-y-4 mt-4">
               <div className="space-y-2">
-                <Label>Name</Label>
-                <Input
-                  value={newRecipient.recipient_name}
-                  onChange={(e) =>
-                    setNewRecipient({ ...newRecipient, recipient_name: e.target.value })
+                <Label>Recipient</Label>
+                <UserPicker
+                  value={{
+                    email: newRecipient.recipient_email,
+                    name: newRecipient.recipient_name,
+                  }}
+                  onChange={(email, name) =>
+                    setNewRecipient({
+                      ...newRecipient,
+                      recipient_email: email,
+                      recipient_name: name,
+                    })
                   }
-                  placeholder="John Smith"
+                  placeholder="Search by name or email..."
                 />
-              </div>
-              <div className="space-y-2">
-                <Label>Email Address *</Label>
-                <Input
-                  type="email"
-                  value={newRecipient.recipient_email}
-                  onChange={(e) =>
-                    setNewRecipient({ ...newRecipient, recipient_email: e.target.value })
-                  }
-                  placeholder="john@company.com"
-                />
+                <p className="text-xs text-muted-foreground">
+                  Select a user from the system or type a valid email to add a custom recipient
+                </p>
               </div>
               <div className="space-y-2">
                 <Label>Notification Type</Label>
@@ -247,7 +253,7 @@ export function NotificationSettingsManager() {
                       </div>
                       <div className="min-w-0">
                         <p className="font-medium text-foreground truncate">
-                          {setting.recipient_name || setting.recipient_email}
+                          {formatDisplayName(setting.recipient_name, setting.recipient_email) || setting.recipient_email}
                         </p>
                         {setting.recipient_name && (
                           <p className="text-sm text-muted-foreground truncate">

@@ -161,6 +161,33 @@ const handler = async (req: Request): Promise<Response> => {
     console.log(`[APPROVE-USER] Role ${assigned_role} assigned`);
 
     // ========================================================================
+    // STEP 3b: Link commission_reps by email (commissions uploaded before user joined)
+    // When a user is approved, any commission_reps with matching email and no user_id
+    // get linked so their commissions/leaderboard data match up (case-insensitive match)
+    // ========================================================================
+    if (profileData.email) {
+      const emailLower = profileData.email.toLowerCase();
+      const { data: unlinkedReps } = await supabaseAdmin
+        .from("commission_reps")
+        .select("id, email")
+        .is("user_id", null);
+
+      const toLink = (unlinkedReps || []).filter(
+        (r) => r.email?.toLowerCase() === emailLower
+      );
+      for (const rep of toLink) {
+        const { error: linkError } = await supabaseAdmin
+          .from("commission_reps")
+          .update({ user_id: user_id })
+          .eq("id", rep.id);
+        if (linkError) console.warn("[APPROVE-USER] commission_rep link warning:", linkError);
+      }
+      if (toLink.length > 0) {
+        console.log(`[APPROVE-USER] Linked ${toLink.length} commission_rep(s) to user`);
+      }
+    }
+
+    // ========================================================================
     // STEP 4: Get department name for email
     // ========================================================================
     let departmentName: string | null = null;
