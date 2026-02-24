@@ -950,13 +950,13 @@ export type Database = {
           custom_commission_percentage: number | null
           denied_at: string | null
           denied_by: string | null
+          draw_amount_paid: number | null
+          draw_closed_out: boolean | null
           flat_fee_amount: number | null
           gross_commission: number | null
           id: string
           install_completion_date: string | null
           is_draw: boolean | null
-          draw_amount_paid: number | null
-          draw_closed_out: boolean | null
           is_flat_fee: boolean | null
           is_manager_submission: boolean | null
           job_address: string
@@ -1008,13 +1008,13 @@ export type Database = {
           custom_commission_percentage?: number | null
           denied_at?: string | null
           denied_by?: string | null
+          draw_amount_paid?: number | null
+          draw_closed_out?: boolean | null
           flat_fee_amount?: number | null
           gross_commission?: number | null
           id?: string
           install_completion_date?: string | null
           is_draw?: boolean | null
-          draw_amount_paid?: number | null
-          draw_closed_out?: boolean | null
           is_flat_fee?: boolean | null
           is_manager_submission?: boolean | null
           job_address: string
@@ -1066,13 +1066,13 @@ export type Database = {
           custom_commission_percentage?: number | null
           denied_at?: string | null
           denied_by?: string | null
+          draw_amount_paid?: number | null
+          draw_closed_out?: boolean | null
           flat_fee_amount?: number | null
           gross_commission?: number | null
           id?: string
           install_completion_date?: string | null
           is_draw?: boolean | null
-          draw_amount_paid?: number | null
-          draw_closed_out?: boolean | null
           is_flat_fee?: boolean | null
           is_manager_submission?: boolean | null
           job_address?: string

@@ -66,7 +66,7 @@ import { LeaderboardSettingsPanel } from "@/components/admin/LeaderboardSettings
 import { formatDisplayName } from "@/lib/displayName";
 import { PlaybookCompletionStatus } from "@/components/admin/PlaybookCompletionStatus";
 import { RoleOnboardingAdmin } from "@/components/admin/RoleOnboardingAdmin";
-import { BookOpen, GraduationCap, ShieldCheck, Shield } from "lucide-react";
+import { BookOpen, GraduationCap, ShieldCheck } from "lucide-react";
 import { GuidedTour } from "@/components/tutorial/GuidedTour";
 import { adminSteps } from "@/components/tutorial/tutorialSteps";
 import { RoleAssignment } from "@/components/admin/RoleAssignment";
