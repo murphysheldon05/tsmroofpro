@@ -1,100 +1,57 @@
 
 
-# Plan: Revert to Self-Signup & Purge Tim Brown
+## Fix Build Errors and Restore App Functionality
 
-## Summary
-You want to undo the invite-only changes and go back to allowing users to create their own accounts via the signup page. Additionally, you want to completely remove `timbrown@tsmroofs.com` from all database records so he can register fresh.
-
----
-
-## Part 1: Complete Purge of Tim Brown
-
-**Current Records Found:**
-- Profile ID: `7f380256-1da8-4c05-a3d4-81be992f90b5`
-- User role: `employee`
-- Pending approval record exists
-- 2 audit log entries referencing Tim Brown
-
-**Database Deletions Required:**
-| Table | Record |
-|-------|--------|
-| `profiles` | ID: `7f380256-1da8-4c05-a3d4-81be992f90b5` |
-| `user_roles` | user_id: `7f380256-1da8-4c05-a3d4-81be992f90b5` |
-| `pending_approvals` | entity_id: `7f380256-1da8-4c05-a3d4-81be992f90b5` |
-| `admin_audit_log` | 2 entries with object_id referencing timbrown@tsmroofs.com |
-| `auth.users` | Delete via edge function |
+The app is completely broken due to multiple build errors, which is why pending approvals (and everything else) can't be seen. The pending approval data IS correctly stored in the database — Anakin Armenta is pending with both `profiles.is_approved = false` and a matching `pending_approvals` row. Once these build errors are fixed, the Pending Approvals section will work as expected.
 
 ---
 
-## Part 2: Revert Signup Page (Enable Self-Registration)
+### Root Cause
 
-**File:** `src/pages/Signup.tsx`
-
-**Current State:** Shows "Invite Only" message, blocks all signups
-
-**Revert To:** Full signup form that allows users to create their own accounts with:
-- Email field
-- Password field (with show/hide toggle)
-- Full name field
-- Terms/consent checkbox
-- Password strength indicator
-- Form validation
-- Submit button that calls `signUp()` from AuthContext
-- Pending approval message after successful signup
+The app has a blank screen because the build fails with type errors across several files. Fixing these will restore the entire app including the admin panel's Pending Approvals box.
 
 ---
 
-## Part 3: Revert Auth Page Link
+### Fixes Required
 
-**File:** `src/pages/Auth.tsx`
+**1. Edge Function: send-hold-notification/index.ts**
+- Change `import { Resend } from "npm:resend@2.0.0"` to use the `esm.sh` CDN pattern (matching all other edge functions in the project)
+- New import: `import { Resend } from "https://esm.sh/resend@2.0.0?target=deno"`
 
-**Current State:**
-```tsx
-Need access? <a href="mailto:sheldonmurphy@tsmroofs.com">Request an invite</a>
-```
+**2. src/hooks/useCommissions.ts — Missing `pay_run_id` column**
+- The `commission_submissions` table does NOT have a `pay_run_id` column
+- Remove `pay_run_id` from the `CommissionSubmission` interface
+- Remove `pay_run_id` from the `.select()` query on line ~304
+- Remove `pay_run_id` references in the pay tracking logic (~line 427)
 
-**Revert To:**
-```tsx
-Don't have an account? <button onClick={() => navigate("/signup")}>Create one</button>
-```
+**3. src/hooks/useCommissions.ts — Missing `email` in profile select**
+- Line 197 selects `manager_id, full_name` but line 251 references `profile?.email`
+- Add `email` to the select: `.select("manager_id, full_name, email")`
 
----
+**4. src/hooks/useCommissions.ts — `previous_submission_snapshot` type mismatch**
+- Line ~710: `Record<string, unknown>` is not assignable to `Json`
+- Cast `previousSnapshot` as `Json` before passing to the update
 
-## Part 4: Revert Invite Email
+**5. src/hooks/useEmployeeHandbook.ts — `.catch` on PromiseLike**
+- Line 114: chain `.then(() => {}).catch(...)` on a PromiseLike that doesn't have `.catch`
+- Wrap in a proper try/catch or use `Promise.resolve()` wrapper
 
-**File:** `supabase/functions/send-invite-email/index.ts`
+**6. src/pages/CommissionDetail.tsx — Type conversion error**
+- Line 147: casting `submission` as `Record<string, unknown>` fails
+- Add intermediate `unknown` cast: `(submission as unknown as Record<string, unknown>)[key]`
 
-**Current State:** Points to `/auth` with "Sign In" messaging
-
-**Revert To:** Points to `/signup` with "Create My Account" messaging:
-- URL: `https://tsmroofpro.com/signup`
-- Button text: "Create My Account"
-- Instructions about creating account and awaiting approval
-
----
-
-## Technical Summary
-
-| Action | Details |
-|--------|---------|
-| Delete from `profiles` | 1 record |
-| Delete from `user_roles` | 1 record |
-| Delete from `pending_approvals` | 1 record |
-| Delete from `admin_audit_log` | 2 records |
-| Delete from `auth.users` | Via admin-delete-user function |
-| Rewrite `Signup.tsx` | Full signup form with email/password/name |
-| Edit `Auth.tsx` | Restore "Create one" link |
-| Edit `send-invite-email` | Restore `/signup` URL and messaging |
+**7. src/pages/Commissions.tsx — Type mismatch in pay run grouping**
+- Line ~282: items cast to `{ scheduled_pay_date?: string | null }[]` but then `push(s)` where `s` must be full `CommissionSubmission`
+- Fix the type assertion to use `any` or properly type the accumulator
 
 ---
 
-## User Flow After Changes
+### Technical Details
 
-1. **Tim Brown** visits `tsmroofpro.com/signup`
-2. Enters email, password, and full name
-3. Clicks "Create Account"
-4. Sees "Pending Approval" message
-5. Admin approves → Tim gets access
+All changes are TypeScript type fixes and one edge function import fix. No database schema changes needed. No new features — purely restoring the app to a working state.
 
-Invited users will also follow the same flow—they receive an email pointing to `/signup` where they create their own password and account.
+After these fixes:
+- The app will load and render properly
+- The Admin panel's "Users" tab will show the Pending Approvals section with Anakin Armenta listed
+- All existing functionality will be restored
 
