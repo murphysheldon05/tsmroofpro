@@ -271,25 +271,35 @@ export default function Admin() {
   };
 
   const handleUpdateUserRole = async (userId: string, displayRole: "user" | "manager" | "admin") => {
-    // Get old role for audit log
     const oldRole = users?.find((u) => u.id === userId)?.role;
-    const newRole = displayRoleToDbRole(displayRole);
+    const userProfile = users?.find((u) => u.id === userId);
+    const deptName = departments?.find((d) => d.id === userProfile?.department_id)?.name;
+    const isSalesDept = deptName === "Sales";
+    const hasTier = !!getUserTier(userId);
+
+    let targetRole: string;
+    if (displayRole === "admin") {
+      targetRole = "admin";
+    } else if (displayRole === "manager") {
+      targetRole = isSalesDept ? "sales_manager" : "manager";
+    } else {
+      targetRole = isSalesDept && hasTier ? "sales_rep" : "employee";
+    }
 
     const { error } = await supabase
       .from("user_roles")
-      .update({ role: newRole as any })
+      .update({ role: targetRole as any })
       .eq("user_id", userId);
 
     if (error) {
       toast.error("Failed to update role");
     } else {
-      // Audit log
       logAction.mutate({
         action_type: AUDIT_ACTIONS.ROLE_CHANGED,
         object_type: OBJECT_TYPES.USER,
         object_id: userId,
         previous_value: { role: oldRole },
-        new_value: { role: newRole },
+        new_value: { role: targetRole },
       });
       
       toast.success("Role updated");
@@ -345,15 +355,17 @@ export default function Admin() {
 
       if (profileError) throw profileError;
 
-      // Sync role: User in Sales with tier → sales_rep; otherwise → employee
       const displayRole = dbRoleToDisplayRole(previousUser?.role);
       const isSalesDept = departmentName === "Sales";
       const hasTier = !!editUserData.commission_tier_id;
-      const targetRole = displayRole === "user"
-        ? (isSalesDept && hasTier ? "sales_rep" : "employee")
-        : displayRole === "manager"
-          ? "manager"
-          : "admin";
+      let targetRole: string;
+      if (displayRole === "admin") {
+        targetRole = "admin";
+      } else if (displayRole === "manager") {
+        targetRole = isSalesDept ? "sales_manager" : "manager";
+      } else {
+        targetRole = isSalesDept && hasTier ? "sales_rep" : "employee";
+      }
       const { error: roleError } = await supabase
         .from("user_roles")
         .update({ role: targetRole })
