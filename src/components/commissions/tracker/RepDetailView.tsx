@@ -6,7 +6,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ChevronLeft, ChevronRight, Share2, BarChart3, FileText, Eye, Clock, CheckCircle, XCircle, Wallet, Plus, Pencil } from "lucide-react";
+import { ChevronLeft, ChevronRight, Share2, BarChart3, FileText, Eye, Clock, CheckCircle, XCircle, Wallet, Plus, Pencil, ExternalLink } from "lucide-react";
 import { PayTypeBadge } from "./PayTypeBadge";
 import { formatUSD, getRepInitials, type EnrichedEntry } from "@/hooks/useCommissionEntries";
 import { useCommissionDocuments } from "@/hooks/useCommissionDocuments";
@@ -95,6 +95,32 @@ export function RepDetailView({ repName, repColor, entries, readOnly, hideBackBu
   const totalJobVal = entries.filter((e) => e.job_value).reduce((s, e) => s + (e.job_value || 0), 0);
   const totalPaid = entries.reduce((s, e) => s + e.amount_paid, 0);
 
+  // Parse commission submission ID from tracker entry notes (e.g. "Auto-created from commission submission abc-123")
+  const getSubmissionIdFromNotes = (notes: string | null): string | null => {
+    if (!notes) return null;
+    const match = notes.match(/commission submission ([a-f0-9-]{36})/i);
+    return match ? match[1] : null;
+  };
+
+  const NotesCell = ({ entry }: { entry: EnrichedEntry }) => {
+    const submissionId = getSubmissionIdFromNotes(entry.notes);
+    return (
+      <TableCell className="text-sm text-muted-foreground max-w-[200px]">
+        {submissionId ? (
+          <button
+            onClick={() => navigate(`/commissions/${submissionId}`)}
+            className="flex items-center gap-1.5 truncate text-left hover:text-primary hover:underline"
+          >
+            <ExternalLink className="h-3.5 w-3.5 flex-shrink-0" />
+            <span className="truncate">{entry.notes || "—"}</span>
+          </button>
+        ) : (
+          <span className="truncate block">{entry.notes || "—"}</span>
+        )}
+      </TableCell>
+    );
+  };
+
   const getDocStatusBadge = (status: string) => {
     const icons: Record<string, React.ReactNode> = {
       draft: <FileText className="h-3 w-3" />,
@@ -110,10 +136,9 @@ export function RepDetailView({ repName, repColor, entries, readOnly, hideBackBu
       paid: "bg-emerald-100 text-emerald-800 border-emerald-300",
       accounting_approved: "bg-green-100 text-green-800 border-green-300",
       manager_approved: "bg-blue-100 text-blue-800 border-blue-300",
-      rejected: "bg-red-100 text-red-800 border-red-300",
+      rejected: "bg-orange-100 text-orange-800 border-orange-300",
       submitted: "bg-amber-100 text-amber-800 border-amber-300",
       draft: "bg-slate-200 text-slate-700 border-slate-400 dark:bg-slate-700 dark:text-slate-300 dark:border-slate-500",
-      rejected: "bg-orange-100 text-orange-800 border-orange-300",
     };
     return (
       <Badge variant="outline" className={`gap-1 ${colors[status] || ""}`}>
@@ -237,7 +262,7 @@ export function RepDetailView({ repName, repColor, entries, readOnly, hideBackBu
                                   </TableCell>
                                 </>
                               )}
-                              <TableCell className="text-sm text-muted-foreground max-w-[200px] truncate">{entry.notes || "—"}</TableCell>
+                              <NotesCell entry={entry} />
                             </TableRow>
                           ))}
                         </>
@@ -262,7 +287,7 @@ export function RepDetailView({ repName, repColor, entries, readOnly, hideBackBu
                             </TableCell>
                           </>
                         )}
-                        <TableCell className="text-sm text-muted-foreground max-w-[200px] truncate">{entry.notes || "—"}</TableCell>
+                        <NotesCell entry={entry} />
                       </TableRow>
                     );
                   })}

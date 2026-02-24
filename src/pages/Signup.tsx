@@ -142,7 +142,7 @@ export default function Signup() {
           .eq("email", trimmedEmail);
 
         setSignupComplete(true);
-        toast.success("Account created! Awaiting approval.");
+        toast.success("Account created! You can sign in now.");
       }
     } catch (error) {
       toast.error("An unexpected error occurred");
@@ -181,8 +181,7 @@ export default function Signup() {
                 Account Created!
               </h1>
               <p className="text-muted-foreground mb-6">
-                Your account has been created and is pending admin approval.
-                You'll receive an email once your account is activated.
+                Your account is ready. Sign in to access the portal.
               </p>
 
               <Button

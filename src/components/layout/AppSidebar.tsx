@@ -79,6 +79,7 @@ interface NavChild {
   sectionKey: string;
   managerOnly?: boolean;
   adminOnly?: boolean;
+  salesRepOnly?: boolean; // Show for sales reps (can submit commissions) - links to their own tracker
   requiresPlaybook?: boolean;
 }
 
@@ -115,6 +116,7 @@ const navigationItems: NavItem[] = [
     requiresPlaybook: true,
     children: [
       { title: "Submissions", href: "/commissions", icon: DollarSign, sectionKey: "commissions", requiresPlaybook: true },
+      { title: "My Tracker", href: "/my-commissions", icon: BarChart3, sectionKey: "commissions", requiresPlaybook: true, salesRepOnly: true },
       { title: "Tracker", href: "/commission-tracker", icon: TrendingUp, sectionKey: "commissions", requiresPlaybook: true, managerOnly: true },
       { title: "Accounting", href: "/accounting", icon: Calculator, sectionKey: "accounting", requiresPlaybook: true, adminOnly: true },
     ],
@@ -498,6 +500,7 @@ export function AppSidebar() {
           const filteredChildren = item.children.filter((child) => {
             if (child.managerOnly && !isManager && !isAdmin) return false;
             if (child.adminOnly && !isAdmin) return false;
+            if (child.salesRepOnly && (isManager || isAdmin || role !== "sales_rep")) return false;
             return isSectionVisible(child.sectionKey, userPermissions, role);
           });
           if (filteredChildren.length === 0) return null;

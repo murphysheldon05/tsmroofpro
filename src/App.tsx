@@ -342,7 +342,7 @@ const App = () => (
             <Route
               path="/commission-tracker"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute requireManager>
                   <CommissionTracker />
                 </ProtectedRoute>
               }
@@ -350,7 +350,7 @@ const App = () => (
             <Route
               path="/commission-tracker/:repSlug"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute requireManager>
                   <CommissionTrackerDetail />
                 </ProtectedRoute>
               }

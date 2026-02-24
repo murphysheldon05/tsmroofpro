@@ -69,6 +69,16 @@ export function useCommissionReps() {
   return useQuery({
     queryKey: ["commission-reps", user?.id, isAdmin, isManager],
     queryFn: async () => {
+      // Sales rep: only their own linked rep
+      if (!isAdmin && !isManager && user) {
+        const { data, error } = await supabase
+          .from("commission_reps")
+          .select("*")
+          .eq("user_id", user.id);
+        if (error) throw error;
+        return (data as CommissionRep[]) || [];
+      }
+
       // Manager-level: only reps assigned to this manager (team_assignments) + self
       if (isManager && !isAdmin && user) {
         const { data: assignments } = await supabase

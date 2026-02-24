@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { formatDisplayName } from "@/lib/displayName";
 import { toast } from "sonner";
@@ -214,11 +215,13 @@ export function useCreateCommission() {
       const insertData = {
         ...data,
         submitted_by: user.id,
+        status: "pending_review" as const,
+        approval_stage: data.is_manager_submission ? "pending_admin" : "pending_manager",
       };
       
       const { data: result, error } = await supabase
         .from("commission_submissions")
-        .insert(insertData as any)
+        .insert(insertData as Database["public"]["Tables"]["commission_submissions"]["Insert"])
         .select()
         .single();
       
@@ -305,7 +308,7 @@ export function useUpdateCommissionStatus() {
         .eq("id", id)
         .single();
       
-      const updateData: Record<string, any> = { status };
+      const updateData: Database["public"]["Tables"]["commission_submissions"]["Update"] = { status };
       
       // Set approval_stage if provided
       if (approval_stage) {
@@ -956,6 +959,16 @@ export function useRevertCommission() {
           paid_at: null,
           paid_by: null,
         };
+
+        // Clean up auto-created commission_entries for this submission
+        try {
+          await supabase
+            .from("commission_entries")
+            .delete()
+            .ilike("notes", `%commission submission ${id}%`);
+        } catch (cleanupErr) {
+          console.warn("Failed to clean up tracker entries on revert:", cleanupErr);
+        }
       } else if (current.status === "approved" && current.approval_stage === "completed") {
         updateData = {
           status: "pending_review",

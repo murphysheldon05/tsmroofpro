@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import { Loader2, Save, Camera, User } from "lucide-react";
@@ -109,9 +110,9 @@ export function ProfileInfoTab() {
 
       setAvatarUrl(publicUrl);
       toast.success("Profile photo updated successfully");
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error uploading avatar:", error);
-      toast.error("Failed to upload photo: " + error.message);
+      toast.error("Failed to upload photo: " + (error instanceof Error ? error.message : String(error)));
     } finally {
       setUploadingAvatar(false);
       // Reset file input
@@ -139,8 +140,8 @@ export function ProfileInfoTab() {
       if (error) throw error;
 
       toast.success("Profile updated successfully");
-    } catch (error: any) {
-      toast.error("Failed to update profile: " + error.message);
+    } catch (error: unknown) {
+      toast.error("Failed to update profile: " + (error instanceof Error ? error.message : String(error)));
     } finally {
       setSaving(false);
     }

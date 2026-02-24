@@ -43,7 +43,6 @@ import {
   Trophy,
 } from "lucide-react";
 import { UserPermissionsEditor } from "@/components/admin/UserPermissionsEditor";
-import { PendingApprovals } from "@/components/admin/PendingApprovals";
 import { PendingInvites } from "@/components/admin/PendingInvites";
 import { useDepartments } from "@/hooks/useDepartments";
 import { Badge } from "@/components/ui/badge";
@@ -59,6 +58,7 @@ import { ToolsManager } from "@/components/admin/ToolsManager";
 import { AuditLogViewer } from "@/components/admin/AuditLogViewer";
 import { ResetPasswordDialog } from "@/components/admin/ResetPasswordDialog";
 import { useCommissionTiers } from "@/hooks/useCommissionTiers";
+import { useAuth } from "@/contexts/AuthContext";
 import { useAdminAuditLog, AUDIT_ACTIONS, OBJECT_TYPES } from "@/hooks/useAdminAuditLog";
 import { DrawSettingsManager } from "@/components/admin/DrawSettingsManager";
 import { OverrideReportPanel } from "@/components/admin/OverrideReportPanel";
@@ -69,17 +69,48 @@ import { RoleOnboardingAdmin } from "@/components/admin/RoleOnboardingAdmin";
 import { BookOpen, GraduationCap, ShieldCheck, Shield } from "lucide-react";
 import { GuidedTour } from "@/components/tutorial/GuidedTour";
 import { adminSteps } from "@/components/tutorial/tutorialSteps";
-import { RoleAssignment } from "@/components/admin/RoleAssignment";
 import { PendingActionsSection } from "@/components/admin/PendingActionsSection";
 import OpsCompliance from "@/pages/OpsCompliance";
 
-const ADMIN_TAB_VALUES = ["users", "tiers", "sops", "categories", "tools", "notifications", "routing", "audit", "draws", "overrides", "leaderboard", "playbook-status", "role-onboarding", "roles-departments", "ops-compliance"] as const;
+const ADMIN_TAB_VALUES = ["users", "tiers", "sops", "categories", "tools", "notifications", "routing", "audit", "draws", "overrides", "leaderboard", "playbook-status", "role-onboarding", "ops-compliance"] as const;
+
+/** Map DB role to display role for Admin Panel dropdown (User | Manager | Admin only). */
+function dbRoleToDisplayRole(dbRole: string | null | undefined): "user" | "manager" | "admin" {
+  if (!dbRole) return "user";
+  switch (dbRole) {
+    case "admin": return "admin";
+    case "manager":
+    case "sales_manager": return "manager";
+    default: return "user"; // employee, sales_rep, user, or any unknown
+  }
+}
+
+/** Map display role selection back to DB role when saving. */
+function displayRoleToDbRole(displayRole: "user" | "manager" | "admin"): string {
+  switch (displayRole) {
+    case "admin": return "admin";
+    case "manager": return "manager";
+    case "user": return "employee";
+  }
+}
+
+/** Paul Santiano's department should display as 'HR' not 'HR / IT'. */
+function getDepartmentDisplayName(
+  fullName: string | null,
+  email: string | null,
+  deptName: string | undefined
+): string | undefined {
+  const isPaul = fullName === "Paul Santiano" || email?.toLowerCase() === "paul.santiano@tsmroofs.com";
+  if (isPaul && deptName === "HR / IT") return "HR";
+  return deptName;
+}
 
 export default function Admin() {
   const [searchParams, setSearchParams] = useSearchParams();
   const tabParam = searchParams.get("tab");
   const activeTab = ADMIN_TAB_VALUES.includes(tabParam as any) ? tabParam : "users";
   const queryClient = useQueryClient();
+  const { user: currentUser } = useAuth();
   const { data: departments } = useDepartments();
   const { data: commissionTiers } = useCommissionTiers();
   const { logAction } = useAdminAuditLog();
@@ -239,10 +270,11 @@ export default function Admin() {
     }
   };
 
-  const handleUpdateUserRole = async (userId: string, newRole: string) => {
+  const handleUpdateUserRole = async (userId: string, displayRole: "user" | "manager" | "admin") => {
     // Get old role for audit log
     const oldRole = users?.find((u) => u.id === userId)?.role;
-    
+    const newRole = displayRoleToDbRole(displayRole);
+
     const { error } = await supabase
       .from("user_roles")
       .update({ role: newRole as any })
@@ -299,8 +331,9 @@ export default function Admin() {
       const previousUser = users?.find((u) => u.id === userId);
       const previousTier = getUserTier(userId);
       const previousManager = getUserManager(userId);
-      
-      // Update profile
+      const departmentName = departments?.find((d) => d.id === editUserData.department_id)?.name ?? null;
+
+      // Update profile (trigger syncs profiles.department from department_id)
       const { error: profileError } = await supabase
         .from("profiles")
         .update({
@@ -312,8 +345,23 @@ export default function Admin() {
 
       if (profileError) throw profileError;
 
-      // Update commission tier assignment
-      if (editUserData.commission_tier_id) {
+      // Sync role: User in Sales with tier → sales_rep; otherwise → employee
+      const displayRole = dbRoleToDisplayRole(previousUser?.role);
+      const isSalesDept = departmentName === "Sales";
+      const hasTier = !!editUserData.commission_tier_id;
+      const targetRole = displayRole === "user"
+        ? (isSalesDept && hasTier ? "sales_rep" : "employee")
+        : displayRole === "manager"
+          ? "manager"
+          : "admin";
+      const { error: roleError } = await supabase
+        .from("user_roles")
+        .update({ role: targetRole })
+        .eq("user_id", userId);
+      if (roleError) console.warn("Role sync warning:", roleError);
+
+      // Update commission tier assignment (only for Sales department)
+      if (editUserData.commission_tier_id && isSalesDept) {
         // Delete existing assignment
         await supabase
           .from("user_commission_tiers")
@@ -326,11 +374,12 @@ export default function Admin() {
           .insert({
             user_id: userId,
             tier_id: editUserData.commission_tier_id,
+            assigned_by: currentUser?.id ?? null,
           });
 
         if (tierError) throw tierError;
       } else {
-        // Remove tier assignment if none selected
+        // Remove tier assignment if none selected or not Sales
         await supabase
           .from("user_commission_tiers")
           .delete()
@@ -398,6 +447,7 @@ export default function Admin() {
       toast.success("User settings saved");
       queryClient.invalidateQueries({ queryKey: ["admin-users"] });
       queryClient.invalidateQueries({ queryKey: ["user-commission-tiers"] });
+      queryClient.invalidateQueries({ queryKey: ["user-commission-tier", userId] });
       queryClient.invalidateQueries({ queryKey: ["team-assignments"] });
       setEditingUser(null);
     } catch (error: any) {
@@ -488,10 +538,6 @@ export default function Admin() {
               <GraduationCap className="w-4 h-4" />
               Role Onboarding
             </TabsTrigger>
-            <TabsTrigger value="roles-departments" className="gap-2">
-              <ShieldCheck className="w-4 h-4" />
-              Roles & Depts
-            </TabsTrigger>
             <TabsTrigger value="ops-compliance" className="gap-2">
               <Shield className="w-4 h-4" />
               Ops Compliance
@@ -507,12 +553,6 @@ export default function Admin() {
             <div>
               <h2 className="text-lg font-semibold text-foreground mb-4">Pending Invites</h2>
               <PendingInvites />
-            </div>
-
-            {/* Pending Approvals Section */}
-            <div data-tutorial="admin-pending">
-              <h2 className="text-lg font-semibold text-foreground mb-4">Pending Approvals</h2>
-              <PendingApprovals />
             </div>
 
             <div className="flex justify-between items-center">
@@ -545,7 +585,7 @@ export default function Admin() {
                     </DialogHeader>
                     <div className="space-y-4 mt-4">
                       <p className="text-sm text-muted-foreground">
-                        Send an invite email. The user will create their own account at the signup page and appear in Pending Approvals once they register.
+                        Send an invite email. The user will create their own account at the signup page and get immediate access with default user-level permissions. You can change their department, tier, and role in the Users table below.
                       </p>
                       <div className="space-y-2">
                         <Label>Email Address *</Label>
@@ -611,7 +651,8 @@ export default function Admin() {
                 {users?.map((user, index) => {
                     const userTierId = getUserTier(user.id);
                     const tierName = commissionTiers?.find((t) => t.id === userTierId)?.name;
-                    const deptName = departments?.find((d) => d.id === user.department_id)?.name;
+                    const rawDeptName = departments?.find((d) => d.id === user.department_id)?.name;
+                    const deptName = getDepartmentDisplayName(user.full_name, user.email, rawDeptName);
                     const userManagerId = getUserManager(user.id);
                     const managerName = managers?.find((m) => m.id === userManagerId)?.full_name;
                     const isSalesWithoutManager = (user.role === "sales_rep" || user.role === "sales_manager") && !userManagerId;
@@ -671,21 +712,15 @@ export default function Admin() {
                         <td className="px-4 py-3">
                           <Select
                             key={`${user.id}-${user.role}`}
-                            defaultValue={user.role || "employee"}
-                            onValueChange={(v) => handleUpdateUserRole(user.id, v)}
+                            value={dbRoleToDisplayRole(user.role)}
+                            onValueChange={(v) => handleUpdateUserRole(user.id, v as "user" | "manager" | "admin")}
                           >
                             <SelectTrigger className="w-32">
-                              <SelectValue />
+                              <SelectValue placeholder="User" />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="employee">
-                                <span className="font-medium">Employee</span>
-                              </SelectItem>
-                              <SelectItem value="sales_rep">
-                                <span className="font-medium">Sales Rep</span>
-                              </SelectItem>
-                              <SelectItem value="sales_manager">
-                                <span className="font-medium">Sales Manager</span>
+                              <SelectItem value="user">
+                                <span className="font-medium">User</span>
                               </SelectItem>
                               <SelectItem value="manager">
                                 <span className="font-medium">Manager</span>
@@ -784,7 +819,15 @@ export default function Admin() {
                                     <Label>Department</Label>
                                     <Select
                                       value={editUserData.department_id || "none"}
-                                      onValueChange={(v) => setEditUserData({ ...editUserData, department_id: v === "none" ? null : v })}
+                                      onValueChange={(v) => {
+                                        const newDeptId = v === "none" ? null : v;
+                                        const newDeptName = departments?.find((d) => d.id === newDeptId)?.name;
+                                        setEditUserData({
+                                          ...editUserData,
+                                          department_id: newDeptId,
+                                          commission_tier_id: newDeptName === "Sales" ? editUserData.commission_tier_id : null,
+                                        });
+                                      }}
                                     >
                                       <SelectTrigger>
                                         <SelectValue placeholder="No department" />
@@ -819,25 +862,28 @@ export default function Admin() {
                                     </Select>
                                     <p className="text-xs text-muted-foreground">Commission forms route to this manager for approval</p>
                                   </div>
-                                  <div className="space-y-2">
-                                    <Label>Commission Tier</Label>
-                                    <Select
-                                      value={editUserData.commission_tier_id || "none"}
-                                      onValueChange={(v) => setEditUserData({ ...editUserData, commission_tier_id: v === "none" ? null : v })}
-                                    >
-                                      <SelectTrigger>
-                                        <SelectValue placeholder="No tier assigned" />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        <SelectItem value="none">No tier assigned</SelectItem>
-                                        {commissionTiers?.map((tier) => (
-                                          <SelectItem key={tier.id} value={tier.id}>
-                                            {tier.name}
-                                          </SelectItem>
-                                        ))}
-                                      </SelectContent>
-                                    </Select>
-                                  </div>
+                                  {departments?.find((d) => d.id === editUserData.department_id)?.name === "Sales" && (
+                                    <div className="space-y-2">
+                                      <Label>Commission Tier</Label>
+                                      <Select
+                                        value={editUserData.commission_tier_id || "none"}
+                                        onValueChange={(v) => setEditUserData({ ...editUserData, commission_tier_id: v === "none" ? null : v })}
+                                      >
+                                        <SelectTrigger>
+                                          <SelectValue placeholder="No tier assigned" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          <SelectItem value="none">No tier assigned</SelectItem>
+                                          {commissionTiers?.map((tier) => (
+                                            <SelectItem key={tier.id} value={tier.id}>
+                                              {tier.name}
+                                            </SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                      <p className="text-xs text-muted-foreground">Only available for Sales department</p>
+                                    </div>
+                                  )}
                                   <Button
                                     onClick={() => handleSaveUserSettings(user.id)}
                                     className="w-full"
@@ -932,11 +978,6 @@ export default function Admin() {
           {/* Role Onboarding Tab */}
           <TabsContent value="role-onboarding" className="space-y-4">
             <RoleOnboardingAdmin />
-          </TabsContent>
-
-          {/* Roles & Departments Tab */}
-          <TabsContent value="roles-departments" className="space-y-4">
-            <RoleAssignment />
           </TabsContent>
 
           {/* Ops Compliance Tab - Admin only (Admin route is already protected) */}
