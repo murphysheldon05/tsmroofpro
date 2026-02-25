@@ -49,12 +49,12 @@ export function VendorForm({ open, onOpenChange, vendor }: VendorFormProps) {
     defaultValues: getDefaults(vendor),
   });
 
-  // Reset form when dialog opens or vendor changes
+  // Reset form when dialog opens or when editing target changes
   useEffect(() => {
     if (open) {
       reset(getDefaults(vendor));
     }
-  }, [open, vendor, reset]);
+  }, [open, vendor?.id, reset]);
 
   const coiExpirationDate = watch("coi_expiration_date");
 
@@ -86,7 +86,7 @@ export function VendorForm({ open, onOpenChange, vendor }: VendorFormProps) {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="vendor_name">Vendor Name *</Label>
-              <Input id="vendor_name" {...register("vendor_name", { required: true })} />
+              <Input id="vendor_name" autoFocus {...register("vendor_name", { required: true })} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="primary_contact_name">Primary Contact Name *</Label>

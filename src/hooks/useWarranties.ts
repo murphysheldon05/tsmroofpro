@@ -243,12 +243,22 @@ export function useUpdateWarranty() {
 
   return useMutation({
     mutationFn: async ({ id, previousStatus, userRole, ...updates }: Partial<WarrantyRequest> & { id: string; previousStatus?: string; userRole?: string }) => {
-      const r = userRole ?? role;
+      const { data: authData } = await supabase.auth.getUser();
+      const authUserId = authData.user?.id;
+
+      let effectiveRole = userRole ?? role;
+      if (!effectiveRole && authUserId) {
+        const { data: resolvedRole } = await supabase.rpc("get_user_role", { _user_id: authUserId });
+        if (typeof resolvedRole === "string") {
+          effectiveRole = resolvedRole;
+        }
+      }
+
       // ENFORCEMENT: completed/denied/closed — manager/admin can do all; production users can mark completed and closed for warranties assigned to them
       const terminalStatuses: string[] = ["completed", "denied", "closed"];
       if (updates.status && terminalStatuses.includes(updates.status)) {
         const allowedRoles = ["admin", "manager", "sales_manager"];
-        const canDoAsManager = r && allowedRoles.includes(r);
+        const canDoAsManager = !!effectiveRole && allowedRoles.includes(effectiveRole);
         if (canDoAsManager) {
           // Manager/admin: allow
         } else if ((updates.status === "completed" || updates.status === "closed") && user?.id) {
