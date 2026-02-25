@@ -1,4 +1,5 @@
 import { useForm } from "react-hook-form";
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -6,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useCreateSubcontractor, useUpdateSubcontractor, Subcontractor } from "@/hooks/useSubcontractors";
-import { TRADE_TYPES, SERVICE_AREAS, ENTITY_STATUSES, DOC_STATUSES } from "@/lib/directoryConstants";
+import { TRADE_TYPES, ENTITY_STATUSES, DOC_STATUSES } from "@/lib/directoryConstants";
 import { DatePickerField } from "@/components/ui/date-picker-field";
 import { toast } from "sonner";
 
@@ -20,28 +21,39 @@ type TradeType = "roofing" | "tile" | "shingle" | "foam" | "coatings" | "metal" 
 type EntityStatus = "active" | "on_hold" | "do_not_use";
 type DocStatus = "received" | "missing";
 
+function getDefaults(sub?: Subcontractor | null) {
+  return {
+    company_name: sub?.company_name || "",
+    primary_contact_name: sub?.primary_contact_name || "",
+    phone: sub?.phone || "",
+    email: sub?.email || "",
+    trade_type: (sub?.trade_type || "other") as TradeType,
+    service_areas: sub?.service_areas || ["phoenix_metro"],
+    status: (sub?.status || "active") as EntityStatus,
+    internal_rating: sub?.internal_rating || null,
+    notes: sub?.notes || "",
+    coi_status: (sub?.coi_status || "missing") as DocStatus,
+    coi_expiration_date: sub?.coi_expiration_date || "",
+    w9_status: (sub?.w9_status || "missing") as DocStatus,
+    ic_agreement_status: (sub?.ic_agreement_status || "missing") as DocStatus,
+  };
+}
+
 export function SubcontractorForm({ open, onOpenChange, subcontractor }: SubcontractorFormProps) {
   const isEditing = !!subcontractor;
   const createMutation = useCreateSubcontractor();
   const updateMutation = useUpdateSubcontractor();
 
   const { register, handleSubmit, reset, setValue, watch } = useForm({
-    defaultValues: {
-      company_name: subcontractor?.company_name || "",
-      primary_contact_name: subcontractor?.primary_contact_name || "",
-      phone: subcontractor?.phone || "",
-      email: subcontractor?.email || "",
-      trade_type: (subcontractor?.trade_type || "other") as TradeType,
-      service_areas: subcontractor?.service_areas || ["phoenix_metro"],
-      status: (subcontractor?.status || "active") as EntityStatus,
-      internal_rating: subcontractor?.internal_rating || null,
-      notes: subcontractor?.notes || "",
-      coi_status: (subcontractor?.coi_status || "missing") as DocStatus,
-      coi_expiration_date: subcontractor?.coi_expiration_date || "",
-      w9_status: (subcontractor?.w9_status || "missing") as DocStatus,
-      ic_agreement_status: (subcontractor?.ic_agreement_status || "missing") as DocStatus,
-    },
+    defaultValues: getDefaults(subcontractor),
   });
+
+  // Reset form when dialog opens or subcontractor changes
+  useEffect(() => {
+    if (open) {
+      reset(getDefaults(subcontractor));
+    }
+  }, [open, subcontractor, reset]);
 
   const coiExpirationDate = watch("coi_expiration_date");
 
@@ -87,7 +99,7 @@ export function SubcontractorForm({ open, onOpenChange, subcontractor }: Subcont
             </div>
             <div className="space-y-2">
               <Label>Trade Type</Label>
-              <Select defaultValue={watch("trade_type")} onValueChange={(v: TradeType) => setValue("trade_type", v)}>
+              <Select value={watch("trade_type")} onValueChange={(v: TradeType) => setValue("trade_type", v)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {TRADE_TYPES.map((t) => (
@@ -98,7 +110,7 @@ export function SubcontractorForm({ open, onOpenChange, subcontractor }: Subcont
             </div>
             <div className="space-y-2">
               <Label>Status</Label>
-              <Select defaultValue={watch("status")} onValueChange={(v: EntityStatus) => setValue("status", v)}>
+              <Select value={watch("status")} onValueChange={(v: EntityStatus) => setValue("status", v)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {ENTITY_STATUSES.map((s) => (
@@ -113,7 +125,7 @@ export function SubcontractorForm({ open, onOpenChange, subcontractor }: Subcont
             </div>
             <div className="space-y-2">
               <Label>COI Status</Label>
-              <Select defaultValue={watch("coi_status")} onValueChange={(v: DocStatus) => setValue("coi_status", v)}>
+              <Select value={watch("coi_status")} onValueChange={(v: DocStatus) => setValue("coi_status", v)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {DOC_STATUSES.map((s) => (
@@ -130,7 +142,7 @@ export function SubcontractorForm({ open, onOpenChange, subcontractor }: Subcont
             />
             <div className="space-y-2">
               <Label>W-9 Status</Label>
-              <Select defaultValue={watch("w9_status")} onValueChange={(v: DocStatus) => setValue("w9_status", v)}>
+              <Select value={watch("w9_status")} onValueChange={(v: DocStatus) => setValue("w9_status", v)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {DOC_STATUSES.map((s) => (
@@ -141,7 +153,7 @@ export function SubcontractorForm({ open, onOpenChange, subcontractor }: Subcont
             </div>
             <div className="space-y-2">
               <Label>IC Agreement Status</Label>
-              <Select defaultValue={watch("ic_agreement_status")} onValueChange={(v: DocStatus) => setValue("ic_agreement_status", v)}>
+              <Select value={watch("ic_agreement_status")} onValueChange={(v: DocStatus) => setValue("ic_agreement_status", v)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {DOC_STATUSES.map((s) => (
