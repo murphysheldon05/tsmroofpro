@@ -1,4 +1,5 @@
 import { useForm } from "react-hook-form";
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,28 +22,39 @@ type EntityStatus = "active" | "on_hold" | "do_not_use";
 type DocStatus = "received" | "missing";
 type ContactMethod = "call" | "text" | "email";
 
+function getDefaults(vendor?: Vendor | null) {
+  return {
+    vendor_name: vendor?.vendor_name || "",
+    primary_contact_name: vendor?.primary_contact_name || "",
+    phone: vendor?.phone || "",
+    email: vendor?.email || "",
+    vendor_type: (vendor?.vendor_type || "other") as VendorType,
+    status: (vendor?.status || "active") as EntityStatus,
+    account_number: vendor?.account_number || "",
+    preferred_contact_method: (vendor?.preferred_contact_method || "email") as ContactMethod,
+    notes: vendor?.notes || "",
+    coi_status: (vendor?.coi_status || "missing") as DocStatus,
+    coi_expiration_date: vendor?.coi_expiration_date || "",
+    w9_status: (vendor?.w9_status || "missing") as DocStatus,
+    ic_agreement_status: (vendor?.ic_agreement_status || "missing") as DocStatus,
+  };
+}
+
 export function VendorForm({ open, onOpenChange, vendor }: VendorFormProps) {
   const isEditing = !!vendor;
   const createMutation = useCreateVendor();
   const updateMutation = useUpdateVendor();
 
   const { register, handleSubmit, reset, setValue, watch } = useForm({
-    defaultValues: {
-      vendor_name: vendor?.vendor_name || "",
-      primary_contact_name: vendor?.primary_contact_name || "",
-      phone: vendor?.phone || "",
-      email: vendor?.email || "",
-      vendor_type: (vendor?.vendor_type || "other") as VendorType,
-      status: (vendor?.status || "active") as EntityStatus,
-      account_number: vendor?.account_number || "",
-      preferred_contact_method: (vendor?.preferred_contact_method || "email") as ContactMethod,
-      notes: vendor?.notes || "",
-      coi_status: (vendor?.coi_status || "missing") as DocStatus,
-      coi_expiration_date: vendor?.coi_expiration_date || "",
-      w9_status: (vendor?.w9_status || "missing") as DocStatus,
-      ic_agreement_status: (vendor?.ic_agreement_status || "missing") as DocStatus,
-    },
+    defaultValues: getDefaults(vendor),
   });
+
+  // Reset form when dialog opens or vendor changes
+  useEffect(() => {
+    if (open) {
+      reset(getDefaults(vendor));
+    }
+  }, [open, vendor, reset]);
 
   const coiExpirationDate = watch("coi_expiration_date");
 
@@ -90,7 +102,7 @@ export function VendorForm({ open, onOpenChange, vendor }: VendorFormProps) {
             </div>
             <div className="space-y-2">
               <Label>Vendor Type</Label>
-              <Select defaultValue={watch("vendor_type")} onValueChange={(v: VendorType) => setValue("vendor_type", v)}>
+              <Select value={watch("vendor_type")} onValueChange={(v: VendorType) => setValue("vendor_type", v)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {VENDOR_TYPES.map((t) => (
@@ -101,7 +113,7 @@ export function VendorForm({ open, onOpenChange, vendor }: VendorFormProps) {
             </div>
             <div className="space-y-2">
               <Label>Status</Label>
-              <Select defaultValue={watch("status")} onValueChange={(v: EntityStatus) => setValue("status", v)}>
+              <Select value={watch("status")} onValueChange={(v: EntityStatus) => setValue("status", v)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {ENTITY_STATUSES.map((s) => (
@@ -116,7 +128,7 @@ export function VendorForm({ open, onOpenChange, vendor }: VendorFormProps) {
             </div>
             <div className="space-y-2">
               <Label>Preferred Contact Method</Label>
-              <Select defaultValue={watch("preferred_contact_method")} onValueChange={(v: ContactMethod) => setValue("preferred_contact_method", v)}>
+              <Select value={watch("preferred_contact_method")} onValueChange={(v: ContactMethod) => setValue("preferred_contact_method", v)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {CONTACT_METHODS.map((m) => (
@@ -127,7 +139,7 @@ export function VendorForm({ open, onOpenChange, vendor }: VendorFormProps) {
             </div>
             <div className="space-y-2">
               <Label>COI Status</Label>
-              <Select defaultValue={watch("coi_status")} onValueChange={(v: DocStatus) => setValue("coi_status", v)}>
+              <Select value={watch("coi_status")} onValueChange={(v: DocStatus) => setValue("coi_status", v)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {DOC_STATUSES.map((s) => (
@@ -144,7 +156,7 @@ export function VendorForm({ open, onOpenChange, vendor }: VendorFormProps) {
             />
             <div className="space-y-2">
               <Label>W-9 Status</Label>
-              <Select defaultValue={watch("w9_status")} onValueChange={(v: DocStatus) => setValue("w9_status", v)}>
+              <Select value={watch("w9_status")} onValueChange={(v: DocStatus) => setValue("w9_status", v)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {DOC_STATUSES.map((s) => (
@@ -155,7 +167,7 @@ export function VendorForm({ open, onOpenChange, vendor }: VendorFormProps) {
             </div>
             <div className="space-y-2">
               <Label>IC Agreement Status</Label>
-              <Select defaultValue={watch("ic_agreement_status")} onValueChange={(v: DocStatus) => setValue("ic_agreement_status", v)}>
+              <Select value={watch("ic_agreement_status")} onValueChange={(v: DocStatus) => setValue("ic_agreement_status", v)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {DOC_STATUSES.map((s) => (
