@@ -118,6 +118,8 @@ const ROLE_PERMISSIONS: Record<UserRole, PermissionKey[]> = {
     'viewOwnProfile',
     'submitForms',
     'viewOwnForms',
+    'viewSubcontractors',
+    'submitNewSubcontractor',
     'viewCommandCenter',
     'configureCommandCenter',
   ],
