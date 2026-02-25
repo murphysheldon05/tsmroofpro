@@ -251,8 +251,8 @@ export function useUpdateWarranty() {
         const canDoAsManager = r && allowedRoles.includes(r);
         if (canDoAsManager) {
           // Manager/admin: allow
-        } else if ((updates.status === "completed" || updates.status === "closed") && isProductionDept && user?.id) {
-          // Production user can complete or close only if they're the assigned user
+        } else if ((updates.status === "completed" || updates.status === "closed") && user?.id) {
+          // Any user can complete or close only if they're the assigned user
           const { data: current } = await supabase.from("warranty_requests").select("assigned_production_member").eq("id", id).single();
           if (current?.assigned_production_member !== user.id) {
             throw new Error(`You can only mark warranties assigned to you as ${updates.status === "closed" ? "closed" : "completed"}.`);
