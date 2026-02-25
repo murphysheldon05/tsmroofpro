@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -18,6 +19,7 @@ import { useVendors } from "@/hooks/useVendors";
 import { useProspects } from "@/hooks/useProspects";
 import { Skeleton } from "@/components/ui/skeleton";
 import { VENDOR_TYPES } from "@/lib/directoryConstants";
+import { VendorForm } from "@/components/directory/VendorForm";
 
 interface UserProfile {
   id: string;
@@ -86,7 +88,9 @@ export default function ContactList() {
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [vendorSearch, setVendorSearch] = useState("");
   const [prospectSearch, setProspectSearch] = useState("");
-  const { user } = useAuth();
+  const [vendorFormOpen, setVendorFormOpen] = useState(false);
+  const { user, isAdmin, isManager } = useAuth();
+  const canManageVendors = isAdmin || isManager;
   const { data: departments } = useDepartments();
   const { data: myManager } = useMyManager();
   const { data: vendors = [], isLoading: vendorsLoading } = useVendors();
@@ -253,9 +257,16 @@ export default function ContactList() {
           </TabsContent>
 
           <TabsContent value="vendors" className="space-y-4 mt-0">
-            <div className="relative max-w-sm">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Search vendors..." value={vendorSearch} onChange={(e) => setVendorSearch(e.target.value)} className="pl-10 rounded-xl" />
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between">
+              <div className="relative max-w-sm w-full">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input placeholder="Search vendors..." value={vendorSearch} onChange={(e) => setVendorSearch(e.target.value)} className="pl-10 rounded-xl" />
+              </div>
+              {canManageVendors && (
+                <Button onClick={() => setVendorFormOpen(true)} className="rounded-xl">
+                  <UserPlus className="h-4 w-4 mr-2" /> Add Vendor
+                </Button>
+              )}
             </div>
             {vendorsLoading ? (
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"><Skeleton className="h-40 rounded-xl" /><Skeleton className="h-40 rounded-xl" /><Skeleton className="h-40 rounded-xl" /></div>
@@ -317,6 +328,7 @@ export default function ContactList() {
           </TabsContent>
         </Tabs>
       </div>
+      <VendorForm open={vendorFormOpen} onOpenChange={setVendorFormOpen} vendor={null} />
     </AppLayout>
   );
 }

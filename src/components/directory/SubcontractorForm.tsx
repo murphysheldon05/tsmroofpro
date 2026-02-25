@@ -48,12 +48,12 @@ export function SubcontractorForm({ open, onOpenChange, subcontractor }: Subcont
     defaultValues: getDefaults(subcontractor),
   });
 
-  // Reset form when dialog opens or subcontractor changes
+  // Reset form when dialog opens or when editing target changes
   useEffect(() => {
     if (open) {
       reset(getDefaults(subcontractor));
     }
-  }, [open, subcontractor, reset]);
+  }, [open, subcontractor?.id, reset]);
 
   const coiExpirationDate = watch("coi_expiration_date");
 
@@ -83,7 +83,7 @@ export function SubcontractorForm({ open, onOpenChange, subcontractor }: Subcont
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="company_name">Company/Crew Name *</Label>
-              <Input id="company_name" {...register("company_name", { required: true })} />
+              <Input id="company_name" autoFocus {...register("company_name", { required: true })} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="primary_contact_name">Primary Contact Name *</Label>

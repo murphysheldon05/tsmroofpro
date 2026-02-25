@@ -389,11 +389,9 @@ export default function Directory() {
                 <Button className="gap-2 rounded-xl" onClick={() => { setEditingSub(null); setSubFormOpen(true); }}>
                   <Plus className="h-4 w-4" /> Add Sub
                 </Button>
-                {!subcontractorsOnly && (
-                  <Button variant="secondary" className="gap-2 rounded-xl" onClick={() => { setEditingVendor(null); setVendorFormOpen(true); }}>
-                    <Plus className="h-4 w-4" /> Add Vendor
-                  </Button>
-                )}
+                <Button variant="secondary" className="gap-2 rounded-xl" onClick={() => { setEditingVendor(null); setVendorFormOpen(true); }}>
+                  <Plus className="h-4 w-4" /> Add Vendor
+                </Button>
               </>
             )}
           </div>
