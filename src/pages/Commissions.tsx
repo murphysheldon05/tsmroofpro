@@ -34,6 +34,14 @@ const STATUS_LABELS: Record<string, string> = {
   needs_action: "Needs Action",
 };
 
+const normalizeApprovalStage = (stage: string | null | undefined) => {
+  // Legacy values (older DB constraint) -> current app values
+  if (stage === "manager_approved") return "pending_accounting";
+  if (stage === "accounting_approved" || stage === "approved") return "completed";
+  if (stage === "pending") return "pending_manager";
+  return stage ?? null;
+};
+
 export default function Commissions() {
   const navigate = useNavigate();
   const { role, isAdmin, userDepartment } = useAuth();
@@ -79,8 +87,8 @@ export default function Commissions() {
     const complianceApprovedAmount = list
       .filter(
         (s) =>
-          s.approval_stage === "pending_accounting" ||
-          s.approval_stage === "completed" ||
+          normalizeApprovalStage(s.approval_stage) === "pending_accounting" ||
+          normalizeApprovalStage(s.approval_stage) === "completed" ||
           s.status === "approved" ||
           s.status === "paid"
       )

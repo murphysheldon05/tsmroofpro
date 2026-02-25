@@ -106,6 +106,28 @@ export default function CommissionDetail() {
   // Draw-to-final: rep can close out a paid draw to submit final commission
   const canCloseOutDraw = isSubmitter && !!submission?.is_draw && submission?.status === "paid" && !(submission as { draw_closed_out?: boolean }).draw_closed_out;
 
+  // NOTE: Must be declared before any early returns to avoid hook order violations.
+  // Changed fields from previous submission (for compliance: highlight what rep revised on resubmit)
+  const changedFields = useMemo(() => {
+    const snap = (submission as any)?.previous_submission_snapshot as Record<string, unknown> | null | undefined;
+    if (!snap || typeof snap !== "object") return new Set<string>();
+    const set = new Set<string>();
+    const keys = [
+      "job_name", "job_address", "acculynx_job_id", "job_type", "roof_type", "contract_date", "install_completion_date",
+      "sales_rep_name", "rep_role", "commission_tier", "custom_commission_percentage", "subcontractor_name",
+      "is_flat_fee", "flat_fee_amount", "contract_amount", "supplements_approved", "commission_percentage",
+      "advances_paid", "net_commission_owed", "commission_requested", "total_job_revenue", "gross_commission",
+    ];
+    keys.forEach((key) => {
+      const prev = snap[key];
+      const cur = (submission as unknown as Record<string, unknown> | null | undefined)?.[key];
+      const prevVal = prev === null || prev === undefined ? "" : String(prev);
+      const curVal = cur === null || cur === undefined ? "" : String(cur);
+      if (prevVal !== curVal) set.add(key);
+    });
+    return set;
+  }, [submission]);
+
   if (isLoading) {
     return (
       <AppLayout>
@@ -132,27 +154,6 @@ export default function CommissionDetail() {
 
   const statusConfig = STATUS_CONFIG[submission.status];
   const approvalStageConfig = submission.approval_stage ? APPROVAL_STAGE_CONFIG[submission.approval_stage] : null;
-
-  // Changed fields from previous submission (for compliance: highlight what rep revised on resubmit)
-  const changedFields = useMemo(() => {
-    const snap = submission.previous_submission_snapshot as Record<string, unknown> | null | undefined;
-    if (!snap || typeof snap !== "object") return new Set<string>();
-    const set = new Set<string>();
-    const keys = [
-      "job_name", "job_address", "acculynx_job_id", "job_type", "roof_type", "contract_date", "install_completion_date",
-      "sales_rep_name", "rep_role", "commission_tier", "custom_commission_percentage", "subcontractor_name",
-      "is_flat_fee", "flat_fee_amount", "contract_amount", "supplements_approved", "commission_percentage",
-      "advances_paid", "net_commission_owed", "commission_requested", "total_job_revenue", "gross_commission",
-    ];
-    keys.forEach((key) => {
-      const prev = snap[key];
-      const cur = (submission as unknown as Record<string, unknown>)[key];
-      const prevVal = prev === null || prev === undefined ? "" : String(prev);
-      const curVal = cur === null || cur === undefined ? "" : String(cur);
-      if (prevVal !== curVal) set.add(key);
-    });
-    return set;
-  }, [submission]);
   const showChangeHighlights = (isReviewer || isAdmin) && changedFields.size > 0;
   const highlightClass = "bg-yellow-200/90 dark:bg-yellow-900/40 border-l-4 border-yellow-500 pl-2 -ml-2 rounded-r";
 
