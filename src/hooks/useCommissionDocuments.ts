@@ -57,6 +57,7 @@ export interface CommissionDocument {
   revision_count: number;
   submitted_at: string | null;
   submitter_email: string | null;
+  workflow_submission_id?: string | null;
 }
 
 export type CommissionDocumentInsert = Omit<CommissionDocument, 
@@ -126,7 +127,7 @@ export function useCreateCommissionDocument() {
   const { user } = useAuth();
 
   return useMutation({
-    mutationFn: async (data: Omit<CommissionDocumentInsert, 'created_by'>) => {
+    mutationFn: async ({ data }: { data: Omit<CommissionDocumentInsert, 'created_by'>; silent?: boolean }) => {
       if (!user) throw new Error('Not authenticated');
 
       // Use neg_exp_4 if available, otherwise fall back to supplement_fees_expense
@@ -176,43 +177,24 @@ export function useCreateCommissionDocument() {
 
       if (error) throw error;
 
-      // Send notification on creation
-      try {
-        const { data: creatorProfile } = await supabase
-          .from('profiles')
-          .select('email, full_name')
-          .eq('id', user.id)
-          .single();
-
-        await supabase.functions.invoke('send-commission-notification', {
-          body: {
-            notification_type: 'submitted',
-            document_type: 'commission_document',
-            commission_id: result.id,
-            job_name: data.job_name_id || '',
-            job_address: data.job_name_id || '',
-            sales_rep_name: data.sales_rep || '',
-            subcontractor_name: null,
-            submission_type: 'employee',
-            contract_amount: data.gross_contract_total || 0,
-            net_commission_owed: result.rep_commission || 0,
-            submitter_email: creatorProfile?.email || '',
-            submitter_name: creatorProfile?.full_name || data.sales_rep || '',
-          },
-        });
-      } catch (notifyError) {
-        console.error('Failed to send commission document notification:', notifyError);
-      }
-
       return result;
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['commission-documents'] });
-      toast.success('Commission document created successfully');
+      if (!variables?.silent) {
+        const s = (variables as any)?.data?.status as CommissionDocument["status"] | undefined;
+        if (s === 'submitted') {
+          // Submit flow has explicit success messaging tied to the unified workflow record.
+          return;
+        }
+        toast.success('Draft saved');
+      }
     },
-    onError: (error) => {
+    onError: (error, variables) => {
       console.error('Error creating commission document:', error);
-      toast.error('Failed to create commission document');
+      if (!variables?.silent) {
+        toast.error('Failed to create commission document');
+      }
     },
   });
 }
@@ -221,7 +203,7 @@ export function useUpdateCommissionDocument() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, ...data }: Partial<CommissionDocument> & { id: string }) => {
+    mutationFn: async ({ id, data }: { id: string; data: Partial<CommissionDocument>; silent?: boolean }) => {
       // Use neg_exp_4 if available, otherwise fall back to supplement_fees_expense
       const negExp4 = data.neg_exp_4 ?? data.supplement_fees_expense ?? 0;
       const repProfitPercent = data.rep_profit_percent ?? data.commission_rate ?? 0;
@@ -273,11 +255,20 @@ export function useUpdateCommissionDocument() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['commission-documents'] });
       queryClient.invalidateQueries({ queryKey: ['commission-document', variables.id] });
-      toast.success('Commission document updated successfully');
+      if (!(variables as any)?.silent) {
+        const s = (variables as any)?.data?.status as CommissionDocument["status"] | undefined;
+        if (s === 'submitted') {
+          // Submit flow has explicit success messaging tied to the unified workflow record.
+          return;
+        }
+        toast.success('Draft saved');
+      }
     },
-    onError: (error) => {
+    onError: (error, variables) => {
       console.error('Error updating commission document:', error);
-      toast.error('Failed to update commission document');
+      if (!(variables as any)?.silent) {
+        toast.error('Failed to update commission document');
+      }
     },
   });
 }
@@ -405,15 +396,58 @@ export function useUpdateCommissionDocumentStatus() {
         .single();
 
       if (error) throw error;
-      
-      // Send notification after successful status update
+
+      // Unified workflow: submitting a commission document creates/links a commission_submissions workflow record.
+      // Notifications for submission should route to the workflow record so compliance/admin emails link to /commissions/:id.
+      if (status === 'submitted') {
+        const { data: submissionId, error: rpcError } = await supabase.rpc('create_submission_from_document', {
+          document_id: id,
+        });
+        if (rpcError) throw rpcError;
+
+        // Best-effort: send workflow-based submission notification
+        try {
+          const { data: creatorProfile } = await supabase
+            .from('profiles')
+            .select('email, full_name')
+            .eq('id', (data as any).created_by)
+            .maybeSingle();
+
+          await supabase.functions.invoke('send-commission-notification', {
+            body: {
+              notification_type: 'submitted',
+              document_type: 'commission_submission',
+              commission_id: submissionId,
+              job_name: (data as any).job_name_id || '',
+              job_address: (data as any).job_name_id || '',
+              sales_rep_name: (data as any).sales_rep || '',
+              subcontractor_name: null,
+              submission_type: 'employee',
+              contract_amount: (data as any).gross_contract_total || 0,
+              net_commission_owed: (data as any).rep_commission || 0,
+              submitter_email: creatorProfile?.email || (data as any).submitter_email || '',
+              submitter_name: creatorProfile?.full_name || (data as any).sales_rep || '',
+            },
+          });
+        } catch (notifyError) {
+          console.error('Failed to send workflow submission notification:', notifyError);
+        }
+
+        return { ...(data as any), workflow_submission_id: submissionId } as CommissionDocument;
+      }
+
+      // Non-submit statuses: retain existing commission_document notifications
       await sendCommissionDocumentNotification(data as CommissionDocument, status, revision_reason || approval_comment);
-      
+
       return data;
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['commission-documents'] });
       queryClient.invalidateQueries({ queryKey: ['commission-document', variables.id] });
+      if (variables.status === 'submitted') {
+        toast.success('Commission submitted successfully');
+        return;
+      }
       const statusLabel = variables.status === 'revision_required' || variables.status === 'rejected' 
         ? 'rejected' 
         : variables.status.replace(/_/g, ' ');

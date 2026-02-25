@@ -148,13 +148,6 @@ export default function CommissionDocumentDetail() {
     );
   }
 
-  // For drafts with ?edit=true, open edit form immediately (Continue Draft flow)
-  useEffect(() => {
-    if (document?.status === 'draft' && editParam) {
-      setIsEditing(true);
-    }
-  }, [document?.status, editParam]);
-
   if (showPrint) {
     return (
       <div>

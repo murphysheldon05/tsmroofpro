@@ -366,7 +366,7 @@ export function CommissionDocumentForm({ document: existingDoc, readOnly = false
     job_name_id: formData.job_name_id,
     job_date: formData.job_date,
     sales_rep: formData.sales_rep,
-    sales_rep_id: null,
+    sales_rep_id: formData.sales_rep_id,
     gross_contract_total: formData.gross_contract_total,
     op_percent: formData.op_percent,
     material_cost: formData.material_cost,
@@ -408,10 +408,10 @@ export function CommissionDocumentForm({ document: existingDoc, readOnly = false
     
     try {
       if (autoSaveDocId) {
-        await updateMutation.mutateAsync({ id: autoSaveDocId, ...payload });
+        await updateMutation.mutateAsync({ id: autoSaveDocId, data: payload, silent: true } as any);
       } else if (formData.job_name_id) {
         // Create new draft on first auto-save if job name exists
-        const result = await createMutation.mutateAsync(payload);
+        const result = await createMutation.mutateAsync({ data: payload, silent: true } as any);
         if (result?.id) {
           setAutoSaveDocId(result.id);
         }
@@ -445,12 +445,67 @@ export function CommissionDocumentForm({ document: existingDoc, readOnly = false
 
     const payload = buildPayload(submit);
 
+    let saved: CommissionDocument | null = null;
     if (autoSaveDocId || existingDoc?.id) {
-      await updateMutation.mutateAsync({ id: autoSaveDocId || existingDoc!.id, ...payload });
+      saved = await updateMutation.mutateAsync({ id: autoSaveDocId || existingDoc!.id, data: payload, silent: false } as any);
     } else {
-      await createMutation.mutateAsync(payload);
+      saved = await createMutation.mutateAsync({ data: payload, silent: false } as any);
+      if (saved?.id) setAutoSaveDocId(saved.id);
     }
-    navigate('/commission-documents');
+
+    if (!saved?.id) {
+      navigate('/commission-documents');
+      return;
+    }
+
+    // Draft saves stay in the document system
+    if (!submit) {
+      navigate('/commission-documents');
+      return;
+    }
+
+    // Submissions create/link the unified workflow record, then route to the workflow detail page.
+    try {
+      const { data: submissionId, error } = await supabase.rpc('create_submission_from_document', {
+        document_id: saved.id,
+      });
+      if (error) throw error;
+
+      // Best-effort: notify compliance/admins + rep via unified workflow notification (links to /commissions/:id)
+      try {
+        await supabase.functions.invoke('send-commission-notification', {
+          body: {
+            notification_type: 'submitted',
+            document_type: 'commission_submission',
+            commission_id: submissionId,
+            job_name: formData.job_name_id || '',
+            job_address: formData.job_name_id || '',
+            sales_rep_name: formData.sales_rep || '',
+            subcontractor_name: null,
+            submission_type: 'employee',
+            contract_amount: formData.gross_contract_total || 0,
+            net_commission_owed: calculated.rep_commission || 0,
+            submitter_email: user?.email,
+            submitter_name: formData.sales_rep || userProfile?.full_name || user?.email || '',
+          },
+        });
+      } catch (notifyErr) {
+        console.error("Failed to send submission notification:", notifyErr);
+      }
+
+      toast.success("Commission submitted successfully");
+      navigate(`/commissions/${submissionId}`);
+    } catch (e: any) {
+      const msg = String(e?.message || e);
+      if (msg.includes("MANAGER_REQUIRED")) {
+        toast.error("Manager Required", {
+          description: "You must have a manager assigned before submitting commissions. Please contact your administrator.",
+        });
+      } else {
+        toast.error("Failed to submit commission");
+      }
+      // Keep the user on the document page so they can retry
+    }
   };
 
   const handleSubmitClick = () => {

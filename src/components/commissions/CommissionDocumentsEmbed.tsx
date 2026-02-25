@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Search, FileText, Eye, Clock, CheckCircle, XCircle, Wallet, DollarSign, TrendingUp, Pencil } from "lucide-react";
 import { useCommissionDocuments, type CommissionDocument } from "@/hooks/useCommissionDocuments";
@@ -15,6 +16,8 @@ export function CommissionDocumentsEmbed() {
   const navigate = useNavigate();
   const { user, isAdmin, isManager } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
+  const [quickViewOpen, setQuickViewOpen] = useState(false);
+  const [selectedDoc, setSelectedDoc] = useState<CommissionDocument | null>(null);
   const { data: documents, isLoading } = useCommissionDocuments("all");
 
   const filtered = useMemo(() => {
@@ -36,11 +39,39 @@ export function CommissionDocumentsEmbed() {
 
   const stats = useMemo(() => ({
     total: filtered.length,
-    pending: filtered.filter((d) => d.status === "submitted").length,
+    pending: filtered.filter((d) => ["submitted", "manager_approved", "accounting_approved"].includes(d.status)).length,
     totalCommission: filtered
-      .filter((d) => d.status === "approved" || d.status === "paid" || d.status === "accounting_approved")
+      .filter((d) => d.status !== "draft")
       .reduce((s, d) => s + (d.rep_commission || 0), 0),
   }), [filtered]);
+
+  const openQuickView = (doc: CommissionDocument) => {
+    setSelectedDoc(doc);
+    setQuickViewOpen(true);
+  };
+
+  const phaseLabel = (status: CommissionDocument["status"]) => {
+    switch (status) {
+      case "draft":
+        return "Draft";
+      case "submitted":
+        return "Pending Compliance Review";
+      case "manager_approved":
+        return "Pending Accounting Review";
+      case "accounting_approved":
+        return "Approved — Ready for Payment";
+      case "paid":
+        return "Paid";
+      case "revision_required":
+        return "Rejected — Needs Changes";
+      case "rejected":
+        return "Denied";
+      case "approved":
+        return "Approved";
+      default:
+        return status;
+    }
+  };
 
   const getStatusBadge = (status: string) => {
     const icons: Record<string, React.ReactNode> = {
@@ -125,7 +156,7 @@ export function CommissionDocumentsEmbed() {
                 className="w-full text-left p-4 bg-card border border-border rounded-lg hover:border-primary/30 transition-all"
               >
                 <button
-                  onClick={() => navigate(doc.status === 'draft' ? `/commission-documents/${doc.id}?edit=true` : `/commission-documents/${doc.id}`)}
+                  onClick={() => (doc.status === "draft" ? navigate(`/commission-documents/${doc.id}?edit=true`) : openQuickView(doc))}
                   className="w-full text-left"
                 >
                   <div className="flex items-start justify-between gap-2 mb-2">
@@ -167,7 +198,11 @@ export function CommissionDocumentsEmbed() {
               </TableHeader>
               <TableBody>
                 {filtered.map((doc) => (
-                  <TableRow key={doc.id} className="cursor-pointer hover:bg-muted/50" onClick={() => navigate(doc.status === 'draft' ? `/commission-documents/${doc.id}?edit=true` : `/commission-documents/${doc.id}`)}>
+                  <TableRow
+                    key={doc.id}
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => (doc.status === "draft" ? navigate(`/commission-documents/${doc.id}?edit=true`) : openQuickView(doc))}
+                  >
                     <TableCell className="font-medium">{doc.job_name_id}</TableCell>
                     <TableCell>{doc.job_date ? format(parseISO(doc.job_date), "MM/dd/yyyy") : "—"}</TableCell>
                     <TableCell>{doc.sales_rep}</TableCell>
@@ -180,7 +215,7 @@ export function CommissionDocumentsEmbed() {
                           Continue Draft
                         </Button>
                       ) : (
-                        <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); navigate(`/commission-documents/${doc.id}`); }}>
+                        <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); openQuickView(doc); }}>
                           <Eye className="h-4 w-4" />
                         </Button>
                       )}
@@ -190,6 +225,69 @@ export function CommissionDocumentsEmbed() {
               </TableBody>
             </Table>
           </div>
+
+          {/* Quick View Modal */}
+          <Dialog open={quickViewOpen} onOpenChange={setQuickViewOpen}>
+            <DialogContent className="sm:max-w-[640px]">
+              <DialogHeader>
+                <DialogTitle>{selectedDoc?.job_name_id || "Commission Summary"}</DialogTitle>
+              </DialogHeader>
+              {selectedDoc && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="text-sm text-muted-foreground">{phaseLabel(selectedDoc.status)}</div>
+                    {getStatusBadge(selectedDoc.status)}
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                    <div className="rounded-lg border border-border/60 p-3">
+                      <div className="text-xs text-muted-foreground">Sales Rep</div>
+                      <div className="font-medium">{selectedDoc.sales_rep}</div>
+                    </div>
+                    <div className="rounded-lg border border-border/60 p-3">
+                      <div className="text-xs text-muted-foreground">Job Date</div>
+                      <div className="font-medium">{selectedDoc.job_date ? format(parseISO(selectedDoc.job_date), "MMM d, yyyy") : "—"}</div>
+                    </div>
+                    <div className="rounded-lg border border-border/60 p-3">
+                      <div className="text-xs text-muted-foreground">Gross Contract</div>
+                      <div className="font-mono font-semibold">{formatCurrency(selectedDoc.gross_contract_total || 0)}</div>
+                    </div>
+                    <div className="rounded-lg border border-border/60 p-3">
+                      <div className="text-xs text-muted-foreground">Rep Commission</div>
+                      <div className="font-mono font-semibold text-green-600">{formatCurrency(selectedDoc.rep_commission || 0)}</div>
+                    </div>
+                    {(selectedDoc.advance_total || 0) > 0 && (
+                      <div className="rounded-lg border border-border/60 p-3 sm:col-span-2">
+                        <div className="text-xs text-muted-foreground">Draw Total</div>
+                        <div className="font-mono font-semibold text-amber-600">{formatCurrency(selectedDoc.advance_total || 0)}</div>
+                      </div>
+                    )}
+                    {selectedDoc.notes && (
+                      <div className="rounded-lg border border-border/60 p-3 sm:col-span-2">
+                        <div className="text-xs text-muted-foreground">Notes</div>
+                        <div className="whitespace-pre-wrap">{selectedDoc.notes}</div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+              <DialogFooter className="gap-2 sm:gap-0">
+                {selectedDoc?.workflow_submission_id && (
+                  <Button
+                    variant="outline"
+                    onClick={() => navigate(`/commissions/${selectedDoc.workflow_submission_id}`)}
+                  >
+                    Open Workflow
+                  </Button>
+                )}
+                {selectedDoc?.id && (
+                  <Button variant="outline" onClick={() => navigate(`/commission-documents/${selectedDoc.id}`)}>
+                    Open Full Document
+                  </Button>
+                )}
+                <Button onClick={() => setQuickViewOpen(false)}>Close</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </>
       )}
     </div>
