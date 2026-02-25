@@ -39,6 +39,10 @@ const STATUS_CONFIG: Record<string, { label: string; icon: React.ReactNode; colo
     colorClass: "text-sky-400",
     bgClass: "bg-sky-500/10 border-sky-500/20"
   },
+  submitted: { label: "Pending Review", icon: <Clock className="h-3.5 w-3.5" />, colorClass: "text-amber-400", bgClass: "bg-amber-500/10 border-amber-500/20" },
+  manager_approved: { label: "Pending Review", icon: <Clock className="h-3.5 w-3.5" />, colorClass: "text-amber-400", bgClass: "bg-amber-500/10 border-amber-500/20" },
+  accounting_approved: { label: "Approved", icon: <CheckCircle className="h-3.5 w-3.5" />, colorClass: "text-emerald-400", bgClass: "bg-emerald-500/10 border-emerald-500/20" },
+  revision_required: { label: "Rejected", icon: <AlertCircle className="h-3.5 w-3.5" />, colorClass: "text-orange-400", bgClass: "bg-orange-500/10 border-orange-500/20" },
 };
 
 interface CommissionCardProps {
@@ -60,6 +64,7 @@ interface CommissionCardProps {
     draw_amount_paid?: number | null;
     scheduled_pay_date?: string | null;
   };
+  detailPath?: string;
 }
 
 const formatFullCurrency = (value: number) => {
@@ -70,13 +75,14 @@ const formatFullCurrency = (value: number) => {
   }).format(value);
 };
 
-export function CommissionCard({ submission }: CommissionCardProps) {
+export function CommissionCard({ submission, detailPath }: CommissionCardProps) {
   const navigate = useNavigate();
   const config = STATUS_CONFIG[submission.status] || STATUS_CONFIG.pending_review;
+  const path = detailPath ?? `/commissions/${submission.id}`;
 
   return (
     <button
-      onClick={() => navigate(`/commissions/${submission.id}`)}
+      onClick={() => navigate(path)}
       className="w-full text-left bg-card/80 backdrop-blur-sm border border-border/40 rounded-2xl p-4 
                  hover:bg-card hover:border-border/60 hover:shadow-md 
                  transition-all duration-200 active:scale-[0.98] min-h-[52px]"
@@ -141,10 +147,10 @@ export function CommissionCard({ submission }: CommissionCardProps) {
               Pay: {formatPayDateShort(submission.scheduled_pay_date)}
             </span>
           )}
-          {submission.status === "rejected" && (
+          {(submission.status === "rejected" || submission.status === "revision_required") && (
             <span
               role="button"
-              onClick={(e) => { e.stopPropagation(); navigate(`/commissions/${submission.id}?edit=true`); }}
+              onClick={(e) => { e.stopPropagation(); navigate(path.includes("?") ? `${path}&edit=true` : `${path}?edit=true`); }}
               className="flex items-center gap-1 text-amber-500 text-xs font-medium px-2 py-0.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 transition-colors"
             >
               <Edit className="h-3 w-3" />
@@ -154,7 +160,7 @@ export function CommissionCard({ submission }: CommissionCardProps) {
           {submission.status === "denied" && (
             <span
               role="button"
-              onClick={(e) => { e.stopPropagation(); navigate(`/commissions/${submission.id}?edit=true`); }}
+              onClick={(e) => { e.stopPropagation(); navigate(path.includes("?") ? `${path}&edit=true` : `${path}?edit=true`); }}
               className="flex items-center gap-1 text-red-500 text-xs font-medium px-2 py-0.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 transition-colors"
             >
               <RotateCcw className="h-3 w-3" />

@@ -13,7 +13,7 @@ export function useAccountingCommissions() {
       const { data, error } = await supabase
         .from("commission_documents")
         .select("*, manager_approved_by_profile:profiles!commission_documents_manager_approved_by_fkey(full_name, email)")
-        .in("status", ["approved", "paid"])
+        .in("status", ["approved", "accounting_approved", "paid"])
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -165,6 +165,7 @@ export function useMarkCommissionsPaid() {
     onSuccess: (ids) => {
       queryClient.invalidateQueries({ queryKey: ["accounting-commissions"] });
       queryClient.invalidateQueries({ queryKey: ["commission-documents"] });
+      queryClient.invalidateQueries({ queryKey: ["cc-commission-summary"] });
       queryClient.invalidateQueries({ queryKey: ["draw-requests"] });
       queryClient.invalidateQueries({ queryKey: ["user-notifications"] });
       queryClient.invalidateQueries({ queryKey: ["unread-notification-count"] });

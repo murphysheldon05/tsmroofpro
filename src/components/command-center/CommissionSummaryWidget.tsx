@@ -19,56 +19,67 @@ export function CommissionSummaryWidget() {
   const { data, isLoading } = useQuery({
     queryKey: ["cc-commission-summary", user?.id, role],
     queryFn: async () => {
-      // Exclude draws from commission totals — draws tracked separately in draw_requests
+      const monthStart = format(startOfMonth(new Date()), "yyyy-MM-dd");
+      const sum = (arr: any[] | null, field: string) =>
+        (arr || []).reduce((s, r) => s + (r[field] || 0), 0);
+
+      // 1. Commission submissions (legacy + subcontractor)
       const commissionBase = supabase
         .from("commission_submissions")
         .select("net_commission_owed, status, approval_stage, paid_at")
         .or("is_draw.is.null,is_draw.eq.false");
 
-      let allQuery = commissionBase;
-      if (isScopedUser) {
-        allQuery = allQuery.eq("submitted_by", user!.id);
-      }
+      let subQuery = commissionBase;
+      if (isScopedUser) subQuery = subQuery.eq("submitted_by", user!.id);
+      const { data: subRows } = await subQuery;
 
-      const { data: allRows } = await allQuery;
+      // 2. Commission documents (employee commission form)
+      let docQuery = supabase
+        .from("commission_documents")
+        .select("rep_commission, status, paid_at")
+        .neq("status", "draft");
+      if (isScopedUser) docQuery = docQuery.eq("created_by", user!.id);
+      const { data: docRows } = await docQuery;
 
-      const monthStart = format(startOfMonth(new Date()), "yyyy-MM-dd");
-      const sum = (arr: any[] | null, field: string) =>
-        (arr || []).reduce((s, r) => s + (r[field] || 0), 0);
+      const docRowsNorm = (docRows || []).map((r) => ({
+        net_commission_owed: r.rep_commission || 0,
+        status: r.status,
+        paid_at: r.paid_at,
+      }));
 
-      // Pending Review = $ submitted awaiting compliance (pending_manager, pending_admin)
-      const pendingReview = (allRows || []).filter(
+      const docPending = docRowsNorm.filter(
+        (r) => r.status === "submitted" || r.status === "manager_approved"
+      );
+      const docReady = docRowsNorm.filter((r) => r.status === "accounting_approved");
+      const docPaid = docRowsNorm.filter(
+        (r) => r.status === "paid" && r.paid_at && r.paid_at >= monthStart
+      );
+
+      const pendingReview = (subRows || []).filter(
         (r) =>
           r.status === "pending_review" &&
           (r.approval_stage === "pending_manager" || r.approval_stage === "pending_admin" || r.approval_stage == null)
       );
-
-      // Ready for Payment = $ compliance approved, awaiting accounting (pending_accounting) + $ accounting approved (status=approved)
-      const readyForPayment = (allRows || []).filter(
+      const readyForPayment = (subRows || []).filter(
         (r) =>
           (r.status === "pending_review" && r.approval_stage === "pending_accounting") ||
           r.status === "approved"
       );
-
-      // Paid This Month = $ marked paid this month
-      const paidThisMonth = (allRows || []).filter(
+      const paidThisMonth = (subRows || []).filter(
         (r) => r.status === "paid" && r.paid_at && r.paid_at >= monthStart
       );
 
-      // Draw balance from draw_requests table
       let drawQuery = supabase
         .from("draw_requests" as any)
         .select("remaining_balance")
         .in("status", ["approved", "paid"]);
-      if (isScopedUser) {
-        drawQuery = drawQuery.eq("user_id", user!.id);
-      }
+      if (isScopedUser) drawQuery = drawQuery.eq("user_id", user!.id);
       const { data: drawData } = await drawQuery;
 
       return {
-        pending: sum(pendingReview, "net_commission_owed"),
-        approved: sum(readyForPayment, "net_commission_owed"),
-        paid: sum(paidThisMonth, "net_commission_owed"),
+        pending: sum(pendingReview, "net_commission_owed") + sum(docPending, "net_commission_owed"),
+        approved: sum(readyForPayment, "net_commission_owed") + sum(docReady, "net_commission_owed"),
+        paid: sum(paidThisMonth, "net_commission_owed") + sum(docPaid, "net_commission_owed"),
         draw: sum(drawData, "remaining_balance"),
       };
     },

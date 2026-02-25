@@ -121,13 +121,16 @@ export function useCommissionDocument(id: string | undefined) {
   });
 }
 
+type CreateDocInput = Omit<CommissionDocumentInsert, 'created_by'> & { _silent?: boolean; _isSubmit?: boolean };
+
 export function useCreateCommissionDocument() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
 
   return useMutation({
-    mutationFn: async (data: Omit<CommissionDocumentInsert, 'created_by'>) => {
+    mutationFn: async (input: CreateDocInput) => {
       if (!user) throw new Error('Not authenticated');
+      const { _silent, _isSubmit, ...data } = input;
 
       // Use neg_exp_4 if available, otherwise fall back to supplement_fees_expense
       const negExp4 = data.neg_exp_4 ?? data.supplement_fees_expense ?? 0;
@@ -176,52 +179,60 @@ export function useCreateCommissionDocument() {
 
       if (error) throw error;
 
-      // Send notification on creation
-      try {
-        const { data: creatorProfile } = await supabase
-          .from('profiles')
-          .select('email, full_name')
-          .eq('id', user.id)
-          .single();
+      // Send notification ONLY when submitting (status=submitted), NOT on draft creation/auto-save
+      if (data.status === 'submitted') {
+        try {
+          const { data: creatorProfile } = await supabase
+            .from('profiles')
+            .select('email, full_name')
+            .eq('id', user.id)
+            .single();
 
-        await supabase.functions.invoke('send-commission-notification', {
-          body: {
-            notification_type: 'submitted',
-            document_type: 'commission_document',
-            commission_id: result.id,
-            job_name: data.job_name_id || '',
-            job_address: data.job_name_id || '',
-            sales_rep_name: data.sales_rep || '',
-            subcontractor_name: null,
-            submission_type: 'employee',
-            contract_amount: data.gross_contract_total || 0,
-            net_commission_owed: result.rep_commission || 0,
-            submitter_email: creatorProfile?.email || '',
-            submitter_name: creatorProfile?.full_name || data.sales_rep || '',
-          },
-        });
-      } catch (notifyError) {
-        console.error('Failed to send commission document notification:', notifyError);
+          await supabase.functions.invoke('send-commission-notification', {
+            body: {
+              notification_type: 'submitted',
+              document_type: 'commission_document',
+              commission_id: result.id,
+              job_name: data.job_name_id || '',
+              job_address: data.job_name_id || '',
+              sales_rep_name: data.sales_rep || '',
+              subcontractor_name: null,
+              submission_type: 'employee',
+              contract_amount: data.gross_contract_total || 0,
+              net_commission_owed: result.rep_commission || 0,
+              submitter_email: creatorProfile?.email || '',
+              submitter_name: creatorProfile?.full_name || data.sales_rep || '',
+            },
+          });
+        } catch (notifyError) {
+          console.error('Failed to send commission document notification:', notifyError);
+        }
       }
 
       return result;
     },
-    onSuccess: () => {
+    onSuccess: (_, variables: CreateDocInput) => {
       queryClient.invalidateQueries({ queryKey: ['commission-documents'] });
-      toast.success('Commission document created successfully');
+      queryClient.invalidateQueries({ queryKey: ['cc-commission-summary'] });
+      if (variables._silent) return;
+      const msg = variables._isSubmit ? 'Commission submitted successfully' : 'Commission document created successfully';
+      toast.success(msg);
     },
-    onError: (error) => {
+    onError: (error, variables: CreateDocInput) => {
       console.error('Error creating commission document:', error);
-      toast.error('Failed to create commission document');
+      if (!variables._silent) toast.error('Failed to create commission document');
     },
   });
 }
+
+type UpdateDocInput = Partial<CommissionDocument> & { id: string; _silent?: boolean; _isSubmit?: boolean };
 
 export function useUpdateCommissionDocument() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, ...data }: Partial<CommissionDocument> & { id: string }) => {
+    mutationFn: async (input: UpdateDocInput) => {
+      const { id, _silent, _isSubmit, ...data } = input;
       // Use neg_exp_4 if available, otherwise fall back to supplement_fees_expense
       const negExp4 = data.neg_exp_4 ?? data.supplement_fees_expense ?? 0;
       const repProfitPercent = data.rep_profit_percent ?? data.commission_rate ?? 0;
@@ -268,16 +279,50 @@ export function useUpdateCommissionDocument() {
         .single();
 
       if (error) throw error;
+
+      // Send notification when submitting (draft -> submitted)
+      if (data.status === 'submitted' && result) {
+        try {
+          const { data: creatorProfile } = await supabase
+            .from('profiles')
+            .select('email, full_name')
+            .eq('id', (result as CommissionDocument).created_by)
+            .single();
+
+          await supabase.functions.invoke('send-commission-notification', {
+            body: {
+              notification_type: 'submitted',
+              document_type: 'commission_document',
+              commission_id: id,
+              job_name: (result as CommissionDocument).job_name_id || '',
+              job_address: (result as CommissionDocument).job_name_id || '',
+              sales_rep_name: (result as CommissionDocument).sales_rep || '',
+              subcontractor_name: null,
+              submission_type: 'employee',
+              contract_amount: (result as CommissionDocument).gross_contract_total || 0,
+              net_commission_owed: (result as CommissionDocument).rep_commission || 0,
+              submitter_email: creatorProfile?.email || '',
+              submitter_name: creatorProfile?.full_name || (result as CommissionDocument).sales_rep || '',
+            },
+          });
+        } catch (notifyError) {
+          console.error('Failed to send commission document notification:', notifyError);
+        }
+      }
+
       return result;
     },
-    onSuccess: (_, variables) => {
+    onSuccess: (_, variables: UpdateDocInput) => {
       queryClient.invalidateQueries({ queryKey: ['commission-documents'] });
       queryClient.invalidateQueries({ queryKey: ['commission-document', variables.id] });
-      toast.success('Commission document updated successfully');
+      queryClient.invalidateQueries({ queryKey: ['cc-commission-summary'] });
+      if (variables._silent) return;
+      const msg = variables._isSubmit ? 'Commission submitted successfully' : 'Commission document updated successfully';
+      toast.success(msg);
     },
-    onError: (error) => {
+    onError: (error, variables: UpdateDocInput) => {
       console.error('Error updating commission document:', error);
-      toast.error('Failed to update commission document');
+      if (!variables._silent) toast.error('Failed to update commission document');
     },
   });
 }
