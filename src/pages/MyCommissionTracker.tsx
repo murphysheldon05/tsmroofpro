@@ -39,17 +39,23 @@ export default function MyCommissionTracker() {
     );
   }
 
+  // Sales reps without linked commission_rep can still access Documents tab (drafts, submit)
   if (!linkedRep) {
     return (
       <AppLayout>
-        <div className="text-center py-16">
-          <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-4">
-            <DollarSign className="h-8 w-8 text-muted-foreground" />
+        <div className="space-y-5 pb-8">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-full bg-muted/50 flex items-center justify-center">
+              <DollarSign className="h-6 w-6 text-muted-foreground" />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold">My Commissions</h1>
+              <p className="text-sm text-muted-foreground">
+                Create and manage your commission documents. Contact your manager to link your commission history.
+              </p>
+            </div>
           </div>
-          <h3 className="text-lg font-semibold mb-1">No commission data found</h3>
-          <p className="text-sm text-muted-foreground">
-            Contact your manager if you believe this is an error.
-          </p>
+          <CommissionDocumentsEmbed />
         </div>
       </AppLayout>
     );

@@ -1,0 +1,12 @@
+---
+description: Run terminal commands without permission prompts
+alwaysApply: true
+---
+
+# Terminal Command Permissions
+
+When running terminal commands (npm, npx, build, tests, migrations, etc.):
+
+- **Always request full permissions upfront** — Use `required_permissions: ["all"]` or `["full_network"]` so commands execute without prompting the user.
+- **Do not ask for permission** — Run commands directly; the user has granted approval.
+- **Use semicolons for PowerShell** — On Windows, chain commands with `;` not `&&`.

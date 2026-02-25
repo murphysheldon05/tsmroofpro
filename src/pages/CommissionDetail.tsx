@@ -26,6 +26,7 @@ import {
   Trash2,
   RotateCcw,
   CheckCircle2,
+  BarChart3,
 } from "lucide-react";
 import { formatDisplayName } from "@/lib/displayName";
 import { cn } from "@/lib/utils";
@@ -43,6 +44,7 @@ import {
   useDeleteCommission,
   useRevertCommission,
 } from "@/hooks/useCommissions";
+import { slugifyRep } from "@/hooks/useCommissionEntries";
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
 import { formatPayDateShort } from "@/lib/commissionPayDateCalculations";
@@ -366,6 +368,24 @@ export default function CommissionDetail() {
           </div>
           
           <div className="flex items-center gap-2">
+            {submission.status === "paid" && submission.sales_rep_name && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                onClick={() => {
+                  const isOwnSubmission = user && submission.submitted_by === user.id;
+                  if (isOwnSubmission) {
+                    navigate("/my-commissions");
+                  } else {
+                    navigate(`/commission-tracker/${slugifyRep(submission.sales_rep_name!)}`);
+                  }
+                }}
+              >
+                <BarChart3 className="h-4 w-4" />
+                View in Tracker
+              </Button>
+            )}
             {canCloseOutDraw && (
               <Button onClick={() => setIsClosingOut(true)} className="gap-2 bg-emerald-600 hover:bg-emerald-700">
                 <CheckCircle2 className="h-4 w-4" />
