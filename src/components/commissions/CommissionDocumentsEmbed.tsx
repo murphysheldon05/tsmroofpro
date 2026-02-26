@@ -1,20 +1,32 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Search, FileText, Eye, Clock, CheckCircle, XCircle, Wallet, DollarSign, TrendingUp, Pencil } from "lucide-react";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
+import { Plus, Search, FileText, Eye, Clock, CheckCircle, XCircle, Wallet, Pencil } from "lucide-react";
 import { useCommissionDocuments, type CommissionDocument } from "@/hooks/useCommissionDocuments";
 import { formatCurrency } from "@/lib/commissionDocumentCalculations";
 import { format, parseISO } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
 
+const STATUS_PHASE: Record<string, string> = {
+  draft: "Draft",
+  submitted: "Pending — Awaiting Compliance Review",
+  manager_approved: "Compliance Approved — Awaiting Accounting",
+  accounting_approved: "Approved — Payment Scheduled",
+  paid: "Paid",
+  rejected: "Denied",
+  revision_required: "Rejected — Needs Resubmission",
+};
+
 export function CommissionDocumentsEmbed() {
   const navigate = useNavigate();
   const { user, isAdmin, isManager } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
+  const [summaryDoc, setSummaryDoc] = useState<CommissionDocument | null>(null);
   const { data: documents, isLoading } = useCommissionDocuments("all");
 
   const filtered = useMemo(() => {
@@ -34,13 +46,20 @@ export function CommissionDocumentsEmbed() {
     return docs;
   }, [documents, searchQuery, isAdmin, isManager, user?.id]);
 
-  const stats = useMemo(() => ({
-    total: filtered.length,
-    pending: filtered.filter((d) => d.status === "submitted").length,
-    totalCommission: filtered
-      .filter((d) => d.status === "approved" || d.status === "paid" || d.status === "accounting_approved")
-      .reduce((s, d) => s + (d.rep_commission || 0), 0),
-  }), [filtered]);
+  const stats = useMemo(() => {
+    const nonDraft = filtered.filter((d) => d.status !== "draft");
+    const pending = nonDraft.filter((d) => d.status === "submitted" || d.status === "manager_approved").length;
+    const totalSubmitted = nonDraft.reduce((s, d) => s + (d.rep_commission || 0), 0);
+    const totalCommission = nonDraft
+      .filter((d) => ["approved", "paid", "accounting_approved"].includes(d.status))
+      .reduce((s, d) => s + (d.rep_commission || 0), 0);
+    return {
+      total: nonDraft.length,
+      pending,
+      totalSubmitted,
+      totalCommission,
+    };
+  }, [filtered]);
 
   const getStatusBadge = (status: string) => {
     const icons: Record<string, React.ReactNode> = {
@@ -86,8 +105,8 @@ export function CommissionDocumentsEmbed() {
         </Card>
         <Card>
           <CardContent className="p-3">
-            <div className="text-xs text-muted-foreground font-medium mb-1">Commission</div>
-            <div className="text-lg font-bold text-primary">{formatCurrency(stats.totalCommission)}</div>
+            <div className="text-xs text-muted-foreground font-medium mb-1">Total Submitted</div>
+            <div className="text-lg font-bold text-primary">{formatCurrency(stats.totalSubmitted)}</div>
           </CardContent>
         </Card>
       </div>
@@ -125,7 +144,10 @@ export function CommissionDocumentsEmbed() {
                 className="w-full text-left p-4 bg-card border border-border rounded-lg hover:border-primary/30 transition-all"
               >
                 <button
-                  onClick={() => navigate(doc.status === 'draft' ? `/commission-documents/${doc.id}?edit=true` : `/commission-documents/${doc.id}`)}
+                  onClick={() => {
+                    if (doc.status === "draft") navigate(`/commission-documents/${doc.id}?edit=true`);
+                    else setSummaryDoc(doc);
+                  }}
                   className="w-full text-left"
                 >
                   <div className="flex items-start justify-between gap-2 mb-2">
@@ -138,7 +160,7 @@ export function CommissionDocumentsEmbed() {
                     <span className="text-xs text-muted-foreground">{doc.job_date ? format(parseISO(doc.job_date), "MMM d, yyyy") : "—"}</span>
                   </div>
                 </button>
-                {doc.status === 'draft' && doc.created_by === user?.id && (
+                {doc.status === "draft" && doc.created_by === user?.id && (
                   <Button
                     size="sm"
                     className="mt-3 w-full gap-2"
@@ -167,20 +189,27 @@ export function CommissionDocumentsEmbed() {
               </TableHeader>
               <TableBody>
                 {filtered.map((doc) => (
-                  <TableRow key={doc.id} className="cursor-pointer hover:bg-muted/50" onClick={() => navigate(doc.status === 'draft' ? `/commission-documents/${doc.id}?edit=true` : `/commission-documents/${doc.id}`)}>
+                  <TableRow
+                    key={doc.id}
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => {
+                      if (doc.status === "draft") navigate(`/commission-documents/${doc.id}?edit=true`);
+                      else setSummaryDoc(doc);
+                    }}
+                  >
                     <TableCell className="font-medium">{doc.job_name_id}</TableCell>
                     <TableCell>{doc.job_date ? format(parseISO(doc.job_date), "MM/dd/yyyy") : "—"}</TableCell>
                     <TableCell>{doc.sales_rep}</TableCell>
                     <TableCell className="text-right font-mono font-semibold text-green-600">{formatCurrency(doc.rep_commission)}</TableCell>
                     <TableCell>{getStatusBadge(doc.status)}</TableCell>
                     <TableCell className="text-right">
-                      {doc.status === 'draft' && doc.created_by === user?.id ? (
+                      {doc.status === "draft" && doc.created_by === user?.id ? (
                         <Button size="sm" className="gap-1.5" onClick={(e) => { e.stopPropagation(); navigate(`/commission-documents/${doc.id}?edit=true`); }}>
                           <Pencil className="h-4 w-4" />
                           Continue Draft
                         </Button>
                       ) : (
-                        <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); navigate(`/commission-documents/${doc.id}`); }}>
+                        <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setSummaryDoc(doc); }}>
                           <Eye className="h-4 w-4" />
                         </Button>
                       )}
@@ -192,6 +221,50 @@ export function CommissionDocumentsEmbed() {
           </div>
         </>
       )}
+
+      <Sheet open={!!summaryDoc} onOpenChange={(open) => !open && setSummaryDoc(null)}>
+        <SheetContent className="sm:max-w-md">
+          {summaryDoc && (
+            <>
+              <SheetHeader>
+                <SheetTitle>{summaryDoc.job_name_id}</SheetTitle>
+              </SheetHeader>
+              <div className="mt-6 space-y-4">
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Phase</p>
+                  <p className="font-semibold mt-1">{STATUS_PHASE[summaryDoc.status] || summaryDoc.status}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Sales Rep</p>
+                  <p className="mt-1">{summaryDoc.sales_rep}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Commission</p>
+                  <p className="mt-1 text-lg font-bold text-primary">{formatCurrency(summaryDoc.rep_commission || 0)}</p>
+                </div>
+                {summaryDoc.job_date && (
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Job Date</p>
+                    <p className="mt-1">{format(parseISO(summaryDoc.job_date), "MMM d, yyyy")}</p>
+                  </div>
+                )}
+                {(summaryDoc.status === "revision_required" || summaryDoc.status === "rejected") && summaryDoc.created_by === user?.id && (
+                  <p className="text-sm text-amber-600">Make the requested changes and resubmit.</p>
+                )}
+              </div>
+              <SheetFooter className="mt-8">
+                <Button variant="outline" onClick={() => setSummaryDoc(null)}>
+                  Close
+                </Button>
+                <Button onClick={() => { navigate(`/commission-documents/${summaryDoc.id}`); setSummaryDoc(null); }}>
+                  <Eye className="h-4 w-4 mr-2" />
+                  View Full Details
+                </Button>
+              </SheetFooter>
+            </>
+          )}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

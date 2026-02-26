@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,8 +10,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { 
-  Search, Flag, AlertTriangle, Clock, Download, Eye, ShieldAlert, AlertCircle 
+  Search, Flag, AlertTriangle, Clock, Download, Eye, ShieldAlert, AlertCircle, FileText 
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { format, parseISO, differenceInHours } from "date-fns";
 import { toast } from "sonner";
 import { formatDisplayName } from "@/lib/displayName";
@@ -19,6 +20,7 @@ import { useAuth } from "@/contexts/AuthContext";
 
 export function CommissionOversightTab() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [statusFilter, setStatusFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [flagModalOpen, setFlagModalOpen] = useState(false);
@@ -230,6 +232,55 @@ export function CommissionOversightTab() {
           </Table>
         </CardContent>
       </Card>
+
+      {commissionDocs && commissionDocs.filter((d: any) => ["submitted", "manager_approved"].includes(d.status)).length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Commission Documents — Pending Review
+            </CardTitle>
+            <CardDescription>
+              Employee commission worksheets awaiting compliance or accounting review
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Job</TableHead>
+                  <TableHead>Rep</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Amount</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {commissionDocs
+                  .filter((d: any) => ["submitted", "manager_approved"].includes(d.status))
+                  .slice(0, 25)
+                  .map((d: any) => (
+                    <TableRow key={d.id} className="cursor-pointer hover:bg-muted/50" onClick={() => navigate(`/commission-documents/${d.id}`)}>
+                      <TableCell className="font-medium">{d.job_name_id}</TableCell>
+                      <TableCell>{d.sales_rep}</TableCell>
+                      <TableCell>
+                        <Badge variant="secondary" className="text-xs">{d.status?.replace(/_/g, " ")}</Badge>
+                      </TableCell>
+                      <TableCell className="text-right font-mono">
+                        ${(d.rep_commission || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                      </TableCell>
+                      <TableCell>
+                        <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); navigate(`/commission-documents/${d.id}`); }}>
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Flag Modal */}
       <Dialog open={flagModalOpen} onOpenChange={setFlagModalOpen}>

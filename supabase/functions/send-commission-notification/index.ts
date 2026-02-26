@@ -58,14 +58,15 @@ async function resolveRecipients(
     .single();
 
   if (roleAssignment) {
-    // Priority: assigned_email > backup_email > fallback_email
     if (roleAssignment.assigned_email) {
       recipients.push(roleAssignment.assigned_email);
       console.log("Added assigned role email:", roleAssignment.assigned_email);
-    } else if (roleAssignment.backup_email) {
+    }
+    if (roleAssignment.backup_email && roleAssignment.backup_email !== roleAssignment.assigned_email) {
       recipients.push(roleAssignment.backup_email);
       console.log("Added backup role email:", roleAssignment.backup_email);
-    } else {
+    }
+    if (recipients.length === 0) {
       recipients.push(routing.fallback_email);
       console.log("Added fallback email:", routing.fallback_email);
     }

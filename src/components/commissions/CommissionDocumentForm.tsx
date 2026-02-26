@@ -408,10 +408,10 @@ export function CommissionDocumentForm({ document: existingDoc, readOnly = false
     
     try {
       if (autoSaveDocId) {
-        await updateMutation.mutateAsync({ id: autoSaveDocId, ...payload });
+        await updateMutation.mutateAsync({ id: autoSaveDocId, ...payload, _silent: true });
       } else if (formData.job_name_id) {
         // Create new draft on first auto-save if job name exists
-        const result = await createMutation.mutateAsync(payload);
+        const result = await createMutation.mutateAsync({ ...payload, _silent: true });
         if (result?.id) {
           setAutoSaveDocId(result.id);
         }
@@ -444,11 +444,12 @@ export function CommissionDocumentForm({ document: existingDoc, readOnly = false
     }
 
     const payload = buildPayload(submit);
+    const meta = { _isSubmit: submit };
 
     if (autoSaveDocId || existingDoc?.id) {
-      await updateMutation.mutateAsync({ id: autoSaveDocId || existingDoc!.id, ...payload });
+      await updateMutation.mutateAsync({ id: autoSaveDocId || existingDoc!.id, ...payload, ...meta });
     } else {
-      await createMutation.mutateAsync(payload);
+      await createMutation.mutateAsync({ ...payload, ...meta });
     }
     navigate('/commission-documents');
   };

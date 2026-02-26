@@ -23,7 +23,7 @@ export function AccountingPayoutQueue({ mode }: Props) {
     let items = commissions || [];
     
     if (mode === "pending") {
-      items = items.filter((c) => c.status === "approved");
+      items = items.filter((c) => c.status === "approved" || c.status === "accounting_approved");
     } else {
       items = items.filter((c) => c.status === "paid");
     }
