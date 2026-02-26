@@ -72,6 +72,7 @@ import { RoleOnboardingAdmin } from "@/components/admin/RoleOnboardingAdmin";
 import { GuidedTour } from "@/components/tutorial/GuidedTour";
 import { adminSteps } from "@/components/tutorial/tutorialSteps";
 import { PendingActionsSection } from "@/components/admin/PendingActionsSection";
+import { PendingApprovals } from "@/components/admin/PendingApprovals";
 import OpsCompliance from "@/pages/OpsCompliance";
 
 const ADMIN_TAB_VALUES = ["users", "tiers", "sops", "categories", "tools", "notifications", "routing", "audit", "draws", "overrides", "leaderboard", "playbook-status", "role-onboarding", "ops-compliance"] as const;
@@ -569,6 +570,12 @@ export default function Admin() {
             <div>
               <h2 className="text-lg font-semibold text-foreground mb-4">Sent Invites</h2>
               <PendingInvites />
+            </div>
+
+            {/* Pending Approvals Section */}
+            <div id="pending-approvals" data-tutorial="admin-pending">
+              <h2 className="text-lg font-semibold text-foreground mb-4">Pending Approvals</h2>
+              <PendingApprovals />
             </div>
 
             <div className="flex justify-between items-center">
