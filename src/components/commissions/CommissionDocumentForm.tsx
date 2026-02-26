@@ -32,6 +32,7 @@ import {
 import { 
   useCreateCommissionDocument, 
   useUpdateCommissionDocument,
+  useUpdateCommissionDocumentStatus,
   type CommissionDocument 
 } from "@/hooks/useCommissionDocuments";
 import { useUserCommissionTier } from "@/hooks/useCommissionTiers";
@@ -151,6 +152,7 @@ export function CommissionDocumentForm({ document: existingDoc, readOnly = false
   const { user, isAdmin, isManager } = useAuth();
   const createMutation = useCreateCommissionDocument();
   const updateMutation = useUpdateCommissionDocument();
+  const statusMutation = useUpdateCommissionDocumentStatus();
   
   // Fetch user profile for auto-populating sales rep name
   const { data: userProfile } = useQuery({
@@ -443,13 +445,22 @@ export function CommissionDocumentForm({ document: existingDoc, readOnly = false
       return;
     }
 
-    const payload = buildPayload(submit);
+    // Always save as draft first so the status update hook handles submission logic
+    const payload = buildPayload(false);
+    let docId = autoSaveDocId || existingDoc?.id;
 
-    if (autoSaveDocId || existingDoc?.id) {
-      await updateMutation.mutateAsync({ id: autoSaveDocId || existingDoc!.id, ...payload });
+    if (docId) {
+      await updateMutation.mutateAsync({ id: docId, ...payload });
     } else {
-      await createMutation.mutateAsync(payload);
+      const result = await createMutation.mutateAsync(payload);
+      docId = result?.id;
     }
+
+    // If submitting, use the status hook which handles manager assignment and timestamps
+    if (submit && docId) {
+      await statusMutation.mutateAsync({ id: docId, status: 'submitted' });
+    }
+
     navigate('/commission-documents');
   };
 
@@ -473,7 +484,7 @@ export function CommissionDocumentForm({ document: existingDoc, readOnly = false
     setShowPreview(false);
   };
 
-  const isLoading = createMutation.isPending || updateMutation.isPending;
+  const isLoading = createMutation.isPending || updateMutation.isPending || statusMutation.isPending;
   const negExpenseCount = [formData.neg_exp_1, formData.neg_exp_2, formData.neg_exp_3, formData.neg_exp_4, ...additionalNegExpenses].filter(e => e > 0).length;
 
   // ── Render helper for money inputs (inline, not a component) ──

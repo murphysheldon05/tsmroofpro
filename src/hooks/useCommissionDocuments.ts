@@ -299,6 +299,26 @@ export function useUpdateCommissionDocumentStatus() {
       revision_reason?: string;
       notes?: string;
     }) => {
+      // Validate status transition
+      const { data: currentDoc } = await supabase
+        .from('commission_documents')
+        .select('status')
+        .eq('id', id)
+        .single();
+      const validTransitions: Record<string, string[]> = {
+        draft: ['submitted'],
+        submitted: ['manager_approved', 'revision_required', 'rejected'],
+        revision_required: ['submitted'],
+        rejected: ['submitted'],
+        manager_approved: ['accounting_approved', 'revision_required', 'rejected'],
+        accounting_approved: ['paid', 'revision_required', 'rejected'],
+        paid: [],
+      };
+      const allowed = validTransitions[currentDoc?.status || ''] || [];
+      if (currentDoc && !allowed.includes(status)) {
+        throw new Error(`Cannot transition from "${currentDoc.status}" to "${status}"`);
+      }
+
       const updateData: Record<string, any> = { status };
       
       // Handle submission - fetch manager from profile
