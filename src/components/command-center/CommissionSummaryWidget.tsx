@@ -16,6 +16,14 @@ export function CommissionSummaryWidget() {
   const { user, role, isAdmin, isManager } = useAuth();
   const isScopedUser = !isAdmin && !isManager;
 
+  const normalizeStage = (stage: string | null | undefined) => {
+    // Legacy values (older DB constraint) -> current app values
+    if (stage === "manager_approved") return "pending_accounting";
+    if (stage === "accounting_approved" || stage === "approved") return "completed";
+    if (stage === "pending") return "pending_manager";
+    return stage ?? null;
+  };
+
   const { data, isLoading } = useQuery({
     queryKey: ["cc-commission-summary", user?.id, role],
     queryFn: async () => {
@@ -34,20 +42,28 @@ export function CommissionSummaryWidget() {
 
       const monthStart = format(startOfMonth(new Date()), "yyyy-MM-dd");
       const sum = (arr: any[] | null, field: string) =>
-        (arr || []).reduce((s, r) => s + (r[field] || 0), 0);
+        (arr || []).reduce((s, r) => s + (Number(r?.[field] ?? 0) || 0), 0);
 
       // Pending Review = $ submitted awaiting compliance (pending_manager, pending_admin)
       const pendingReview = (allRows || []).filter(
-        (r) =>
-          r.status === "pending_review" &&
-          (r.approval_stage === "pending_manager" || r.approval_stage === "pending_admin" || r.approval_stage == null)
+        (r) => {
+          const stage = normalizeStage(r.approval_stage);
+          return (
+            r.status === "pending_review" &&
+            (stage === "pending_manager" || stage === "pending_admin" || stage == null)
+          );
+        }
       );
 
       // Ready for Payment = $ compliance approved, awaiting accounting (pending_accounting) + $ accounting approved (status=approved)
       const readyForPayment = (allRows || []).filter(
-        (r) =>
-          (r.status === "pending_review" && r.approval_stage === "pending_accounting") ||
-          r.status === "approved"
+        (r) => {
+          const stage = normalizeStage(r.approval_stage);
+          return (
+            (r.status === "pending_review" && stage === "pending_accounting") ||
+            r.status === "approved"
+          );
+        }
       );
 
       // Paid This Month = $ marked paid this month

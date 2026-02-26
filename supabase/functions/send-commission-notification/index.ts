@@ -11,7 +11,7 @@ const corsHeaders = {
 };
 
 interface CommissionNotification {
-  notification_type: "submitted" | "manager_approved" | "accounting_approved" | "paid" | "rejected" | "denied" | "status_change" | "rejected_commission_revised";
+  notification_type: "submitted" | "manager_approved" | "accounting_approved" | "paid" | "rejected" | "revision_required" | "denied" | "status_change" | "rejected_commission_revised";
   commission_id: string;
   job_name: string;
   job_address: string;
@@ -49,30 +49,29 @@ async function resolveRecipients(
     return recipients;
   }
 
-  // Get role assignment for the primary role
-  const { data: roleAssignment } = await supabaseClient
+  // Get all active role assignments for the primary role (so assigned + backup both receive email)
+  const { data: roleAssignments } = await supabaseClient
     .from("role_assignments")
     .select("*")
     .eq("role_name", routing.primary_role)
-    .eq("active", true)
-    .single();
+    .eq("active", true);
 
-  if (roleAssignment) {
-    // Priority: assigned_email > backup_email > fallback_email
-    if (roleAssignment.assigned_email) {
-      recipients.push(roleAssignment.assigned_email);
-      console.log("Added assigned role email:", roleAssignment.assigned_email);
-    } else if (roleAssignment.backup_email) {
-      recipients.push(roleAssignment.backup_email);
-      console.log("Added backup role email:", roleAssignment.backup_email);
-    } else {
-      recipients.push(routing.fallback_email);
-      console.log("Added fallback email:", routing.fallback_email);
+  if (roleAssignments && roleAssignments.length > 0) {
+    for (const ra of roleAssignments) {
+      if (ra.assigned_email) {
+        recipients.push(ra.assigned_email);
+        console.log("Added assigned role email:", ra.assigned_email);
+      }
+      if (ra.backup_email) {
+        recipients.push(ra.backup_email);
+        console.log("Added backup role email:", ra.backup_email);
+      }
     }
-  } else {
-    // No role assignment, use fallback
+  }
+
+  // Always include fallback as a safety net
+  if (routing.fallback_email) {
     recipients.push(routing.fallback_email);
-    console.log("No role assignment, using fallback:", routing.fallback_email);
   }
 
   return [...new Set(recipients.filter(e => e && e.trim()))];
@@ -187,12 +186,30 @@ const handler = async (req: Request): Promise<Response> => {
 
     switch (payload.notification_type) {
       case "submitted":
-        // COMPLIANCE ONLY (Manny + Sheldon): "New commission submitted by [Rep Name]"
+        // COMPLIANCE + ADMINS: "New commission submitted by [Rep Name]"
         subject = `New commission submitted by ${payload.submitter_name || repName}`;
         heading = "New Commission Submitted";
         introText = `New commission submitted by <strong>${payload.submitter_name || repName}</strong>.`;
         headerColor = "#d97706";
         recipientEmails = await resolveRecipients(supabaseClient, "commission_submission");
+        // Also email all admins (not just in-app)
+        try {
+          const { data: adminUsers } = await supabaseClient
+            .from("user_roles")
+            .select("user_id")
+            .eq("role", "admin");
+          const adminIds = (adminUsers || []).map((u: any) => u.user_id).filter(Boolean);
+          if (adminIds.length > 0) {
+            const { data: adminProfiles } = await supabaseClient
+              .from("profiles")
+              .select("email")
+              .in("id", adminIds);
+            const adminEmails = (adminProfiles || []).map((p: any) => p.email).filter((e: string) => e && e.trim());
+            recipientEmails.push(...adminEmails);
+          }
+        } catch (e) {
+          console.error("Failed to resolve admin email recipients:", e);
+        }
         additionalPlainText = `Job: ${payload.job_name}\nRep: ${payload.submitter_name || repName}\nAmount: ${formatCurrency(payload.net_commission_owed)}`;
         additionalContent = `
           <tr><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;"><strong>Job:</strong></td><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">${payload.job_name}</td></tr>
@@ -259,6 +276,28 @@ const handler = async (req: Request): Promise<Response> => {
         break;
 
       case "rejected":
+        subject = `⚠️ Commission Rejected: ${payload.job_name}`;
+        heading = "Commission Rejected";
+        introText = `Your commission for <strong>${payload.job_name}</strong> was rejected.${payload.notes ? ` Rejection reason: ${payload.notes}` : " Please review the notes below and resubmit."}`;
+        headerColor = "#dc2626";
+        recipientEmails = payload.submitter_email ? [payload.submitter_email] : [];
+        additionalPlainText = `Job: ${payload.job_name}${payload.notes ? `\nRejection Reason: ${payload.notes}` : ""}`;
+        additionalContent = `
+          <tr><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;"><strong>Job:</strong></td><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">${payload.job_name}</td></tr>
+          <tr><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;"><strong>Rep:</strong></td><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">${repName}</td></tr>
+          <tr><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;"><strong>Commission Amount:</strong></td><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">${formatCurrency(payload.net_commission_owed)}</td></tr>
+          ${payload.notes ? `
+          <tr><td colspan="2" style="padding: 20px; background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); border: 1px solid #fecaca; border-radius: 12px; margin-top: 15px;">
+            <div style="font-size: 16px; font-weight: bold; color: #991b1b; margin-bottom: 8px;">📝 Rejection Reason:</div>
+            <div style="font-size: 14px; color: #dc2626; line-height: 1.6;">${payload.notes}</div>
+            <div style="font-size: 13px; color: #9ca3af; margin-top: 12px;">Please make the requested changes and resubmit your commission.</div>
+          </td></tr>` : ""}
+        `;
+        buttonText = "View & Resubmit";
+        break;
+
+      case "revision_required":
+        // Alias of rejected (document workflow)
         subject = `⚠️ Commission Rejected: ${payload.job_name}`;
         heading = "Commission Rejected";
         introText = `Your commission for <strong>${payload.job_name}</strong> was rejected.${payload.notes ? ` Rejection reason: ${payload.notes}` : " Please review the notes below and resubmit."}`;
