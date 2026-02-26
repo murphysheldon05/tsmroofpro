@@ -1,4 +1,5 @@
-import { formatCurrency, formatTierPercent } from "@/lib/commissionDocumentCalculations";
+import { formatCurrency } from "@/lib/utils";
+import { formatTierPercent } from "@/lib/commissionDocumentCalculations";
 import type { CommissionDocument } from "@/hooks/useCommissionDocuments";
 import { format } from "date-fns";
 

@@ -2,12 +2,7 @@ import { useMemo } from "react";
 import { DollarSign, CheckCircle, Clock } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { useCommissionSubmissions } from "@/hooks/useCommissions";
-
-function formatCurrency(val: number) {
-  if (val >= 1000000) return `$${(val / 1000000).toFixed(1)}M`;
-  if (val >= 1000) return `$${(val / 1000).toFixed(1)}K`;
-  return `$${val.toFixed(0)}`;
-}
+import { formatCurrency } from "@/lib/utils";
 
 /** Admin/Accounting view: 3 boxes — Total Submitted (awaiting compliance), Compliance Approved (awaiting accounting), Accounting Approved (ready for payment). */
 export function AccountingSummaryCards() {

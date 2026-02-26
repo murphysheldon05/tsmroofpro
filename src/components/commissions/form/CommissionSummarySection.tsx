@@ -2,7 +2,7 @@ import { CommissionDocumentFormRow as FormRow } from "../CommissionDocumentFormR
 import { FormSection } from "./FormSection";
 import { CurrencyInput } from "./CurrencyInput";
 import { CalculatedField } from "./CalculatedField";
-import { formatCurrency } from "@/lib/commissionDocumentCalculations";
+import { formatCurrency } from "@/lib/utils";
 
 interface CommissionSummarySectionProps {
   netProfit: number;

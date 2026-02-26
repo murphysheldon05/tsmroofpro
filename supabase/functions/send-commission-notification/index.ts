@@ -176,6 +176,15 @@ const handler = async (req: Request): Promise<Response> => {
       ? `Subcontractor: ${payload.subcontractor_name}` 
       : payload.sales_rep_name;
 
+    // Resolve admin reply-to email dynamically from profiles
+    const { data: adminProfile } = await supabaseClient
+      .from("profiles")
+      .select("email")
+      .eq("role", "admin")
+      .limit(1)
+      .maybeSingle();
+    const replyToEmail = adminProfile?.email || "notifications@tsmroofpro.com";
+
     let subject = "";
     let heading = "";
     let introText = "";
@@ -187,8 +196,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     switch (payload.notification_type) {
       case "submitted":
-        // COMPLIANCE ONLY (Manny + Sheldon): "New commission submitted by [Rep Name]"
-        subject = `New commission submitted by ${payload.submitter_name || repName}`;
+        subject = `New Commission Submitted — ${payload.submitter_name || repName}`;
         heading = "New Commission Submitted";
         introText = `New commission submitted by <strong>${payload.submitter_name || repName}</strong>.`;
         headerColor = "#d97706";
@@ -203,10 +211,9 @@ const handler = async (req: Request): Promise<Response> => {
         break;
 
       case "manager_approved":
-        // ACCOUNTING ONLY (Courtney): "Commission ready for accounting review — [Rep Name] [Job]"
-        subject = `Commission ready for accounting review — ${payload.submitter_name || repName} ${payload.job_name}`;
-        heading = "Commission Ready for Accounting Review";
-        introText = `Commission ready for accounting review — <strong>${payload.submitter_name || repName}</strong> — <strong>${payload.job_name}</strong>.`;
+        subject = `Commission Ready for Payment — ${payload.submitter_name || repName}`;
+        heading = "Commission Ready for Payment";
+        introText = `Commission ready for payment review — <strong>${payload.submitter_name || repName}</strong> — <strong>${payload.job_name}</strong>.`;
         headerColor = "#1d4ed8";
         recipientEmails = await resolveRecipients(supabaseClient, "commission_accounting");
         additionalPlainText = `Rep: ${payload.submitter_name || repName}\nJob: ${payload.job_name}\nAmount: ${formatCurrency(payload.net_commission_owed)}`;
@@ -246,7 +253,7 @@ const handler = async (req: Request): Promise<Response> => {
         break;
 
       case "paid":
-        subject = `🎉 Commission Paid: ${payload.job_name}`;
+        subject = `Commission Paid — ${formatCurrency(payload.net_commission_owed)}`;
         heading = "Commission Paid! 🎉";
         introText = `Your commission for ${payload.job_name} has been processed and paid.`;
         headerColor = "#059669";
@@ -259,7 +266,7 @@ const handler = async (req: Request): Promise<Response> => {
         break;
 
       case "rejected":
-        subject = `⚠️ Commission Rejected: ${payload.job_name}`;
+        subject = `Commission Rejected — Action Required`;
         heading = "Commission Rejected";
         introText = `Your commission for <strong>${payload.job_name}</strong> was rejected.${payload.notes ? ` Rejection reason: ${payload.notes}` : " Please review the notes below and resubmit."}`;
         headerColor = "#dc2626";
@@ -414,7 +421,7 @@ If you have questions, please contact your supervisor or the accounting team.
     if (recipientEmails.length > 0) {
       emailResponse = await resend.emails.send({
         from: "TSM Hub <notifications@tsmroofpro.com>",
-        reply_to: "sheldonmurphy@tsmroofs.com",
+        reply_to: replyToEmail,
         to: recipientEmails,
         subject,
         text: plainText,
@@ -439,7 +446,7 @@ If you have questions, please contact your supervisor or the accounting team.
         </body></html>`;
       await resend.emails.send({
         from: "TSM Hub <notifications@tsmroofpro.com>",
-        reply_to: "sheldonmurphy@tsmroofs.com",
+        reply_to: replyToEmail,
         to: [payload.submitter_email],
         subject: repConfirmSubject,
         text: `Your commission for ${payload.job_name} has been submitted and is in the compliance review queue. View: ${commissionUrl}`,

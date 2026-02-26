@@ -1,7 +1,8 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
-import { formatUSD, getRepInitials, type EnrichedEntry } from "@/hooks/useCommissionEntries";
+import { getRepInitials, type EnrichedEntry } from "@/hooks/useCommissionEntries";
+import { formatCurrency } from "@/lib/utils";
 
 interface RepCardProps {
   repName: string;
@@ -35,10 +36,10 @@ export function RepCard({ repName, repColor, entries, totalPaidAllReps, onClick 
             <div className="text-xs text-muted-foreground">{jobCount} jobs · {entries.length} entries</div>
           </div>
         </div>
-        <div className="text-2xl font-extrabold tracking-tight mb-2">{formatUSD(ytdPaid)}</div>
+        <div className="text-2xl font-extrabold tracking-tight mb-2">{formatCurrency(ytdPaid)}</div>
         <div className="flex gap-3 text-xs text-muted-foreground mb-3">
-          <span className="text-green-600 font-medium">Comm: {formatUSD(commissionTotal)}</span>
-          <span className="text-amber-600 font-medium">Draw: {formatUSD(drawTotal)}</span>
+          <span className="text-green-600 font-medium">Comm: {formatCurrency(commissionTotal)}</span>
+          <span className="text-amber-600 font-medium">Draw: {formatCurrency(drawTotal)}</span>
         </div>
         <Progress value={pctOfTotal} className="h-1.5" />
         <div className="text-[10px] text-muted-foreground mt-1 text-right">{pctOfTotal.toFixed(1)}% of total</div>

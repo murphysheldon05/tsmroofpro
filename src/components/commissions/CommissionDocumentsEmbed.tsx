@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Search, FileText, Eye, Clock, CheckCircle, XCircle, Wallet, DollarSign, TrendingUp, Pencil } from "lucide-react";
 import { useCommissionDocuments, type CommissionDocument } from "@/hooks/useCommissionDocuments";
-import { formatCurrency } from "@/lib/commissionDocumentCalculations";
+import { formatCurrency } from "@/lib/utils";
 import { format, parseISO } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
 

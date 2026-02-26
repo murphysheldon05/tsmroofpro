@@ -6,7 +6,7 @@ import {
 import { format } from "date-fns";
 import { formatPayDateShort } from "@/lib/commissionPayDateCalculations";
 import { formatDisplayName } from "@/lib/displayName";
-import { cn } from "@/lib/utils";
+import { cn, formatCurrency } from "@/lib/utils";
 
 const STATUS_CONFIG: Record<string, { label: string; icon: React.ReactNode; colorClass: string; bgClass: string }> = {
   pending_review: { 
@@ -61,14 +61,6 @@ interface CommissionCardProps {
     scheduled_pay_date?: string | null;
   };
 }
-
-const formatFullCurrency = (value: number) => {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 2,
-  }).format(value);
-};
 
 export function CommissionCard({ submission }: CommissionCardProps) {
   const navigate = useNavigate();
@@ -165,14 +157,14 @@ export function CommissionCard({ submission }: CommissionCardProps) {
 
         <div className="text-right flex-shrink-0">
           <p className="text-lg font-bold text-foreground leading-tight tracking-tight">
-            {formatFullCurrency(submission.net_commission_owed || 0)}
+            {formatCurrency(submission.net_commission_owed || 0)}
           </p>
           <p className="text-xs text-muted-foreground">
-            of {formatFullCurrency(submission.contract_amount)}
+            of {formatCurrency(submission.contract_amount)}
           </p>
           {submission.draw_closed_out && submission.draw_amount_paid != null && submission.draw_amount_paid > 0 && (
             <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">
-              Draw paid: {formatFullCurrency(submission.draw_amount_paid)}
+              Draw paid: {formatCurrency(submission.draw_amount_paid)}
             </p>
           )}
         </div>

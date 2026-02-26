@@ -3,7 +3,7 @@ import { CommissionDocumentFormRow as FormRow } from "../CommissionDocumentFormR
 import { FormSection } from "./FormSection";
 import { CurrencyInput } from "./CurrencyInput";
 import { CalculatedField } from "./CalculatedField";
-import { formatCurrency } from "@/lib/commissionDocumentCalculations";
+import { formatCurrency } from "@/lib/utils";
 
 const inputClasses = "transition-all duration-200 ease-out hover:border-primary/50 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:shadow-md text-base";
 

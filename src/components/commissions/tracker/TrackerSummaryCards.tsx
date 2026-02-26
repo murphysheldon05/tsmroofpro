@@ -1,6 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { DollarSign, Briefcase, TrendingDown, BarChart3 } from "lucide-react";
-import { formatUSD, type EnrichedEntry } from "@/hooks/useCommissionEntries";
+import { type EnrichedEntry } from "@/hooks/useCommissionEntries";
+import { formatCurrency } from "@/lib/utils";
 
 interface TrackerSummaryCardsProps {
   entries: EnrichedEntry[];
@@ -15,10 +16,10 @@ export function TrackerSummaryCards({ entries, repCount }: TrackerSummaryCardsPr
   const jobCount = entries.filter((e) => e.job_value != null && (e.job_value || 0) > 0).length;
 
   const cards = [
-    { label: "Total Paid Out", value: formatUSD(totalPaid), icon: DollarSign, color: "text-emerald-600", border: "border-t-emerald-500" },
-    { label: "Job Commissions", value: formatUSD(jobCommissions), icon: Briefcase, color: "text-blue-600", border: "border-t-blue-500" },
-    { label: "Draws", value: formatUSD(drawsAdvances), icon: TrendingDown, color: "text-amber-600", border: "border-t-amber-500" },
-    { label: "Total Job Value", value: formatUSD(totalJobValue), sub: `${jobCount} jobs · ${repCount} reps`, icon: BarChart3, color: "text-purple-600", border: "border-t-purple-500" },
+    { label: "Total Paid Out", value: formatCurrency(totalPaid), icon: DollarSign, color: "text-emerald-600", border: "border-t-emerald-500" },
+    { label: "Job Commissions", value: formatCurrency(jobCommissions), icon: Briefcase, color: "text-blue-600", border: "border-t-blue-500" },
+    { label: "Draws", value: formatCurrency(drawsAdvances), icon: TrendingDown, color: "text-amber-600", border: "border-t-amber-500" },
+    { label: "Total Job Value", value: formatCurrency(totalJobValue), sub: `${jobCount} jobs · ${repCount} reps`, icon: BarChart3, color: "text-purple-600", border: "border-t-purple-500" },
   ];
 
   return (

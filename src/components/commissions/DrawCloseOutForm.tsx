@@ -1,15 +1,16 @@
-import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, Loader2, Send } from "lucide-react";
 import { CommissionWorksheet } from "./CommissionWorksheet";
 import { CommissionSubmission, useCloseOutDraw } from "@/hooks/useCommissions";
 import { DatePickerField } from "@/components/ui/date-picker-field";
+
+const formatCurrency = (value: number) =>
+  new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2 }).format(value);
 
 const formSchema = z.object({
   contract_amount: z.number().min(0),
@@ -51,6 +52,11 @@ export function DrawCloseOutForm({ submission, onSuccess, onCancel }: DrawCloseO
     flat_fee_amount: undefined,
   };
 
+  const totalJobRevenue = (worksheetData.contract_amount || 0) + (worksheetData.supplements_approved || 0);
+  const grossCommission = totalJobRevenue * ((worksheetData.commission_percentage || 0) / 100);
+  const finalCommission = grossCommission - (worksheetData.advances_paid || 0);
+  const balanceDue = finalCommission;
+
   const handleWorksheetChange = (data: Partial<typeof worksheetData>) => {
     Object.entries(data).forEach(([key, value]) => {
       form.setValue(key as keyof FormData, value as number);
@@ -78,26 +84,35 @@ export function DrawCloseOutForm({ submission, onSuccess, onCancel }: DrawCloseO
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        {/* Close Out Job — Request Final Commission */}
+        {/* Final Commission Close-Out header */}
         <Card className="border-emerald-500/30 bg-emerald-500/5">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400">
               <CheckCircle2 className="h-5 w-5" />
-              Close Out Job — Request Final Commission
+              Final Commission Close-Out
             </CardTitle>
             <CardDescription>
-              Your draw of ${drawAmountPaid.toLocaleString()} has been paid. Enter the final job amounts and submit to request your remaining commission. This will go through the full approval chain: Rep → Compliance → Accounting → Paid.
+              Your draw of {formatCurrency(drawAmountPaid)} has been paid. Enter the final job amounts from AccuLynx and submit to request your remaining commission. This will go through the full approval chain: Rep &rarr; Compliance &rarr; Accounting &rarr; Paid.
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="rounded-lg bg-muted/30 p-3 text-sm">
-              <p className="font-medium text-amber-700 dark:text-amber-400">
-                Draw paid: ${drawAmountPaid.toLocaleString()}
-              </p>
-              <p className="text-muted-foreground mt-1">
-                Enter the final contract amount, supplements, and advances below. The advances should include the draw amount ({drawAmountPaid.toLocaleString()}).
-              </p>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 text-center">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Draw Paid</p>
+                <p className="text-lg font-bold text-amber-700 dark:text-amber-400 mt-1">{formatCurrency(drawAmountPaid)}</p>
+              </div>
+              <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3 text-center">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Final Commission</p>
+                <p className="text-lg font-bold text-emerald-700 dark:text-emerald-400 mt-1">{formatCurrency(grossCommission)}</p>
+              </div>
+              <div className="rounded-xl border border-primary/30 bg-primary/5 p-3 text-center">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Balance Due</p>
+                <p className="text-lg font-bold text-primary mt-1">{formatCurrency(balanceDue)}</p>
+              </div>
             </div>
+            <p className="text-xs text-muted-foreground">
+              Balance Due = Final Commission &minus; Draw Already Paid (included in Advances)
+            </p>
           </CardContent>
         </Card>
 

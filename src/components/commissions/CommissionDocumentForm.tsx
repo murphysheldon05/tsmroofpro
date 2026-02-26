@@ -19,7 +19,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import {
   calculateAllFields,
-  formatCurrency,
   formatTierPercent,
   validateCommissionDocument,
   PROFIT_SPLIT_OPTIONS,
@@ -39,7 +38,7 @@ import { useUserCommissionTier } from "@/hooks/useCommissionTiers";
 import { useAutoSave } from "@/hooks/useAutoSave";
 import { CommissionPreviewModal } from "./CommissionPreviewModal";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
+import { cn, formatCurrency } from "@/lib/utils";
 
 interface CommissionDocumentFormProps {
   document?: CommissionDocument;

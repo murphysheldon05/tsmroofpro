@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { TrendingUp, DollarSign } from "lucide-react";
 import { startOfMonth, startOfYear, format, parseISO } from "date-fns";
 import { formatDisplayName } from "@/lib/displayName";
+import { formatCurrency } from "@/lib/utils";
 
 export function ManagerOverrideEarningsCard() {
   const { user } = useAuth();
@@ -72,9 +73,6 @@ export function ManagerOverrideEarningsCard() {
 
   if (overrideCommissions.length === 0 && repsInPhase === 0) return null;
 
-  const formatCurrency = (value: number) =>
-    new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(value);
-
   return (
     <Card className="border-purple-200/50 bg-purple-50/20 dark:bg-purple-950/10 dark:border-purple-800/20">
       <CardContent className="pt-4 pb-3">
@@ -122,9 +120,6 @@ export function ManagerOverridesTab() {
   });
 
   const totalOverride = overrideCommissions.reduce((sum, c) => sum + (c.override_amount || 0), 0);
-
-  const formatCurrency = (value: number) =>
-    new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(value);
 
   if (isLoading) {
     return <div className="space-y-3">{[1, 2, 3].map(i => <div key={i} className="h-12 rounded-lg bg-card/40 animate-pulse" />)}</div>;

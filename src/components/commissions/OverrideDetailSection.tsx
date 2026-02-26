@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { TrendingUp, UserCheck } from "lucide-react";
+import { formatCurrency } from "@/lib/utils";
 
 interface OverrideDetailSectionProps {
   commission: {
@@ -75,9 +76,6 @@ export function OverrideDetailSection({ commission }: OverrideDetailSectionProps
 
   const overrideAmount = commission.override_amount || (commission.net_commission_owed * 0.10);
   const commNumber = commission.override_commission_number || (tracking ? tracking.approved_commission_count + 1 : null);
-
-  const formatCurrency = (value: number) =>
-    new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(value);
 
   return (
     <Card className="border-purple-200 bg-purple-50/30 dark:bg-purple-950/10 dark:border-purple-800/30">

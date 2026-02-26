@@ -12,6 +12,7 @@ import { Download, Edit, Save, TrendingUp, CheckCircle, DollarSign, Users, Calen
 import { toast } from "sonner";
 import { format, startOfMonth, startOfYear, parseISO } from "date-fns";
 import { formatDisplayName } from "@/lib/displayName";
+import { formatCurrency } from "@/lib/utils";
 
 export function OverrideReportPanel() {
   const { data: trackings = [] } = useAllOverrideTrackings();
@@ -117,9 +118,6 @@ export function OverrideReportPanel() {
     setEditingRepId(null);
     toast.success("Commission count updated");
   };
-
-  const formatCurrency = (value: number) =>
-    new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(value);
 
   const exportCsv = () => {
     const rows = [["Sales Manager", "Manager Email", "Sales Rep", "Commission #", "Job Number", "Job Date", "Net Profit", "Override Amount (10%)", "Status", "Date Paid"]];

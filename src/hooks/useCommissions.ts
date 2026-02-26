@@ -211,11 +211,25 @@ export function useCreateCommission() {
         throw new Error("MANAGER_REQUIRED: You must have a manager assigned before submitting commissions. Please contact your administrator.");
       }
       
+      const contractAmt = data.contract_amount || 0;
+      const supplementsAmt = data.supplements_approved || 0;
+      const commPct = data.commission_percentage || 0;
+      const advancesPaid = data.advances_paid || 0;
+      const isFlatFee = data.is_flat_fee || false;
+      const flatFeeAmt = data.flat_fee_amount || 0;
+
+      const totalJobRevenue = contractAmt + supplementsAmt;
+      const grossCommission = isFlatFee ? flatFeeAmt : totalJobRevenue * (commPct / 100);
+      const netCommissionOwed = grossCommission - advancesPaid;
+
       const insertData = {
         ...data,
         submitted_by: user.id,
         status: "pending_review" as const,
         approval_stage: data.is_manager_submission ? "pending_admin" : "pending_manager",
+        total_job_revenue: totalJobRevenue,
+        gross_commission: grossCommission,
+        net_commission_owed: netCommissionOwed,
       };
       
       const { data: result, error } = await supabase
@@ -247,8 +261,8 @@ export function useCreateCommission() {
             sales_rep_name: data.sales_rep_name || null,
             subcontractor_name: data.subcontractor_name || null,
             submission_type: data.submission_type || "employee",
-            contract_amount: data.contract_amount || 0,
-            net_commission_owed: data.net_commission_owed || data.commission_requested || 0,
+            contract_amount: contractAmt,
+            net_commission_owed: netCommissionOwed || data.commission_requested || 0,
             submitter_email: user.email,
             submitter_name: formatDisplayName(profile?.full_name, profile?.email || user.email),
           },
@@ -265,7 +279,7 @@ export function useCreateCommission() {
       toast.success(
         (result as CommissionSubmission)?.is_draw
           ? "Draw request submitted. Your manager will review it."
-          : "Commission submitted successfully"
+          : "Commission Submitted"
       );
     },
     onError: (error: Error) => {

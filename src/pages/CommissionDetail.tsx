@@ -29,7 +29,7 @@ import {
   BarChart3,
 } from "lucide-react";
 import { formatDisplayName } from "@/lib/displayName";
-import { cn } from "@/lib/utils";
+import { cn, formatCurrency } from "@/lib/utils";
 import { CommissionWorksheet } from "@/components/commissions/CommissionWorksheet";
 import { CommissionStatusTimeline } from "@/components/commissions/CommissionStatusTimeline";
 import { CommissionEditForm } from "@/components/commissions/CommissionEditForm";
@@ -177,13 +177,6 @@ export default function CommissionDetail() {
   const canMarkPaid = canPayout && isApproved;
   // Admin-only: revert to previous phase (e.g. paid → approved, or approved → pending accounting)
   const canRevert = isAdmin && (submission.status === "paid" || (submission.status === "approved" && submission.approval_stage === "completed") || (submission.status === "pending_review" && submission.approval_stage === "pending_accounting"));
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-    }).format(value);
-  };
 
   const handleComplianceApprove = async () => {
     await updateStatus.mutateAsync({
@@ -922,16 +915,22 @@ export default function CommissionDetail() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <dl className="grid grid-cols-2 gap-4 text-sm">
+              <dl className="grid grid-cols-3 gap-4 text-sm">
                 <div>
-                  <dt className="text-muted-foreground">Draw paid</dt>
+                  <dt className="text-muted-foreground">Draw Paid</dt>
                   <dd className="font-semibold text-amber-700 dark:text-amber-400">
                     {formatCurrency((submission as { draw_amount_paid?: number }).draw_amount_paid ?? 0)}
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-muted-foreground">Final commission</dt>
+                  <dt className="text-muted-foreground">Final Commission</dt>
                   <dd className="font-semibold text-emerald-700 dark:text-emerald-400">
+                    {formatCurrency(submission.gross_commission ?? 0)}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground">Balance Due</dt>
+                  <dd className="font-semibold text-primary">
                     {formatCurrency(submission.net_commission_owed ?? 0)}
                   </dd>
                 </div>

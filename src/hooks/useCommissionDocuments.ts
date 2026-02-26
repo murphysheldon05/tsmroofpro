@@ -208,7 +208,7 @@ export function useCreateCommissionDocument() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['commission-documents'] });
-      toast.success('Commission document created successfully');
+      toast.success('Draft Saved');
     },
     onError: (error) => {
       console.error('Error creating commission document:', error);
@@ -273,7 +273,7 @@ export function useUpdateCommissionDocument() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['commission-documents'] });
       queryClient.invalidateQueries({ queryKey: ['commission-document', variables.id] });
-      toast.success('Commission document updated successfully');
+      toast.success('Draft Saved');
     },
     onError: (error) => {
       console.error('Error updating commission document:', error);
@@ -434,10 +434,14 @@ export function useUpdateCommissionDocumentStatus() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['commission-documents'] });
       queryClient.invalidateQueries({ queryKey: ['commission-document', variables.id] });
-      const statusLabel = variables.status === 'revision_required' || variables.status === 'rejected' 
-        ? 'rejected' 
-        : variables.status.replace(/_/g, ' ');
-      toast.success(`Commission document ${statusLabel}`);
+      if (variables.status === 'submitted') {
+        toast.success('Commission Submitted');
+      } else {
+        const statusLabel = variables.status === 'revision_required' || variables.status === 'rejected' 
+          ? 'rejected' 
+          : variables.status.replace(/_/g, ' ');
+        toast.success(`Commission document ${statusLabel}`);
+      }
     },
     onError: (error) => {
       console.error('Error updating status:', error);

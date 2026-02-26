@@ -4,7 +4,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Calculator, Lock } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, formatCurrency } from "@/lib/utils";
 
 interface WorksheetData {
   contract_amount: number;
@@ -44,13 +44,6 @@ export function CommissionWorksheet({ data, onChange, readOnly = false }: Commis
       netCommissionOwed,
     };
   }, [data]);
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-    }).format(value);
-  };
 
   const parseNumericInput = (value: string): number => {
     // Allow transient states like "", ".", "10." while typing; on blur we normalize.

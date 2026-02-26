@@ -18,7 +18,7 @@ import {
   CheckCircle, Clock, XCircle, X, Wallet, CalendarCheck, Pencil
 } from "lucide-react";
 import { useCommissionDocuments, type CommissionDocument } from "@/hooks/useCommissionDocuments";
-import { formatCurrency } from "@/lib/commissionDocumentCalculations";
+import { formatCurrency } from "@/lib/utils";
 import { format, parseISO, isWithinInterval, startOfDay, endOfDay, startOfYear } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";

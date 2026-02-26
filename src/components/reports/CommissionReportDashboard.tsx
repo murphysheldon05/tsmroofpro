@@ -11,6 +11,7 @@ import { format, subMonths, startOfMonth, endOfMonth, eachMonthOfInterval, parse
 import { Loader2, TrendingUp, TrendingDown, DollarSign, Users, FileCheck, Clock, Download, FileSpreadsheet, FileText } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { formatDisplayName } from "@/lib/displayName";
+import { formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
 
@@ -220,24 +221,6 @@ export function CommissionReportDashboard() {
     return { totalRequested, totalApproved, pendingCount, approvedCount, approvalRate, trend: 0 };
   }, [filteredData, monthlyData]);
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(value);
-  };
-
-  const formatCurrencyForExport = (value: number) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(value);
-  };
-
   // Export to CSV
   const exportToCSV = () => {
     try {
@@ -311,8 +294,8 @@ export function CommissionReportDashboard() {
       doc.setFontSize(10);
       doc.setFont("helvetica", "normal");
       const summaryData = [
-        ["Total Requested:", formatCurrencyForExport(stats.totalRequested)],
-        ["Total Approved:", formatCurrencyForExport(stats.totalApproved)],
+        ["Total Requested:", formatCurrency(stats.totalRequested)],
+        ["Total Approved:", formatCurrency(stats.totalApproved)],
         ["Pending Requests:", stats.pendingCount.toString()],
         ["Approved Requests:", stats.approvedCount.toString()],
         ["Approval Rate:", `${stats.approvalRate.toFixed(1)}%`],
@@ -347,8 +330,8 @@ export function CommissionReportDashboard() {
             yPosition = 20;
           }
           doc.text(month.month, 14, yPosition);
-          doc.text(formatCurrencyForExport(month.requested), 60, yPosition);
-          doc.text(formatCurrencyForExport(month.approved), 100, yPosition);
+          doc.text(formatCurrency(month.requested), 60, yPosition);
+          doc.text(formatCurrency(month.approved), 100, yPosition);
           doc.text(month.count.toString(), 140, yPosition);
           yPosition += 5;
         });
@@ -383,8 +366,8 @@ export function CommissionReportDashboard() {
           }
           const name = emp.name.length > 25 ? emp.name.substring(0, 22) + "..." : emp.name;
           doc.text(name, 14, yPosition);
-          doc.text(formatCurrencyForExport(emp.requested), 70, yPosition);
-          doc.text(formatCurrencyForExport(emp.approved), 110, yPosition);
+          doc.text(formatCurrency(emp.requested), 70, yPosition);
+          doc.text(formatCurrency(emp.approved), 110, yPosition);
           doc.text(emp.count.toString(), 150, yPosition);
           yPosition += 5;
         });

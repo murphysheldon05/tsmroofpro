@@ -53,13 +53,15 @@ export default function Commissions() {
   const showMyDraws = canRequestDraws || role === "sales_rep" || role === "sales_manager";
   const commissionHolds = userHolds?.filter(h => h.hold_type === "commission_hold") || [];
 
-  // Status counts
-  const statusCounts = useMemo(() => {
+  // Status counts and dollar amounts
+  const { statusCounts, statusAmounts } = useMemo(() => {
     const counts: Record<string, number> = {};
+    const amounts: Record<string, number> = {};
     submissions?.forEach((s) => {
       counts[s.status] = (counts[s.status] || 0) + 1;
+      amounts[s.status] = (amounts[s.status] || 0) + (s.net_commission_owed || 0);
     });
-    return counts;
+    return { statusCounts: counts, statusAmounts: amounts };
   }, [submissions]);
 
   // Summary stats — USER VIEW vs ADMIN VIEW (useCommissionSubmissions scopes by role)
@@ -250,6 +252,7 @@ export default function Commissions() {
             <div data-tutorial="commission-pipeline">
             <CommissionStatusPipeline
               statusCounts={statusCounts}
+              statusAmounts={statusAmounts}
               activeStatus={activeStatus}
               onStatusClick={setActiveStatus}
             />

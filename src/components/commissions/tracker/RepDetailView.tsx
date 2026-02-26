@@ -8,12 +8,11 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ChevronLeft, ChevronRight, Share2, BarChart3, FileText, Eye, Clock, CheckCircle, XCircle, Wallet, Plus, Pencil, ExternalLink } from "lucide-react";
 import { PayTypeBadge } from "./PayTypeBadge";
-import { formatUSD, getRepInitials, type EnrichedEntry } from "@/hooks/useCommissionEntries";
+import { getRepInitials, type EnrichedEntry } from "@/hooks/useCommissionEntries";
 import { useCommissionDocuments } from "@/hooks/useCommissionDocuments";
 import { useAuth } from "@/contexts/AuthContext";
-import { formatCurrency } from "@/lib/commissionDocumentCalculations";
 import { format, parseISO } from "date-fns";
-import { cn } from "@/lib/utils";
+import { cn, formatCurrency } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 
@@ -78,17 +77,17 @@ export function RepDetailView({ repName, repColor, entries, readOnly, hideBackBu
   };
 
   const statCards = [
-    { label: "YTD Paid", value: formatUSD(ytdPaid), color: "border-t-emerald-500" },
-    { label: "Job Commissions", value: formatUSD(jobCommissions.reduce((s, e) => s + e.amount_paid, 0)), sub: `${jobCount} jobs`, color: "border-t-blue-500" },
-    { label: "Draws", value: formatUSD(drawsAdvances), color: "border-t-amber-500" },
-    { label: "Total Job Value", value: formatUSD(totalJobValue), sub: `avg ${avgCommPct.toFixed(1)}%`, color: "border-t-purple-500" },
+    { label: "YTD Paid", value: formatCurrency(ytdPaid), color: "border-t-emerald-500" },
+    { label: "Job Commissions", value: formatCurrency(jobCommissions.reduce((s, e) => s + e.amount_paid, 0)), sub: `${jobCount} jobs`, color: "border-t-blue-500" },
+    { label: "Draws", value: formatCurrency(drawsAdvances), color: "border-t-amber-500" },
+    { label: "Total Job Value", value: formatCurrency(totalJobValue), sub: `avg ${avgCommPct.toFixed(1)}%`, color: "border-t-purple-500" },
   ];
 
   if (isPrestonStuart) {
     statCards.push(
-      { label: "Draws Taken", value: formatUSD(drawsTaken), color: "border-t-red-500" },
-      { label: "Draw Paybacks", value: formatUSD(drawPaybacks), color: "border-t-green-500" },
-      { label: "Draw Balance", value: formatUSD(drawBalance), sub: drawBalance > 0 ? "Owed" : "Paid Off", color: drawBalance > 0 ? "border-t-red-500" : "border-t-green-500" },
+      { label: "Draws Taken", value: formatCurrency(drawsTaken), color: "border-t-red-500" },
+      { label: "Draw Paybacks", value: formatCurrency(drawPaybacks), color: "border-t-green-500" },
+      { label: "Draw Balance", value: formatCurrency(drawBalance), sub: drawBalance > 0 ? "Owed" : "Paid Off", color: drawBalance > 0 ? "border-t-red-500" : "border-t-green-500" },
     );
   }
 
@@ -152,7 +151,7 @@ export function RepDetailView({ repName, repColor, entries, readOnly, hideBackBu
     <div className="space-y-5">
       <div className="flex items-center gap-3">
         {!hideBackButton && (
-          <Button variant="ghost" size="icon" onClick={() => navigate("/commission-tracker")} className="rounded-xl">
+          <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="rounded-xl">
             <ChevronLeft className="h-5 w-5" />
           </Button>
         )}
@@ -240,8 +239,8 @@ export function RepDetailView({ repName, repColor, entries, readOnly, hideBackBu
                             <TableCell className="w-8 text-center"><ChevronRight className={cn("h-4 w-4 transition-transform", isExpanded && "rotate-90")} /></TableCell>
                             <TableCell className="font-semibold">{format(parseISO(date), "MM/dd/yyyy")}</TableCell>
                             <TableCell colSpan={3} className="text-muted-foreground text-sm">{items.length} items on this pay run</TableCell>
-                            <TableCell className="text-right font-mono">{formatUSD(dateJobValue)}</TableCell>
-                            <TableCell className="text-right font-mono font-bold">{formatUSD(datePaid)}</TableCell>
+                            <TableCell className="text-right font-mono">{formatCurrency(dateJobValue)}</TableCell>
+                            <TableCell className="text-right font-mono font-bold">{formatCurrency(datePaid)}</TableCell>
                             {isPrestonStuart && <><TableCell /><TableCell /></>}
                             <TableCell />
                           </TableRow>
@@ -252,13 +251,13 @@ export function RepDetailView({ repName, repColor, entries, readOnly, hideBackBu
                               <TableCell className="text-sm font-mono">{entry.job || "—"}</TableCell>
                               <TableCell className="text-sm">{entry.customer || "—"}</TableCell>
                               <TableCell><PayTypeBadge entryId={entry.id} currentPayType={entry.pay_type} repName={repName} readOnly={readOnly} /></TableCell>
-                              <TableCell className="text-right text-sm font-mono">{formatUSD(entry.job_value)}</TableCell>
-                              <TableCell className={cn("text-right text-sm font-mono", !entry.has_paid && "text-muted-foreground")}>{entry.has_paid ? formatUSD(entry.amount_paid) : "—"}</TableCell>
+                              <TableCell className="text-right text-sm font-mono">{formatCurrency(entry.job_value)}</TableCell>
+                              <TableCell className={cn("text-right text-sm font-mono", !entry.has_paid && "text-muted-foreground")}>{entry.has_paid ? formatCurrency(entry.amount_paid) : "—"}</TableCell>
                               {isPrestonStuart && (
                                 <>
-                                  <TableCell className="text-right text-sm font-mono">{formatUSD(entry.earned_comm)}</TableCell>
+                                  <TableCell className="text-right text-sm font-mono">{formatCurrency(entry.earned_comm)}</TableCell>
                                   <TableCell className={cn("text-right text-sm font-mono", (entry.applied_bank || 0) < 0 ? "text-red-600" : (entry.applied_bank || 0) > 0 ? "text-green-600" : "")}>
-                                    {entry.applied_bank != null ? entry.applied_bank < 0 ? `(${formatUSD(Math.abs(entry.applied_bank))})` : formatUSD(entry.applied_bank) : "—"}
+                                    {entry.applied_bank != null ? entry.applied_bank < 0 ? `(${formatCurrency(Math.abs(entry.applied_bank))})` : formatCurrency(entry.applied_bank) : "—"}
                                   </TableCell>
                                 </>
                               )}
@@ -277,13 +276,13 @@ export function RepDetailView({ repName, repColor, entries, readOnly, hideBackBu
                         <TableCell className="text-sm font-mono">{entry.job || "—"}</TableCell>
                         <TableCell className="text-sm">{entry.customer || "—"}</TableCell>
                         <TableCell><PayTypeBadge entryId={entry.id} currentPayType={entry.pay_type} repName={repName} readOnly={readOnly} /></TableCell>
-                        <TableCell className="text-right text-sm font-mono">{formatUSD(entry.job_value)}</TableCell>
-                        <TableCell className={cn("text-right text-sm font-mono", !entry.has_paid && "text-muted-foreground")}>{entry.has_paid ? formatUSD(entry.amount_paid) : "—"}</TableCell>
+                        <TableCell className="text-right text-sm font-mono">{formatCurrency(entry.job_value)}</TableCell>
+                        <TableCell className={cn("text-right text-sm font-mono", !entry.has_paid && "text-muted-foreground")}>{entry.has_paid ? formatCurrency(entry.amount_paid) : "—"}</TableCell>
                         {isPrestonStuart && (
                           <>
-                            <TableCell className="text-right text-sm font-mono">{formatUSD(entry.earned_comm)}</TableCell>
+                            <TableCell className="text-right text-sm font-mono">{formatCurrency(entry.earned_comm)}</TableCell>
                             <TableCell className={cn("text-right text-sm font-mono", (entry.applied_bank || 0) < 0 ? "text-red-600" : (entry.applied_bank || 0) > 0 ? "text-green-600" : "")}>
-                              {entry.applied_bank != null ? entry.applied_bank < 0 ? `(${formatUSD(Math.abs(entry.applied_bank))})` : formatUSD(entry.applied_bank) : "—"}
+                              {entry.applied_bank != null ? entry.applied_bank < 0 ? `(${formatCurrency(Math.abs(entry.applied_bank))})` : formatCurrency(entry.applied_bank) : "—"}
                             </TableCell>
                           </>
                         )}
@@ -297,8 +296,8 @@ export function RepDetailView({ repName, repColor, entries, readOnly, hideBackBu
                     <TableCell />
                     <TableCell>TOTAL</TableCell>
                     <TableCell colSpan={3} />
-                    <TableCell className="text-right font-mono">{formatUSD(totalJobVal)}</TableCell>
-                    <TableCell className="text-right font-mono">{formatUSD(totalPaid)}</TableCell>
+                    <TableCell className="text-right font-mono">{formatCurrency(totalJobVal)}</TableCell>
+                    <TableCell className="text-right font-mono">{formatCurrency(totalPaid)}</TableCell>
                     {isPrestonStuart && <><TableCell /><TableCell /></>}
                     <TableCell />
                   </TableRow>

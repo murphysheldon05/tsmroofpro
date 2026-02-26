@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSalesLeaderboard, useLeaderboardSetting, useLatestCompletedPayRun, usePayRunLeaderboard, usePersonalCommissionStats, LeaderboardTab, TimeRange } from "@/hooks/useSalesLeaderboard";
 import { Trophy, Calendar, ExternalLink, ChevronDown, ChevronUp, DollarSign } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, formatCurrency } from "@/lib/utils";
 import { format, startOfMonth, parseISO } from "date-fns";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarPicker } from "@/components/ui/calendar";
@@ -64,11 +64,6 @@ const TAB_CONFIG: { key: LeaderboardTab; label: string; activeClass: string }[] 
   { key: "profit", label: "Profit", activeClass: "bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-400" },
   { key: "commissions", label: "Commissions", activeClass: "bg-blue-500/10 border-blue-500/30 text-blue-700 dark:text-blue-400" },
 ];
-
-function formatUSD(amount: number | null | undefined): string {
-  if (amount == null) return "$0.00";
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2 }).format(amount);
-}
 
 export function SalesLeaderboardWidget() {
   const { isAdmin, user } = useAuth();
@@ -245,20 +240,20 @@ export function SalesLeaderboardWidget() {
           <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-border/40">
             <div className="bg-muted/40 rounded-lg p-2">
               <div className="text-[10px] text-muted-foreground font-medium">Submitted</div>
-              <div className="text-sm font-bold">{formatUSD(personalStats.submitted)}</div>
+              <div className="text-sm font-bold">{formatCurrency(personalStats.submitted)}</div>
             </div>
             <div className="bg-muted/40 rounded-lg p-2">
               <div className="text-[10px] text-muted-foreground font-medium">Approved</div>
-              <div className="text-sm font-bold">{formatUSD(personalStats.approved)}</div>
+              <div className="text-sm font-bold">{formatCurrency(personalStats.approved)}</div>
             </div>
             <div className="bg-muted/40 rounded-lg p-2">
               <div className="text-[10px] text-muted-foreground font-medium">YTD Paid</div>
-              <div className="text-sm font-bold text-emerald-600">{formatUSD(personalStats.ytdPaid)}</div>
+              <div className="text-sm font-bold text-emerald-600">{formatCurrency(personalStats.ytdPaid)}</div>
             </div>
             <div className="bg-muted/40 rounded-lg p-2">
               <div className="text-[10px] text-muted-foreground font-medium">Draw Balance</div>
               <div className={cn("text-sm font-bold", personalStats.drawBalance < 0 ? "text-red-600" : "text-foreground")}>
-                {formatUSD(personalStats.drawBalance)}
+                {formatCurrency(personalStats.drawBalance)}
               </div>
             </div>
           </div>

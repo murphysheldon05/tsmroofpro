@@ -7,11 +7,11 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { CalendarIcon, Plus, CheckCircle2 } from "lucide-react";
 import { format, parseISO } from "date-fns";
-import { cn } from "@/lib/utils";
+import { cn, formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
 import {
   useCommissionPayRuns, useCreatePayRun, useCompletePayRun,
-  useCommissionEntries, formatUSD, type CommissionPayRun,
+  useCommissionEntries, type CommissionPayRun,
 } from "@/hooks/useCommissionEntries";
 
 interface PayRunsTabProps {
@@ -78,7 +78,7 @@ export function PayRunsTab({ readOnly }: PayRunsTabProps) {
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right font-mono">{runEntries.length}</TableCell>
-                  <TableCell className="text-right font-mono">{formatUSD(totalPaid)}</TableCell>
+                  <TableCell className="text-right font-mono">{formatCurrency(totalPaid)}</TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {run.completed_at ? format(parseISO(run.completed_at), "MM/dd/yyyy h:mm a") : "—"}
                   </TableCell>

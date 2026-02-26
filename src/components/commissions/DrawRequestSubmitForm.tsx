@@ -222,9 +222,29 @@ export function DrawRequestSubmitForm({ onCancel, variant = "employee" }: DrawRe
     }
   };
 
+  const formatCurrencyDisplay = (value: number) =>
+    new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2 }).format(value);
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        {/* Label */}
+        <div className="rounded-2xl border-2 border-amber-500/40 bg-amber-500/5 p-5 text-center">
+          <h2 className="text-xl font-bold text-amber-700 dark:text-amber-400">
+            Draw Request &mdash; 50% of Projected Commission
+          </h2>
+          {estimatedCommission > 0 && (
+            <div className="mt-3 flex flex-col sm:flex-row items-center justify-center gap-4 text-sm">
+              <span className="text-muted-foreground">
+                Projected Commission: <span className="font-bold text-foreground">{formatCurrencyDisplay(estimatedCommission)}</span>
+              </span>
+              <span className="text-amber-700 dark:text-amber-400">
+                Draw Amount (50%): <span className="font-bold">{formatCurrencyDisplay(estimatedCommission * 0.5)}</span>
+              </span>
+            </div>
+          )}
+        </div>
+
         {/* 1. Eligibility Checklist — at top */}
         <Card className="border-amber-500/30 bg-amber-500/5">
           <CardHeader>

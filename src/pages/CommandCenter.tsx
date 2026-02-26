@@ -4,7 +4,7 @@ import { CompactCoreIdentity } from "@/components/command-center/CompactCoreIden
 import { PlaybookCompletionBanner } from "@/components/command-center/PlaybookCompletionBanner";
 import { OnboardingBanner } from "@/components/command-center/OnboardingBanner";
 import { QuickActionLinks } from "@/components/command-center/QuickActionLinks";
-import { CommissionSummaryWidget } from "@/components/command-center/CommissionSummaryWidget";
+
 import { SalesLeaderboardWidget } from "@/components/command-center/SalesLeaderboardWidget";
 import { QuickStatsWidget } from "@/components/command-center/QuickStatsWidget";
 import { useLeaderboardSetting } from "@/hooks/useSalesLeaderboard";
@@ -70,11 +70,6 @@ export default function CommandCenter() {
             <SalesLeaderboardWidget />
           </div>
         )}
-
-        {/* 4. Commission summary cards */}
-        <div data-tutorial="commission-summary">
-          <CommissionSummaryWidget />
-        </div>
 
         {/* 5. Quick Links row */}
         <div data-tutorial="quick-links">

@@ -2,10 +2,18 @@ import { useMemo } from "react";
 import { CheckCircle, Clock, AlertCircle, XCircle, DollarSign, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+const formatCompact = (value: number) =>
+  new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 2,
+  }).format(value);
+
 interface PipelineStage {
   key: string;
   label: string;
   count: number;
+  amount: number;
   icon: React.ReactNode;
   colorClass: string;
   bgClass: string;
@@ -14,16 +22,18 @@ interface PipelineStage {
 
 interface CommissionStatusPipelineProps {
   statusCounts: Record<string, number>;
+  statusAmounts?: Record<string, number>;
   activeStatus: string;
   onStatusClick: (status: string) => void;
 }
 
-export function CommissionStatusPipeline({ statusCounts, activeStatus, onStatusClick }: CommissionStatusPipelineProps) {
+export function CommissionStatusPipeline({ statusCounts, statusAmounts, activeStatus, onStatusClick }: CommissionStatusPipelineProps) {
   const stages: PipelineStage[] = useMemo(() => [
     {
       key: "pending_review",
       label: "Pending",
       count: statusCounts["pending_review"] || 0,
+      amount: statusAmounts?.["pending_review"] || 0,
       icon: <Clock className="h-5 w-5" />,
       colorClass: "text-amber-400",
       bgClass: "bg-amber-500/10",
@@ -33,6 +43,7 @@ export function CommissionStatusPipeline({ statusCounts, activeStatus, onStatusC
       key: "rejected",
       label: "Rejected",
       count: statusCounts["rejected"] || 0,
+      amount: statusAmounts?.["rejected"] || 0,
       icon: <AlertCircle className="h-5 w-5" />,
       colorClass: "text-orange-400",
       bgClass: "bg-orange-500/10",
@@ -42,6 +53,7 @@ export function CommissionStatusPipeline({ statusCounts, activeStatus, onStatusC
       key: "approved",
       label: "Approved",
       count: statusCounts["approved"] || 0,
+      amount: statusAmounts?.["approved"] || 0,
       icon: <CheckCircle className="h-5 w-5" />,
       colorClass: "text-emerald-400",
       bgClass: "bg-emerald-500/10",
@@ -51,6 +63,7 @@ export function CommissionStatusPipeline({ statusCounts, activeStatus, onStatusC
       key: "denied",
       label: "Denied",
       count: statusCounts["denied"] || 0,
+      amount: statusAmounts?.["denied"] || 0,
       icon: <XCircle className="h-5 w-5" />,
       colorClass: "text-red-400",
       bgClass: "bg-red-500/10",
@@ -60,12 +73,13 @@ export function CommissionStatusPipeline({ statusCounts, activeStatus, onStatusC
       key: "paid",
       label: "Paid",
       count: statusCounts["paid"] || 0,
+      amount: statusAmounts?.["paid"] || 0,
       icon: <DollarSign className="h-5 w-5" />,
       colorClass: "text-sky-400",
       bgClass: "bg-sky-500/10",
       borderClass: "border-sky-500/30",
     },
-  ], [statusCounts]);
+  ], [statusCounts, statusAmounts]);
 
   return (
     <div className="w-full">
@@ -113,6 +127,14 @@ export function CommissionStatusPipeline({ statusCounts, activeStatus, onStatusC
                     : "bg-muted text-muted-foreground"
                 )}>
                   {stage.count}
+                </span>
+              )}
+              {stage.amount > 0 && (
+                <span className={cn(
+                  "text-[10px] font-semibold whitespace-nowrap",
+                  activeStatus === stage.key ? stage.colorClass : "text-muted-foreground"
+                )}>
+                  {formatCompact(stage.amount)}
                 </span>
               )}
             </button>

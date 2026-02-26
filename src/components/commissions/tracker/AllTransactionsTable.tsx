@@ -4,7 +4,8 @@ import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, Table
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { PayTypeBadge } from "./PayTypeBadge";
-import { formatUSD, getRepInitials, slugifyRep, type EnrichedEntry, type CommissionRep, type CommissionPayType, type CommissionPayRun } from "@/hooks/useCommissionEntries";
+import { getRepInitials, slugifyRep, type EnrichedEntry, type CommissionRep, type CommissionPayType, type CommissionPayRun } from "@/hooks/useCommissionEntries";
+import { formatCurrency } from "@/lib/utils";
 import { format, parseISO } from "date-fns";
 
 interface AllTransactionsTableProps {
@@ -70,7 +71,7 @@ export function AllTransactionsTable({ entries, reps, payTypes, payRuns, readOnl
           </Select>
         )}
         <div className="text-sm text-muted-foreground ml-auto">
-          {filtered.length} transactions · {formatUSD(totalAmount)}
+          {filtered.length} transactions · {formatCurrency(totalAmount)}
         </div>
       </div>
 
@@ -110,8 +111,8 @@ export function AllTransactionsTable({ entries, reps, payTypes, payRuns, readOnl
                 <TableCell>
                   <PayTypeBadge entryId={entry.id} currentPayType={entry.pay_type} repName={entry.rep_name} readOnly={readOnly} />
                 </TableCell>
-                <TableCell className="text-right text-sm font-mono">{formatUSD(entry.job_value)}</TableCell>
-                <TableCell className="text-right text-sm font-mono font-semibold">{formatUSD(entry.amount_paid)}</TableCell>
+                <TableCell className="text-right text-sm font-mono">{formatCurrency(entry.job_value)}</TableCell>
+                <TableCell className="text-right text-sm font-mono font-semibold">{formatCurrency(entry.amount_paid)}</TableCell>
                 <TableCell className="text-sm text-muted-foreground max-w-[200px] truncate">{entry.notes || "—"}</TableCell>
               </TableRow>
             ))}
@@ -120,9 +121,9 @@ export function AllTransactionsTable({ entries, reps, payTypes, payRuns, readOnl
             <TableRow className="bg-[#111827] text-white font-bold">
               <TableCell colSpan={5}>TOTAL</TableCell>
               <TableCell className="text-right font-mono">
-                {formatUSD(filtered.filter((e) => e.job_value).reduce((s, e) => s + (e.job_value || 0), 0))}
+                {formatCurrency(filtered.filter((e) => e.job_value).reduce((s, e) => s + (e.job_value || 0), 0))}
               </TableCell>
-              <TableCell className="text-right font-mono">{formatUSD(totalAmount)}</TableCell>
+              <TableCell className="text-right font-mono">{formatCurrency(totalAmount)}</TableCell>
               <TableCell />
             </TableRow>
           </TableFooter>

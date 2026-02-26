@@ -4,7 +4,8 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Send, ArrowLeft, FileText, DollarSign, Calculator, Percent } from "lucide-react";
-import { formatCurrency, formatTierPercent } from "@/lib/commissionDocumentCalculations";
+import { formatCurrency } from "@/lib/utils";
+import { formatTierPercent } from "@/lib/commissionDocumentCalculations";
 
 interface CommissionPreviewModalProps {
   open: boolean;

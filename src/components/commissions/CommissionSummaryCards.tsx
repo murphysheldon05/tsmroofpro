@@ -12,11 +12,12 @@ interface CommissionSummaryCardsProps {
   paidAmount: number;
 }
 
-const formatRounded = (value: number) => {
-  if (value >= 1000000) return `$${(value / 1000000).toFixed(1)}M`;
-  if (value >= 1000) return `$${(value / 1000).toFixed(1)}K`;
-  return `$${value.toFixed(0)}`;
-};
+const formatFullCurrency = (value: number) =>
+  new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 2,
+  }).format(value);
 
 export function CommissionSummaryCards({
   totalSubmittedAmount,
@@ -27,7 +28,7 @@ export function CommissionSummaryCards({
   const cards = [
     {
       label: "Total Submitted",
-      value: formatRounded(totalSubmittedAmount),
+      value: formatFullCurrency(totalSubmittedAmount),
       icon: <Wallet className="h-5 w-5" />,
       colorClass: "text-primary",
       bgClass: "bg-primary/10",
@@ -35,7 +36,7 @@ export function CommissionSummaryCards({
     },
     {
       label: "Compliance Approved",
-      value: formatRounded(complianceApprovedAmount),
+      value: formatFullCurrency(complianceApprovedAmount),
       icon: <Clock className="h-5 w-5" />,
       colorClass: "text-amber-400",
       bgClass: "bg-amber-500/10",
@@ -43,7 +44,7 @@ export function CommissionSummaryCards({
     },
     {
       label: "Accounting Approved",
-      value: formatRounded(accountingApprovedAmount),
+      value: formatFullCurrency(accountingApprovedAmount),
       icon: <CheckCircle className="h-5 w-5" />,
       colorClass: "text-emerald-400",
       bgClass: "bg-emerald-500/10",
@@ -51,7 +52,7 @@ export function CommissionSummaryCards({
     },
     {
       label: "Paid",
-      value: formatRounded(paidAmount),
+      value: formatFullCurrency(paidAmount),
       icon: <DollarSign className="h-5 w-5" />,
       colorClass: "text-sky-400",
       bgClass: "bg-sky-500/10",
