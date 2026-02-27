@@ -176,39 +176,13 @@ export function useCreateCommissionDocument() {
 
       if (error) throw error;
 
-      // Send notification on creation
-      try {
-        const { data: creatorProfile } = await supabase
-          .from('profiles')
-          .select('email, full_name')
-          .eq('id', user.id)
-          .single();
-
-        await supabase.functions.invoke('send-commission-notification', {
-          body: {
-            notification_type: 'submitted',
-            document_type: 'commission_document',
-            commission_id: result.id,
-            job_name: data.job_name_id || '',
-            job_address: data.job_name_id || '',
-            sales_rep_name: data.sales_rep || '',
-            subcontractor_name: null,
-            submission_type: 'employee',
-            contract_amount: data.gross_contract_total || 0,
-            net_commission_owed: result.rep_commission || 0,
-            submitter_email: creatorProfile?.email || '',
-            submitter_name: creatorProfile?.full_name || data.sales_rep || '',
-          },
-        });
-      } catch (notifyError) {
-        console.error('Failed to send commission document notification:', notifyError);
-      }
+      // Notification is sent when status changes to 'submitted' via useUpdateCommissionDocumentStatus,
+      // not on draft creation.
 
       return result;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['commission-documents'] });
-      toast.success('Draft Saved');
     },
     onError: (error) => {
       console.error('Error creating commission document:', error);
@@ -273,7 +247,6 @@ export function useUpdateCommissionDocument() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['commission-documents'] });
       queryClient.invalidateQueries({ queryKey: ['commission-document', variables.id] });
-      toast.success('Draft Saved');
     },
     onError: (error) => {
       console.error('Error updating commission document:', error);

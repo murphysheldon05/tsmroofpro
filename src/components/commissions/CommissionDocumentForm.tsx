@@ -460,7 +460,8 @@ export function CommissionDocumentForm({ document: existingDoc, readOnly = false
       await statusMutation.mutateAsync({ id: docId, status: 'submitted' });
     }
 
-    navigate('/commission-documents');
+    toast.success(submit ? 'Commission Submitted' : 'Draft Saved');
+    navigate(-1);
   };
 
   const handleSubmitClick = () => {

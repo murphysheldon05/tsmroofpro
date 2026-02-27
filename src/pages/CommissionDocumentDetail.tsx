@@ -128,6 +128,14 @@ export default function CommissionDocumentDetail() {
     });
   };
 
+  // For drafts with ?edit=true, open edit form immediately (Continue Draft flow)
+  // Must be before any early returns to satisfy React rules-of-hooks
+  useEffect(() => {
+    if (document?.status === 'draft' && editParam) {
+      setIsEditing(true);
+    }
+  }, [document?.status, editParam]);
+
   const handlePrint = () => {
     setShowPrint(true);
     setTimeout(() => window.print(), 100);
@@ -148,13 +156,6 @@ export default function CommissionDocumentDetail() {
       </div>
     );
   }
-
-  // For drafts with ?edit=true, open edit form immediately (Continue Draft flow)
-  useEffect(() => {
-    if (document?.status === 'draft' && editParam) {
-      setIsEditing(true);
-    }
-  }, [document?.status, editParam]);
 
   if (showPrint) {
     return (
