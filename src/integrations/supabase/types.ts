@@ -488,6 +488,7 @@ export type Database = {
           supplement_fee: number | null
           supplement_fees_expense: number
           updated_at: string
+          workflow_submission_id: string | null
         }
         Insert: {
           accounting_approved_at?: string | null
@@ -549,6 +550,7 @@ export type Database = {
           supplement_fee?: number | null
           supplement_fees_expense?: number
           updated_at?: string
+          workflow_submission_id?: string | null
         }
         Update: {
           accounting_approved_at?: string | null
@@ -610,6 +612,7 @@ export type Database = {
           supplement_fee?: number | null
           supplement_fees_expense?: number
           updated_at?: string
+          workflow_submission_id?: string | null
         }
         Relationships: [
           {
@@ -979,6 +982,8 @@ export type Database = {
           roof_type: string
           sales_rep_id: string | null
           sales_rep_name: string | null
+          source_document_id: string | null
+          source_document_type: string | null
           status: string
           subcontractor_name: string | null
           submission_type: string
@@ -1037,6 +1042,8 @@ export type Database = {
           roof_type: string
           sales_rep_id?: string | null
           sales_rep_name?: string | null
+          source_document_id?: string | null
+          source_document_type?: string | null
           status?: string
           subcontractor_name?: string | null
           submission_type?: string
@@ -1095,6 +1102,8 @@ export type Database = {
           roof_type?: string
           sales_rep_id?: string | null
           sales_rep_name?: string | null
+          source_document_id?: string | null
+          source_document_type?: string | null
           status?: string
           subcontractor_name?: string | null
           submission_type?: string
@@ -4104,6 +4113,10 @@ export type Database = {
         Returns: boolean
       }
       can_process_payouts: { Args: { _user_id: string }; Returns: boolean }
+      create_submission_from_document: {
+        Args: { document_id: string }
+        Returns: string
+      }
       can_view_profile: {
         Args: { _target_id: string; _viewer_id: string }
         Returns: boolean
