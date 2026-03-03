@@ -580,6 +580,12 @@ export default function Admin() {
             {/* Pending Actions - Sheldon only (admin with management department) */}
             <PendingActionsSection />
 
+            {/* Pending Approvals — scroll anchor for #pending-approvals */}
+            <div id="pending-approvals">
+              <h2 className="text-lg font-semibold text-foreground mb-4">Pending Approvals</h2>
+              <PendingApprovals />
+            </div>
+
             {/* Sent Invites Section */}
             <div>
               <h2 className="text-lg font-semibold text-foreground mb-4">Sent Invites</h2>
