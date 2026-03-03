@@ -29,9 +29,13 @@ export function useAutoSave<T>({
     dataRef.current = data;
     const currentDataStr = JSON.stringify(data);
     if (currentDataStr !== lastSavedDataRef.current) {
-      setHasUnsavedChanges(true);
+      if (enabled) {
+        setHasUnsavedChanges(true);
+      } else {
+        lastSavedDataRef.current = currentDataStr;
+      }
     }
-  }, [data]);
+  }, [data, enabled]);
 
   const performSave = useCallback(async () => {
     if (!enabled || isSaving) return;

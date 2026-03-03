@@ -56,16 +56,31 @@ export function usePendingComplianceCount() {
 
 /** Count of warranty requests in 'New' status (not yet acknowledged / moved to In Progress). */
 export function useNewWarrantyCount() {
+  const { user, isAdmin, isManager, role, userDepartment } = useAuth();
+  const fullAccessRoles = ["admin", "manager", "sales_manager"];
+  const hasFullAccess = role ? fullAccessRoles.includes(role) : (isAdmin || isManager);
+
   return useQuery({
-    queryKey: ["new-warranty-count"],
+    queryKey: ["new-warranty-count", user?.id, hasFullAccess, userDepartment],
     queryFn: async () => {
-      const { count, error } = await supabase
+      let query = supabase
         .from("warranty_requests")
         .select("*", { count: "exact", head: true })
         .eq("status", "new");
+
+      if (!hasFullAccess && user) {
+        if (userDepartment === "Production") {
+          query = query.eq("assigned_production_member", user.id);
+        } else {
+          query = query.or(`assigned_production_member.eq.${user.id},secondary_support.eq.${user.id},created_by.eq.${user.id}`);
+        }
+      }
+
+      const { count, error } = await query;
       if (error) throw error;
       return count ?? 0;
     },
+    enabled: !!user,
     refetchInterval: 60000,
   });
 }

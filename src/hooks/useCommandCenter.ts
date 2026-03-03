@@ -78,8 +78,12 @@ export function useActionRequired() {
         .not("status", "in", '("completed","denied")')
         .order("updated_at", { ascending: true })
         .limit(5);
-      if (isProductionDept && user) {
-        warrantyQuery = warrantyQuery.eq("assigned_production_member", user.id);
+      if (isScopedUser && user) {
+        if (isProductionDept) {
+          warrantyQuery = warrantyQuery.eq("assigned_production_member", user.id);
+        } else {
+          warrantyQuery = warrantyQuery.or(`assigned_production_member.eq.${user.id},secondary_support.eq.${user.id},created_by.eq.${user.id}`);
+        }
       }
       const { data: pendingWarranties, error: warrantyError } = await warrantyQuery;
       if (warrantyError) throw warrantyError;
@@ -163,8 +167,12 @@ export function useQuickStats() {
         .from("warranty_requests")
         .select("*", { count: "exact", head: true })
         .not("status", "in", '("completed","denied")');
-      if (isProductionDept && user) {
-        openWarrantyQuery = openWarrantyQuery.eq("assigned_production_member", user.id);
+      if (isScopedUser && user) {
+        if (isProductionDept) {
+          openWarrantyQuery = openWarrantyQuery.eq("assigned_production_member", user.id);
+        } else {
+          openWarrantyQuery = openWarrantyQuery.or(`assigned_production_member.eq.${user.id},secondary_support.eq.${user.id},created_by.eq.${user.id}`);
+        }
       }
       const { count: openWarranties } = await openWarrantyQuery;
 

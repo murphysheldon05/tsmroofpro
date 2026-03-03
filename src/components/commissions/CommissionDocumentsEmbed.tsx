@@ -38,7 +38,7 @@ export function CommissionDocumentsEmbed() {
     total: filtered.length,
     pending: filtered.filter((d) => d.status === "submitted").length,
     totalCommission: filtered
-      .filter((d) => d.status === "approved" || d.status === "paid" || d.status === "accounting_approved")
+      .filter((d) => ["submitted", "manager_approved", "accounting_approved", "paid"].includes(d.status))
       .reduce((s, d) => s + (d.rep_commission || 0), 0),
   }), [filtered]);
 
