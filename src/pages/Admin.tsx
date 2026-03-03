@@ -377,7 +377,7 @@ export default function Admin() {
       const displayRole = dbRoleToDisplayRole(previousUser?.role);
       const isSalesDept = departmentName === "Sales";
       const hasTier = !!editUserData.commission_tier_id;
-      let targetRole: string;
+      let targetRole: "admin" | "manager" | "employee" | "sales_rep" | "sales_manager" | "ops_compliance" | "accounting" | "user";
       if (displayRole === "admin") {
         targetRole = "admin";
       } else if (displayRole === "manager") {
