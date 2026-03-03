@@ -643,6 +643,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "commission_documents_workflow_submission_id_fkey"
+            columns: ["workflow_submission_id"]
+            isOneToOne: false
+            referencedRelation: "commission_submissions"
+            referencedColumns: ["id"]
+          },
         ]
       }
       commission_entries: {
@@ -4113,13 +4120,13 @@ export type Database = {
         Returns: boolean
       }
       can_process_payouts: { Args: { _user_id: string }; Returns: boolean }
-      create_submission_from_document: {
-        Args: { document_id: string }
-        Returns: string
-      }
       can_view_profile: {
         Args: { _target_id: string; _viewer_id: string }
         Returns: boolean
+      }
+      create_submission_from_document: {
+        Args: { document_id: string }
+        Returns: string
       }
       get_user_role: {
         Args: { _user_id: string }
