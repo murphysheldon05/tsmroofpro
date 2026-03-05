@@ -190,7 +190,13 @@ export function useRolePermissions(): RolePermissions {
 
     case 'employee':
     default:
-      return { ...NO_PERMISSIONS, canExportOwnData: true };
+      return {
+        ...NO_PERMISSIONS,
+        canExportOwnData: true,
+        canEditProduction: isProductionDept,
+        canEditDeliveries: isProductionDept,
+        canManageWarranties: isProductionDept,
+      };
   }
 }
 
