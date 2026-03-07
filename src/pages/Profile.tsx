@@ -1,12 +1,11 @@
 import { useState } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { User, Lock, Bell, FileText, GraduationCap, ClipboardList } from "lucide-react";
+import { User, Lock, Bell, FileText, ClipboardList } from "lucide-react";
 import { ProfileInfoTab } from "@/components/profile/ProfileInfoTab";
 import { ProfileSecurityTab } from "@/components/profile/ProfileSecurityTab";
 import { ProfileNotificationsTab } from "@/components/profile/ProfileNotificationsTab";
 import { ProfileFilesTab } from "@/components/profile/ProfileFilesTab";
-import { ProfileTrainingTab } from "@/components/profile/ProfileTrainingTab";
 import { ProfileAssignmentsTab } from "@/components/profile/ProfileAssignmentsTab";
 
 const Profile = () => {
@@ -43,15 +42,11 @@ const Profile = () => {
             {/* My Activity Section */}
             <div>
               <p className="text-sm font-medium text-muted-foreground mb-2">My Activity</p>
-              <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4 gap-2 h-auto p-1">
+              <TabsList className="grid w-full grid-cols-3 gap-2 h-auto p-1">
                 <TabsTrigger value="assignments" className="flex items-center gap-2 py-2">
                   <ClipboardList className="w-4 h-4" />
                   <span className="hidden sm:inline">Assignments</span>
                   <span className="sm:hidden">Tasks</span>
-                </TabsTrigger>
-                <TabsTrigger value="training" className="flex items-center gap-2 py-2">
-                  <GraduationCap className="w-4 h-4" />
-                  <span>Training</span>
                 </TabsTrigger>
                 <TabsTrigger value="notifications" className="flex items-center gap-2 py-2">
                   <Bell className="w-4 h-4" />
@@ -77,10 +72,6 @@ const Profile = () => {
 
           <TabsContent value="assignments">
             <ProfileAssignmentsTab />
-          </TabsContent>
-
-          <TabsContent value="training">
-            <ProfileTrainingTab />
           </TabsContent>
 
           <TabsContent value="notifications">

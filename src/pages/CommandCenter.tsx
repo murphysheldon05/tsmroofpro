@@ -1,8 +1,6 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { CompactCoreIdentity } from "@/components/command-center/CompactCoreIdentity";
-import { PlaybookCompletionBanner } from "@/components/command-center/PlaybookCompletionBanner";
-import { OnboardingBanner } from "@/components/command-center/OnboardingBanner";
 import { QuickActionLinks } from "@/components/command-center/QuickActionLinks";
 
 import { SalesLeaderboardWidget } from "@/components/command-center/SalesLeaderboardWidget";
@@ -55,13 +53,7 @@ export default function CommandCenter() {
           </div>
         </header>
 
-        {/* Master Playbook Completion Banner */}
-        <PlaybookCompletionBanner />
-
-        {/* Role Onboarding Banner */}
-        <OnboardingBanner />
-
-        {/* 2. Core Focus + Core Values (locked) */}
+        {/* 2. Core Focus + Core Values */}
         <CompactCoreIdentity />
 
         {/* 3. Sales Leaderboard — only when admin has enabled it (default OFF during AccuLynx debug) */}

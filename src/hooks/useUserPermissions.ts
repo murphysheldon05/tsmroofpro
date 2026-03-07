@@ -4,26 +4,12 @@ import { supabase } from "@/integrations/supabase/client";
 // All available sidebar sections - employees with no permissions get access to all by default
 export const SIDEBAR_SECTIONS = [
   { key: "command-center", label: "Command Center", parent: null },
-  { key: "message-center", label: "Message Center", parent: null },
   { key: "dashboard", label: "Dashboard", parent: null },
-  { key: "sops", label: "SOP Library", parent: null },
-  { key: "sops/sales", label: "Sales", parent: "sops" },
-  { key: "sops/production", label: "Production", parent: "sops" },
-  { key: "sops/supplements", label: "Supplements", parent: "sops" },
-  { key: "sops/office-admin", label: "Office Admin", parent: "sops" },
-  { key: "sops/accounting", label: "Accounting", parent: "sops" },
-  { key: "sops/safety-hr", label: "Safety / HR", parent: "sops" },
-  { key: "sops/templates-scripts", label: "Templates", parent: "sops" },
-  { key: "training", label: "Training", parent: null },
-  { key: "training/new-hire", label: "New Hire", parent: "training" },
-  { key: "training/role-training", label: "Role Training", parent: "training" },
-  { key: "training/video-library", label: "Video Library", parent: "training" },
   { key: "production", label: "Production", parent: null },
   { key: "production/warranties", label: "Warranty Tracker", parent: "production" },
   { key: "production-calendar", label: "Production Calendar", parent: null },
   { key: "production-calendar/build", label: "Build Schedule", parent: "production-calendar" },
   { key: "production-calendar/delivery", label: "Delivery Schedule", parent: "production-calendar" },
-  { key: "tools", label: "Tools & Systems", parent: null },
   { key: "requests", label: "Forms & Requests", parent: null },
   { key: "commissions", label: "Commissions", parent: null },
   { key: "commissions/submissions", label: "Submissions", parent: "commissions" },
@@ -34,7 +20,6 @@ export const SIDEBAR_SECTIONS = [
   { key: "vendors/subcontractors", label: "Sub-Contractors", parent: "vendors" },
   { key: "vendors/contact-list", label: "Contact List", parent: "vendors" },
   { key: "accounting", label: "Accounting", parent: null },
-  { key: "training/requests", label: "IT Request", parent: "training" },
 ] as const;
 
 export type SectionKey = (typeof SIDEBAR_SECTIONS)[number]["key"];
@@ -107,8 +92,8 @@ export function useUpdateUserPermissions() {
 
 // Sections that managers with custom visibility can be granted (no Commissions accounting, no OPS Compliance)
 export const MANAGER_ALLOWED_SECTION_KEYS = [
-  "command-center", "dashboard", "sops", "training", "production", "production-calendar",
-  "tools", "requests", "company", "directory", "vendors",
+  "command-center", "dashboard", "production", "production-calendar",
+  "requests", "company", "directory", "vendors",
 ] as const;
 
 // Helper: check if a section should be visible based on permissions

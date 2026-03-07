@@ -43,13 +43,6 @@ export type PermissionKey =
   | 'markCommissionPaid'        // admin only (Courtney)
   | 'deleteCommission'          // admin only
 
-  // Playbook / SOPs
-  | 'viewSalesSOPs'             // all roles
-  | 'viewProductionSOPs'        // manager + admin
-  | 'viewAccountingSOPs'        // admin only
-  | 'editSOPs'                  // admin only
-  | 'uploadSOPVersion'          // admin only
-
   // Production
   | 'viewProductionSchedule'    // all roles
   | 'editProductionSchedule'    // manager + admin
@@ -57,11 +50,6 @@ export type PermissionKey =
   | 'submitWarranty'            // all roles
   | 'updateWarrantyStatus'      // manager + admin
   | 'closeWarranty'             // admin only
-
-  // Training & Onboarding
-  | 'viewOwnTraining'           // all roles
-  | 'viewAllTraining'           // admin only
-  | 'uploadTrainingContent'     // admin only
 
   // Users & Admin Panel
   | 'viewOwnProfile'            // all roles
@@ -110,11 +98,9 @@ const ROLE_PERMISSIONS: Record<UserRole, PermissionKey[]> = {
   user: [
     'submitCommission',
     'viewOwnCommissions',
-    'viewSalesSOPs',
     'viewProductionSchedule',
     'viewWarrantyTracker',
     'submitWarranty',
-    'viewOwnTraining',
     'viewOwnProfile',
     'submitForms',
     'viewOwnForms',
@@ -130,20 +116,17 @@ const ROLE_PERMISSIONS: Record<UserRole, PermissionKey[]> = {
   manager: [
     'submitCommission',
     'viewOwnCommissions',
-    'viewAllCommissions',         // full visibility, read-only
-    'viewSalesSOPs',
-    'viewProductionSOPs',
+    'viewAllCommissions',
     'viewProductionSchedule',
     'editProductionSchedule',
     'viewWarrantyTracker',
     'submitWarranty',
     'updateWarrantyStatus',
-    'viewOwnTraining',
     'viewOwnProfile',
     'submitForms',
     'viewOwnForms',
-    'viewNewHireForms',           // Paul gets these via notification routing
-    'completeOnboardingChecklist', // Paul fills out credential/setup checklist
+    'viewNewHireForms',
+    'completeOnboardingChecklist',
     'viewSubcontractors',
     'submitNewSubcontractor',
     'viewCommandCenter',
@@ -161,20 +144,12 @@ const ROLE_PERMISSIONS: Record<UserRole, PermissionKey[]> = {
     'denyCommission',
     'markCommissionPaid',
     'deleteCommission',
-    'viewSalesSOPs',
-    'viewProductionSOPs',
-    'viewAccountingSOPs',
-    'editSOPs',
-    'uploadSOPVersion',
     'viewProductionSchedule',
     'editProductionSchedule',
     'viewWarrantyTracker',
     'submitWarranty',
     'updateWarrantyStatus',
     'closeWarranty',
-    'viewOwnTraining',
-    'viewAllTraining',
-    'uploadTrainingContent',
     'viewOwnProfile',
     'viewAllUsers',
     'assignRoles',

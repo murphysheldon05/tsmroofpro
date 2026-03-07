@@ -24,20 +24,14 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import {
   LayoutGrid,
-  FileText,
-  GraduationCap,
-  Wrench,
-  Send,
   Settings,
   LogOut,
   ChevronDown,
   TrendingUp,
   Hammer,
-  FileCode,
   Calculator,
   Shield,
-  UserPlus,
-  Video,
+  Wrench,
   Menu,
   X,
   User,
@@ -45,13 +39,8 @@ import {
   Truck,
   DollarSign,
   Calendar,
-  ClipboardCheck,
-  BookOpen,
-  Lock,
   GripVertical,
-  Ruler,
   BarChart3,
-  MessageCircle,
   Compass,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -62,13 +51,11 @@ import {
 } from "@/components/ui/collapsible";
 import { useCurrentUserPermissions, isSectionVisible } from "@/hooks/useUserPermissions";
 import { useUserCommissionTier } from "@/hooks/useCommissionTiers";
-import { useMasterSOPAcknowledgments } from "@/hooks/useMasterSOPAcknowledgments";
 import { useSidebarOrder } from "@/hooks/useSidebarOrder";
 import { useWalkthroughContext } from "@/contexts/WalkthroughContext";
-import { usePendingComplianceCount, useNewWarrantyCount, useMessageCenterBadgeCount, useSheldonPendingCount } from "@/hooks/useNavBadgeCounts";
+import { usePendingComplianceCount, useNewWarrantyCount, useSheldonPendingCount } from "@/hooks/useNavBadgeCounts";
 import { formatDisplayName } from "@/lib/displayName";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
@@ -79,8 +66,7 @@ interface NavChild {
   sectionKey: string;
   managerOnly?: boolean;
   adminOnly?: boolean;
-  salesRepOnly?: boolean; // Show for sales reps (can submit commissions) - links to their own tracker
-  requiresPlaybook?: boolean;
+  salesRepOnly?: boolean;
 }
 
 interface NavItem {
@@ -89,8 +75,7 @@ interface NavItem {
   icon: React.ElementType;
   sectionKey: string;
   children?: NavChild[];
-  requiresPlaybook?: boolean;
-  tutorialTarget?: string; // data-tutorial for app walkthrough
+  tutorialTarget?: string;
 }
 
 // Main navigation items
@@ -102,83 +87,35 @@ const navigationItems: NavItem[] = [
     sectionKey: "command-center",
   },
   {
-    title: "Message Center",
-    href: "/message-center",
-    icon: MessageCircle,
-    sectionKey: "message-center",
-    tutorialTarget: "sidebar-message-center",
-  },
-  {
     title: "Commissions",
     icon: DollarSign,
     sectionKey: "commissions",
     tutorialTarget: "sidebar-commissions",
-    requiresPlaybook: true,
     children: [
-      { title: "Submissions", href: "/commissions", icon: DollarSign, sectionKey: "commissions", requiresPlaybook: true },
-      { title: "My Tracker", href: "/my-commissions", icon: BarChart3, sectionKey: "commissions", requiresPlaybook: true, salesRepOnly: true },
-      { title: "Tracker", href: "/commission-tracker", icon: TrendingUp, sectionKey: "commissions", requiresPlaybook: true, managerOnly: true },
-      { title: "Accounting", href: "/accounting", icon: Calculator, sectionKey: "accounting", requiresPlaybook: true, adminOnly: true },
+      { title: "Submissions", href: "/commissions", icon: DollarSign, sectionKey: "commissions" },
+      { title: "My Tracker", href: "/my-commissions", icon: BarChart3, sectionKey: "commissions", salesRepOnly: true },
+      { title: "Tracker", href: "/commission-tracker", icon: TrendingUp, sectionKey: "commissions", managerOnly: true },
+      { title: "Accounting", href: "/accounting", icon: Calculator, sectionKey: "accounting", adminOnly: true },
     ],
   },
   {
     title: "Production",
     icon: Hammer,
     sectionKey: "production",
-    requiresPlaybook: true,
     children: [
-      { title: "Build Schedule", href: "/build-schedule", icon: Calendar, sectionKey: "production-calendar/build", requiresPlaybook: true },
-      { title: "Delivery Schedule", href: "/delivery-schedule", icon: Truck, sectionKey: "production-calendar/delivery", requiresPlaybook: true },
-      { title: "Warranty Tracker", href: "/warranties", icon: Shield, sectionKey: "production/warranties", requiresPlaybook: true },
+      { title: "Build Schedule", href: "/build-schedule", icon: Calendar, sectionKey: "production-calendar/build" },
+      { title: "Delivery Schedule", href: "/delivery-schedule", icon: Truck, sectionKey: "production-calendar/delivery" },
+      { title: "Warranty Tracker", href: "/warranties", icon: Shield, sectionKey: "production/warranties" },
     ],
-  },
-  {
-    title: "Playbook Library",
-    icon: BookOpen,
-    sectionKey: "sops",
-    tutorialTarget: "sidebar-playbook-library",
-    children: [
-      { title: "Master Playbook", href: "/playbook-library/master-playbook", icon: BookOpen, sectionKey: "sops/master-playbook" },
-      { title: "Employee Handbook", href: "/playbook-library/employee-handbook", icon: FileText, sectionKey: "sops/employee-handbook" },
-      { title: "Sales", href: "/playbook-library/sales", icon: TrendingUp, sectionKey: "sops/sales", requiresPlaybook: true },
-      { title: "Production", href: "/playbook-library/production", icon: Hammer, sectionKey: "sops/production", requiresPlaybook: true },
-      { title: "Supplements", href: "/playbook-library/supplements", icon: FileCode, sectionKey: "sops/supplements", requiresPlaybook: true },
-      { title: "Office Admin", href: "/playbook-library/office-admin", icon: FileText, sectionKey: "sops/office-admin", requiresPlaybook: true },
-      { title: "Accounting", href: "/playbook-library/accounting", icon: Calculator, sectionKey: "sops/accounting", requiresPlaybook: true },
-      { title: "Human Resources", href: "/playbook-library/safety-hr", icon: Shield, sectionKey: "sops/safety-hr", requiresPlaybook: true },
-      { title: "Templates", href: "/playbook-library/templates-scripts", icon: FileCode, sectionKey: "sops/templates-scripts", requiresPlaybook: true },
-    ],
-  },
-  {
-    title: "Training",
-    icon: GraduationCap,
-    sectionKey: "training",
-    requiresPlaybook: true,
-    children: [
-      { title: "My Onboarding", href: "/training/onboarding", icon: ClipboardCheck, sectionKey: "training/onboarding", requiresPlaybook: true },
-      { title: "Documents", href: "/training/documents", icon: FileText, sectionKey: "training/documents", requiresPlaybook: true },
-      { title: "Video Library", href: "/training/video-library", icon: Video, sectionKey: "training/video-library", requiresPlaybook: true },
-      { title: "Shingle ID Guide", href: "/training/shingle-identification", icon: Ruler, sectionKey: "training/shingle-id", requiresPlaybook: true },
-      { title: "New Hires", href: "/training/new-hire", icon: UserPlus, sectionKey: "training/new-hire", requiresPlaybook: true, adminOnly: true },
-      { title: "IT Request", href: "/training/requests/it", icon: Send, sectionKey: "training/requests", requiresPlaybook: true },
-    ],
-  },
-  {
-    title: "Tools & Systems",
-    href: "/tools",
-    icon: Wrench,
-    sectionKey: "tools",
-    requiresPlaybook: true,
   },
   {
     title: "Subs & Vendors",
     icon: Truck,
     sectionKey: "vendors",
-    requiresPlaybook: true,
     children: [
-      { title: "Sub-Contractors", href: "/vendors/subcontractors", icon: Wrench, sectionKey: "vendors/subcontractors", requiresPlaybook: true },
-      { title: "Contact List", href: "/vendors/contact-list", icon: Users, sectionKey: "vendors/contact-list", requiresPlaybook: true },
-      { title: "Team Directory", href: "/user-directory", icon: Users, sectionKey: "directory", requiresPlaybook: true },
+      { title: "Sub-Contractors", href: "/vendors/subcontractors", icon: Wrench, sectionKey: "vendors/subcontractors" },
+      { title: "Contact List", href: "/vendors/contact-list", icon: Users, sectionKey: "vendors/contact-list" },
+      { title: "Team Directory", href: "/user-directory", icon: Users, sectionKey: "directory" },
     ],
   },
 ];
@@ -212,24 +149,18 @@ function SortableNavItem({
   item,
   isActive,
   isParentActive,
-  isLocked,
   openSections,
   toggleSection,
   handleNavClick,
-  playbookComplete,
-  playbookLoading,
   badgeCount,
   badgeMoveToChildTitle,
 }: {
   item: NavItem;
   isActive: (href: string) => boolean;
   isParentActive: (children?: { href: string }[]) => boolean;
-  isLocked: boolean;
   openSections: string[];
   toggleSection: (title: string) => void;
-  handleNavClick: (href: string, requiresPlaybook?: boolean) => void;
-  playbookComplete: boolean;
-  playbookLoading: boolean;
+  handleNavClick: (href: string) => void;
   badgeCount?: number;
   badgeMoveToChildTitle?: string;
 }) {
@@ -276,7 +207,6 @@ function SortableNavItem({
                 <span className="flex items-center gap-3">
                   <item.icon className={cn("w-4 h-4", isParentActive(item.children) && "nav-icon-glow")} />
                   {item.title}
-                  {isLocked && <Lock className="w-3 h-3 text-muted-foreground" />}
                   {badgeCount != null && badgeCount > 0 && !(openSections.includes(item.title) && badgeMoveToChildTitle) && (
                     <NavBadge count={badgeCount} />
                   )}
@@ -292,24 +222,21 @@ function SortableNavItem({
           </div>
           <CollapsibleContent className="mt-1 ml-6 space-y-1 border-l border-border/30 pl-2">
             {item.children.map((child) => {
-              const childLocked = child.requiresPlaybook && !playbookComplete && !playbookLoading;
               const showBadgeOnChild = openSections.includes(item.title) && badgeMoveToChildTitle === child.title && badgeCount != null && badgeCount > 0;
               return (
                 <button
                   key={child.href}
-                  onClick={() => handleNavClick(child.href, child.requiresPlaybook)}
+                  onClick={() => handleNavClick(child.href)}
                   className={cn(
                     "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-150 relative",
                     isActive(child.href)
                       ? "nav-item-active font-medium"
-                      : "text-sidebar-foreground/70 hover:bg-primary/5 hover:text-primary/80",
-                    childLocked && "opacity-60"
+                      : "text-sidebar-foreground/70 hover:bg-primary/5 hover:text-primary/80"
                   )}
                 >
                   {child.icon && <child.icon className={cn("w-4 h-4", isActive(child.href) && "nav-icon-glow")} />}
                   {child.title}
                   {showBadgeOnChild && <span className="ml-auto"><NavBadge count={badgeCount!} /></span>}
-                  {childLocked && !showBadgeOnChild && <Lock className="w-3 h-3 ml-auto text-muted-foreground" />}
                 </button>
               );
             })}
@@ -326,19 +253,17 @@ function SortableNavItem({
           </button>
           <button
             data-tutorial={item.tutorialTarget}
-            onClick={() => handleNavClick(item.href!, item.requiresPlaybook)}
+            onClick={() => handleNavClick(item.href!)}
             className={cn(
               "flex-1 flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium transition-all duration-150 relative min-h-[44px]",
               isActive(item.href!)
                 ? "nav-item-active"
-                : "text-sidebar-foreground hover:bg-primary/5 hover:text-primary/80",
-              isLocked && "opacity-60"
+                : "text-sidebar-foreground hover:bg-primary/5 hover:text-primary/80"
             )}
           >
             <item.icon className={cn("w-5 h-5 flex-shrink-0", isActive(item.href!) && "nav-icon-glow")} />
             <span className="truncate flex-1">{item.title}</span>
             {badgeCount != null && badgeCount > 0 && <NavBadge count={badgeCount} />}
-            {isLocked && !(badgeCount != null && badgeCount > 0) && <Lock className="w-3.5 h-3.5 ml-auto text-muted-foreground flex-shrink-0" />}
           </button>
         </div>
       )}
@@ -354,18 +279,15 @@ export function AppSidebar() {
   const [openSections, setOpenSections] = useState<string[]>([]);
   const { data: userPermissions } = useCurrentUserPermissions();
   const { data: userTier } = useUserCommissionTier(user?.id);
-  const { allCompleted: playbookComplete, isLoading: playbookLoading } = useMasterSOPAcknowledgments();
   const hasCommissionTier = !!userTier?.tier_id || !!userTier?.tier;
   const { order, reorder } = useSidebarOrder();
   const [profile, setProfile] = useState<{ avatar_url: string | null; full_name: string | null } | null>(null);
   const { data: pendingComplianceCount = 0 } = usePendingComplianceCount();
   const { data: newWarrantyCount = 0 } = useNewWarrantyCount();
-  const { data: messageCenterBadgeCount = 0 } = useMessageCenterBadgeCount();
   const { data: sheldonPendingCount = 0 } = useSheldonPendingCount();
   const showCommissionsBadge = (isAdmin || role === "ops_compliance") && pendingComplianceCount > 0;
   const showAdminPanelBadge = sheldonPendingCount > 0;
   const showProductionBadge = isSectionVisible("production", userPermissions, role) && newWarrantyCount > 0;
-  const showMessageCenterBadge = messageCenterBadgeCount > 0;
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -467,17 +389,7 @@ export function AppSidebar() {
   const isParentActive = (children?: { href: string }[]) =>
     children?.some((child) => location.pathname.startsWith(child.href));
 
-  const handleNavClick = (href: string, requiresPlaybook?: boolean) => {
-    if (requiresPlaybook && !playbookComplete && !playbookLoading) {
-      toast.error("Complete your Master Playbook acknowledgments first", {
-        description: "Navigate to Playbook Library → Master Playbook to get started.",
-        action: {
-          label: "Go Now",
-          onClick: () => navigate("/playbook-library/master-playbook"),
-        },
-      });
-      return;
-    }
+  const handleNavClick = (href: string) => {
     navigate(href);
     setMobileOpen(false);
   };
@@ -486,13 +398,10 @@ export function AppSidebar() {
   const filteredNavigation = useMemo(() => {
     return navigationItems
       .filter((item) => {
-        // Commissions category: hidden from User/Manager who do NOT have a commission tier (e.g. production, office, VAs)
         if (item.sectionKey === "commissions") {
           if (isAdmin || isManager) return true;
           if (!hasCommissionTier) return false;
         }
-        // Message Center: visible to all users
-        if (item.sectionKey === "message-center") return true;
         return isSectionVisible(item.sectionKey, userPermissions, role);
       })
       .map((item) => {
@@ -562,8 +471,7 @@ export function AppSidebar() {
             strategy={verticalListSortingStrategy}
           >
             {sortedNavigation.map((item) => {
-              const isLocked = item.requiresPlaybook && !playbookComplete && !playbookLoading;
-              const badgeCount = item.title === "Commissions" && showCommissionsBadge ? pendingComplianceCount : item.title === "Production" && showProductionBadge ? newWarrantyCount : item.title === "Message Center" && showMessageCenterBadge ? messageCenterBadgeCount : undefined;
+              const badgeCount = item.title === "Commissions" && showCommissionsBadge ? pendingComplianceCount : item.title === "Production" && showProductionBadge ? newWarrantyCount : undefined;
               const badgeMoveToChildTitle = item.title === "Commissions" ? "Accounting" : item.title === "Production" ? "Warranty Tracker" : undefined;
               return (
                 <SortableNavItem
@@ -571,12 +479,9 @@ export function AppSidebar() {
                   item={item}
                   isActive={isActive}
                   isParentActive={isParentActive}
-                  isLocked={isLocked}
                   openSections={openSections}
                   toggleSection={toggleSection}
                   handleNavClick={handleNavClick}
-                  playbookComplete={playbookComplete}
-                  playbookLoading={playbookLoading}
                   badgeCount={badgeCount}
                   badgeMoveToChildTitle={badgeMoveToChildTitle}
                 />

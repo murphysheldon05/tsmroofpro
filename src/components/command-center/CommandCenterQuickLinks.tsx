@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Hammer, Truck, Shield, DollarSign, Ruler } from "lucide-react";
+import { Hammer, Truck, Shield, DollarSign } from "lucide-react";
 
 const quickLinks = [
   {
@@ -25,12 +25,6 @@ const quickLinks = [
     label: "Submit Commission",
     href: "/commissions/new",
     icon: DollarSign,
-    variant: "outline" as const,
-  },
-  {
-    label: "Shingle ID Guide",
-    href: "/training/shingle-identification",
-    icon: Ruler,
     variant: "outline" as const,
   },
 ];

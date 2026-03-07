@@ -14,15 +14,6 @@ import { Loader2 } from "lucide-react";
 const Landing = lazy(() => import("./pages/Landing"));
 const Auth = lazy(() => import("./pages/Auth"));
 const Signup = lazy(() => import("./pages/Signup"));
-const SOPLibrary = lazy(() => import("./pages/SOPLibrary"));
-const MasterPlaybook = lazy(() => import("./pages/MasterPlaybook"));
-const EmployeeHandbook = lazy(() => import("./pages/EmployeeHandbook"));
-const ResourceDetail = lazy(() => import("./pages/ResourceDetail"));
-const Training = lazy(() => import("./pages/Training"));
-const ShingleIdentification = lazy(() => import("./pages/ShingleIdentification"));
-const TrainingDocuments = lazy(() => import("./pages/TrainingDocuments"));
-const RoleOnboarding = lazy(() => import("./pages/RoleOnboarding"));
-const Tools = lazy(() => import("./pages/Tools"));
 const Requests = lazy(() => import("./pages/Requests"));
 const Admin = lazy(() => import("./pages/Admin"));
 const Profile = lazy(() => import("./pages/Profile"));
@@ -42,7 +33,6 @@ const MyCommissionTracker = lazy(() => import("./pages/MyCommissionTracker"));
 const BuildSchedule = lazy(() => import("./pages/BuildSchedule"));
 const DeliverySchedule = lazy(() => import("./pages/DeliverySchedule"));
 const CommandCenter = lazy(() => import("./pages/CommandCenter"));
-const MessageCenter = lazy(() => import("./pages/MessageCenter"));
 const PendingReview = lazy(() => import("./pages/PendingReview"));
 const Accounting = lazy(() => import("./pages/Accounting"));
 const ContactList = lazy(() => import("./pages/ContactList"));
@@ -84,14 +74,6 @@ const App = () => (
               }
             />
             <Route
-              path="/message-center"
-              element={
-                <ProtectedRoute>
-                  <MessageCenter />
-                </ProtectedRoute>
-              }
-            />
-            <Route
               path="/pending-review"
               element={
                 <ProtectedRoute>
@@ -104,100 +86,6 @@ const App = () => (
               path="/dashboard"
               element={<Navigate to="/command-center" replace />}
             />
-            {/* Playbook Library routes */}
-            <Route
-              path="/playbook-library"
-              element={
-                <ProtectedRoute>
-                  <SOPLibrary />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/playbook-library/master-playbook"
-              element={
-                <ProtectedRoute>
-                  <MasterPlaybook />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/playbook-library/employee-handbook"
-              element={
-                <ProtectedRoute>
-                  <EmployeeHandbook />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/playbook-library/:category"
-              element={
-                <ProtectedRoute>
-                  <SOPLibrary />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/playbook-library/:category/resource/:resourceId"
-              element={
-                <ProtectedRoute>
-                  <ResourceDetail />
-                </ProtectedRoute>
-              }
-            />
-            {/* Legacy SOP routes redirect to Playbook Library */}
-            <Route path="/sops" element={<Navigate to="/playbook-library" replace />} />
-            <Route path="/sops/master-playbook" element={<Navigate to="/playbook-library/master-playbook" replace />} />
-            <Route path="/sops/:category" element={<Navigate to="/playbook-library" replace />} />
-            <Route path="/sop-library" element={<Navigate to="/playbook-library" replace />} />
-            <Route path="/training" element={<Navigate to="/training/documents" replace />} />
-            {/* Training Documents route */}
-            <Route
-              path="/training/documents"
-              element={
-                <ProtectedRoute>
-                  <TrainingDocuments />
-                </ProtectedRoute>
-              }
-            />
-            {/* Role Onboarding SOP */}
-            <Route
-              path="/training/onboarding"
-              element={
-                <ProtectedRoute>
-                  <RoleOnboarding />
-                </ProtectedRoute>
-              }
-            />
-            {/* Redirect old role-training to documents */}
-            <Route
-              path="/training/role-training"
-              element={<Navigate to="/training/documents" replace />}
-            />
-            <Route
-              path="/training/shingle-identification"
-              element={
-                <ProtectedRoute>
-                  <ShingleIdentification />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/training/:category"
-              element={
-                <ProtectedRoute>
-                  <Training />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/tools"
-              element={
-                <ProtectedRoute>
-                  <Tools />
-                </ProtectedRoute>
-              }
-            />
             <Route
               path="/requests"
               element={
@@ -206,9 +94,6 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
-            {/* Training request forms (migrated from Forms & Requests) */}
-            <Route path="/training/requests/it" element={<Navigate to="/requests?type=it_access" replace />} />
-            <Route path="/training/requests/hr" element={<Navigate to="/requests?type=hr" replace />} />
             {/* Redirect /company to /command-center */}
             <Route
               path="/company"

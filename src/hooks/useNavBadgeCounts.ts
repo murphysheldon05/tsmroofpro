@@ -85,28 +85,3 @@ export function useNewWarrantyCount() {
   });
 }
 
-/** Count of new Announcement/Update posts since user last visited Message Center. */
-export function useMessageCenterBadgeCount() {
-  const { user } = useAuth();
-  return useQuery({
-    queryKey: ["message-center-badge-count", user?.id],
-    queryFn: async () => {
-      if (!user) return 0;
-      const { data: visit } = await supabase
-        .from("message_center_last_visit")
-        .select("last_visited_at")
-        .eq("user_id", user.id)
-        .maybeSingle();
-      const since = visit?.last_visited_at ?? "1970-01-01T00:00:00Z";
-      const { count, error } = await supabase
-        .from("feed_posts")
-        .select("*", { count: "exact", head: true })
-        .in("post_type", ["announcement", "update"])
-        .gt("created_at", since);
-      if (error) throw error;
-      return count ?? 0;
-    },
-    enabled: !!user,
-    refetchInterval: 60000,
-  });
-}

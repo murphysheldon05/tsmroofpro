@@ -49,18 +49,6 @@ export const WALKTHROUGH_STEPS: WalkthroughStep[] = [
       "Track every commission you've submitted right here. See the status, which phase it's in, and when you're getting paid.",
   },
   {
-    route: "/message-center",
-    target: "sidebar-message-center",
-    description:
-      "This is the team feed. Post your wins, see announcements, tag teammates. Keep it positive.",
-  },
-  {
-    route: "/playbook-library",
-    target: "sidebar-playbook-library",
-    description:
-      "Everything you need to know about how we operate is in here. Read it. Know it.",
-  },
-  {
     route: "/command-center",
     target: null,
     description: "You're all set. Go close some deals.",

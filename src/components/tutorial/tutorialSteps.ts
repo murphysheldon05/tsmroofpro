@@ -134,50 +134,6 @@ export const deliveryScheduleSteps: TutorialStep[] = [
   },
 ];
 
-// ─── PLAYBOOK LIBRARY ───
-export const playbookSteps: TutorialStep[] = [
-  {
-    target: "playbook-progress",
-    title: "Master Playbook",
-    description: "This is the core. All 10 Standard Operating Procedures must be read and acknowledged before you can access the full hub. If you haven't completed them yet, start here.",
-  },
-  {
-    target: "playbook-search",
-    title: "Browse Playbooks",
-    description: "After completing the Master Playbook, you can browse all company playbooks by category.",
-  },
-  {
-    target: "playbook-cards",
-    title: "Your Acknowledgment Status",
-    description: "Green checkmarks show which SOPs you've acknowledged. You can re-read any of them anytime.",
-  },
-];
-
-// ─── TRAINING ───
-export const trainingSteps: TutorialStep[] = [
-  {
-    target: "training-header",
-    title: "Documents",
-    description: "Browse company documents organized by category: Sales Scripts, Email Templates, Manufacturer Specs, Product Knowledge, and more. Download anything you need.",
-  },
-  {
-    target: "training-content",
-    title: "Video Library",
-    description: "Watch training videos and Loom recordings. Organized by category: Onboarding, Sales Training, Product Training, and more.",
-  },
-  {
-    target: "training-search",
-    title: "My Onboarding",
-    description: "Your role-specific onboarding SOP lives here. Complete all sections and sign electronically.",
-  },
-  {
-    target: "training-new-hires",
-    title: "New Hires",
-    description: "Manage new hire onboarding materials and track progress.",
-    roles: ["admin"],
-  },
-];
-
 // ─── WARRANTY ───
 export const warrantySteps: TutorialStep[] = [
   {
@@ -299,30 +255,6 @@ export const adminSteps: TutorialStep[] = [
     title: "Integrations",
     description: "Connect AccuLynx API for live production and sales data.",
     roles: ["admin"],
-  },
-];
-
-// ─── ROLE ONBOARDING ───
-export const roleOnboardingSteps: TutorialStep[] = [
-  {
-    target: "onboarding-header",
-    title: "Your Onboarding SOP",
-    description: "This is your role-specific onboarding document. Complete each section in order to get fully onboarded.",
-  },
-  {
-    target: "onboarding-progress",
-    title: "Progress Tracker",
-    description: "See how far along you are. Each acknowledged section fills the progress bar.",
-  },
-  {
-    target: "onboarding-sections",
-    title: "Sections",
-    description: "Read each section and click 'I Acknowledge' to confirm. Sections unlock sequentially — complete the current one to unlock the next.",
-  },
-  {
-    target: "onboarding-signature",
-    title: "Electronic Signature",
-    description: "After all sections are acknowledged, type your full legal name to sign and complete the onboarding.",
   },
 ];
 

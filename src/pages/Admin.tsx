@@ -37,13 +37,9 @@ import {
   Percent,
   UserPlus,
   AlertTriangle,
-  Wrench,
-  FolderOpen,
   FileText,
   DollarSign,
   Trophy,
-  BookOpen,
-  GraduationCap,
 } from "lucide-react";
 import { UserPermissionsEditor } from "@/components/admin/UserPermissionsEditor";
 import { PendingInvites } from "@/components/admin/PendingInvites";
@@ -55,9 +51,6 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { NotificationSettingsManager } from "@/components/admin/NotificationSettingsManager";
 import { NotificationRoutingManager } from "@/components/admin/NotificationRoutingManager";
 import { CommissionTierManager } from "@/components/admin/CommissionTierManager";
-import { CategoryManager } from "@/components/admin/CategoryManager";
-import { SOPManager } from "@/components/admin/SOPManager";
-import { ToolsManager } from "@/components/admin/ToolsManager";
 import { AuditLogViewer } from "@/components/admin/AuditLogViewer";
 import { ResetPasswordDialog } from "@/components/admin/ResetPasswordDialog";
 import { useCommissionTiers } from "@/hooks/useCommissionTiers";
@@ -67,15 +60,13 @@ import { DrawSettingsManager } from "@/components/admin/DrawSettingsManager";
 import { OverrideReportPanel } from "@/components/admin/OverrideReportPanel";
 import { LeaderboardSettingsPanel } from "@/components/admin/LeaderboardSettingsPanel";
 import { formatDisplayName } from "@/lib/displayName";
-import { PlaybookCompletionStatus } from "@/components/admin/PlaybookCompletionStatus";
-import { RoleOnboardingAdmin } from "@/components/admin/RoleOnboardingAdmin";
 import { GuidedTour } from "@/components/tutorial/GuidedTour";
 import { adminSteps } from "@/components/tutorial/tutorialSteps";
 import { PendingActionsSection } from "@/components/admin/PendingActionsSection";
 import { PendingApprovals } from "@/components/admin/PendingApprovals";
 import OpsCompliance from "@/pages/OpsCompliance";
 
-const ADMIN_TAB_VALUES = ["users", "tiers", "sops", "categories", "tools", "notifications", "routing", "audit", "draws", "overrides", "leaderboard", "playbook-status", "role-onboarding", "ops-compliance"] as const;
+const ADMIN_TAB_VALUES = ["users", "tiers", "notifications", "routing", "audit", "draws", "overrides", "leaderboard", "ops-compliance"] as const;
 
 /** Map DB role to display role for Admin Panel dropdown (User | Manager | Admin only). */
 function dbRoleToDisplayRole(dbRole: string | null | undefined): "user" | "manager" | "admin" {
@@ -525,18 +516,6 @@ export default function Admin() {
               <Percent className="w-4 h-4" />
               Commission Tiers
             </TabsTrigger>
-            <TabsTrigger value="sops" className="gap-2">
-              <FolderOpen className="w-4 h-4" />
-              Playbooks
-            </TabsTrigger>
-            <TabsTrigger value="categories" className="gap-2">
-              <FolderOpen className="w-4 h-4" />
-              Playbook Categories
-            </TabsTrigger>
-            <TabsTrigger value="tools" className="gap-2">
-              <Wrench className="w-4 h-4" />
-              Tools
-            </TabsTrigger>
             <TabsTrigger value="notifications" className="gap-2">
               <Bell className="w-4 h-4" />
               Notifications
@@ -560,14 +539,6 @@ export default function Admin() {
             <TabsTrigger value="leaderboard" className="gap-2" data-tutorial="admin-leaderboard-tab">
               <Trophy className="w-4 h-4" />
               Leaderboard
-            </TabsTrigger>
-            <TabsTrigger value="playbook-status" className="gap-2">
-              <BookOpen className="w-4 h-4" />
-              Playbook Status
-            </TabsTrigger>
-            <TabsTrigger value="role-onboarding" className="gap-2">
-              <GraduationCap className="w-4 h-4" />
-              Role Onboarding
             </TabsTrigger>
             <TabsTrigger value="ops-compliance" className="gap-2">
               <Shield className="w-4 h-4" />
@@ -964,21 +935,6 @@ export default function Admin() {
             <CommissionTierManager />
           </TabsContent>
 
-          {/* SOPs Management Tab - ADMIN ONLY */}
-          <TabsContent value="sops" className="space-y-4">
-            <SOPManager />
-          </TabsContent>
-
-          {/* SOP Categories Tab - ADMIN ONLY */}
-          <TabsContent value="categories" className="space-y-4">
-            <CategoryManager />
-          </TabsContent>
-
-          {/* Tools Tab - ADMIN ONLY */}
-          <TabsContent value="tools" className="space-y-4">
-            <ToolsManager />
-          </TabsContent>
-
           {/* Notifications Tab */}
           <TabsContent value="notifications" className="space-y-4">
             <NotificationSettingsManager />
@@ -1009,21 +965,7 @@ export default function Admin() {
             <LeaderboardSettingsPanel />
           </TabsContent>
 
-          {/* Playbook Completion Status Tab */}
-          <TabsContent value="playbook-status" className="space-y-4">
-            <h2 className="text-lg font-semibold text-foreground">Playbook Completion Status</h2>
-            <p className="text-sm text-muted-foreground">
-              Track which users have completed the Master Playbook acknowledgment requirement.
-            </p>
-            <PlaybookCompletionStatus />
-          </TabsContent>
-
-          {/* Role Onboarding Tab */}
-          <TabsContent value="role-onboarding" className="space-y-4">
-            <RoleOnboardingAdmin />
-          </TabsContent>
-
-          {/* Ops Compliance Tab - Admin only (Admin route is already protected) */}
+          {/* Ops Compliance Tab */}
           <TabsContent value="ops-compliance" className="space-y-4">
             <OpsCompliance embedded />
           </TabsContent>

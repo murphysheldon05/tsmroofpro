@@ -35,7 +35,6 @@ import {
   File,
   X,
   HelpCircle,
-  UserPlus,
   Archive,
   RotateCcw,
   Search,
@@ -48,13 +47,12 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { formatDistanceToNow, format } from "date-fns";
 import { useRequestTypes, type RequestType } from "@/hooks/useRequestTypes";
-import { NewHireForm } from "@/components/training/NewHireForm";
 import { formatDisplayName } from "@/lib/displayName";
 import { useAdminAuditLog, AUDIT_ACTIONS, OBJECT_TYPES } from "@/hooks/useAdminAuditLog";
 
 // Icon map for dynamic icon rendering
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
-  FileEdit, Monitor, Users, Clock, HelpCircle, Send, File, UserPlus,
+  FileEdit, Monitor, Users, Clock, HelpCircle, Send, File,
 };
 
 const getIcon = (iconName: string | null) => {
@@ -114,7 +112,6 @@ export default function Requests() {
   const { data: requestTypes = [] } = useRequestTypes();
   const { logAction } = useAdminAuditLog();
   const [type, setType] = useState("");
-  const [hrSubType, setHrSubType] = useState<"simple" | "new-hire" | null>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -126,11 +123,8 @@ export default function Requests() {
 
   useEffect(() => {
     const urlType = searchParams.get("type");
-    const urlSubtype = searchParams.get("subtype");
     if (urlType && TYPE_FROM_URL[urlType]) {
       setType(TYPE_FROM_URL[urlType]);
-      if (TYPE_FROM_URL[urlType] === "hr" && urlSubtype === "simple") setHrSubType("simple");
-      if (TYPE_FROM_URL[urlType] === "hr" && urlSubtype === "new-hire") setHrSubType("new-hire");
     }
   }, [searchParams]);
 
@@ -332,9 +326,6 @@ export default function Requests() {
 
   const pendingCount = activeRequests.filter(r => r.status === "pending").length;
 
-  const canSubmitNewHire = canReviewRequests || isAdmin;
-  const isNewHireFlow = type === "hr" && hrSubType === "new-hire" && canSubmitNewHire;
-
   return (
     <AppLayout>
       <div className="max-w-5xl mx-auto space-y-8">
@@ -378,9 +369,7 @@ export default function Requests() {
             <TabsContent value="submit" className="space-y-6">
               <SubmitRequestForm
                 type={type}
-                setType={(v) => { setType(v); setHrSubType(null); }}
-                hrSubType={hrSubType}
-                setHrSubType={setHrSubType}
+                setType={setType}
                 title={title}
                 setTitle={setTitle}
                 description={description}
@@ -393,8 +382,6 @@ export default function Requests() {
                 onClearFile={clearSelectedFile}
                 fileInputRef={fileInputRef}
                 requestTypes={requestTypes}
-                isManager={isManager}
-                isAdmin={isAdmin}
               />
               <RequestsList
                 title="My Active Requests"
@@ -424,9 +411,7 @@ export default function Requests() {
           <div className="space-y-6">
             <SubmitRequestForm
               type={type}
-              setType={(v) => { setType(v); setHrSubType(null); }}
-              hrSubType={hrSubType}
-              setHrSubType={setHrSubType}
+              setType={setType}
               title={title}
               setTitle={setTitle}
               description={description}
@@ -439,8 +424,6 @@ export default function Requests() {
               onClearFile={clearSelectedFile}
               fileInputRef={fileInputRef}
               requestTypes={requestTypes}
-              isManager={isManager}
-              isAdmin={isAdmin}
             />
             <Tabs defaultValue="active" className="space-y-4">
               <TabsList className="bg-secondary/50">
@@ -608,14 +591,13 @@ export default function Requests() {
 
 // ──────────── Submit Request Form ────────────
 function SubmitRequestForm({
-  type, setType, hrSubType, setHrSubType,
+  type, setType,
   title, setTitle, description, setDescription,
   isSubmitting, submitted, handleSubmit,
   selectedFile, onFileSelect, onClearFile, fileInputRef,
-  requestTypes, isManager, isAdmin,
+  requestTypes,
 }: {
   type: string; setType: (type: string) => void;
-  hrSubType: "simple" | "new-hire" | null; setHrSubType: (type: "simple" | "new-hire" | null) => void;
   title: string; setTitle: (title: string) => void;
   description: string; setDescription: (description: string) => void;
   isSubmitting: boolean; submitted: boolean;
@@ -625,10 +607,7 @@ function SubmitRequestForm({
   onClearFile: () => void;
   fileInputRef: React.RefObject<HTMLInputElement>;
   requestTypes: RequestType[];
-  isManager: boolean; isAdmin: boolean;
 }) {
-  const canSubmitNewHire = isManager || isAdmin;
-  const isNewHireFlow = type === "hr" && hrSubType === "new-hire" && canSubmitNewHire;
   const filteredRequestTypes = requestTypes.filter(
     (rt) =>
       rt.value !== "commission" &&
@@ -679,54 +658,8 @@ function SubmitRequestForm({
         </div>
       </div>
 
-      {/* HR Sub-type Selection */}
-      {type === "hr" && (
-        <div className="space-y-3">
-          <Label>What type of HR request?</Label>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <button
-              type="button"
-              onClick={() => setHrSubType("simple")}
-              className={`p-4 rounded-lg border text-left transition-all ${
-                hrSubType === "simple"
-                  ? "border-primary bg-primary/10"
-                  : "border-border/50 hover:border-primary/50 bg-secondary/30"
-              }`}
-            >
-              <HelpCircle className={`w-5 h-5 mb-2 ${hrSubType === "simple" ? "text-primary" : "text-muted-foreground"}`} />
-              <p className="font-medium text-foreground text-sm">General HR Request</p>
-              <p className="text-xs text-muted-foreground mt-1">Questions, PTO, payroll, benefits, etc.</p>
-            </button>
-            {canSubmitNewHire && (
-              <button
-                type="button"
-                onClick={() => setHrSubType("new-hire")}
-                className={`p-4 rounded-lg border text-left transition-all ${
-                  hrSubType === "new-hire"
-                    ? "border-primary bg-primary/10"
-                    : "border-border/50 hover:border-primary/50 bg-secondary/30"
-                }`}
-              >
-                <UserPlus className={`w-5 h-5 mb-2 ${hrSubType === "new-hire" ? "text-primary" : "text-muted-foreground"}`} />
-                <p className="font-medium text-foreground text-sm">New Hire Onboarding</p>
-                <p className="text-xs text-muted-foreground mt-1">Submit a new hire for onboarding</p>
-              </button>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* New Hire flow renders its own form */}
-      {isNewHireFlow ? (
-        <NewHireForm
-          onSuccess={() => {
-            setType("");
-            setHrSubType(null);
-          }}
-        />
-      ) : (
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {(type !== "hr" || hrSubType === "simple" || (!canSubmitNewHire && type === "hr")) && type && (
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {type && (
             <>
               <div className="space-y-2">
                 <Label htmlFor="title">Subject</Label>
@@ -799,7 +732,6 @@ function SubmitRequestForm({
             </>
           )}
         </form>
-      )}
     </div>
   );
 }
