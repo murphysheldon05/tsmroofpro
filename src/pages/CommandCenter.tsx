@@ -40,7 +40,7 @@ export default function CommandCenter() {
                 Command Center
               </h1>
               <p className="text-sm text-muted-foreground truncate">
-                Good {getTimeOfDay()}, {firstName}. Here's your daily overview.
+                Welcome Back, {firstName}! Here's your daily overview.
               </p>
             </div>
             <div data-tutorial="cc-settings-gear">
