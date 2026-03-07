@@ -6,17 +6,21 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ChevronLeft, ChevronRight, Share2, BarChart3, FileText, Eye, Clock, CheckCircle, XCircle, Wallet, Plus, Pencil, ExternalLink } from "lucide-react";
 import { PayTypeBadge } from "./PayTypeBadge";
-import { getRepInitials, type EnrichedEntry } from "@/hooks/useCommissionEntries";
+import { getRepInitials, useCommissionPayTypes, useCreateCommissionEntry, type EnrichedEntry } from "@/hooks/useCommissionEntries";
 import { useCommissionDocuments } from "@/hooks/useCommissionDocuments";
 import { useAuth } from "@/contexts/AuthContext";
 import { format, parseISO } from "date-fns";
 import { cn, formatCurrency } from "@/lib/utils";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
 
 interface RepDetailViewProps {
+  repId?: string;
   repName: string;
   repColor: string;
   entries: EnrichedEntry[];
@@ -24,11 +28,30 @@ interface RepDetailViewProps {
   hideBackButton?: boolean;
 }
 
-export function RepDetailView({ repName, repColor, entries, readOnly, hideBackButton }: RepDetailViewProps) {
+const EMPTY_ENTRY_FORM = {
+  amount_paid: "",
+  paid_date: "",
+  pay_type_id: "",
+  job: "",
+  customer: "",
+  job_value: "",
+  approved_date: "",
+  check_type: "",
+  notes: "",
+  earned_comm: "",
+  applied_bank: "",
+};
+
+export function RepDetailView({ repId, repName, repColor, entries, readOnly, hideBackButton }: RepDetailViewProps) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [expandedDates, setExpandedDates] = useState<Set<string>>(new Set());
   const [showShareModal, setShowShareModal] = useState(false);
+  const [showAddEntry, setShowAddEntry] = useState(false);
+  const [entryForm, setEntryForm] = useState(EMPTY_ENTRY_FORM);
+
+  const { data: payTypes = [] } = useCommissionPayTypes();
+  const createEntry = useCreateCommissionEntry();
   const isPrestonStuart = repName.toUpperCase().includes("PRESTON STUART");
 
   // Fetch commission documents filtered to this rep
@@ -74,6 +97,45 @@ export function RepDetailView({ repName, repColor, entries, readOnly, hideBackBu
     navigator.clipboard.writeText(`${window.location.origin}/commission-tracker/${slug}#share`);
     toast.success("Share link copied to clipboard");
     setShowShareModal(false);
+  };
+
+  const resolvedRepId = repId || entries[0]?.rep_id;
+
+  const handleAddEntry = () => {
+    if (!resolvedRepId) return;
+    const amountPaid = parseFloat(entryForm.amount_paid);
+    if (isNaN(amountPaid) || !entryForm.paid_date || !entryForm.pay_type_id) {
+      toast.error("Amount Paid, Paid Date, and Pay Type are required");
+      return;
+    }
+    createEntry.mutate(
+      {
+        rep_id: resolvedRepId,
+        amount_paid: amountPaid,
+        paid_date: entryForm.paid_date,
+        pay_type_id: entryForm.pay_type_id,
+        job: entryForm.job || null,
+        customer: entryForm.customer || null,
+        job_value: entryForm.job_value ? parseFloat(entryForm.job_value) : null,
+        approved_date: entryForm.approved_date || null,
+        check_type: entryForm.check_type || null,
+        notes: entryForm.notes || null,
+        earned_comm: entryForm.earned_comm ? parseFloat(entryForm.earned_comm) : null,
+        applied_bank: entryForm.applied_bank ? parseFloat(entryForm.applied_bank) : null,
+      },
+      {
+        onSuccess: () => {
+          toast.success("Entry added");
+          setShowAddEntry(false);
+          setEntryForm(EMPTY_ENTRY_FORM);
+        },
+        onError: (err) => toast.error(`Failed to add entry: ${err.message}`),
+      },
+    );
+  };
+
+  const updateField = (field: keyof typeof EMPTY_ENTRY_FORM, value: string) => {
+    setEntryForm((prev) => ({ ...prev, [field]: value }));
   };
 
   const statCards = [
@@ -165,9 +227,16 @@ export function RepDetailView({ repName, repColor, entries, readOnly, hideBackBu
           <p className="text-sm text-muted-foreground">{entries.length} transactions</p>
         </div>
         {!readOnly && (
-          <Button variant="outline" className="gap-2 rounded-xl" onClick={() => setShowShareModal(true)}>
-            <Share2 className="h-4 w-4" /> Share
-          </Button>
+          <div className="flex items-center gap-2">
+            {resolvedRepId && (
+              <Button className="gap-2 rounded-xl" onClick={() => { setEntryForm(EMPTY_ENTRY_FORM); setShowAddEntry(true); }}>
+                <Plus className="h-4 w-4" /> Add Entry
+              </Button>
+            )}
+            <Button variant="outline" className="gap-2 rounded-xl" onClick={() => setShowShareModal(true)}>
+              <Share2 className="h-4 w-4" /> Share
+            </Button>
+          </div>
         )}
       </div>
 
@@ -369,6 +438,137 @@ export function RepDetailView({ repName, repColor, entries, readOnly, hideBackBu
           <DialogHeader><DialogTitle>Share {repName}'s Commission Report</DialogTitle></DialogHeader>
           <p className="text-sm text-muted-foreground mb-4">Anyone with this link can view a read-only version of this rep's commission data.</p>
           <Button onClick={copyShareLink} className="w-full rounded-xl">Copy Share Link</Button>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showAddEntry} onOpenChange={setShowAddEntry}>
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Add Commission Entry for {repName}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Amount Paid *</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={entryForm.amount_paid}
+                  onChange={(e) => updateField("amount_paid", e.target.value)}
+                />
+              </div>
+              <div>
+                <Label>Paid Date *</Label>
+                <Input
+                  type="date"
+                  value={entryForm.paid_date}
+                  onChange={(e) => updateField("paid_date", e.target.value)}
+                />
+              </div>
+            </div>
+            <div>
+              <Label>Pay Type *</Label>
+              <Select value={entryForm.pay_type_id} onValueChange={(v) => updateField("pay_type_id", v)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select pay type..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {payTypes.map((pt) => (
+                    <SelectItem key={pt.id} value={pt.id}>{pt.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Job #</Label>
+                <Input
+                  placeholder="e.g. 2026-001"
+                  value={entryForm.job}
+                  onChange={(e) => updateField("job", e.target.value)}
+                />
+              </div>
+              <div>
+                <Label>Customer</Label>
+                <Input
+                  placeholder="Customer name"
+                  value={entryForm.customer}
+                  onChange={(e) => updateField("customer", e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Job Value</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={entryForm.job_value}
+                  onChange={(e) => updateField("job_value", e.target.value)}
+                />
+              </div>
+              <div>
+                <Label>Approved Date</Label>
+                <Input
+                  type="date"
+                  value={entryForm.approved_date}
+                  onChange={(e) => updateField("approved_date", e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Check Type</Label>
+                <Input
+                  placeholder="e.g. Direct Deposit"
+                  value={entryForm.check_type}
+                  onChange={(e) => updateField("check_type", e.target.value)}
+                />
+              </div>
+              <div>
+                <Label>Earned Comm</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={entryForm.earned_comm}
+                  onChange={(e) => updateField("earned_comm", e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Applied to Bank</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={entryForm.applied_bank}
+                  onChange={(e) => updateField("applied_bank", e.target.value)}
+                />
+              </div>
+              <div />
+            </div>
+            <div>
+              <Label>Notes</Label>
+              <Input
+                placeholder="Optional notes"
+                value={entryForm.notes}
+                onChange={(e) => updateField("notes", e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAddEntry(false)}>Cancel</Button>
+            <Button
+              onClick={handleAddEntry}
+              disabled={createEntry.isPending || !entryForm.amount_paid || !entryForm.paid_date || !entryForm.pay_type_id}
+            >
+              {createEntry.isPending ? "Adding..." : "Add Entry"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

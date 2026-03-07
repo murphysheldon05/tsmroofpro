@@ -19,11 +19,12 @@ export default function CommissionTrackerDetail() {
   const readOnly = isShared || isManagerView;
   const isLoading = entriesLoading || repsLoading;
 
-  const { repName, repColor, repEntries } = useMemo(() => {
+  const { repId, repName, repColor, repEntries } = useMemo(() => {
     // Try matching from enriched entries first
     const match = allEntries.find((e) => slugifyRep(e.rep_name) === repSlug);
     if (match) {
       return {
+        repId: match.rep_id,
         repName: match.rep_name,
         repColor: match.rep_color,
         repEntries: allEntries.filter((e) => e.rep_name === match.rep_name),
@@ -33,12 +34,13 @@ export default function CommissionTrackerDetail() {
     const repMatch = (reps || []).find((r) => slugifyRep(r.name) === repSlug);
     if (repMatch) {
       return {
+        repId: repMatch.id,
         repName: repMatch.name,
         repColor: repMatch.color,
         repEntries: allEntries.filter((e) => e.rep_name === repMatch.name),
       };
     }
-    return { repName: "", repColor: "#6b7280", repEntries: [] };
+    return { repId: undefined, repName: "", repColor: "#6b7280", repEntries: [] };
   }, [allEntries, reps, repSlug]);
 
   if (isLoading) {
@@ -71,7 +73,7 @@ export default function CommissionTrackerDetail() {
   return (
     <AppLayout>
       <div className="pb-8">
-        <RepDetailView repName={repName} repColor={repColor} entries={repEntries} readOnly={readOnly} />
+        <RepDetailView repId={repId} repName={repName} repColor={repColor} entries={repEntries} readOnly={readOnly} />
       </div>
     </AppLayout>
   );

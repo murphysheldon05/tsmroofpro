@@ -236,6 +236,51 @@ export function useEnrichedEntries() {
 
 // ——— Mutations ———
 
+export interface CreateCommissionEntryInput {
+  rep_id: string;
+  amount_paid: number;
+  paid_date: string;
+  pay_type_id: string;
+  job?: string | null;
+  customer?: string | null;
+  job_value?: number | null;
+  approved_date?: string | null;
+  check_type?: string | null;
+  notes?: string | null;
+  earned_comm?: number | null;
+  applied_bank?: number | null;
+}
+
+export function useCreateCommissionEntry() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: CreateCommissionEntryInput) => {
+      const { data, error } = await supabase
+        .from("commission_entries")
+        .insert({
+          rep_id: input.rep_id,
+          amount_paid: input.amount_paid,
+          paid_date: input.paid_date,
+          pay_type_id: input.pay_type_id,
+          job: input.job || null,
+          customer: input.customer || null,
+          job_value: input.job_value ?? null,
+          approved_date: input.approved_date || null,
+          check_type: input.check_type || null,
+          notes: input.notes || null,
+          earned_comm: input.earned_comm ?? null,
+          applied_bank: input.applied_bank ?? null,
+          has_paid: true,
+        })
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["commission-entries"] }),
+  });
+}
+
 export function useUpdateEntryPayType() {
   const qc = useQueryClient();
   return useMutation({
