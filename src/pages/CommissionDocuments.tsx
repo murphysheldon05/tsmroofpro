@@ -96,15 +96,15 @@ export default function CommissionDocuments() {
     return roleFilteredDocuments.filter(doc => {
       // Search filter
       const matchesSearch = 
-        doc.job_name_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        doc.sales_rep.toLowerCase().includes(searchQuery.toLowerCase());
+        (doc.job_name_id ?? '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (doc.sales_rep ?? '').toLowerCase().includes(searchQuery.toLowerCase());
       
       // Sales rep filter
       const matchesSalesRep = salesRepFilter === "all" || doc.sales_rep === salesRepFilter;
       
       // Date range filter
       let matchesDateRange = true;
-      if (dateFrom || dateTo) {
+      if ((dateFrom || dateTo) && doc.job_date) {
         const docDate = parseISO(doc.job_date);
         if (dateFrom && dateTo) {
           matchesDateRange = isWithinInterval(docDate, { 
@@ -128,8 +128,8 @@ export default function CommissionDocuments() {
       doc.status === 'paid' || doc.status === 'accounting_approved'
     ).filter(doc => 
       !paidSearchQuery || 
-      doc.job_name_id.toLowerCase().includes(paidSearchQuery.toLowerCase()) ||
-      doc.sales_rep.toLowerCase().includes(paidSearchQuery.toLowerCase())
+      (doc.job_name_id ?? '').toLowerCase().includes(paidSearchQuery.toLowerCase()) ||
+      (doc.sales_rep ?? '').toLowerCase().includes(paidSearchQuery.toLowerCase())
     );
   }, [roleFilteredDocuments, paidSearchQuery]);
 
@@ -155,12 +155,12 @@ export default function CommissionDocuments() {
   const stats = useMemo(() => {
     const total = filteredDocuments.length;
     const pending = filteredDocuments.filter(d => d.status === 'submitted').length;
-    const approved = filteredDocuments.filter(d => d.status === 'approved').length;
+    const approved = filteredDocuments.filter(d => ['manager_approved', 'accounting_approved', 'paid'].includes(d.status)).length;
     const totalCommission = filteredDocuments
-      .filter(d => d.status === 'approved')
+      .filter(d => ['manager_approved', 'accounting_approved', 'paid'].includes(d.status))
       .reduce((sum, d) => sum + (d.rep_commission || 0), 0);
     const totalProfit = filteredDocuments
-      .filter(d => d.status === 'approved')
+      .filter(d => ['manager_approved', 'accounting_approved', 'paid'].includes(d.status))
       .reduce((sum, d) => sum + (d.net_profit || 0), 0);
     
     return { total, pending, approved, totalCommission, totalProfit };
@@ -221,9 +221,9 @@ export default function CommissionDocuments() {
       ];
       
       const rows = docs.map(doc => [
-        `"${doc.job_name_id.replace(/"/g, '""')}"`,
+        `"${(doc.job_name_id ?? '').replace(/"/g, '""')}"`,
         doc.job_date ? format(parseISO(doc.job_date), "MM/dd/yyyy") : "",
-        `"${doc.sales_rep.replace(/"/g, '""')}"`,
+        `"${(doc.sales_rep ?? '').replace(/"/g, '""')}"`,
         doc.status,
         doc.gross_contract_total.toFixed(2),
         doc.net_profit.toFixed(2),
@@ -350,8 +350,8 @@ export default function CommissionDocuments() {
         xPos = 14;
         const paidDate = item.paid_at || item.accounting_approved_at;
         const rowData = [
-          item.job_name_id.substring(0, 25),
-          item.sales_rep.substring(0, 20),
+          (item.job_name_id ?? '').substring(0, 25),
+          (item.sales_rep ?? '').substring(0, 20),
           item.status.replace(/_/g, ' '),
           formatCurrency(item.rep_commission),
           paidDate ? format(parseISO(paidDate), 'MM/dd/yyyy') : '-',

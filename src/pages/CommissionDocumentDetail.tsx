@@ -16,8 +16,9 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { ArrowLeft, Printer, Edit, Check, X, FileText, Calendar, CheckCircle2, RotateCcw, SendHorizonal, Trash2, Loader2 } from "lucide-react";
+import { ArrowLeft, Printer, Edit, Check, X, FileText, Calendar, CheckCircle2, RotateCcw, SendHorizontal, Trash2, Loader2 } from "lucide-react";
 import { useCommissionDocument, useUpdateCommissionDocumentStatus, useDeleteCommissionDocument } from "@/hooks/useCommissionDocuments";
+import { AppLayout } from "@/components/layout/AppLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { CommissionDocumentForm } from "@/components/commissions/CommissionDocumentForm";
 import { CommissionDocumentPrintView } from "@/components/commissions/CommissionDocumentPrintView";
@@ -142,18 +143,20 @@ export default function CommissionDocumentDetail() {
   };
 
   if (isLoading) {
-    return <div className="container mx-auto py-6 text-center">Loading...</div>;
+    return <AppLayout><div className="container mx-auto py-6 text-center">Loading...</div></AppLayout>;
   }
 
   if (!document) {
     return (
-      <div className="container mx-auto py-6 text-center">
-        <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-        <p className="text-muted-foreground">Document not found</p>
-        <Button variant="outline" className="mt-4" onClick={() => navigate('/commission-documents')}>
-          Back to List
-        </Button>
-      </div>
+      <AppLayout>
+        <div className="container mx-auto py-6 text-center">
+          <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+          <p className="text-muted-foreground">Document not found</p>
+          <Button variant="outline" className="mt-4" onClick={() => navigate('/commission-documents')}>
+            Back to List
+          </Button>
+        </div>
+      </AppLayout>
     );
   }
 
@@ -172,9 +175,11 @@ export default function CommissionDocumentDetail() {
 
   if (isEditing) {
     return (
-      <div className="container mx-auto py-6">
-        <CommissionDocumentForm document={document} />
-      </div>
+      <AppLayout>
+        <div className="container mx-auto py-6">
+          <CommissionDocumentForm document={document} />
+        </div>
+      </AppLayout>
     );
   }
 
@@ -268,6 +273,7 @@ export default function CommissionDocumentDetail() {
   const requiresNotes = approvalAction === 'rejected' || approvalAction === 'revision_required';
 
   return (
+    <AppLayout>
     <div className="container mx-auto py-6 space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <Button variant="ghost" onClick={() => navigate('/commission-documents')}>
@@ -291,7 +297,7 @@ export default function CommissionDocumentDetail() {
               onClick={handleResubmit}
               disabled={updateStatusMutation.isPending}
             >
-              <SendHorizonal className="h-4 w-4 mr-2" />
+              <SendHorizontal className="h-4 w-4 mr-2" />
               Resubmit
             </Button>
           )}
@@ -491,5 +497,6 @@ export default function CommissionDocumentDetail() {
         </DialogContent>
       </Dialog>
     </div>
+    </AppLayout>
   );
 }

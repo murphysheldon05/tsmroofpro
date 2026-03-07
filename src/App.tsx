@@ -150,6 +150,7 @@ const App = () => (
             <Route path="/sops/master-playbook" element={<Navigate to="/playbook-library/master-playbook" replace />} />
             <Route path="/sops/:category" element={<Navigate to="/playbook-library" replace />} />
             <Route path="/sop-library" element={<Navigate to="/playbook-library" replace />} />
+            <Route path="/training" element={<Navigate to="/training/documents" replace />} />
             {/* Training Documents route */}
             <Route
               path="/training/documents"

@@ -134,7 +134,7 @@ function DraggableWarrantyCard({
       <div className="flex items-center gap-1.5 flex-wrap">
         <Badge className={cn("text-[10px]", statusConfig?.color)}>{statusConfig?.label}</Badge>
         <Badge className={cn("text-[10px]", priorityConfig?.color)}>{priorityConfig?.label}</Badge>
-        {warranty.status === "completed" && differenceInDays(new Date(), parseISO(warranty.last_status_change_at)) >= 7 && (
+        {warranty.status === "completed" && warranty.last_status_change_at && differenceInDays(new Date(), parseISO(warranty.last_status_change_at)) >= 7 && (
           <Badge variant="outline" className="text-[10px] border-primary text-primary">Ready to Close</Badge>
         )}
       </div>
@@ -219,6 +219,7 @@ export default function Warranties() {
   const readyToClose = useMemo(() => {
     return warranties.filter(w => 
       w.status === "completed" && 
+      w.last_status_change_at &&
       differenceInDays(new Date(), parseISO(w.last_status_change_at)) >= 7
     );
   }, [warranties]);
@@ -324,17 +325,12 @@ export default function Warranties() {
                     size="sm"
                     className="text-xs"
                     onClick={() => {
-                      if (w.customer_notified_of_completion) {
-                        updateWarranty.mutate({
-                          id: w.id,
-                          status: "closed" as WarrantyStatus,
-                          previousStatus: w.status,
-                          userRole: role || undefined,
-                          customer_notified_of_completion: true,
-                        });
-                      } else {
-                        handleView(w);
-                      }
+                      updateWarranty.mutate({
+                        id: w.id,
+                        status: "closed" as WarrantyStatus,
+                        previousStatus: w.status,
+                        userRole: role || undefined,
+                      });
                     }}
                   >
                     Close {w.customer_name.split(" ")[0]}

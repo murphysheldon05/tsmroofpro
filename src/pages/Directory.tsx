@@ -139,7 +139,7 @@ function EntityDetailDialog({ open, onOpenChange, entity, type, canVerify }: {
         </DialogHeader>
         <div className="space-y-4 mt-2">
           <div className="grid grid-cols-2 gap-3 text-sm">
-            <div><span className="text-muted-foreground">Contact:</span> <span className="font-medium">{entity.primary_contact_name}</span></div>
+            <div><span className="text-muted-foreground">Contact:</span> <span className="font-medium">{entity.primary_contact_name ?? '—'}</span></div>
             <div><span className="text-muted-foreground">Phone:</span> <a href={`tel:${entity.phone}`} className="font-medium text-primary">{entity.phone}</a></div>
             <div><span className="text-muted-foreground">Email:</span> <a href={`mailto:${entity.email}`} className="font-medium text-primary truncate">{entity.email}</a></div>
             <div><span className="text-muted-foreground">Status:</span> <Badge className={getStatusColor(entity.status)}>{entity.status?.replace("_", " ")}</Badge></div>
@@ -320,7 +320,7 @@ export default function Directory() {
   // Sub-Contractors view: only subs (W9/insurance). Contact List is a separate page.
   const allEntities = useMemo(() => {
     const subs = subcontractors.map(s => ({
-      ...s, entityType: "sub" as const, displayName: s.company_name, tradeLabel: TRADE_TYPES.find(t => t.value === s.trade_type)?.label || s.trade_type,
+      ...s, entityType: "sub" as const, displayName: s.company_name, primary_contact_name: s.primary_contact_name ?? '', tradeLabel: TRADE_TYPES.find(t => t.value === s.trade_type)?.label || s.trade_type,
     }));
     if (subcontractorsOnly) return subs;
     const vends = vendors.map(v => ({
@@ -333,7 +333,7 @@ export default function Directory() {
     let filtered = allEntities;
     if (search) {
       const q = search.toLowerCase();
-      filtered = filtered.filter(e => e.displayName.toLowerCase().includes(q) || e.primary_contact_name.toLowerCase().includes(q));
+      filtered = filtered.filter(e => e.displayName.toLowerCase().includes(q) || (e.primary_contact_name ?? '').toLowerCase().includes(q));
     }
     if (statusFilter !== "all") {
       filtered = filtered.filter(e => {

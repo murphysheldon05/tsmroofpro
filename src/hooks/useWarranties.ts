@@ -274,30 +274,7 @@ export function useUpdateWarranty() {
         }
       }
 
-      // CLOSE-OUT GATE: Cannot move to "completed" without resolution + photos
-      if (updates.status === "completed") {
-        const current = { ...updates };
-        if (!current.resolution_summary) {
-          throw new Error("Resolution Summary is required before marking as Completed.");
-        }
-        if (!current.date_completed) {
-          throw new Error("Date Completed is required before marking as Completed.");
-        }
-        if (!current.closeout_photos_uploaded) {
-          throw new Error("Close-Out Photos must be uploaded before marking as Completed.");
-        }
-      }
-
-      // CLOSE GATE: Cannot move to "closed" without completed requirements + customer notified + manufacturer claim finalized
       if (updates.status === "closed") {
-        if (!updates.customer_notified_of_completion) {
-          throw new Error("Customer must be notified of completion before moving to Closed.");
-        }
-        // Manufacturer claim must be finalized if warranty is manufacturer or combination type
-        // (We check is_manufacturer_claim_filed is explicitly set — either true or false is fine, 
-        // meaning the user has made a decision on it)
-        
-        // Auto-set closed metadata
         const { data: closingUser } = await supabase.auth.getUser();
         updates.closed_date = new Date().toISOString().split("T")[0];
         updates.closed_by = closingUser.user?.id || null;
