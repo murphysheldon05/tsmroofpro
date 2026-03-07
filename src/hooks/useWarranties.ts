@@ -146,7 +146,7 @@ export function useWarranties() {
         .limit(1)
         .maybeSingle();
       const userRole = roleData?.role;
-      const fullAccessRoles = ["admin", "manager", "sales_manager"];
+      const fullAccessRoles = ["admin", "manager", "sales_manager", "production_manager"];
       if (userRole && fullAccessRoles.includes(userRole)) {
         return all;
       }
@@ -257,7 +257,7 @@ export function useUpdateWarranty() {
       // ENFORCEMENT: completed/denied/closed — manager/admin can do all; production users can mark completed and closed for warranties assigned to them
       const terminalStatuses: string[] = ["completed", "denied", "closed"];
       if (updates.status && terminalStatuses.includes(updates.status)) {
-        const allowedRoles = ["admin", "manager", "sales_manager"];
+        const allowedRoles = ["admin", "manager", "sales_manager", "production_manager"];
         const canDoAsManager = !!effectiveRole && allowedRoles.includes(effectiveRole);
         if (canDoAsManager) {
           // Manager/admin: allow
@@ -371,8 +371,7 @@ export function useDeleteWarranty() {
 
   return useMutation({
     mutationFn: async ({ id, userRole }: { id: string; userRole?: string }) => {
-      // ENFORCEMENT: Only managers and admins can delete warranties
-      const allowedRoles = ["admin", "manager", "sales_manager"];
+      const allowedRoles = ["admin", "manager", "sales_manager", "production_manager"];
       if (!userRole || !allowedRoles.includes(userRole)) {
         throw new Error("Only managers and admins can delete warranty requests.");
       }

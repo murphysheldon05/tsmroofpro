@@ -26,21 +26,21 @@ import {
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
-// Kanban columns mapping
-const KANBAN_COLUMNS: { key: string; label: string; statuses: WarrantyStatus[] }[] = [
-  { key: "new", label: "New", statuses: ["new"] },
-  { key: "in_progress", label: "In Progress", statuses: ["assigned", "in_review", "in_progress", "waiting_on_materials", "waiting_on_manufacturer"] },
-  { key: "scheduled", label: "Scheduled", statuses: ["scheduled"] },
-  { key: "completed", label: "Completed", statuses: ["completed", "denied"] },
-  { key: "closed", label: "Closed", statuses: ["closed"] },
+// Kanban columns for the warranty pipeline
+const KANBAN_COLUMNS: { key: string; label: string; statuses: WarrantyStatus[]; description: string }[] = [
+  { key: "pending_review", label: "Pending Review", statuses: ["new"], description: "Awaiting production manager review" },
+  { key: "approved", label: "Approved", statuses: ["assigned", "in_review"], description: "Reviewed and in the warranty queue" },
+  { key: "scheduled", label: "Scheduled", statuses: ["scheduled"], description: "Scheduled for warranty work" },
+  { key: "in_progress", label: "In Progress", statuses: ["in_progress", "waiting_on_materials", "waiting_on_manufacturer"], description: "Warranty work underway" },
+  { key: "completed", label: "Completed", statuses: ["completed", "denied"], description: "Work completed, ready to archive" },
 ];
 
 const STATUS_FOR_COLUMN: Record<string, WarrantyStatus> = {
-  new: "new",
-  in_progress: "in_progress",
+  pending_review: "new",
+  approved: "assigned",
   scheduled: "scheduled",
+  in_progress: "in_progress",
   completed: "completed",
-  closed: "closed",
 };
 
 function getAgeDays(w: WarrantyRequest): number {
@@ -77,14 +77,19 @@ function DraggableWarrantyCard({
   warranty,
   onView,
   isDragOverlay = false,
+  isDraggable = true,
+  onArchive,
 }: {
   warranty: WarrantyRequest;
   onView: (w: WarrantyRequest) => void;
   isDragOverlay?: boolean;
+  isDraggable?: boolean;
+  onArchive?: (w: WarrantyRequest) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: warranty.id,
     data: { warranty },
+    disabled: !isDraggable,
   });
 
   const age = getAgeDays(warranty);
@@ -107,7 +112,7 @@ function DraggableWarrantyCard({
       ref={setNodeRef}
       style={cardStyle}
       {...attributes}
-      {...listeners}
+      {...(isDraggable ? listeners : {})}
       onClick={() => onView(warranty)}
       className={cn(
         "rounded-xl border p-3 cursor-pointer transition-all hover:shadow-md bg-card",
@@ -115,6 +120,7 @@ function DraggableWarrantyCard({
         !isCompleted && age > 14 && age <= 30 && "border-amber-400/60",
         isDragOverlay && "shadow-xl ring-2 ring-primary rotate-2 scale-105",
         isDragging && "opacity-30",
+        isDraggable && !isDragOverlay && "cursor-grab active:cursor-grabbing",
       )}
     >
       <div className="flex items-start justify-between gap-2 mb-1.5">
@@ -134,14 +140,24 @@ function DraggableWarrantyCard({
       <div className="flex items-center gap-1.5 flex-wrap">
         <Badge className={cn("text-[10px]", statusConfig?.color)}>{statusConfig?.label}</Badge>
         <Badge className={cn("text-[10px]", priorityConfig?.color)}>{priorityConfig?.label}</Badge>
-        {warranty.status === "completed" && warranty.last_status_change_at && differenceInDays(new Date(), parseISO(warranty.last_status_change_at)) >= 7 && (
-          <Badge variant="outline" className="text-[10px] border-primary text-primary">Ready to Close</Badge>
-        )}
       </div>
       {warranty.assigned_production_member && (
         <p className="text-[10px] text-muted-foreground mt-1.5">Assigned</p>
       )}
       <p className="text-[10px] text-muted-foreground">{format(parseISO(warranty.date_submitted), "MMM d, yyyy")}</p>
+      {onArchive && (warranty.status === "completed" || warranty.status === "denied") && (
+        <div onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full mt-2 text-xs h-7 text-muted-foreground hover:text-primary"
+            onClick={() => onArchive(warranty)}
+          >
+            <Archive className="h-3 w-3 mr-1" />
+            Close & Archive
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
@@ -193,14 +209,13 @@ function WarrantyCardSimple({
 }
 
 export default function Warranties() {
-  const { isAdmin, isManager, role } = useAuth();
-  const canEdit = isAdmin || isManager;
+  const { isAdmin, isManager, isProductionManager, role } = useAuth();
+  const canManageWarranty = isAdmin || isManager || isProductionManager;
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [selectedWarranty, setSelectedWarranty] = useState<WarrantyRequest | null>(null);
-  const [mobileTab, setMobileTab] = useState("new");
-  const [showArchive, setShowArchive] = useState(false);
+  const [mobileTab, setMobileTab] = useState("pending_review");
   const [archiveSearch, setArchiveSearch] = useState("");
   const [activeId, setActiveId] = useState<string | null>(null);
 
@@ -215,14 +230,15 @@ export default function Warranties() {
   const handleEdit = (w: WarrantyRequest) => { setSelectedWarranty(w); setIsFormOpen(true); };
   const handleCreate = () => { setSelectedWarranty(null); setIsFormOpen(true); };
 
-  // Warranties ready to close (completed 7+ days ago)
-  const readyToClose = useMemo(() => {
-    return warranties.filter(w => 
-      w.status === "completed" && 
-      w.last_status_change_at &&
-      differenceInDays(new Date(), parseISO(w.last_status_change_at)) >= 7
-    );
-  }, [warranties]);
+  const handleArchive = (w: WarrantyRequest) => {
+    if (!canManageWarranty) return;
+    updateWarranty.mutate({
+      id: w.id,
+      status: "closed" as WarrantyStatus,
+      previousStatus: w.status,
+      userRole: role || undefined,
+    });
+  };
 
   const columns = useMemo(() => {
     return KANBAN_COLUMNS.map(col => {
@@ -233,10 +249,10 @@ export default function Warranties() {
   }, [warranties]);
 
   const archivedWarranties = useMemo(() => {
-    const completed = warranties.filter(w => w.status === "completed" || w.status === "denied" || w.status === "closed");
-    if (!archiveSearch) return completed;
+    const closed = warranties.filter(w => w.status === "closed");
+    if (!archiveSearch) return closed;
     const s = archiveSearch.toLowerCase();
-    return completed.filter(w =>
+    return closed.filter(w =>
       w.customer_name.toLowerCase().includes(s) ||
       w.job_address.toLowerCase().includes(s) ||
       w.issue_description.toLowerCase().includes(s)
@@ -246,13 +262,13 @@ export default function Warranties() {
   const activeWarranty = activeId ? warranties.find(w => w.id === activeId) : null;
 
   const handleDragStart = (event: DragStartEvent) => {
-    if (!canEdit) return;
+    if (!canManageWarranty) return;
     setActiveId(event.active.id as string);
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
     setActiveId(null);
-    if (!canEdit) return;
+    if (!canManageWarranty) return;
 
     const { active, over } = event;
     if (!over) return;
@@ -260,12 +276,10 @@ export default function Warranties() {
     const warranty = warranties.find(w => w.id === active.id);
     if (!warranty) return;
 
-    // The "over" id is the column key
     const targetColumnKey = over.id as string;
     const targetStatus = STATUS_FOR_COLUMN[targetColumnKey];
     if (!targetStatus) return;
 
-    // Check if warranty is already in this column
     const targetColumn = KANBAN_COLUMNS.find(c => c.key === targetColumnKey);
     if (targetColumn?.statuses.includes(warranty.status)) return;
 
@@ -282,8 +296,8 @@ export default function Warranties() {
       <AppLayout>
         <div className="space-y-4">
           <Skeleton className="h-10 w-64" />
-          <div className="grid grid-cols-4 gap-4">
-            {Array(4).fill(0).map((_, i) => <Skeleton key={i} className="h-64" />)}
+          <div className="grid grid-cols-5 gap-4">
+            {Array(5).fill(0).map((_, i) => <Skeleton key={i} className="h-64" />)}
           </div>
         </div>
       </AppLayout>
@@ -307,50 +321,21 @@ export default function Warranties() {
           </Button>
         </div>
 
-        {/* Auto-close suggestion banner */}
-        {canEdit && readyToClose.length > 0 && (
-          <Card className="border-primary/30 bg-primary/5">
-            <CardContent className="flex items-center justify-between py-3 px-4">
-              <div className="flex items-center gap-2">
-                <Archive className="h-4 w-4 text-primary" />
-                <span className="text-sm font-medium">
-                  {readyToClose.length} warrant{readyToClose.length === 1 ? "y" : "ies"} completed 7+ days ago — ready to close
-                </span>
-              </div>
-              <div className="flex gap-2">
-                {readyToClose.slice(0, 3).map(w => (
-                  <Button
-                    key={w.id}
-                    variant="outline"
-                    size="sm"
-                    className="text-xs"
-                    onClick={() => {
-                      updateWarranty.mutate({
-                        id: w.id,
-                        status: "closed" as WarrantyStatus,
-                        previousStatus: w.status,
-                        userRole: role || undefined,
-                      });
-                    }}
-                  >
-                    Close {w.customer_name.split(" ")[0]}
-                  </Button>
-                ))}
-                {readyToClose.length > 3 && (
-                  <Badge variant="secondary" className="text-xs">+{readyToClose.length - 3} more</Badge>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
         <Tabs defaultValue="board">
           <TabsList>
             <TabsTrigger value="board" className="flex items-center gap-1.5"><Shield className="h-3.5 w-3.5" />Board</TabsTrigger>
+            <TabsTrigger value="archive" className="flex items-center gap-1.5"><Archive className="h-3.5 w-3.5" />Archive ({archivedWarranties.length})</TabsTrigger>
             <TabsTrigger value="aging" className="flex items-center gap-1.5" data-tutorial="aging-tab"><BarChart3 className="h-3.5 w-3.5" />Aging Report</TabsTrigger>
           </TabsList>
 
           <TabsContent value="board" className="mt-4" data-tutorial="kanban-board">
+            {!canManageWarranty && (
+              <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50 border border-dashed mb-4">
+                <Shield className="h-4 w-4 text-muted-foreground" />
+                <p className="text-sm text-muted-foreground">Only production managers and admins can move warranties through the pipeline.</p>
+              </div>
+            )}
+
             {/* Desktop Kanban with DnD */}
             <DndContext
               sensors={sensors}
@@ -371,25 +356,18 @@ export default function Warranties() {
                       )}
                     </div>
                     <DroppableColumn id={col.key}>
-                      {col.key === "completed" ? (
-                        <>
-                          {col.items.slice(0, 5).map(w => (
-                            <DraggableWarrantyCard key={w.id} warranty={w} onView={handleView} />
-                          ))}
-                          {col.items.length > 5 && (
-                            <Button variant="ghost" size="sm" className="w-full text-xs" onClick={() => setShowArchive(true)}>
-                              <Archive className="h-3.5 w-3.5 mr-1" />View Archive ({col.items.length})
-                            </Button>
-                          )}
-                        </>
+                      {col.items.length === 0 ? (
+                        <p className="text-xs text-muted-foreground text-center py-8">No warranties</p>
                       ) : (
-                        col.items.length === 0 ? (
-                          <p className="text-xs text-muted-foreground text-center py-8">No warranties</p>
-                        ) : (
-                          col.items.map(w => (
-                            <DraggableWarrantyCard key={w.id} warranty={w} onView={handleView} />
-                          ))
-                        )
+                        col.items.map(w => (
+                          <DraggableWarrantyCard
+                            key={w.id}
+                            warranty={w}
+                            onView={handleView}
+                            isDraggable={canManageWarranty}
+                            onArchive={canManageWarranty ? handleArchive : undefined}
+                          />
+                        ))
                       )}
                     </DroppableColumn>
                   </div>
@@ -407,11 +385,11 @@ export default function Warranties() {
             {/* Mobile Tabs (no drag) */}
             <div className="md:hidden">
               <Tabs value={mobileTab} onValueChange={setMobileTab}>
-                <TabsList className="w-full grid grid-cols-4">
+                <TabsList className="w-full grid grid-cols-5">
                   {columns.map(col => (
-                    <TabsTrigger key={col.key} value={col.key} className="text-xs relative">
+                    <TabsTrigger key={col.key} value={col.key} className="text-[10px] px-1 relative">
                       {col.label}
-                      <Badge variant="secondary" className="ml-1 text-[10px] h-4 min-w-4 px-1">{col.items.length}</Badge>
+                      <Badge variant="secondary" className="ml-0.5 text-[10px] h-4 min-w-4 px-1">{col.items.length}</Badge>
                     </TabsTrigger>
                   ))}
                 </TabsList>
@@ -428,38 +406,48 @@ export default function Warranties() {
                 ))}
               </Tabs>
             </div>
+          </TabsContent>
 
-            {/* Archive Overlay */}
-            {showArchive && (
-              <Card className="mt-4">
-                <CardHeader className="flex flex-row items-center justify-between">
-                  <CardTitle className="text-base">Completed Archive</CardTitle>
-                  <Button variant="ghost" size="sm" onClick={() => setShowArchive(false)}>Close</Button>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex gap-2 mb-4">
-                    <div className="relative flex-1">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input placeholder="Search completed..." value={archiveSearch} onChange={e => setArchiveSearch(e.target.value)} className="pl-9" />
-                    </div>
+          <TabsContent value="archive" className="mt-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Archive className="h-4 w-4" />
+                  Completed Warranty Archive
+                </CardTitle>
+                <Badge variant="secondary">{archivedWarranties.length} total</Badge>
+              </CardHeader>
+              <CardContent>
+                <div className="flex gap-2 mb-4">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input placeholder="Search archived warranties..." value={archiveSearch} onChange={e => setArchiveSearch(e.target.value)} className="pl-9" />
                   </div>
-                  <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                </div>
+                {archivedWarranties.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-8">No archived warranties yet. Completed warranties can be closed and archived from the board.</p>
+                ) : (
+                  <div className="space-y-2 max-h-[600px] overflow-y-auto">
                     {archivedWarranties.map(w => (
                       <div key={w.id} onClick={() => handleView(w)} className="flex items-center justify-between p-3 border rounded-lg cursor-pointer hover:bg-accent/50">
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium truncate">{w.customer_name}</p>
                           <p className="text-xs text-muted-foreground truncate">{w.job_address}</p>
+                          <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">{w.issue_description}</p>
                         </div>
-                        <div className="text-right ml-3">
-                          <Badge className={cn("text-[10px]", WARRANTY_STATUSES.find(s => s.value === w.status)?.color)}>{WARRANTY_STATUSES.find(s => s.value === w.status)?.label}</Badge>
-                          {w.date_completed && <p className="text-[10px] text-muted-foreground mt-0.5">{format(parseISO(w.date_completed), "MMM d, yyyy")}</p>}
+                        <div className="text-right ml-3 flex flex-col items-end gap-1">
+                          <Badge className={cn("text-[10px]", WARRANTY_STATUSES.find(s => s.value === w.status)?.color)}>
+                            {WARRANTY_STATUSES.find(s => s.value === w.status)?.label}
+                          </Badge>
+                          {w.closed_date && <p className="text-[10px] text-muted-foreground">Closed {format(parseISO(w.closed_date), "MMM d, yyyy")}</p>}
+                          {w.date_completed && !w.closed_date && <p className="text-[10px] text-muted-foreground">Completed {format(parseISO(w.date_completed), "MMM d, yyyy")}</p>}
                         </div>
                       </div>
                     ))}
                   </div>
-                </CardContent>
-              </Card>
-            )}
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="aging" className="mt-4">
