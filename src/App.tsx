@@ -3,14 +3,14 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { AuthProvider } from "@/contexts/AuthContext";
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
+import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { WalkthroughProvider } from "@/contexts/WalkthroughContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { AppLayout } from "@/components/layout/AppLayout";
 import { PageTransition } from "@/components/PageTransition";
 import { Loader2 } from "lucide-react";
 
-// Lazy-loaded pages — each chunk loads only when navigated to
 const Landing = lazy(() => import("./pages/Landing"));
 const Auth = lazy(() => import("./pages/Auth"));
 const Signup = lazy(() => import("./pages/Signup"));
@@ -46,6 +46,40 @@ function PageLoader() {
   );
 }
 
+function InlinePageLoader() {
+  return (
+    <div className="flex items-center justify-center py-32">
+      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+    </div>
+  );
+}
+
+function ProtectedAppShell() {
+  return (
+    <ProtectedRoute>
+      <AppLayout>
+        <PageTransition>
+          <Suspense fallback={<InlinePageLoader />}>
+            <Outlet />
+          </Suspense>
+        </PageTransition>
+      </AppLayout>
+    </ProtectedRoute>
+  );
+}
+
+function RequireAdmin() {
+  const { isAdmin } = useAuth();
+  if (!isAdmin) return <Navigate to="/command-center" replace />;
+  return <Outlet />;
+}
+
+function RequireManager() {
+  const { isManager } = useAuth();
+  if (!isManager) return <Navigate to="/command-center" replace />;
+  return <Outlet />;
+}
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -57,216 +91,52 @@ const App = () => (
         <BrowserRouter>
           <WalkthroughProvider>
           <Suspense fallback={<PageLoader />}>
-          <PageTransition>
           <Routes>
-            {/* Public routes - root redirects to auth for login/signup flow */}
             <Route path="/" element={<Navigate to="/auth" replace />} />
             <Route path="/landing" element={<Landing />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/signup" element={<Signup />} />
-            {/* Protected routes */}
-            <Route
-              path="/command-center"
-              element={
-                <ProtectedRoute>
-                  <CommandCenter />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/pending-review"
-              element={
-                <ProtectedRoute>
-                  <PendingReview />
-                </ProtectedRoute>
-              }
-            />
-            {/* Redirect old dashboard route to command center */}
-            <Route
-              path="/dashboard"
-              element={<Navigate to="/command-center" replace />}
-            />
-            <Route
-              path="/requests"
-              element={
-                <ProtectedRoute>
-                  <Requests />
-                </ProtectedRoute>
-              }
-            />
-            {/* Redirect /company to /command-center */}
-            <Route
-              path="/company"
-              element={<Navigate to="/command-center" replace />}
-            />
-            <Route
-              path="/admin"
-              element={
-                <ProtectedRoute requireAdmin>
-                  <Admin />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/profile"
-              element={
-                <ProtectedRoute>
-                  <Profile />
-                </ProtectedRoute>
-              }
-            />
-            <Route path="/directory" element={<Navigate to="/vendors/contact-list" replace />} />
-            <Route
-              path="/user-directory"
-              element={
-                <ProtectedRoute>
-                  <UserDirectory />
-                </ProtectedRoute>
-              }
-            />
-            <Route path="/vendors" element={<Navigate to="/vendors/subcontractors" replace />} />
-            <Route
-              path="/vendors/subcontractors"
-              element={
-                <ProtectedRoute>
-                  <Directory />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/vendors/contact-list"
-              element={
-                <ProtectedRoute>
-                  <ContactList />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/warranties"
-              element={
-                <ProtectedRoute>
-                  <Warranties />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/build-schedule"
-              element={
-                <ProtectedRoute>
-                  <BuildSchedule />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/delivery-schedule"
-              element={
-                <ProtectedRoute>
-                  <DeliverySchedule />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/commissions"
-              element={
-                <ProtectedRoute>
-                  <Commissions />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/commissions/new"
-              element={
-                <ProtectedRoute>
-                  <CommissionNew />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/commissions/draw/new"
-              element={
-                <ProtectedRoute>
-                  <CommissionDrawNew />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/commissions/draws"
-              element={<Navigate to="/commissions" replace />}
-            />
-            <Route
-              path="/commissions/:id"
-              element={
-                <ProtectedRoute>
-                  <CommissionDetail />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/commission-documents"
-              element={
-                <ProtectedRoute>
-                  <CommissionDocuments />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/commission-documents/new"
-              element={
-                <ProtectedRoute>
-                  <CommissionDocumentNew />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/commission-documents/:id"
-              element={
-                <ProtectedRoute>
-                  <CommissionDocumentDetail />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/commission-tracker"
-              element={
-                <ProtectedRoute requireManager>
-                  <CommissionTracker />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/commission-tracker/:repSlug"
-              element={
-                <ProtectedRoute requireManager>
-                  <CommissionTrackerDetail />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/my-commissions"
-              element={
-                <ProtectedRoute>
-                  <MyCommissionTracker />
-                </ProtectedRoute>
-              }
-            />
-            {/* Ops Compliance moved to Admin Panel — redirect old route for backwards compatibility */}
-            <Route
-              path="/ops-compliance"
-              element={<Navigate to="/admin?tab=ops-compliance" replace />}
-            />
-            <Route
-              path="/accounting"
-              element={
-                <ProtectedRoute requireAdmin>
-                  <Accounting />
-                </ProtectedRoute>
-              }
-            />
 
-            {/* Catch-all */}
+            <Route element={<ProtectedAppShell />}>
+              <Route path="/command-center" element={<CommandCenter />} />
+              <Route path="/pending-review" element={<PendingReview />} />
+              <Route path="/requests" element={<Requests />} />
+              <Route path="/profile" element={<Profile />} />
+              <Route path="/user-directory" element={<UserDirectory />} />
+              <Route path="/vendors/subcontractors" element={<Directory />} />
+              <Route path="/vendors/contact-list" element={<ContactList />} />
+              <Route path="/warranties" element={<Warranties />} />
+              <Route path="/build-schedule" element={<BuildSchedule />} />
+              <Route path="/delivery-schedule" element={<DeliverySchedule />} />
+              <Route path="/commissions" element={<Commissions />} />
+              <Route path="/commissions/new" element={<CommissionNew />} />
+              <Route path="/commissions/draw/new" element={<CommissionDrawNew />} />
+              <Route path="/commissions/:id" element={<CommissionDetail />} />
+              <Route path="/commission-documents" element={<CommissionDocuments />} />
+              <Route path="/commission-documents/new" element={<CommissionDocumentNew />} />
+              <Route path="/commission-documents/:id" element={<CommissionDocumentDetail />} />
+              <Route path="/my-commissions" element={<MyCommissionTracker />} />
+
+              <Route element={<RequireAdmin />}>
+                <Route path="/admin" element={<Admin />} />
+                <Route path="/accounting" element={<Accounting />} />
+              </Route>
+
+              <Route element={<RequireManager />}>
+                <Route path="/commission-tracker" element={<CommissionTracker />} />
+                <Route path="/commission-tracker/:repSlug" element={<CommissionTrackerDetail />} />
+              </Route>
+            </Route>
+
+            <Route path="/dashboard" element={<Navigate to="/command-center" replace />} />
+            <Route path="/company" element={<Navigate to="/command-center" replace />} />
+            <Route path="/directory" element={<Navigate to="/vendors/contact-list" replace />} />
+            <Route path="/vendors" element={<Navigate to="/vendors/subcontractors" replace />} />
+            <Route path="/commissions/draws" element={<Navigate to="/commissions" replace />} />
+            <Route path="/ops-compliance" element={<Navigate to="/admin?tab=ops-compliance" replace />} />
+
             <Route path="*" element={<NotFound />} />
           </Routes>
-          </PageTransition>
           </Suspense>
           </WalkthroughProvider>
         </BrowserRouter>

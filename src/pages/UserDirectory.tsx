@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { AppLayout } from "@/components/layout/AppLayout";
+
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -149,8 +149,7 @@ export default function UserDirectory() {
   });
 
   return (
-    <AppLayout>
-      <div className="max-w-6xl mx-auto space-y-6 pb-8">
+    <div className="max-w-6xl mx-auto space-y-6 pb-8">
         {/* Header */}
         <header className="pt-4 lg:pt-0">
           <div className="flex items-center gap-3">
@@ -270,7 +269,6 @@ export default function UserDirectory() {
             ))}
           </div>
         )}
-      </div>
-    </AppLayout>
+    </div>
   );
 }

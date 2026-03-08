@@ -1,6 +1,5 @@
 import { useMemo } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
-import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -45,20 +44,17 @@ export default function CommissionTrackerDetail() {
 
   if (isLoading) {
     return (
-      <AppLayout>
         <div className="space-y-4 pb-8">
           <div className="h-8 w-48 bg-muted animate-pulse rounded-lg" />
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             {[1, 2, 3, 4].map((i) => <div key={i} className="h-24 bg-muted animate-pulse rounded-xl" />)}
           </div>
         </div>
-      </AppLayout>
     );
   }
 
   if (!repName) {
     return (
-      <AppLayout>
         <div className="text-center py-16">
           <h3 className="text-lg font-semibold">Rep not found</h3>
           <p className="text-sm text-muted-foreground">No data found for this sales rep.</p>
@@ -66,15 +62,12 @@ export default function CommissionTrackerDetail() {
             <ArrowLeft className="h-4 w-4" /> Back to Tracker
           </Button>
         </div>
-      </AppLayout>
     );
   }
 
   return (
-    <AppLayout>
       <div className="pb-8">
         <RepDetailView repId={repId} repName={repName} repColor={repColor} entries={repEntries} readOnly={readOnly} />
       </div>
-    </AppLayout>
   );
 }

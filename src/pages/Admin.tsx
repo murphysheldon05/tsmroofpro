@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useSearchParams, useLocation } from "react-router-dom";
-import { AppLayout } from "@/components/layout/AppLayout";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -488,8 +488,7 @@ export default function Admin() {
   };
 
   return (
-    <AppLayout>
-      <div className="max-w-6xl mx-auto space-y-6">
+    <div className="max-w-6xl mx-auto space-y-6">
         {/* Header */}
         <header className="pt-4 lg:pt-0">
           <div className="flex items-center gap-3">
@@ -971,7 +970,6 @@ export default function Admin() {
           </TabsContent>
         </Tabs>
         <GuidedTour pageName="admin" pageTitle="Admin Panel" steps={adminSteps} />
-      </div>
-    </AppLayout>
+    </div>
   );
 }

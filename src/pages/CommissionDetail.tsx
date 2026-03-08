@@ -1,6 +1,5 @@
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useMemo } from "react";
-import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -108,17 +107,14 @@ export default function CommissionDetail() {
 
   if (isLoading) {
     return (
-      <AppLayout>
         <div className="flex items-center justify-center h-64">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
-      </AppLayout>
     );
   }
 
   if (!submission) {
     return (
-      <AppLayout>
         <div className="text-center py-12">
           <h2 className="text-xl font-semibold">Commission not found</h2>
           <Button onClick={() => navigate("/commissions")} className="mt-4">
@@ -126,7 +122,6 @@ export default function CommissionDetail() {
             Back to Commissions
           </Button>
         </div>
-      </AppLayout>
     );
   }
 
@@ -273,7 +268,6 @@ export default function CommissionDetail() {
   // If closing out a draw, show the close-out form
   if (isClosingOut && submission) {
     return (
-      <AppLayout>
         <div className="max-w-4xl mx-auto space-y-6">
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="icon" onClick={() => { setIsClosingOut(false); refetch(); }}>
@@ -291,14 +285,12 @@ export default function CommissionDetail() {
             onCancel={() => { setIsClosingOut(false); refetch(); }}
           />
         </div>
-      </AppLayout>
     );
   }
 
   // If editing, show the edit form
   if (isEditing && submission) {
     return (
-      <AppLayout>
         <div className="max-w-4xl mx-auto space-y-6">
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="icon" onClick={handleCloseEdit}>
@@ -316,12 +308,10 @@ export default function CommissionDetail() {
             onCancel={handleCloseEdit}
           />
         </div>
-      </AppLayout>
     );
   }
 
   return (
-    <AppLayout>
       <div className="max-w-4xl mx-auto space-y-5">
         {/* Header */}
         <div className="flex items-start justify-between">
@@ -1004,6 +994,5 @@ export default function CommissionDetail() {
           </Card>
         )}
       </div>
-    </AppLayout>
   );
 }

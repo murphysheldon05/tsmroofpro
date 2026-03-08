@@ -1,5 +1,4 @@
 import { useAuth } from "@/contexts/AuthContext";
-import { AppLayout } from "@/components/layout/AppLayout";
 import { formatDisplayName } from "@/lib/displayName";
 import { SearchBar } from "@/components/SearchBar";
 import { AnnouncementCard } from "@/components/dashboard/AnnouncementCard";
@@ -20,7 +19,6 @@ export default function Dashboard() {
   const firstName = displayName !== "Unknown" ? displayName.trim().split(/\s+/)[0] : "there";
 
   return (
-    <AppLayout>
       <div className="max-w-7xl mx-auto space-y-8">
         {/* Header */}
         <header className="pt-4 lg:pt-0">
@@ -114,6 +112,5 @@ export default function Dashboard() {
           </section>
         </div>
       </div>
-    </AppLayout>
   );
 }

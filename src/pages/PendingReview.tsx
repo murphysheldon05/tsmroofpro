@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { AppLayout } from "@/components/layout/AppLayout";
+
 import { useAuth } from "@/contexts/AuthContext";
 import { usePendingReview, PendingItem, SlaStatus } from "@/hooks/usePendingReview";
 import { useUpdateCommissionStatus } from "@/hooks/useCommissions";
@@ -262,17 +262,15 @@ export default function PendingReview() {
 
   if (isLoading) {
     return (
-      <AppLayout>
-        <div className="max-w-7xl mx-auto space-y-6">
-          <Skeleton className="h-12 w-64" />
-          <Skeleton className="h-96 w-full" />
-        </div>
-      </AppLayout>
+      <div className="max-w-7xl mx-auto space-y-6">
+        <Skeleton className="h-12 w-64" />
+        <Skeleton className="h-96 w-full" />
+      </div>
     );
   }
 
   return (
-    <AppLayout>
+    <>
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -667,6 +665,6 @@ export default function PendingReview() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </AppLayout>
+    </>
   );
 }

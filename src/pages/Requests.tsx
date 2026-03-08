@@ -1,6 +1,6 @@
 import { useState, useRef, useMemo, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-import { AppLayout } from "@/components/layout/AppLayout";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -327,8 +327,7 @@ export default function Requests() {
   const pendingCount = activeRequests.filter(r => r.status === "pending").length;
 
   return (
-    <AppLayout>
-      <div className="max-w-5xl mx-auto space-y-8">
+    <div className="max-w-5xl mx-auto space-y-8">
         {/* Header */}
         <header className="pt-4 lg:pt-0">
           <div className="flex items-center gap-3">
@@ -584,8 +583,7 @@ export default function Requests() {
             )}
           </DialogContent>
         </Dialog>
-      </div>
-    </AppLayout>
+    </div>
   );
 }
 

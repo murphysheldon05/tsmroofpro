@@ -1,5 +1,4 @@
 import { useState, useMemo } from "react";
-import { AppLayout } from "@/components/layout/AppLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCommissionReps, useEnrichedEntries } from "@/hooks/useCommissionEntries";
 import { RepDetailView } from "@/components/commissions/tracker/RepDetailView";
@@ -26,7 +25,6 @@ export default function MyCommissionTracker() {
 
   if (isLoading) {
     return (
-      <AppLayout>
         <div className="space-y-4 pb-8">
           <div className="h-8 w-48 bg-muted animate-pulse rounded-lg" />
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -35,14 +33,12 @@ export default function MyCommissionTracker() {
             ))}
           </div>
         </div>
-      </AppLayout>
     );
   }
 
   // Sales reps without linked commission_rep can still access Documents tab (drafts, submit)
   if (!linkedRep) {
     return (
-      <AppLayout>
         <div className="space-y-5 pb-8">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-full bg-muted/50 flex items-center justify-center">
@@ -57,12 +53,10 @@ export default function MyCommissionTracker() {
           </div>
           <CommissionDocumentsEmbed />
         </div>
-      </AppLayout>
     );
   }
 
   return (
-    <AppLayout>
       <div className="space-y-5 pb-8">
         <Tabs defaultValue="history" className="space-y-4">
           <TabsList className="bg-card/60 border border-border/40 rounded-2xl p-1 h-auto">
@@ -91,6 +85,5 @@ export default function MyCommissionTracker() {
           </TabsContent>
         </Tabs>
       </div>
-    </AppLayout>
   );
 }

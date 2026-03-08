@@ -27,7 +27,7 @@ import {
   useDeleteDeliveryEvent, DeliveryCalendarEvent,
 } from "@/hooks/useDeliveryCalendar";
 import { cn } from "@/lib/utils";
-import { AppLayout } from "@/components/layout/AppLayout";
+
 import { GuidedTour } from "@/components/tutorial/GuidedTour";
 import { deliveryScheduleSteps } from "@/components/tutorial/tutorialSteps";
 import { TodaysDeliveriesSection } from "@/components/production/TodaysDeliveriesSection";
@@ -205,18 +205,16 @@ export default function DeliverySchedule() {
 
   if (isLoading) {
     return (
-      <AppLayout>
-        <div className="space-y-4">
-          <Skeleton className="h-10 w-64" />
-          <Skeleton className="h-8 w-48" />
-          <div className="grid grid-cols-7 gap-2">{Array(14).fill(0).map((_, i) => <Skeleton key={i} className="h-24" />)}</div>
-        </div>
-      </AppLayout>
+      <div className="space-y-4">
+        <Skeleton className="h-10 w-64" />
+        <Skeleton className="h-8 w-48" />
+        <div className="grid grid-cols-7 gap-2">{Array(14).fill(0).map((_, i) => <Skeleton key={i} className="h-24" />)}</div>
+      </div>
     );
   }
 
   return (
-    <AppLayout>
+    <>
       <div className="space-y-4">
         {/* Header */}
         <div className="flex items-center justify-between flex-wrap gap-3">
@@ -442,6 +440,6 @@ export default function DeliverySchedule() {
         </AlertDialogContent>
       </AlertDialog>
       <GuidedTour pageName="delivery-schedule" pageTitle="Delivery Schedule" steps={deliveryScheduleSteps} />
-    </AppLayout>
+    </>
   );
 }

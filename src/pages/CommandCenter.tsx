@@ -1,5 +1,5 @@
 import { useAuth } from "@/contexts/AuthContext";
-import { AppLayout } from "@/components/layout/AppLayout";
+
 import { CompactCoreIdentity } from "@/components/command-center/CompactCoreIdentity";
 import { QuickActionLinks } from "@/components/command-center/QuickActionLinks";
 
@@ -25,8 +25,7 @@ export default function CommandCenter() {
   const firstName = displayName !== "Unknown" ? displayName.trim().split(/\s+/)[0] : "there";
 
   return (
-    <AppLayout>
-      <div className="max-w-7xl mx-auto space-y-5 px-4 sm:px-0">
+    <div className="max-w-7xl mx-auto space-y-5 px-4 sm:px-0">
         {/* 1. Header greeting */}
         <header className="pt-4 lg:pt-0" data-tutorial="command-center-header">
           <div className="flex items-center gap-3 min-w-0">
@@ -85,8 +84,7 @@ export default function CommandCenter() {
         </div>
 
         <GuidedTour pageName="command-center" pageTitle="Command Center" steps={commandCenterSteps} />
-      </div>
-    </AppLayout>
+    </div>
   );
 }
 

@@ -221,7 +221,7 @@
   }
 
   .hover-lift {
-    @apply transition-all duration-200;
+    @apply transition-[transform,box-shadow] duration-200;
   }
 
   .hover-lift:hover {

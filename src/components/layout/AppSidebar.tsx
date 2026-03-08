@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Logo } from "@/components/Logo";
 import { cn } from "@/lib/utils";
+import { prefetchRoute } from "@/lib/routePrefetch";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -126,7 +127,7 @@ function TakeTheTourButton() {
   return (
     <button
       onClick={startTour}
-      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-sidebar-foreground/70 hover:bg-primary/5 hover:text-primary/80 transition-all duration-150"
+      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-sidebar-foreground/70 hover:bg-primary/5 hover:text-primary/80 transition-colors duration-150"
     >
       <Compass className="w-4 h-4" />
       Take the Tour
@@ -198,7 +199,7 @@ function SortableNavItem({
               <button
                 data-tutorial={item.tutorialTarget}
                 className={cn(
-                  "flex-1 flex items-center justify-between px-2 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 relative",
+                  "flex-1 flex items-center justify-between px-2 py-2.5 rounded-lg text-sm font-medium transition-colors duration-150 relative",
                   isParentActive(item.children)
                     ? "nav-item-active"
                     : "text-sidebar-foreground hover:bg-primary/5 hover:text-primary/80"
@@ -227,8 +228,9 @@ function SortableNavItem({
                 <button
                   key={child.href}
                   onClick={() => handleNavClick(child.href)}
+                  onMouseEnter={() => prefetchRoute(child.href)}
                   className={cn(
-                    "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-150 relative",
+                    "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150 relative",
                     isActive(child.href)
                       ? "nav-item-active font-medium"
                       : "text-sidebar-foreground/70 hover:bg-primary/5 hover:text-primary/80"
@@ -254,8 +256,9 @@ function SortableNavItem({
           <button
             data-tutorial={item.tutorialTarget}
             onClick={() => handleNavClick(item.href!)}
+            onMouseEnter={() => prefetchRoute(item.href!)}
             className={cn(
-              "flex-1 flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium transition-all duration-150 relative min-h-[44px]",
+              "flex-1 flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium transition-colors duration-150 relative min-h-[44px]",
               isActive(item.href!)
                 ? "nav-item-active"
                 : "text-sidebar-foreground hover:bg-primary/5 hover:text-primary/80"
@@ -499,8 +502,9 @@ export function AppSidebar() {
         <button
           data-tutorial="sidebar-profile"
           onClick={() => handleNavClick("/profile")}
+          onMouseEnter={() => prefetchRoute("/profile")}
           className={cn(
-            "w-full flex items-center justify-between px-3 py-2.5 rounded-lg transition-all duration-150",
+            "w-full flex items-center justify-between px-3 py-2.5 rounded-lg transition-colors duration-150",
             isActive("/profile")
               ? "nav-item-active"
               : "bg-surface-2/50 hover:bg-primary/5"
@@ -548,8 +552,9 @@ export function AppSidebar() {
             {isAdmin && (
               <button
                 onClick={() => handleNavClick("/admin")}
+                onMouseEnter={() => prefetchRoute("/admin")}
                 className={cn(
-                  "w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm transition-all duration-150 relative min-h-[44px]",
+                  "w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm transition-colors duration-150 relative min-h-[44px]",
                   isActive("/admin")
                     ? "nav-item-active font-medium"
                     : "text-sidebar-foreground/70 hover:bg-primary/5 hover:text-primary/80"
@@ -571,7 +576,7 @@ export function AppSidebar() {
         
         <button
           onClick={() => signOut()}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-sidebar-foreground/70 hover:bg-destructive/10 hover:text-destructive transition-all duration-150 min-h-[44px]"
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-sidebar-foreground/70 hover:bg-destructive/10 hover:text-destructive transition-colors duration-150 min-h-[44px]"
         >
           <LogOut className="w-[18px] h-[18px]" />
           Sign Out

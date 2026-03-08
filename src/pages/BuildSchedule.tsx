@@ -30,7 +30,7 @@ import {
 } from "@/hooks/useProductionCalendar";
 import { useCrews, useCreateCrew, useUpdateCrew, useDeleteCrew, Crew } from "@/hooks/useCrews";
 import { cn } from "@/lib/utils";
-import { AppLayout } from "@/components/layout/AppLayout";
+
 import { GuidedTour } from "@/components/tutorial/GuidedTour";
 import { buildScheduleSteps } from "@/components/tutorial/tutorialSteps";
 import { useUserHoldsCheck } from "@/hooks/useComplianceHoldCheck";
@@ -253,23 +253,21 @@ export default function BuildSchedule() {
   // Loading skeleton
   if (isLoading) {
     return (
-      <AppLayout>
-        <div className="space-y-4">
-          <Skeleton className="h-10 w-64" />
-          <Skeleton className="h-8 w-48" />
-          <div className="grid grid-cols-7 gap-2">
-            {Array(7).fill(0).map((_, i) => <Skeleton key={i} className="h-24" />)}
-          </div>
-          <div className="grid grid-cols-7 gap-2">
-            {Array(7).fill(0).map((_, i) => <Skeleton key={i} className="h-24" />)}
-          </div>
+      <div className="space-y-4">
+        <Skeleton className="h-10 w-64" />
+        <Skeleton className="h-8 w-48" />
+        <div className="grid grid-cols-7 gap-2">
+          {Array(7).fill(0).map((_, i) => <Skeleton key={i} className="h-24" />)}
         </div>
-      </AppLayout>
+        <div className="grid grid-cols-7 gap-2">
+          {Array(7).fill(0).map((_, i) => <Skeleton key={i} className="h-24" />)}
+        </div>
+      </div>
     );
   }
 
   return (
-    <AppLayout>
+    <>
       <div className="space-y-4">
         {/* Header */}
         <div className="flex items-center justify-between flex-wrap gap-3">
@@ -633,6 +631,6 @@ export default function BuildSchedule() {
         </AlertDialogContent>
       </AlertDialog>
       <GuidedTour pageName="build-schedule" pageTitle="Build Schedule" steps={buildScheduleSteps} />
-    </AppLayout>
+    </>
   );
 }

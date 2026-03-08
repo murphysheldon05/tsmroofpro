@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -160,7 +159,7 @@ export default function ContactList() {
     : prospects;
 
   return (
-    <AppLayout>
+    <>
       <div className="space-y-5 pb-8">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Contact List</h1>
@@ -329,6 +328,6 @@ export default function ContactList() {
         </Tabs>
       </div>
       <VendorForm open={vendorFormOpen} onOpenChange={setVendorFormOpen} vendor={null} />
-    </AppLayout>
+    </>
   );
 }

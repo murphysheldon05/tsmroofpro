@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { AppLayout } from "@/components/layout/AppLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCurrentUserPermissions } from "@/hooks/useUserPermissions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -66,7 +65,7 @@ const tabs = [
 ];
 
 interface OpsComplianceProps {
-  /** When true, renders content without AppLayout (for embedding in Admin Panel) */
+  /** When true, renders content for embedding in Admin Panel */
   embedded?: boolean;
 }
 
@@ -189,7 +188,6 @@ export default function OpsCompliance({ embedded = false }: OpsComplianceProps) 
   // Users without compliance access get a limited reporting view (standalone only)
   if (showLimitedView) {
     return (
-      <AppLayout>
         <div className="space-y-6">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -212,7 +210,6 @@ export default function OpsCompliance({ embedded = false }: OpsComplianceProps) 
             </CardContent>
           </Card>
         </div>
-      </AppLayout>
     );
   }
 
@@ -356,5 +353,5 @@ export default function OpsCompliance({ embedded = false }: OpsComplianceProps) 
     return content;
   }
 
-  return <AppLayout>{content}</AppLayout>;
+  return content;
 }

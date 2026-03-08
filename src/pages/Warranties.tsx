@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { AppLayout } from "@/components/layout/AppLayout";
+
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -293,19 +293,17 @@ export default function Warranties() {
 
   if (isLoading) {
     return (
-      <AppLayout>
-        <div className="space-y-4">
-          <Skeleton className="h-10 w-64" />
-          <div className="grid grid-cols-5 gap-4">
-            {Array(5).fill(0).map((_, i) => <Skeleton key={i} className="h-64" />)}
-          </div>
+      <div className="space-y-4">
+        <Skeleton className="h-10 w-64" />
+        <div className="grid grid-cols-5 gap-4">
+          {Array(5).fill(0).map((_, i) => <Skeleton key={i} className="h-64" />)}
         </div>
-      </AppLayout>
+      </div>
     );
   }
 
   return (
-    <AppLayout>
+    <>
       <div className="space-y-4">
         {/* Header */}
         <div className="flex items-center justify-between flex-wrap gap-3">
@@ -474,6 +472,6 @@ export default function Warranties() {
         onEdit={() => { setIsDetailOpen(false); setIsFormOpen(true); }}
       />
       <GuidedTour pageName="warranties" pageTitle="Warranty Tracker" steps={warrantySteps} />
-    </AppLayout>
+    </>
   );
 }

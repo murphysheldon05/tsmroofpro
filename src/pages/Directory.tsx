@@ -1,6 +1,5 @@
 import { useState, useMemo } from "react";
 import { useLocation } from "react-router-dom";
-import { AppLayout } from "@/components/layout/AppLayout";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -361,7 +360,7 @@ export default function Directory() {
   const isLoading = subsLoading || vendorsLoading;
 
   return (
-    <AppLayout>
+    <>
       <div className="space-y-5 pb-8">
         {/* Header */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -484,6 +483,6 @@ export default function Directory() {
       <ComplianceRequestForm open={complianceFormOpen} onOpenChange={setComplianceFormOpen} />
       <CsvImportDialog open={csvImportOpen} onOpenChange={setCsvImportOpen} type={csvImportType} />
       <EntityDetailDialog open={!!detailEntity} onOpenChange={(o) => { if (!o) setDetailEntity(null); }} entity={detailEntity} type={detailType} canVerify={isAdmin} />
-    </AppLayout>
+    </>
   );
 }

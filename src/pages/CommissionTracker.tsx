@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { AppLayout } from "@/components/layout/AppLayout";
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LayoutGrid, List, ClipboardList } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -39,20 +39,17 @@ export default function CommissionTracker() {
 
   if (isLoading) {
     return (
-      <AppLayout>
-        <div className="space-y-4 pb-8">
-          <div className="h-8 w-48 bg-muted animate-pulse rounded-lg" />
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            {[1, 2, 3, 4].map((i) => <div key={i} className="h-24 bg-muted animate-pulse rounded-xl" />)}
-          </div>
+      <div className="space-y-4 pb-8">
+        <div className="h-8 w-48 bg-muted animate-pulse rounded-lg" />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {[1, 2, 3, 4].map((i) => <div key={i} className="h-24 bg-muted animate-pulse rounded-xl" />)}
         </div>
-      </AppLayout>
+      </div>
     );
   }
 
   return (
-    <AppLayout>
-      <div className="space-y-5 pb-8">
+    <div className="space-y-5 pb-8">
         {/* Dark Header */}
         <div className="bg-[#111827] text-white rounded-2xl p-5 flex items-center justify-between">
           <div>
@@ -109,7 +106,6 @@ export default function CommissionTracker() {
             <PayRunsTab readOnly={trackerReadOnly} />
           </TabsContent>
         </Tabs>
-      </div>
-    </AppLayout>
+    </div>
   );
 }

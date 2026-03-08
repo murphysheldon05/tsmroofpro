@@ -1,4 +1,3 @@
-import { AppLayout } from "@/components/layout/AppLayout";
 import { Building2, Heart, Target, Users, CheckCircle, FileText, ExternalLink, Loader2 } from "lucide-react";
 import { usePolicies } from "@/hooks/usePolicies";
 
@@ -40,7 +39,6 @@ export default function Company() {
   };
 
   return (
-    <AppLayout>
       <div className="max-w-5xl mx-auto space-y-10">
         {/* Header */}
         <header className="pt-4 lg:pt-0">
@@ -179,6 +177,5 @@ export default function Company() {
           )}
         </section>
       </div>
-    </AppLayout>
   );
 }

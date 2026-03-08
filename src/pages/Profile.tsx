@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { AppLayout } from "@/components/layout/AppLayout";
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { User, Lock, Bell, FileText, ClipboardList } from "lucide-react";
 import { ProfileInfoTab } from "@/components/profile/ProfileInfoTab";
@@ -12,8 +12,7 @@ const Profile = () => {
   const [activeTab, setActiveTab] = useState("info");
 
   return (
-    <AppLayout>
-      <div className="space-y-6">
+    <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">My Profile</h1>
           <p className="text-muted-foreground">
@@ -82,8 +81,7 @@ const Profile = () => {
             <ProfileFilesTab />
           </TabsContent>
         </Tabs>
-      </div>
-    </AppLayout>
+    </div>
   );
 };
 

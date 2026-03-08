@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { AppLayout } from "@/components/layout/AppLayout";
+
 import { DrawRequestSubmitForm } from "@/components/commissions/DrawRequestSubmitForm";
 import { DollarSign } from "lucide-react";
 
@@ -7,8 +7,7 @@ export default function CommissionDrawNew() {
   const navigate = useNavigate();
 
   return (
-    <AppLayout>
-      <div className="max-w-4xl mx-auto space-y-6">
+    <div className="max-w-4xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center gap-3">
           <DollarSign className="h-8 w-8 text-amber-600" />
@@ -24,7 +23,6 @@ export default function CommissionDrawNew() {
 
         {/* Form */}
         <DrawRequestSubmitForm onCancel={() => navigate("/commissions")} />
-      </div>
-    </AppLayout>
+    </div>
   );
 }

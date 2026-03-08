@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { AppLayout } from "@/components/layout/AppLayout";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, DollarSign, Search, FileSpreadsheet, BarChart3, TrendingUp, Wallet, ClipboardList, CalendarCheck } from "lucide-react";
@@ -154,9 +154,8 @@ export default function Commissions() {
   }, [filteredSubmissions, activeStatus]);
 
   return (
-    <AppLayout>
-      <div className="space-y-5 pb-8">
-        {/* Hold Warning */}
+    <div className="space-y-5 pb-8">
+      {/* Hold Warning */}
         <HoldWarningBanner holds={commissionHolds} context="commission" />
 
         {/* Tuesday 3PM Cutoff — helps reps understand pay timing */}
@@ -379,8 +378,7 @@ export default function Commissions() {
           )}
         </Tabs>
 
-        <GuidedTour pageName="commissions" pageTitle="Commissions" steps={commissionsSteps} />
-      </div>
-    </AppLayout>
+      <GuidedTour pageName="commissions" pageTitle="Commissions" steps={commissionsSteps} />
+    </div>
   );
 }

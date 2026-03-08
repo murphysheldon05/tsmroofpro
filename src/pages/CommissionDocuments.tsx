@@ -1,6 +1,5 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -573,7 +572,7 @@ export default function CommissionDocuments() {
   );
 
   return (
-    <AppLayout>
+    <>
       <div className="space-y-4 sm:space-y-6">
         {/* Header */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -967,6 +966,6 @@ export default function CommissionDocuments() {
         </Tabs>
       </div>
       <GuidedTour pageName="commission-documents" pageTitle="Commission Documents" steps={commissionDocumentsSteps} />
-    </AppLayout>
+    </>
   );
 }

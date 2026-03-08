@@ -18,7 +18,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { ArrowLeft, Printer, Edit, Check, X, FileText, Calendar, CheckCircle2, RotateCcw, SendHorizontal, Trash2, Loader2 } from "lucide-react";
 import { useCommissionDocument, useUpdateCommissionDocumentStatus, useDeleteCommissionDocument } from "@/hooks/useCommissionDocuments";
-import { AppLayout } from "@/components/layout/AppLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { CommissionDocumentForm } from "@/components/commissions/CommissionDocumentForm";
 import { CommissionDocumentPrintView } from "@/components/commissions/CommissionDocumentPrintView";
@@ -143,12 +142,11 @@ export default function CommissionDocumentDetail() {
   };
 
   if (isLoading) {
-    return <AppLayout><div className="container mx-auto py-6 text-center">Loading...</div></AppLayout>;
+    return <div className="container mx-auto py-6 text-center">Loading...</div>;
   }
 
   if (!document) {
     return (
-      <AppLayout>
         <div className="container mx-auto py-6 text-center">
           <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
           <p className="text-muted-foreground">Document not found</p>
@@ -156,7 +154,6 @@ export default function CommissionDocumentDetail() {
             Back to List
           </Button>
         </div>
-      </AppLayout>
     );
   }
 
@@ -175,11 +172,9 @@ export default function CommissionDocumentDetail() {
 
   if (isEditing) {
     return (
-      <AppLayout>
         <div className="container mx-auto py-6">
           <CommissionDocumentForm document={document} />
         </div>
-      </AppLayout>
     );
   }
 
@@ -273,7 +268,6 @@ export default function CommissionDocumentDetail() {
   const requiresNotes = approvalAction === 'rejected' || approvalAction === 'revision_required';
 
   return (
-    <AppLayout>
     <div className="container mx-auto py-6 space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <Button variant="ghost" onClick={() => navigate('/commission-documents')}>
@@ -497,6 +491,5 @@ export default function CommissionDocumentDetail() {
         </DialogContent>
       </Dialog>
     </div>
-    </AppLayout>
   );
 }

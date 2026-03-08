@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { AppLayout } from "@/components/layout/AppLayout";
+
 import { useAuth } from "@/contexts/AuthContext";
 import { Navigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -17,8 +17,7 @@ export default function Accounting() {
   }
 
   return (
-    <AppLayout>
-      <div className="space-y-5 pb-8">
+    <div className="space-y-5 pb-8">
         {/* Migration Banner */}
         <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-xl px-4 py-3 flex items-center justify-between gap-3 flex-wrap">
           <p className="text-sm text-amber-800 dark:text-amber-300">
@@ -64,7 +63,6 @@ export default function Accounting() {
             <AccountingPayoutQueue mode="history" />
           </TabsContent>
         </Tabs>
-      </div>
-    </AppLayout>
+    </div>
   );
 }
