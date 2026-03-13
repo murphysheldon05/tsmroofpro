@@ -24,15 +24,28 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { GuidedTour } from "@/components/tutorial/GuidedTour";
 import { commissionsSteps } from "@/components/tutorial/tutorialSteps";
 
-const STATUS_ORDER = ["pending_review", "rejected", "denied", "approved", "paid"];
-const STATUS_LABELS: Record<string, string> = {
-  pending_review: "Pending Review",
+const PIPELINE_ORDER = ["submitted", "compliance_approved", "approved", "paid", "rejected", "denied"];
+const PIPELINE_LABELS: Record<string, string> = {
+  submitted: "Submitted",
+  compliance_approved: "Compliance Approved",
+  approved: "Accounting Approved",
+  paid: "Paid",
   rejected: "Rejected",
   denied: "Denied",
-  approved: "Approved",
-  paid: "Paid",
-  needs_action: "Needs Action",
 };
+
+/** Map a commission's status + approval_stage to a pipeline stage key */
+function getPipelineStage(status: string, approvalStage: string | null | undefined): string {
+  if (status === "paid") return "paid";
+  if (status === "approved") return "approved";
+  if (status === "rejected") return "rejected";
+  if (status === "denied") return "denied";
+  // status === "pending_review"
+  if (approvalStage === "pending_accounting" || approvalStage === "completed") {
+    return "compliance_approved";
+  }
+  return "submitted"; // pending_manager, pending_admin, or null
+}
 
 export default function Commissions() {
   const navigate = useNavigate();
