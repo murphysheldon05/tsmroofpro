@@ -293,7 +293,7 @@ export default function Commissions() {
                       {activeStatus === "all" && (
                         <div className="flex items-center gap-2 mb-3">
                           <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-                            {STATUS_LABELS[status] || status}
+                            {PIPELINE_LABELS[status] || status}
                           </h2>
                           <span className="text-xs font-bold text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
                             {items.length}
