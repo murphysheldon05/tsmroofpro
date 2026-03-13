@@ -141,10 +141,8 @@ export default function Commissions() {
       );
     }
 
-    if (activeStatus === "needs_action") {
-      filtered = filtered.filter((s) => s.status === "rejected" || s.status === "denied");
-    } else if (activeStatus !== "all") {
-      filtered = filtered.filter((s) => s.status === activeStatus);
+    if (activeStatus !== "all") {
+      filtered = filtered.filter((s) => getPipelineStage(s.status, s.approval_stage) === activeStatus);
     }
 
     return filtered;
