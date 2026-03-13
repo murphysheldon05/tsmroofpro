@@ -156,10 +156,10 @@ export default function Commissions() {
       return { [activeStatus]: filteredSubmissions };
     }
     
-    STATUS_ORDER.forEach((status) => {
-      const items = filteredSubmissions.filter((s) => s.status === status);
+    PIPELINE_ORDER.forEach((stage) => {
+      const items = filteredSubmissions.filter((s) => getPipelineStage(s.status, s.approval_stage) === stage);
       if (items.length > 0) {
-        groups[status] = items;
+        groups[stage] = items;
       }
     });
     return groups;
