@@ -58,16 +58,18 @@ async function resolveRecipients(
     .single();
 
   if (roleAssignment) {
-    // Priority: assigned_email > backup_email > fallback_email
-    if (roleAssignment.assigned_email) {
-      recipients.push(roleAssignment.assigned_email);
+    // Send to ALL compliance officers: both assigned_email and backup_email when present
+    if (roleAssignment.assigned_email?.trim()) {
+      recipients.push(roleAssignment.assigned_email.trim());
       console.log("Added assigned role email:", roleAssignment.assigned_email);
-    } else if (roleAssignment.backup_email) {
-      recipients.push(roleAssignment.backup_email);
+    }
+    if (roleAssignment.backup_email?.trim()) {
+      recipients.push(roleAssignment.backup_email.trim());
       console.log("Added backup role email:", roleAssignment.backup_email);
-    } else {
+    }
+    if (recipients.length === 0) {
       recipients.push(routing.fallback_email);
-      console.log("Added fallback email:", routing.fallback_email);
+      console.log("No role emails, using fallback:", routing.fallback_email);
     }
   } else {
     // No role assignment, use fallback

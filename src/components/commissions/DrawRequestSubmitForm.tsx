@@ -13,7 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Building2, User, Send, Loader2, AlertTriangle, Ban, ClipboardCheck, Paperclip } from "lucide-react";
+import { Building2, User, Send, Loader2, AlertTriangle, Ban, ClipboardCheck, Paperclip, DollarSign } from "lucide-react";
 import { CommissionWorksheet } from "./CommissionWorksheet";
 import { CommissionAttachments } from "./CommissionAttachments";
 import { useCreateCommission, useSalesReps, COMMISSION_TIERS } from "@/hooks/useCommissions";
@@ -222,38 +222,18 @@ export function DrawRequestSubmitForm({ onCancel, variant = "employee" }: DrawRe
     }
   };
 
-  const formatCurrencyDisplay = (value: number) =>
-    new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2 }).format(value);
-
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        {/* Label */}
-        <div className="rounded-2xl border-2 border-amber-500/40 bg-amber-500/5 p-5 text-center">
-          <h2 className="text-xl font-bold text-amber-700 dark:text-amber-400">
-            Draw Request &mdash; 50% of Projected Commission
-          </h2>
-          {estimatedCommission > 0 && (
-            <div className="mt-3 flex flex-col sm:flex-row items-center justify-center gap-4 text-sm">
-              <span className="text-muted-foreground">
-                Projected Commission: <span className="font-bold text-foreground">{formatCurrencyDisplay(estimatedCommission)}</span>
-              </span>
-              <span className="text-amber-700 dark:text-amber-400">
-                Draw Amount (50%): <span className="font-bold">{formatCurrencyDisplay(estimatedCommission * 0.5)}</span>
-              </span>
-            </div>
-          )}
-        </div>
-
-        {/* 1. Eligibility Checklist — at top */}
-        <Card className="border-amber-500/30 bg-amber-500/5">
+        {/* Draw Request: eligibility (same Card pattern as commission form) */}
+        <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-amber-700 dark:text-amber-400">
+            <CardTitle className="flex items-center gap-2">
               <ClipboardCheck className="h-5 w-5" />
-              Draw Eligibility Checklist
+              Draw Request — Eligibility
             </CardTitle>
             <CardDescription>
-              Confirm all requirements before submitting. All boxes must be checked.
+              Confirm all requirements before submitting. All boxes must be checked. Maximum draw is 50% of projected commission, capped at $1,500 without manager approval.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -276,7 +256,7 @@ export function DrawRequestSubmitForm({ onCancel, variant = "employee" }: DrawRe
             {!allEligibilityChecked && (
               <p className="mt-4 text-sm text-amber-600 flex items-center gap-1.5">
                 <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-                Please confirm all eligibility requirements before submitting a draw request
+                Please confirm all eligibility requirements before submitting a draw request.
               </p>
             )}
           </CardContent>
@@ -291,7 +271,7 @@ export function DrawRequestSubmitForm({ onCancel, variant = "employee" }: DrawRe
           </Alert>
         )}
 
-        {/* 2. Job Information — identical to CommissionSubmitForm */}
+        {/* Section 1: Job Information — same as CommissionSubmitForm */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -423,7 +403,7 @@ export function DrawRequestSubmitForm({ onCancel, variant = "employee" }: DrawRe
           </CardContent>
         </Card>
 
-        {/* 3. Sales Rep / Subcontractor Information — identical to CommissionSubmitForm */}
+        {/* Section 2: Sales Rep / Subcontractor Information — same as CommissionSubmitForm */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -601,15 +581,34 @@ export function DrawRequestSubmitForm({ onCancel, variant = "employee" }: DrawRe
           </CardContent>
         </Card>
 
-        {/* 4. Commission Worksheet — identical to CommissionSubmitForm */}
+        {/* Section 3: Commission Worksheet — same as CommissionSubmitForm */}
         <CommissionWorksheet data={worksheetData} onChange={handleWorksheetChange} readOnly={false} />
 
-        {/* 5. Draw Amount Requested — draw-specific */}
-        <Card className="border-amber-500/30">
+        {/* Section 4: Document Attachments — same as CommissionSubmitForm (moved up to match order) */}
+        <Card>
           <CardHeader>
-            <CardTitle className="text-amber-700 dark:text-amber-400">Draw Amount Requested *</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Paperclip className="h-5 w-5" />
+              Document Attachments
+            </CardTitle>
             <CardDescription>
-              Maximum is 50% of estimated commission above, capped at $1,500 without manager approval.
+              Upload required documents: Signed Contract, Approved Supplements, Final Invoice
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <CommissionAttachments attachments={attachments} onAttachmentsChange={setAttachments} />
+          </CardContent>
+        </Card>
+
+        {/* Draw Amount Requested — draw-specific, appended at end */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <DollarSign className="h-5 w-5" />
+              Draw Amount Requested *
+            </CardTitle>
+            <CardDescription>
+              Maximum is 50% of estimated commission from the worksheet above, capped at $1,500 without manager approval.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -662,23 +661,7 @@ export function DrawRequestSubmitForm({ onCancel, variant = "employee" }: DrawRe
           </CardContent>
         </Card>
 
-        {/* 6. Document Attachments — identical to CommissionSubmitForm */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Paperclip className="h-5 w-5" />
-              Document Attachments
-            </CardTitle>
-            <CardDescription>
-              Upload required documents: Signed Contract, Approved Supplements, Final Invoice
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <CommissionAttachments attachments={attachments} onAttachmentsChange={setAttachments} />
-          </CardContent>
-        </Card>
-
-        {/* 7. Request / Notes — at bottom */}
+        {/* Request / Notes — draw-specific */}
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Request / Notes</CardTitle>

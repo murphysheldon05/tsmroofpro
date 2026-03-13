@@ -53,11 +53,11 @@ export default function Commissions() {
   const showMyDraws = canRequestDraws || role === "sales_rep" || role === "sales_manager";
   const commissionHolds = userHolds?.filter(h => h.hold_type === "commission_hold") || [];
 
-  // Status counts and dollar amounts
+  // Status counts and dollar amounts (pipeline: commissions only, no draws)
   const { statusCounts, statusAmounts } = useMemo(() => {
     const counts: Record<string, number> = {};
     const amounts: Record<string, number> = {};
-    submissions?.forEach((s) => {
+    submissions?.filter((s) => !s.is_draw).forEach((s) => {
       counts[s.status] = (counts[s.status] || 0) + 1;
       amounts[s.status] = (amounts[s.status] || 0) + (s.net_commission_owed || 0);
     });
@@ -113,9 +113,9 @@ export default function Commissions() {
     };
   }, [submissions, isAdminView]);
 
-  // Filtered & grouped submissions
+  // Filtered & grouped submissions (pipeline: commissions only; draws appear in Draw Requests / My Draws tabs)
   const filteredSubmissions = useMemo(() => {
-    let filtered = submissions || [];
+    let filtered = (submissions || []).filter((s) => !s.is_draw);
     
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
@@ -172,29 +172,16 @@ export default function Commissions() {
           
           <div className="flex gap-2 flex-wrap">
             {canSubmit && (
-              <>
-                <Button 
-                  data-tutorial="submit-commission"
-                  onClick={() => navigate("/commissions/new")} 
-                  className="gap-2 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground"
-                  disabled={commissionHolds.length > 0}
-                  title={commissionHolds.length > 0 ? "Blocked by active hold" : ""}
-                >
-                  <Plus className="h-4 w-4" />
-                  Submit Commission
-                </Button>
-                <Button 
-                  data-tutorial="request-draw"
-                  variant="outline" 
-                  onClick={() => navigate("/commissions/draw/new")}
-                  className="gap-2 rounded-xl border-amber-500 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-500/10"
-                  disabled={commissionHolds.length > 0}
-                  title={commissionHolds.length > 0 ? "Blocked by active hold" : ""}
-                >
-                  <DollarSign className="h-4 w-4" />
-                  Request a Draw
-                </Button>
-              </>
+              <Button 
+                data-tutorial="submit-commission"
+                onClick={() => navigate("/commissions/new")} 
+                className="gap-2 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground"
+                disabled={commissionHolds.length > 0}
+                title={commissionHolds.length > 0 ? "Blocked by active hold" : ""}
+              >
+                <Plus className="h-4 w-4" />
+                Submit Commission
+              </Button>
             )}
           </div>
         </div>
@@ -338,36 +325,63 @@ export default function Commissions() {
                   }
                 </p>
                 {canSubmit && !searchQuery && activeStatus === "all" && (
-                  <div className="flex gap-2 justify-center flex-wrap">
-                    <Button onClick={() => navigate("/commissions/new")} className="rounded-xl">
-                      <Plus className="h-4 w-4 mr-2" />
-                      Submit Commission
-                    </Button>
-                    <Button variant="outline" onClick={() => navigate("/commissions/draw/new")} className="rounded-xl border-amber-500 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-500/10">
-                      <DollarSign className="h-4 w-4 mr-2" />
-                      Request a Draw
-                    </Button>
-                  </div>
+                  <Button onClick={() => navigate("/commissions/new")} className="rounded-xl">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Submit Commission
+                  </Button>
                 )}
               </div>
             )}
           </TabsContent>
 
           {showMyDraws && (
-            <TabsContent value="my-draws">
+            <TabsContent value="my-draws" className="space-y-4">
+              {canSubmit && (
+                <div className="flex justify-end">
+                  <Button
+                    data-tutorial="request-draw"
+                    variant="outline"
+                    onClick={() => navigate("/commissions/draw/new")}
+                    className="gap-2 rounded-xl border-amber-500 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-500/10"
+                    disabled={commissionHolds.length > 0}
+                    title={commissionHolds.length > 0 ? "Blocked by active hold" : ""}
+                  >
+                    <DollarSign className="h-4 w-4" />
+                    Request a Draw
+                  </Button>
+                </div>
+              )}
               <DrawHistoryTab />
             </TabsContent>
           )}
 
           {showDrawRequests && (
-            <TabsContent value="draw-requests">
+            <TabsContent value="draw-requests" className="space-y-4">
+              {canSubmit && (
+                <div className="flex justify-end">
+                  <Button
+                    variant="outline"
+                    onClick={() => navigate("/commissions/draw/new")}
+                    className="gap-2 rounded-xl border-amber-500 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-500/10"
+                    disabled={commissionHolds.length > 0}
+                    title={commissionHolds.length > 0 ? "Blocked by active hold" : ""}
+                  >
+                    <DollarSign className="h-4 w-4" />
+                    Request a Draw
+                  </Button>
+                </div>
+              )}
               <DrawApprovalQueue />
             </TabsContent>
           )}
 
           {isReviewer && (
             <TabsContent value="tracker">
-              <CommissionTracker submissions={submissions || []} />
+              <CommissionTracker
+                submissions={(submissions || []).filter(
+                  (s) => s.status === "paid" && !s.is_draw
+                )}
+              />
             </TabsContent>
           )}
 
