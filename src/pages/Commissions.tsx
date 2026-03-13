@@ -24,15 +24,28 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { GuidedTour } from "@/components/tutorial/GuidedTour";
 import { commissionsSteps } from "@/components/tutorial/tutorialSteps";
 
-const STATUS_ORDER = ["pending_review", "rejected", "denied", "approved", "paid"];
-const STATUS_LABELS: Record<string, string> = {
-  pending_review: "Pending Review",
+const PIPELINE_ORDER = ["submitted", "compliance_approved", "approved", "paid", "rejected", "denied"];
+const PIPELINE_LABELS: Record<string, string> = {
+  submitted: "Submitted",
+  compliance_approved: "Compliance Approved",
+  approved: "Accounting Approved",
+  paid: "Paid",
   rejected: "Rejected",
   denied: "Denied",
-  approved: "Approved",
-  paid: "Paid",
-  needs_action: "Needs Action",
 };
+
+/** Map a commission's status + approval_stage to a pipeline stage key */
+function getPipelineStage(status: string, approvalStage: string | null | undefined): string {
+  if (status === "paid") return "paid";
+  if (status === "approved") return "approved";
+  if (status === "rejected") return "rejected";
+  if (status === "denied") return "denied";
+  // status === "pending_review"
+  if (approvalStage === "pending_accounting" || approvalStage === "completed") {
+    return "compliance_approved";
+  }
+  return "submitted"; // pending_manager, pending_admin, or null
+}
 
 export default function Commissions() {
   const navigate = useNavigate();
@@ -53,13 +66,14 @@ export default function Commissions() {
   const showMyDraws = canRequestDraws || role === "sales_rep" || role === "sales_manager";
   const commissionHolds = userHolds?.filter(h => h.hold_type === "commission_hold") || [];
 
-  // Status counts and dollar amounts (pipeline: commissions only, no draws)
+  // Status counts and dollar amounts based on pipeline stage (not raw status)
   const { statusCounts, statusAmounts } = useMemo(() => {
     const counts: Record<string, number> = {};
     const amounts: Record<string, number> = {};
     submissions?.filter((s) => !s.is_draw).forEach((s) => {
-      counts[s.status] = (counts[s.status] || 0) + 1;
-      amounts[s.status] = (amounts[s.status] || 0) + (s.net_commission_owed || 0);
+      const stage = getPipelineStage(s.status, s.approval_stage);
+      counts[stage] = (counts[stage] || 0) + 1;
+      amounts[stage] = (amounts[stage] || 0) + (s.net_commission_owed || 0);
     });
     return { statusCounts: counts, statusAmounts: amounts };
   }, [submissions]);
@@ -127,10 +141,8 @@ export default function Commissions() {
       );
     }
 
-    if (activeStatus === "needs_action") {
-      filtered = filtered.filter((s) => s.status === "rejected" || s.status === "denied");
-    } else if (activeStatus !== "all") {
-      filtered = filtered.filter((s) => s.status === activeStatus);
+    if (activeStatus !== "all") {
+      filtered = filtered.filter((s) => getPipelineStage(s.status, s.approval_stage) === activeStatus);
     }
 
     return filtered;
@@ -144,10 +156,10 @@ export default function Commissions() {
       return { [activeStatus]: filteredSubmissions };
     }
     
-    STATUS_ORDER.forEach((status) => {
-      const items = filteredSubmissions.filter((s) => s.status === status);
+    PIPELINE_ORDER.forEach((stage) => {
+      const items = filteredSubmissions.filter((s) => getPipelineStage(s.status, s.approval_stage) === stage);
       if (items.length > 0) {
-        groups[status] = items;
+        groups[stage] = items;
       }
     });
     return groups;
@@ -281,7 +293,7 @@ export default function Commissions() {
                       {activeStatus === "all" && (
                         <div className="flex items-center gap-2 mb-3">
                           <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-                            {STATUS_LABELS[status] || status}
+                            {PIPELINE_LABELS[status] || status}
                           </h2>
                           <span className="text-xs font-bold text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
                             {items.length}
