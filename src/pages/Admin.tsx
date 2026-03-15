@@ -21,7 +21,6 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Settings,
-  Plus,
   Users,
   Trash2,
   Edit,
@@ -29,16 +28,12 @@ import {
   Shield,
   ShieldCheck,
   Mail,
-  CheckCircle,
-  Clock,
   Bell,
   Route,
   Building2,
   Percent,
   UserPlus,
-  AlertTriangle,
   FileText,
-  DollarSign,
   Trophy,
 } from "lucide-react";
 import { UserPermissionsEditor } from "@/components/admin/UserPermissionsEditor";
@@ -56,8 +51,6 @@ import { ResetPasswordDialog } from "@/components/admin/ResetPasswordDialog";
 import { useCommissionTiers } from "@/hooks/useCommissionTiers";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAdminAuditLog, AUDIT_ACTIONS, OBJECT_TYPES } from "@/hooks/useAdminAuditLog";
-import { DrawSettingsManager } from "@/components/admin/DrawSettingsManager";
-import { OverrideReportPanel } from "@/components/admin/OverrideReportPanel";
 import { LeaderboardSettingsPanel } from "@/components/admin/LeaderboardSettingsPanel";
 import { formatDisplayName } from "@/lib/displayName";
 import { GuidedTour } from "@/components/tutorial/GuidedTour";
@@ -65,8 +58,9 @@ import { adminSteps } from "@/components/tutorial/tutorialSteps";
 import { PendingActionsSection } from "@/components/admin/PendingActionsSection";
 import { PendingApprovals } from "@/components/admin/PendingApprovals";
 import OpsCompliance from "@/pages/OpsCompliance";
+import { WorkflowRoleAssignments } from "@/components/admin/WorkflowRoleAssignments";
 
-const ADMIN_TAB_VALUES = ["users", "tiers", "notifications", "routing", "audit", "draws", "overrides", "leaderboard", "ops-compliance"] as const;
+const ADMIN_TAB_VALUES = ["users", "tiers", "workflow", "notifications", "routing", "audit", "leaderboard", "ops-compliance"] as const;
 
 /** Map DB role to display role for Admin Panel dropdown (User | Manager | Admin only). */
 function dbRoleToDisplayRole(dbRole: string | null | undefined): "user" | "manager" | "admin" {
@@ -515,6 +509,10 @@ export default function Admin() {
               <Percent className="w-4 h-4" />
               Commission Tiers
             </TabsTrigger>
+            <TabsTrigger value="workflow" className="gap-2">
+              <ShieldCheck className="w-4 h-4" />
+              Workflow
+            </TabsTrigger>
             <TabsTrigger value="notifications" className="gap-2">
               <Bell className="w-4 h-4" />
               Notifications
@@ -526,14 +524,6 @@ export default function Admin() {
             <TabsTrigger value="audit" className="gap-2">
               <FileText className="w-4 h-4" />
               Audit Log
-            </TabsTrigger>
-            <TabsTrigger value="draws" className="gap-2" data-tutorial="admin-draws-tab">
-              <DollarSign className="w-4 h-4" />
-              Draw Settings
-            </TabsTrigger>
-            <TabsTrigger value="overrides" className="gap-2">
-              <Percent className="w-4 h-4" />
-              Overrides
             </TabsTrigger>
             <TabsTrigger value="leaderboard" className="gap-2" data-tutorial="admin-leaderboard-tab">
               <Trophy className="w-4 h-4" />
@@ -934,6 +924,11 @@ export default function Admin() {
             <CommissionTierManager />
           </TabsContent>
 
+          {/* Workflow Tab */}
+          <TabsContent value="workflow" className="space-y-4">
+            <WorkflowRoleAssignments />
+          </TabsContent>
+
           {/* Notifications Tab */}
           <TabsContent value="notifications" className="space-y-4">
             <NotificationSettingsManager />
@@ -947,16 +942,6 @@ export default function Admin() {
           {/* Audit Log Tab */}
           <TabsContent value="audit" className="space-y-4">
             <AuditLogViewer />
-          </TabsContent>
-
-          {/* Draw Settings Tab */}
-          <TabsContent value="draws" className="space-y-4">
-            <DrawSettingsManager />
-          </TabsContent>
-
-          {/* Overrides Tab */}
-          <TabsContent value="overrides" className="space-y-4">
-            <OverrideReportPanel />
           </TabsContent>
 
           {/* Leaderboard Settings Tab */}

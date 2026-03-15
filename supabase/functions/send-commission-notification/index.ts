@@ -29,14 +29,58 @@ interface CommissionNotification {
   scheduled_pay_date?: string; // ISO date string of Friday pay date
 }
 
-// Dynamic recipient resolution using notification_routing and role_assignments
+// Resolve workflow role assignment (new table) — returns email or null
+async function resolveWorkflowAssignee(
+  supabaseClient: any,
+  roleKey: string
+): Promise<string | null> {
+  try {
+    const { data } = await supabaseClient
+      .from("workflow_role_assignments")
+      .select("assigned_user_id")
+      .eq("role_key", roleKey)
+      .single();
+
+    if (data?.assigned_user_id) {
+      const { data: profile } = await supabaseClient
+        .from("profiles")
+        .select("email")
+        .eq("id", data.assigned_user_id)
+        .single();
+      if (profile?.email) {
+        console.log(`Workflow role ${roleKey} resolved to:`, profile.email);
+        return profile.email;
+      }
+    }
+  } catch {
+    // Table may not exist yet — fall through to legacy resolution
+  }
+  return null;
+}
+
+// Dynamic recipient resolution — tries workflow_role_assignments first, then legacy tables
 async function resolveRecipients(
   supabaseClient: any,
   notificationType: string
 ): Promise<string[]> {
   const recipients: string[] = [];
 
-  // Get notification routing configuration
+  // Map notification types to workflow role keys
+  const workflowRoleMap: Record<string, string> = {
+    commission_submission: "compliance_reviewer",
+    commission_accounting: "accounting_reviewer",
+  };
+  const workflowRoleKey = workflowRoleMap[notificationType];
+
+  if (workflowRoleKey) {
+    const email = await resolveWorkflowAssignee(supabaseClient, workflowRoleKey);
+    if (email) {
+      recipients.push(email);
+      return [...new Set(recipients)];
+    }
+  }
+
+  // Legacy fallback: notification_routing + role_assignments
   const { data: routing } = await supabaseClient
     .from("notification_routing")
     .select("*")
@@ -49,7 +93,6 @@ async function resolveRecipients(
     return recipients;
   }
 
-  // Get role assignment for the primary role
   const { data: roleAssignment } = await supabaseClient
     .from("role_assignments")
     .select("*")
@@ -58,23 +101,17 @@ async function resolveRecipients(
     .single();
 
   if (roleAssignment) {
-    // Send to ALL compliance officers: both assigned_email and backup_email when present
     if (roleAssignment.assigned_email?.trim()) {
       recipients.push(roleAssignment.assigned_email.trim());
-      console.log("Added assigned role email:", roleAssignment.assigned_email);
     }
     if (roleAssignment.backup_email?.trim()) {
       recipients.push(roleAssignment.backup_email.trim());
-      console.log("Added backup role email:", roleAssignment.backup_email);
     }
     if (recipients.length === 0) {
       recipients.push(routing.fallback_email);
-      console.log("No role emails, using fallback:", routing.fallback_email);
     }
   } else {
-    // No role assignment, use fallback
     recipients.push(routing.fallback_email);
-    console.log("No role assignment, using fallback:", routing.fallback_email);
   }
 
   return [...new Set(recipients.filter(e => e && e.trim()))];

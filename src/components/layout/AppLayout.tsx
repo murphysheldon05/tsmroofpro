@@ -23,31 +23,19 @@ const routeHierarchy: Record<string, BreadcrumbItem[]> = {
   "/warranties": [{ label: "Warranty Tracker", href: "/warranties" }],
   "/tools": [{ label: "Tools & Systems", href: "/tools" }],
   "/requests": [{ label: "Forms & Requests", href: "/requests" }],
-  "/commissions": [{ label: "Commissions", href: "/commissions" }],
-  "/commissions/draws": [
-    { label: "Commissions", href: "/commissions" },
-    { label: "Draws", href: "/commissions/draws" },
-  ],
-  "/commission-documents": [
-    { label: "Commissions", href: "/commissions" },
-    { label: "Documents", href: "/commission-documents" },
-  ],
+  "/commissions": [{ label: "My Commissions", href: "/commissions" }],
   "/commissions/new": [
-    { label: "Commissions", href: "/commissions" },
-    { label: "New Submission", href: "/commissions/new" },
+    { label: "My Commissions", href: "/commissions" },
+    { label: "New Commission", href: "/commissions/new" },
   ],
-  "/commissions/draw/new": [
-    { label: "Commissions", href: "/commissions" },
-    { label: "Request a Draw", href: "/commissions/draw/new" },
-  ],
+  "/commission-manager": [{ label: "Commission Manager", href: "/commission-manager" }],
   "/user-directory": [
     { label: "Subs & Vendors", href: "/vendors/subcontractors" },
     { label: "Team Directory", href: "/user-directory" },
   ],
   "/commission-documents/new": [
-    { label: "Commissions", href: "/commissions" },
-    { label: "Documents", href: "/commission-documents" },
-    { label: "New Document", href: "/commission-documents/new" },
+    { label: "My Commissions", href: "/commissions" },
+    { label: "New Commission", href: "/commission-documents/new" },
   ],
   "/directory": [{ label: "Who to Contact", href: "/directory" }],
   "/vendors": [{ label: "Subs & Vendors", href: "/vendors" }],
@@ -71,19 +59,17 @@ function getBreadcrumbs(pathname: string): BreadcrumbItem[] {
     return routeHierarchy[pathname];
   }
 
-  if (pathname.startsWith("/commissions/") && pathname !== "/commissions/new" && pathname !== "/commissions/draw/new") {
-    const isDraw = pathname.includes("/draw/");
+  if (pathname.startsWith("/commissions/") && pathname !== "/commissions/new") {
     return [
-      { label: "Commissions", href: "/commissions" },
-      { label: isDraw ? "Draw Details" : "Submission Details", href: pathname },
+      { label: "My Commissions", href: "/commissions" },
+      { label: "Commission Details", href: pathname },
     ];
   }
 
   if (pathname.startsWith("/commission-documents/") && pathname !== "/commission-documents/new") {
     return [
-      { label: "Commissions", href: "/commissions" },
-      { label: "Documents", href: "/commission-documents" },
-      { label: "Document Details", href: pathname },
+      { label: "My Commissions", href: "/commissions" },
+      { label: "Commission Details", href: pathname },
     ];
   }
 

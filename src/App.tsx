@@ -20,21 +20,15 @@ const Profile = lazy(() => import("./pages/Profile"));
 const UserDirectory = lazy(() => import("./pages/UserDirectory"));
 const Directory = lazy(() => import("./pages/Directory"));
 const Warranties = lazy(() => import("./pages/Warranties"));
-const Commissions = lazy(() => import("./pages/Commissions"));
+const MyCommissions = lazy(() => import("./pages/MyCommissions"));
 const CommissionNew = lazy(() => import("./pages/CommissionNew"));
-const CommissionDrawNew = lazy(() => import("./pages/CommissionDrawNew"));
-const CommissionDetail = lazy(() => import("./pages/CommissionDetail"));
-const CommissionDocuments = lazy(() => import("./pages/CommissionDocuments"));
 const CommissionDocumentNew = lazy(() => import("./pages/CommissionDocumentNew"));
 const CommissionDocumentDetail = lazy(() => import("./pages/CommissionDocumentDetail"));
-const CommissionTracker = lazy(() => import("./pages/CommissionTracker"));
-const CommissionTrackerDetail = lazy(() => import("./pages/CommissionTrackerDetail"));
-const MyCommissionTracker = lazy(() => import("./pages/MyCommissionTracker"));
+const CommissionManager = lazy(() => import("./pages/CommissionManager"));
 const BuildSchedule = lazy(() => import("./pages/BuildSchedule"));
 const DeliverySchedule = lazy(() => import("./pages/DeliverySchedule"));
 const CommandCenter = lazy(() => import("./pages/CommandCenter"));
 const PendingReview = lazy(() => import("./pages/PendingReview"));
-const Accounting = lazy(() => import("./pages/Accounting"));
 const ContactList = lazy(() => import("./pages/ContactList"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
@@ -74,12 +68,6 @@ function RequireAdmin() {
   return <Outlet />;
 }
 
-function RequireManager() {
-  const { isManager } = useAuth();
-  if (!isManager) return <Navigate to="/command-center" replace />;
-  return <Outlet />;
-}
-
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -108,23 +96,15 @@ const App = () => (
               <Route path="/warranties" element={<Warranties />} />
               <Route path="/build-schedule" element={<BuildSchedule />} />
               <Route path="/delivery-schedule" element={<DeliverySchedule />} />
-              <Route path="/commissions" element={<Commissions />} />
+              <Route path="/commissions" element={<MyCommissions />} />
               <Route path="/commissions/new" element={<CommissionNew />} />
-              <Route path="/commissions/draw/new" element={<CommissionDrawNew />} />
-              <Route path="/commissions/:id" element={<CommissionDetail />} />
-              <Route path="/commission-documents" element={<CommissionDocuments />} />
+              <Route path="/commissions/:id" element={<CommissionDocumentDetail />} />
               <Route path="/commission-documents/new" element={<CommissionDocumentNew />} />
               <Route path="/commission-documents/:id" element={<CommissionDocumentDetail />} />
-              <Route path="/my-commissions" element={<MyCommissionTracker />} />
 
               <Route element={<RequireAdmin />}>
                 <Route path="/admin" element={<Admin />} />
-                <Route path="/accounting" element={<Accounting />} />
-              </Route>
-
-              <Route element={<RequireManager />}>
-                <Route path="/commission-tracker" element={<CommissionTracker />} />
-                <Route path="/commission-tracker/:repSlug" element={<CommissionTrackerDetail />} />
+                <Route path="/commission-manager" element={<CommissionManager />} />
               </Route>
             </Route>
 
@@ -133,6 +113,11 @@ const App = () => (
             <Route path="/directory" element={<Navigate to="/vendors/contact-list" replace />} />
             <Route path="/vendors" element={<Navigate to="/vendors/subcontractors" replace />} />
             <Route path="/commissions/draws" element={<Navigate to="/commissions" replace />} />
+            <Route path="/commissions/draw/new" element={<Navigate to="/commissions" replace />} />
+            <Route path="/commission-documents" element={<Navigate to="/commissions" replace />} />
+            <Route path="/my-commissions" element={<Navigate to="/commissions" replace />} />
+            <Route path="/commission-tracker" element={<Navigate to="/commission-manager" replace />} />
+            <Route path="/accounting" element={<Navigate to="/commission-manager" replace />} />
             <Route path="/ops-compliance" element={<Navigate to="/admin?tab=ops-compliance" replace />} />
 
             <Route path="*" element={<NotFound />} />

@@ -1,0 +1,349 @@
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
+
+export interface ManagerCommission {
+  id: string;
+  job_name_id: string;
+  job_date: string;
+  sales_rep: string;
+  sales_rep_id: string | null;
+  created_by: string;
+  rep_commission: number;
+  gross_contract_total: number;
+  status: string;
+  created_at: string;
+  submitted_at: string | null;
+  paid_at: string | null;
+  manager_approved_at: string | null;
+  accounting_approved_at: string | null;
+  revision_reason: string | null;
+  submitter_email: string | null;
+  rep_name?: string;
+}
+
+export function useManagerCommissions(statusFilter?: string) {
+  const { isAdmin } = useAuth();
+
+  return useQuery({
+    queryKey: ["manager-commissions", statusFilter],
+    queryFn: async () => {
+      let query = supabase
+        .from("commission_documents")
+        .select("*")
+        .neq("status", "draft")
+        .order("created_at", { ascending: false });
+
+      if (statusFilter && statusFilter !== "all") {
+        query = query.eq("status", statusFilter);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+
+      const userIds = [...new Set((data || []).map((d) => d.created_by).filter(Boolean))];
+      let profileMap: Record<string, string> = {};
+      if (userIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("id, full_name, email")
+          .in("id", userIds);
+
+        profileMap = (profiles || []).reduce((acc, p) => {
+          acc[p.id] = p.full_name || p.email || "Unknown";
+          return acc;
+        }, {} as Record<string, string>);
+      }
+
+      return (data || []).map((d) => ({
+        ...d,
+        rep_name: d.sales_rep || profileMap[d.created_by] || "Unknown",
+      })) as ManagerCommission[];
+    },
+    enabled: isAdmin,
+  });
+}
+
+export function useManagerSummary() {
+  const { isAdmin } = useAuth();
+
+  return useQuery({
+    queryKey: ["manager-commission-summary"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("commission_documents")
+        .select("status, rep_commission, paid_at")
+        .neq("status", "draft");
+
+      if (error) throw error;
+
+      const now = new Date();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+      const pendingCompliance = (data || [])
+        .filter((d) => d.status === "submitted")
+        .reduce((sum, d) => sum + (d.rep_commission || 0), 0);
+
+      const pendingAccounting = (data || [])
+        .filter((d) => d.status === "manager_approved")
+        .reduce((sum, d) => sum + (d.rep_commission || 0), 0);
+
+      const pendingPayment = (data || [])
+        .filter((d) => d.status === "accounting_approved")
+        .reduce((sum, d) => sum + (d.rep_commission || 0), 0);
+
+      const paidThisMonth = (data || [])
+        .filter((d) => d.status === "paid" && d.paid_at && new Date(d.paid_at) >= startOfMonth)
+        .reduce((sum, d) => sum + (d.rep_commission || 0), 0);
+
+      return { pendingCompliance, pendingAccounting, pendingPayment, paidThisMonth };
+    },
+    enabled: isAdmin,
+  });
+}
+
+export function useApproveCommissionDoc() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  return useMutation({
+    mutationFn: async ({ id, newStatus }: { id: string; newStatus: "manager_approved" | "accounting_approved" | "paid" }) => {
+      const updateData: Record<string, any> = { status: newStatus };
+      const now = new Date().toISOString();
+
+      if (newStatus === "manager_approved") {
+        updateData.manager_approved_by = user?.id;
+        updateData.manager_approved_at = now;
+      } else if (newStatus === "accounting_approved") {
+        updateData.accounting_approved_by = user?.id;
+        updateData.accounting_approved_at = now;
+        updateData.approved_by = user?.id;
+        updateData.approved_at = now;
+      } else if (newStatus === "paid") {
+        updateData.paid_by = user?.id;
+        updateData.paid_at = now;
+      }
+
+      const { data, error } = await supabase
+        .from("commission_documents")
+        .update(updateData)
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Send notification
+      const { data: creatorProfile } = await supabase
+        .from("profiles")
+        .select("email, full_name")
+        .eq("id", data.created_by)
+        .single();
+
+      const { data: currentUserProfile } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("id", user!.id)
+        .single();
+
+      const notificationTypeMap: Record<string, string> = {
+        manager_approved: "manager_approved",
+        accounting_approved: "accounting_approved",
+        paid: "paid",
+      };
+
+      await supabase.functions.invoke("send-commission-notification", {
+        body: {
+          notification_type: notificationTypeMap[newStatus],
+          document_type: "commission_document",
+          commission_id: data.id,
+          job_name: data.job_name_id,
+          job_address: data.job_name_id,
+          sales_rep_name: data.sales_rep,
+          submission_type: "employee",
+          contract_amount: data.gross_contract_total,
+          net_commission_owed: data.rep_commission,
+          submitter_email: creatorProfile?.email || data.submitter_email,
+          submitter_name: creatorProfile?.full_name || data.sales_rep,
+          status: newStatus,
+          changed_by_name: currentUserProfile?.full_name || "Admin",
+          scheduled_pay_date: data.scheduled_pay_date,
+        },
+      }).catch(console.error);
+
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["manager-commissions"] });
+      queryClient.invalidateQueries({ queryKey: ["manager-commission-summary"] });
+      queryClient.invalidateQueries({ queryKey: ["commission-documents"] });
+      toast.success("Commission updated successfully");
+    },
+    onError: (error: Error) => {
+      toast.error("Failed to update commission: " + error.message);
+    },
+  });
+}
+
+export function useRejectCommissionDoc() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  return useMutation({
+    mutationFn: async ({ id, reason }: { id: string; reason: string }) => {
+      const { data, error } = await supabase
+        .from("commission_documents")
+        .update({
+          status: "rejected",
+          revision_reason: reason,
+          revision_count: supabase.rpc ? undefined : 0,
+        })
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Increment revision count
+      await supabase.rpc("increment_revision_count" as any, { doc_id: id }).catch(() => {
+        // RPC may not exist; ignore
+      });
+
+      // Send rejection notification to rep
+      const { data: creatorProfile } = await supabase
+        .from("profiles")
+        .select("email, full_name")
+        .eq("id", data.created_by)
+        .single();
+
+      const { data: currentUserProfile } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("id", user!.id)
+        .single();
+
+      await supabase.functions.invoke("send-commission-notification", {
+        body: {
+          notification_type: "rejected",
+          document_type: "commission_document",
+          commission_id: data.id,
+          job_name: data.job_name_id,
+          job_address: data.job_name_id,
+          sales_rep_name: data.sales_rep,
+          submission_type: "employee",
+          contract_amount: data.gross_contract_total,
+          net_commission_owed: data.rep_commission,
+          submitter_email: creatorProfile?.email || data.submitter_email,
+          submitter_name: creatorProfile?.full_name || data.sales_rep,
+          status: "rejected",
+          notes: reason,
+          changed_by_name: currentUserProfile?.full_name || "Admin",
+        },
+      }).catch(console.error);
+
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["manager-commissions"] });
+      queryClient.invalidateQueries({ queryKey: ["manager-commission-summary"] });
+      queryClient.invalidateQueries({ queryKey: ["commission-documents"] });
+      toast.success("Commission rejected");
+    },
+    onError: (error: Error) => {
+      toast.error("Failed to reject commission: " + error.message);
+    },
+  });
+}
+
+export function useImportCommission() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  return useMutation({
+    mutationFn: async (data: {
+      sales_rep_id: string;
+      sales_rep_name: string;
+      job_name: string;
+      job_date: string;
+      amount: number;
+      mark_as_paid: boolean;
+    }) => {
+      const now = new Date().toISOString();
+      const insertData: Record<string, any> = {
+        job_name_id: data.job_name,
+        job_date: data.job_date,
+        sales_rep: data.sales_rep_name,
+        sales_rep_id: data.sales_rep_id,
+        created_by: data.sales_rep_id,
+        rep_commission: data.amount,
+        gross_contract_total: data.amount,
+        contract_total_net: data.amount,
+        net_profit: data.amount,
+        company_profit: 0,
+        advance_total: 0,
+        material_cost: 0,
+        labor_cost: 0,
+        neg_exp_1: 0,
+        neg_exp_2: 0,
+        neg_exp_3: 0,
+        pos_exp_1: 0,
+        pos_exp_2: 0,
+        pos_exp_3: 0,
+        pos_exp_4: 0,
+        supplement_fees_expense: 0,
+        op_percent: 0,
+        commission_rate: 1,
+        status: data.mark_as_paid ? "paid" : "accounting_approved",
+        submitted_at: now,
+        manager_approved_by: user?.id,
+        manager_approved_at: now,
+        accounting_approved_by: user?.id,
+        accounting_approved_at: now,
+      };
+
+      if (data.mark_as_paid) {
+        insertData.paid_by = user?.id;
+        insertData.paid_at = now;
+      }
+
+      const { error } = await supabase.from("commission_documents").insert(insertData);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["manager-commissions"] });
+      queryClient.invalidateQueries({ queryKey: ["manager-commission-summary"] });
+      toast.success("Commission imported successfully");
+    },
+    onError: (error: Error) => {
+      toast.error("Import failed: " + error.message);
+    },
+  });
+}
+
+export function useAllReps() {
+  return useQuery({
+    queryKey: ["all-sales-reps"],
+    queryFn: async () => {
+      const { data: roles } = await supabase
+        .from("user_roles")
+        .select("user_id, role")
+        .in("role", ["sales_rep", "sales_manager"]);
+
+      const repIds = (roles || []).map((r) => r.user_id);
+      if (repIds.length === 0) return [];
+
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, full_name, email")
+        .in("id", repIds)
+        .eq("employee_status", "active");
+
+      return (profiles || []).map((p) => ({
+        id: p.id,
+        name: p.full_name || p.email || "Unknown",
+        email: p.email,
+      }));
+    },
+  });
+}

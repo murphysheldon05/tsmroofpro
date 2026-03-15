@@ -28,9 +28,7 @@ import {
   Settings,
   LogOut,
   ChevronDown,
-  TrendingUp,
   Hammer,
-  Calculator,
   Shield,
   Wrench,
   Menu,
@@ -41,7 +39,6 @@ import {
   DollarSign,
   Calendar,
   GripVertical,
-  BarChart3,
   Compass,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -51,7 +48,6 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { useCurrentUserPermissions, isSectionVisible } from "@/hooks/useUserPermissions";
-import { useUserCommissionTier } from "@/hooks/useCommissionTiers";
 import { useSidebarOrder } from "@/hooks/useSidebarOrder";
 import { useWalkthroughContext } from "@/contexts/WalkthroughContext";
 import { usePendingComplianceCount, useNewWarrantyCount, useSheldonPendingCount } from "@/hooks/useNavBadgeCounts";
@@ -79,25 +75,13 @@ interface NavItem {
   tutorialTarget?: string;
 }
 
-// Main navigation items
-const navigationItems: NavItem[] = [
+// Base navigation items (commission item is added dynamically based on role)
+const baseNavigationItems: NavItem[] = [
   {
     title: "Command Center",
     href: "/command-center",
     icon: LayoutGrid,
     sectionKey: "command-center",
-  },
-  {
-    title: "Commissions",
-    icon: DollarSign,
-    sectionKey: "commissions",
-    tutorialTarget: "sidebar-commissions",
-    children: [
-      { title: "Submissions", href: "/commissions", icon: DollarSign, sectionKey: "commissions" },
-      { title: "My Tracker", href: "/my-commissions", icon: BarChart3, sectionKey: "commissions", salesRepOnly: true },
-      { title: "Tracker", href: "/commission-tracker", icon: TrendingUp, sectionKey: "commissions", managerOnly: true },
-      { title: "Accounting", href: "/accounting", icon: Calculator, sectionKey: "accounting", adminOnly: true },
-    ],
   },
   {
     title: "Production",
@@ -281,8 +265,6 @@ export function AppSidebar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [openSections, setOpenSections] = useState<string[]>([]);
   const { data: userPermissions } = useCurrentUserPermissions();
-  const { data: userTier } = useUserCommissionTier(user?.id);
-  const hasCommissionTier = !!userTier?.tier_id || !!userTier?.tier;
   const { order, reorder } = useSidebarOrder();
   const [profile, setProfile] = useState<{ avatar_url: string | null; full_name: string | null } | null>(null);
   const { data: pendingComplianceCount = 0 } = usePendingComplianceCount();
@@ -353,15 +335,16 @@ export function AppSidebar() {
 
   const getRoleBadgeVariant = () => {
     if (role === 'admin') return 'destructive';
-    if (role === 'manager' || role === 'sales_manager') return 'default';
+    if (role === 'manager') return 'default';
     return 'secondary';
   };
 
   const getRoleLabel = () => {
     if (role === 'admin') return 'Admin';
     if (role === 'manager') return 'Manager';
-    if (role === 'sales_manager') return 'Sales Manager';
     if (role === 'sales_rep') return 'Sales Rep';
+    if (role === 'accounting') return 'Accounting';
+    if (role === 'production_manager') return 'Production';
     return 'User';
   };
 
@@ -397,31 +380,44 @@ export function AppSidebar() {
     setMobileOpen(false);
   };
 
-  // Filter navigation based on permissions
+  // Build navigation with role-based commission item
   const filteredNavigation = useMemo(() => {
-    return navigationItems
-      .filter((item) => {
-        if (item.sectionKey === "commissions") {
-          if (isAdmin || isManager) return true;
-          if (!hasCommissionTier) return false;
+    const commissionItem: NavItem = isAdmin
+      ? {
+          title: "Commission Manager",
+          href: "/commission-manager",
+          icon: DollarSign,
+          sectionKey: "commissions",
+          tutorialTarget: "sidebar-commissions",
         }
-        return isSectionVisible(item.sectionKey, userPermissions, role);
-      })
+      : {
+          title: "Commissions",
+          href: "/commissions",
+          icon: DollarSign,
+          sectionKey: "commissions",
+          tutorialTarget: "sidebar-commissions",
+        };
+
+    const allItems: NavItem[] = [
+      baseNavigationItems[0], // Command Center
+      commissionItem,
+      ...baseNavigationItems.slice(1), // Production, Subs & Vendors
+    ];
+
+    return allItems
+      .filter((item) => isSectionVisible(item.sectionKey, userPermissions, role))
       .map((item) => {
         if (item.children) {
-          const filteredChildren = item.children.filter((child) => {
-            if (child.managerOnly && !isManager && !isAdmin) return false;
-            if (child.adminOnly && !isAdmin) return false;
-            if (child.salesRepOnly && role !== "sales_rep" && role !== "sales_manager") return false;
-            return isSectionVisible(child.sectionKey, userPermissions, role);
-          });
+          const filteredChildren = item.children.filter((child) =>
+            isSectionVisible(child.sectionKey, userPermissions, role)
+          );
           if (filteredChildren.length === 0) return null;
           return { ...item, children: filteredChildren };
         }
         return item;
       })
       .filter(Boolean) as NavItem[];
-  }, [userPermissions, role, isManager, isAdmin, hasCommissionTier]);
+  }, [userPermissions, role, isAdmin]);
 
   // Sort navigation by user's preferred order
   const sortedNavigation = useMemo(() => {
@@ -474,8 +470,8 @@ export function AppSidebar() {
             strategy={verticalListSortingStrategy}
           >
             {sortedNavigation.map((item) => {
-              const badgeCount = item.title === "Commissions" && showCommissionsBadge ? pendingComplianceCount : item.title === "Production" && showProductionBadge ? newWarrantyCount : undefined;
-              const badgeMoveToChildTitle = item.title === "Commissions" ? "Accounting" : item.title === "Production" ? "Warranty Tracker" : undefined;
+              const badgeCount = (item.title === "Commission Manager" || item.title === "Commissions") && showCommissionsBadge ? pendingComplianceCount : item.title === "Production" && showProductionBadge ? newWarrantyCount : undefined;
+              const badgeMoveToChildTitle = item.title === "Production" ? "Warranty Tracker" : undefined;
               return (
                 <SortableNavItem
                   key={item.title}

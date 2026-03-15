@@ -12,14 +12,11 @@ export const SIDEBAR_SECTIONS = [
   { key: "production-calendar/delivery", label: "Delivery Schedule", parent: "production-calendar" },
   { key: "requests", label: "Forms & Requests", parent: null },
   { key: "commissions", label: "Commissions", parent: null },
-  { key: "commissions/submissions", label: "Submissions", parent: "commissions" },
-  { key: "commissions/documents", label: "Documents", parent: "commissions" },
   { key: "company", label: "Company", parent: null },
   { key: "directory", label: "Team Directory", parent: null },
   { key: "vendors", label: "Subs & Vendors", parent: null },
   { key: "vendors/subcontractors", label: "Sub-Contractors", parent: "vendors" },
   { key: "vendors/contact-list", label: "Contact List", parent: "vendors" },
-  { key: "accounting", label: "Accounting", parent: null },
 ] as const;
 
 export type SectionKey = (typeof SIDEBAR_SECTIONS)[number]["key"];

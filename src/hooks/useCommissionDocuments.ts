@@ -469,8 +469,8 @@ async function sendCommissionDocumentNotification(
       'manager_approved': 'manager_approved',
       'accounting_approved': 'accounting_approved',
       'paid': 'paid',
-      'revision_required': 'revision_required',
-      'rejected': 'denied',
+      'revision_required': 'rejected',
+      'rejected': 'rejected',
     };
 
     const notificationType = notificationTypeMap[status];
