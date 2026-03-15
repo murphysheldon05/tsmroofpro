@@ -58,14 +58,14 @@ export function LogViolationModalEnhanced({ open, onOpenChange }: LogViolationMo
   
   const [evidenceUrls, setEvidenceUrls] = useState<string[]>([""]);
 
-  // Get the ops_compliance user (Manny) to assign violations to
+  // Get the admin user to assign violations to
   const { data: opsComplianceUser } = useQuery({
     queryKey: ["ops-compliance-user"],
     queryFn: async () => {
       const { data } = await supabase
         .from("user_roles")
         .select("user_id")
-        .eq("role", "ops_compliance")
+        .eq("role", "admin")
         .limit(1)
         .single();
       return data?.user_id || null;

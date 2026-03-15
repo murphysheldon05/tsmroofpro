@@ -67,17 +67,14 @@ export default function CommissionDocumentDetail() {
   }, [document]);
 
   // --- Role-based action permissions ---
-  const isSalesManager = role === 'sales_manager';
   const isAccountingUser = userDepartment === 'Accounting';
   
-  // Manager can approve submitted docs (but NOT their own, and NOT if they're the assigned manager)
-  const canApproveAsManager = (isAdmin || isSalesManager) && 
+  // Admin can approve submitted docs (compliance review)
+  const canApproveAsManager = isAdmin && 
     document?.status === 'submitted' && 
-    document?.created_by !== user?.id &&
-    document?.manager_id !== user?.id;
+    document?.created_by !== user?.id;
   
-  // Self-submitted by a sales manager → needs admin approval
-  const isSelfSubmission = isSalesManager && document?.created_by === user?.id && document?.status === 'submitted';
+  const isSelfSubmission = false;
   
   // Accounting can process manager_approved docs (Admin OR Accounting department)
   const canApproveAsAccounting = (isAdmin || isAccountingUser) && document?.status === 'manager_approved';
@@ -150,7 +147,7 @@ export default function CommissionDocumentDetail() {
         <div className="container mx-auto py-6 text-center">
           <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
           <p className="text-muted-foreground">Document not found</p>
-          <Button variant="outline" className="mt-4" onClick={() => navigate('/commission-documents')}>
+          <Button variant="outline" className="mt-4" onClick={() => navigate(isAdmin ? '/commission-manager' : '/commissions')}>
             Back to List
           </Button>
         </div>
@@ -205,7 +202,7 @@ export default function CommissionDocumentDetail() {
       manager_approved: 'bg-blue-100 text-blue-800 border-blue-300',
       accounting_approved: 'bg-green-100 text-green-800 border-green-300',
       paid: 'bg-emerald-100 text-emerald-800 border-emerald-300',
-      revision_required: 'bg-amber-100 text-amber-800 border-amber-300',
+      revision_required: 'bg-red-100 text-red-800 border-red-300',
     };
     return (
       <Badge variant={variants[status] || "secondary"} className={colors[status] || ''}>
@@ -270,7 +267,7 @@ export default function CommissionDocumentDetail() {
   return (
     <div className="container mx-auto py-6 space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <Button variant="ghost" onClick={() => navigate('/commission-documents')}>
+        <Button variant="ghost" onClick={() => navigate(isAdmin ? '/commission-manager' : '/commissions')}>
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to List
         </Button>
@@ -372,7 +369,7 @@ export default function CommissionDocumentDetail() {
                   <AlertDialogAction
                     onClick={() => {
                       deleteDocument.mutate(id!, {
-                        onSuccess: () => navigate('/commission-documents'),
+                        onSuccess: () => navigate(isAdmin ? '/commission-manager' : '/commissions'),
                       });
                     }}
                     disabled={deleteDocument.isPending}
@@ -413,15 +410,15 @@ export default function CommissionDocumentDetail() {
         </CardContent>
       </Card>
 
-      {/* Revision Notice */}
+      {/* Rejection Notice */}
       {document.status === 'revision_required' && document.revision_reason && (
-        <Card className="border-amber-300 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-700">
+        <Card className="border-red-300 bg-red-50 dark:bg-red-950/20 dark:border-red-700">
           <CardContent className="pt-4">
             <div className="flex items-start gap-2">
-              <RotateCcw className="h-5 w-5 text-amber-600 mt-0.5" />
+              <RotateCcw className="h-5 w-5 text-red-600 mt-0.5" />
               <div>
-                <p className="font-medium text-amber-800 dark:text-amber-400">Rejected</p>
-                <p className="text-sm text-amber-700 dark:text-amber-300/80 mt-1">{document.revision_reason}</p>
+                <p className="font-medium text-red-800 dark:text-red-400">Commission Rejected</p>
+                <p className="text-sm text-red-700 dark:text-red-300/80 mt-1">{document.revision_reason}</p>
               </div>
             </div>
           </CardContent>

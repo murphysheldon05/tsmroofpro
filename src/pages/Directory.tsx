@@ -290,7 +290,7 @@ export default function Directory() {
   const { role } = useAuth();
   const isAdmin = role === "admin";
   const isManager = role === "manager";
-  const isSalesManager = role === "sales_manager";
+  const isSalesManager = false;
   const canEdit = isAdmin || isManager;
   const canView = canEdit || isSalesManager;
   const canImport = isAdmin || isManager;

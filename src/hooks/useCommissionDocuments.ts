@@ -309,25 +309,7 @@ export function useUpdateCommissionDocumentStatus() {
             .eq('id', user.id)
             .single();
           
-          // Check if submitter is a sales_manager or admin — self-commission prevention
-          const { data: roleData } = await supabase
-            .from('user_roles')
-            .select('role')
-            .eq('user_id', user.id)
-            .single();
-          
-          const isSubmitterSalesManager = roleData?.role === 'sales_manager';
-          const isSubmitterAdmin = roleData?.role === 'admin';
-          
-          if (isSubmitterAdmin) {
-            // Admin submission — skip manager approval, go straight to accounting
-            updateData.manager_id = null;
-            updateData.manager_approved_by = user.id;
-            updateData.manager_approved_at = new Date().toISOString();
-          } else if (isSubmitterSalesManager) {
-            // Sales Manager self-submission — route to Admin for review (can't approve own)
-            updateData.manager_id = null; // No specific manager — Admin will pick it up
-          } else if (profile?.manager_id) {
+          if (profile?.manager_id) {
             updateData.manager_id = profile.manager_id;
           }
           updateData.submitter_email = profile?.email || null;

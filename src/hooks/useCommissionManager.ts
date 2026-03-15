@@ -191,7 +191,7 @@ export function useRejectCommissionDoc() {
   const { user } = useAuth();
 
   return useMutation({
-    mutationFn: async ({ id, reason }: { id: string; reason: string }) => {
+    mutationFn: async ({ id, reason, rejection_source }: { id: string; reason: string; rejection_source?: "compliance" | "accounting" }) => {
       const { data, error } = await supabase
         .from("commission_documents")
         .update({
@@ -238,6 +238,7 @@ export function useRejectCommissionDoc() {
           submitter_name: creatorProfile?.full_name || data.sales_rep,
           status: "rejected",
           notes: reason,
+          rejection_source: rejection_source || "compliance",
           changed_by_name: currentUserProfile?.full_name || "Admin",
         },
       }).catch(console.error);
@@ -328,7 +329,7 @@ export function useAllReps() {
       const { data: roles } = await supabase
         .from("user_roles")
         .select("user_id, role")
-        .in("role", ["sales_rep", "sales_manager"]);
+        .in("role", ["sales_rep"]);
 
       const repIds = (roles || []).map((r) => r.user_id);
       if (repIds.length === 0) return [];

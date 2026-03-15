@@ -17,7 +17,6 @@ import { Building2, User, FileSpreadsheet, Paperclip, Send, Loader2, AlertCircle
 import { CommissionWorksheet } from "./CommissionWorksheet";
 import { CommissionAttachments } from "./CommissionAttachments";
 import { useCreateCommission, useSalesReps, COMMISSION_TIERS } from "@/hooks/useCommissions";
-import { useIsJobNumberDenied } from "@/hooks/useGovernedCommissionWorkflow";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { DatePickerField } from "@/components/ui/date-picker-field";
@@ -70,8 +69,8 @@ export function CommissionSubmitForm({ variant = "employee" }: CommissionSubmitF
   
   // Track entered job number to check if denied
   const [enteredJobNumber, setEnteredJobNumber] = useState<string>("");
-  const { data: isJobDenied } = useIsJobNumberDenied(enteredJobNumber);
-  const isManagerSubmission = role === "manager" || role === "admin" || role === "sales_manager";
+  const isJobDenied = false;
+  const isManagerSubmission = role === "manager" || role === "admin";
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),

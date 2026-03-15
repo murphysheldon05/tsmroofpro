@@ -41,8 +41,8 @@ function mapToUserRole(dbRole: string | null | undefined): UserRole {
       return 'manager';
     case 'user':
     case 'employee':
+    case 'user':
     case 'sales_rep':
-    case 'ops_compliance':
     case 'accounting':
     default:
       return 'user';

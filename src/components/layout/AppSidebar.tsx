@@ -270,7 +270,7 @@ export function AppSidebar() {
   const { data: pendingComplianceCount = 0 } = usePendingComplianceCount();
   const { data: newWarrantyCount = 0 } = useNewWarrantyCount();
   const { data: sheldonPendingCount = 0 } = useSheldonPendingCount();
-  const showCommissionsBadge = (isAdmin || role === "ops_compliance") && pendingComplianceCount > 0;
+  const showCommissionsBadge = isAdmin && pendingComplianceCount > 0;
   const showAdminPanelBadge = sheldonPendingCount > 0;
   const showProductionBadge = isSectionVisible("production", userPermissions, role) && newWarrantyCount > 0;
 
@@ -344,7 +344,7 @@ export function AppSidebar() {
     if (role === 'manager') return 'Manager';
     if (role === 'sales_rep') return 'Sales Rep';
     if (role === 'accounting') return 'Accounting';
-    if (role === 'production_manager') return 'Production';
+    if (role === 'production_manager' || role === 'production') return 'Production';
     return 'User';
   };
 
@@ -539,32 +539,30 @@ export function AppSidebar() {
           </Badge>
         </button>
 
-        {/* Admin & Manager Panel */}
-        {(isAdmin || isManager) && (
+        {/* Admin Panel */}
+        {isAdmin && (
           <div className="pt-2 border-t border-border/30">
             <span className="text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-[1px] px-3 mb-1 block">
-              {isAdmin ? 'Admin Panel' : 'Manager Panel'}
+              Admin Panel
             </span>
-            {isAdmin && (
-              <button
-                onClick={() => handleNavClick("/admin")}
-                onMouseEnter={() => prefetchRoute("/admin")}
-                className={cn(
-                  "w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm transition-colors duration-150 relative min-h-[44px]",
-                  isActive("/admin")
-                    ? "nav-item-active font-medium"
-                    : "text-sidebar-foreground/70 hover:bg-primary/5 hover:text-primary/80"
-                )}
-              >
-                <Settings className={cn("w-5 h-5", isActive("/admin") && "nav-icon-glow")} />
-                <span className="truncate flex-1 text-left">Admin Panel</span>
-                {showAdminPanelBadge && (
-                  <span className="flex items-center justify-center min-w-[18px] h-[18px] px-1.5 rounded-full bg-destructive text-destructive-foreground text-[11px] font-semibold">
-                    {sheldonPendingCount > 99 ? "99+" : sheldonPendingCount}
-                  </span>
-                )}
-              </button>
-            )}
+            <button
+              onClick={() => handleNavClick("/admin")}
+              onMouseEnter={() => prefetchRoute("/admin")}
+              className={cn(
+                "w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm transition-colors duration-150 relative min-h-[44px]",
+                isActive("/admin")
+                  ? "nav-item-active font-medium"
+                  : "text-sidebar-foreground/70 hover:bg-primary/5 hover:text-primary/80"
+              )}
+            >
+              <Settings className={cn("w-5 h-5", isActive("/admin") && "nav-icon-glow")} />
+              <span className="truncate flex-1 text-left">Admin Panel</span>
+              {showAdminPanelBadge && (
+                <span className="flex items-center justify-center min-w-[18px] h-[18px] px-1.5 rounded-full bg-destructive text-destructive-foreground text-[11px] font-semibold">
+                  {sheldonPendingCount > 99 ? "99+" : sheldonPendingCount}
+                </span>
+              )}
+            </button>
           </div>
         )}
         

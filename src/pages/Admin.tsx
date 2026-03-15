@@ -67,8 +67,7 @@ function dbRoleToDisplayRole(dbRole: string | null | undefined): "user" | "manag
   if (!dbRole) return "user";
   switch (dbRole) {
     case "admin": return "admin";
-    case "manager":
-    case "sales_manager": return "manager";
+    case "manager": return "manager";
     default: return "user"; // employee, sales_rep, user, or any unknown
   }
 }
@@ -283,9 +282,9 @@ export default function Admin() {
     if (displayRole === "admin") {
       targetRole = "admin";
     } else if (displayRole === "manager") {
-      targetRole = isSalesDept ? "sales_manager" : "manager";
+      targetRole = "manager";
     } else {
-      targetRole = isSalesDept && hasTier ? "sales_rep" : "employee";
+      targetRole = isSalesDept && hasTier ? "sales_rep" : "user";
     }
 
     const { error } = await supabase
@@ -362,13 +361,13 @@ export default function Admin() {
       const displayRole = dbRoleToDisplayRole(previousUser?.role);
       const isSalesDept = departmentName === "Sales";
       const hasTier = !!editUserData.commission_tier_id;
-      let targetRole: "admin" | "manager" | "employee" | "sales_rep" | "sales_manager" | "ops_compliance" | "accounting" | "user";
+      let targetRole: "admin" | "manager" | "sales_rep" | "accounting" | "user";
       if (displayRole === "admin") {
         targetRole = "admin";
       } else if (displayRole === "manager") {
-        targetRole = isSalesDept ? "sales_manager" : "manager";
+        targetRole = "manager";
       } else {
-        targetRole = isSalesDept && hasTier ? "sales_rep" : "employee";
+        targetRole = isSalesDept && hasTier ? "sales_rep" : "user";
       }
       const { error: roleError } = await supabase
         .from("user_roles")
@@ -658,7 +657,7 @@ export default function Admin() {
                     const deptName = getDepartmentDisplayName(user.full_name, user.email, rawDeptName);
                     const userManagerId = getUserManager(user.id);
                     const managerName = managers?.find((m) => m.id === userManagerId)?.full_name;
-                    const isSalesWithoutManager = (user.role === "sales_rep" || user.role === "sales_manager") && !userManagerId;
+                    const isSalesWithoutManager = user.role === "sales_rep" && !userManagerId;
 
                     return (
                       <tr

@@ -119,7 +119,7 @@ export function TeamAssignmentManager() {
     },
   });
 
-  const managers = users?.filter((u) => u.role === "manager" || u.role === "sales_manager" || u.role === "admin") || [];
+  const managers = users?.filter((u) => u.role === "manager" || u.role === "admin") || [];
   const employees = users?.filter((u) => u.role !== "admin" && u.role !== "manager") || [];
   
   // Get assigned employee IDs

@@ -86,6 +86,7 @@ export default function CommissionManager() {
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
   const [rejectTarget, setRejectTarget] = useState<{ id: string; jobName: string } | null>(null);
   const [rejectReason, setRejectReason] = useState("");
+  const [rejectSource, setRejectSource] = useState<"compliance" | "accounting">("compliance");
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [importData, setImportData] = useState({
     rep_id: "",
@@ -136,16 +137,17 @@ export default function CommissionManager() {
     approveCommission.mutate({ id, newStatus });
   };
 
-  const handleRejectClick = (id: string, jobName: string) => {
+  const handleRejectClick = (id: string, jobName: string, source: "compliance" | "accounting" = "compliance") => {
     setRejectTarget({ id, jobName });
     setRejectReason("");
+    setRejectSource(source);
     setRejectModalOpen(true);
   };
 
   const handleRejectConfirm = () => {
     if (!rejectTarget || !rejectReason.trim()) return;
     rejectCommission.mutate(
-      { id: rejectTarget.id, reason: rejectReason.trim() },
+      { id: rejectTarget.id, reason: rejectReason.trim(), rejection_source: rejectSource },
       {
         onSuccess: () => {
           setRejectModalOpen(false);
@@ -401,13 +403,13 @@ export default function CommissionManager() {
                             onClick={() => handleApprove(c.id, "accounting_approved")}
                             disabled={approveCommission.isPending}
                           >
-                            <Check className="w-4 h-4" /> Approve
+                            <Check className="w-4 h-4" /> Approve for Payment
                           </Button>
                           <Button
                             size="sm"
                             variant="ghost"
                             className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20 gap-1"
-                            onClick={() => handleRejectClick(c.id, c.job_name_id)}
+                            onClick={() => handleRejectClick(c.id, c.job_name_id, "accounting")}
                           >
                             <X className="w-4 h-4" /> Reject
                           </Button>

@@ -32,7 +32,6 @@ import { cn, formatCurrency } from "@/lib/utils";
 import { CommissionWorksheet } from "@/components/commissions/CommissionWorksheet";
 import { CommissionStatusTimeline } from "@/components/commissions/CommissionStatusTimeline";
 import { CommissionEditForm } from "@/components/commissions/CommissionEditForm";
-import { DrawCloseOutForm } from "@/components/commissions/DrawCloseOutForm";
 import { OverrideDetailSection } from "@/components/commissions/OverrideDetailSection";
 import {
   useCommissionSubmission,
@@ -43,7 +42,6 @@ import {
   useDeleteCommission,
   useRevertCommission,
 } from "@/hooks/useCommissions";
-import { slugifyRep } from "@/hooks/useCommissionEntries";
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
 import { formatPayDateShort } from "@/lib/commissionPayDateCalculations";
@@ -159,7 +157,7 @@ export default function CommissionDetail() {
   const isDenied = submission.status === "denied";
 
   // Phase 2 (Compliance Review): only Compliance Officer (Manny) or Admin (Sheldon) can action — managers removed from chain
-  const canDoComplianceReview = (role === "admin" || role === "ops_compliance") && isPendingManager;
+  const canDoComplianceReview = role === "admin" && isPendingManager;
   // Accounting can approve if pending_accounting stage (Courtney; reviewers in commission_reviewers)
   const canAccountingApprove = isReviewer && isPendingAccounting;
   // Admin can approve if pending_admin stage (manager submissions only)
@@ -279,11 +277,7 @@ export default function CommissionDetail() {
             </div>
           </div>
           
-          <DrawCloseOutForm
-            submission={submission}
-            onSuccess={() => { setIsClosingOut(false); refetch(); }}
-            onCancel={() => { setIsClosingOut(false); refetch(); }}
-          />
+          <div className="text-muted-foreground text-center py-8">Close-out form has been removed.</div>
         </div>
     );
   }
@@ -361,7 +355,7 @@ export default function CommissionDetail() {
                   if (isOwnSubmission) {
                     navigate("/my-commissions");
                   } else {
-                    navigate(`/commission-tracker/${slugifyRep(submission.sales_rep_name!)}`);
+                    navigate("/commission-manager");
                   }
                 }}
               >

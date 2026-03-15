@@ -105,7 +105,7 @@ function getSlaDays(type: PendingItem["type"], requiresAction: PendingItem["requ
 export function usePendingReview() {
   const { user, isAdmin, isManager, role, userDepartment } = useAuth();
   const isReviewer = isAdmin || isManager;
-  const canDoComplianceReview = isAdmin || role === "ops_compliance";
+  const canDoComplianceReview = isAdmin;
   const isProductionDept = userDepartment === "Production";
 
   return useQuery({

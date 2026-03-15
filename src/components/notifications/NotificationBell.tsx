@@ -1,3 +1,4 @@
+import { useCallback } from "react";
 import { Bell, Check, CheckCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,8 +25,14 @@ export function NotificationBell() {
     markAllRead.mutate();
   };
 
+  const handleOpenChange = useCallback((open: boolean) => {
+    if (open && unreadCount > 0) {
+      markAllRead.mutate();
+    }
+  }, [unreadCount, markAllRead]);
+
   return (
-    <Popover>
+    <Popover onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
         <Button variant="ghost" size="icon" className="relative">
           <Bell className="h-5 w-5" />

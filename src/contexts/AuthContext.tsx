@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { PasswordResetPrompt } from '@/components/auth/PasswordResetPrompt';
 import { DisplayNamePrompt } from '@/components/auth/DisplayNamePrompt';
 
-type AppRole = 'admin' | 'manager' | 'employee' | 'sales_rep' | 'sales_manager' | 'ops_compliance' | 'accounting' | 'production_manager';
+type AppRole = 'admin' | 'manager' | 'sales_rep' | 'production' | 'accounting' | 'user' | 'production_manager' | 'employee';
 type EmployeeStatus = 'active' | 'pending' | 'rejected' | 'inactive';
 
 interface AuthContextType {
@@ -219,12 +219,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signOut,
     refreshProfile,
     isAdmin: role === 'admin',
-    isManager: role === 'manager' || role === 'sales_manager' || role === 'admin',
-    isProductionManager: role === 'production_manager',
-    isSalesManager: role === 'sales_manager' || role === 'admin',
-    isSalesRep: role === 'sales_rep' || role === 'sales_manager' || role === 'admin',
-    canApproveCommissions: role === 'admin' || role === 'ops_compliance',
-    canSubmitCommissions: role === 'sales_rep' || role === 'sales_manager' || role === 'admin',
+    isManager: role === 'manager' || role === 'admin',
+    isProductionManager: role === 'production_manager' || role === 'production',
+    isSalesManager: role === 'admin',
+    isSalesRep: role === 'sales_rep',
+    canApproveCommissions: role === 'admin',
+    canSubmitCommissions: role === 'sales_rep',
     userDepartment,
     isActive,
   };

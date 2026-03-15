@@ -22,12 +22,16 @@ export function useNotifications() {
     queryFn: async () => {
       if (!user) return [];
 
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
       const { data, error } = await supabase
         .from('user_notifications')
         .select('*')
         .eq('user_id', user.id)
+        .gte('created_at', thirtyDaysAgo.toISOString())
         .order('created_at', { ascending: false })
-        .limit(20);
+        .limit(50);
 
       if (error) throw error;
       return data as UserNotification[];
@@ -45,11 +49,15 @@ export function useUnreadNotificationCount() {
     queryFn: async () => {
       if (!user) return 0;
 
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
       const { count, error } = await supabase
         .from('user_notifications')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', user.id)
-        .eq('is_read', false);
+        .eq('is_read', false)
+        .gte('created_at', thirtyDaysAgo.toISOString());
 
       if (error) throw error;
       return count || 0;

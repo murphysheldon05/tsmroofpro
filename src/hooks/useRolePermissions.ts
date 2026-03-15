@@ -146,21 +146,6 @@ export function useRolePermissions(): RolePermissions {
         canUploadTraining: true,
       };
 
-    case 'sales_manager':
-      return {
-        ...NO_PERMISSIONS,
-        canSubmitCommissions: true,
-        canApproveCommissions: false, canDenyCommissions: false, canRequestRevisions: false,
-        canViewTeamCommissions: true, canViewOwnCommissionsOnly: false,
-        canExportTeamData: true, canExportOwnData: true,
-        canReviewRequests: false, canApproveRequests: false,
-        canDraftSOPs: true,
-        canViewReports: true, canViewTeamReports: true,
-        canRequestDraws: true,
-        canApproveDraws: false,
-        canUploadTraining: true,
-      };
-
     case 'sales_rep':
       return {
         ...NO_PERMISSIONS,
@@ -181,14 +166,8 @@ export function useRolePermissions(): RolePermissions {
         canViewReports: true,
       };
 
-    case 'ops_compliance':
-      return {
-        ...NO_PERMISSIONS,
-        canViewReports: true,
-        canExportOwnData: true,
-      };
-
     case 'employee':
+    case 'user':
     default:
       return {
         ...NO_PERMISSIONS,
@@ -218,5 +197,5 @@ export function useCanViewAllData() {
 
 export function useCanViewTeamData() {
   const { role } = useAuth();
-  return role === 'admin' || role === 'manager' || role === 'sales_manager';
+  return role === 'admin' || role === 'manager';
 }

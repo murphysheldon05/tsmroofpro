@@ -235,7 +235,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     switch (payload.notification_type) {
       case "submitted":
-        subject = `New Commission Submitted — ${payload.submitter_name || repName}`;
+        subject = `New Commission Submitted — ${payload.submitter_name || repName} — ${payload.job_name}`;
         heading = "New Commission Submitted";
         introText = `New commission submitted by <strong>${payload.submitter_name || repName}</strong>.`;
         headerColor = "#d97706";
@@ -250,9 +250,9 @@ const handler = async (req: Request): Promise<Response> => {
         break;
 
       case "manager_approved":
-        subject = `Commission Ready for Payment — ${payload.submitter_name || repName}`;
-        heading = "Commission Ready for Payment";
-        introText = `Commission ready for payment review — <strong>${payload.submitter_name || repName}</strong> — <strong>${payload.job_name}</strong>.`;
+        subject = `Commission Ready for Accounting — ${payload.submitter_name || repName} — ${payload.job_name}`;
+        heading = "Commission Ready for Accounting Review";
+        introText = `Commission ready for accounting review — <strong>${payload.submitter_name || repName}</strong> — <strong>${payload.job_name}</strong>.`;
         headerColor = "#1d4ed8";
         recipientEmails = await resolveRecipients(supabaseClient, "commission_accounting");
         additionalPlainText = `Rep: ${payload.submitter_name || repName}\nJob: ${payload.job_name}\nAmount: ${formatCurrency(payload.net_commission_owed)}`;
@@ -265,34 +265,12 @@ const handler = async (req: Request): Promise<Response> => {
         break;
 
       case "accounting_approved":
-        // Celebratory email with scheduled pay date
-        const payDateFormatted = formatPayDateFn(payload.scheduled_pay_date);
-        subject = `🎉 Commission Approved - Payment Scheduled for ${payDateFormatted}!`;
-        heading = "Congratulations! Your Commission is Approved! 🎉";
-        introText = `Great news! Your commission for <strong>${payload.job_name}</strong> has been fully approved and is scheduled for payment!`;
-        headerColor = "#059669";
-        recipientEmails = payload.submitter_email ? [payload.submitter_email] : [];
-        const accountingRecipients = await resolveRecipients(supabaseClient, "commission_accounting");
-        recipientEmails.push(...accountingRecipients);
-        additionalPlainText = `Job: ${payload.job_name}\nCommission Amount: ${formatCurrency(payload.net_commission_owed)}\nPayment Date: ${payDateFormatted}\n\n🎉 Your hard work is paying off!`;
-        additionalContent = `
-          <tr><td colspan="2" style="padding: 30px; background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 50%, #d1fae5 100%); border-radius: 16px; text-align: center; margin-bottom: 15px;">
-            <div style="font-size: 48px; margin-bottom: 12px;">🎉💰🏠</div>
-            <div style="font-size: 14px; text-transform: uppercase; letter-spacing: 2px; color: #166534; font-weight: 600; margin-bottom: 8px;">Your Commission</div>
-            <div style="font-size: 36px; font-weight: 800; color: #15803d; margin-bottom: 4px;">${formatCurrency(payload.net_commission_owed)}</div>
-            <div style="font-size: 16px; color: #166534; font-weight: 600;">Has been approved! 🎊</div>
-          </td></tr>
-          <tr><td style="padding: 12px 0; border-bottom: 1px solid #e5e7eb;"><strong>Job:</strong></td><td style="padding: 12px 0; border-bottom: 1px solid #e5e7eb;">${payload.job_name}</td></tr>
-          <tr><td style="padding: 12px 0; border-bottom: 1px solid #e5e7eb;"><strong>Payment Date:</strong></td><td style="padding: 12px 0; border-bottom: 1px solid #e5e7eb; color: #1e40af; font-weight: bold; font-size: 18px;">📅 ${payDateFormatted}</td></tr>
-          <tr><td colspan="2" style="padding: 20px; background: #eff6ff; border-radius: 12px; margin-top: 10px; text-align: center;">
-            <div style="font-size: 15px; font-weight: 600; color: #1e40af;">Payment will be deposited on ${payDateFormatted}</div>
-            <div style="font-size: 13px; color: #6b7280; margin-top: 6px;">Your hard work is paying off — keep closing those deals! 💪</div>
-          </td></tr>
-        `;
+        // No email at this step per spec — only in-app notification
+        recipientEmails = [];
         break;
 
       case "paid":
-        subject = `Commission Paid — ${formatCurrency(payload.net_commission_owed)}`;
+        subject = `Commission Paid — ${payload.job_name} — ${formatCurrency(payload.net_commission_owed)}`;
         heading = "Commission Paid! 🎉";
         introText = `Your commission for ${payload.job_name} has been processed and paid.`;
         headerColor = "#059669";
@@ -304,8 +282,11 @@ const handler = async (req: Request): Promise<Response> => {
         `;
         break;
 
-      case "rejected":
-        subject = `Commission Rejected — Action Required`;
+      case "rejected": {
+        const rejectionSource = (rawPayload as any).rejection_source;
+        subject = rejectionSource === "accounting"
+          ? `Commission Rejected by Accounting — ${payload.job_name}`
+          : `Commission Rejected — ${payload.job_name}`;
         heading = "Commission Rejected";
         introText = `Your commission for <strong>${payload.job_name}</strong> was rejected.${payload.notes ? ` Rejection reason: ${payload.notes}` : " Please review the notes below and resubmit."}`;
         headerColor = "#dc2626";
@@ -324,6 +305,7 @@ const handler = async (req: Request): Promise<Response> => {
         `;
         buttonText = "View & Resubmit";
         break;
+      }
 
       case "rejected_commission_revised":
         subject = `Rejected Commission Revised by ${payload.submitter_name || repName}`;

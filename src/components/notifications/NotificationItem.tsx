@@ -45,9 +45,8 @@ function getNavigationPath(notification: UserNotification, isAdmin: boolean): st
   switch (entity_type) {
     case 'commission':
     case 'commission_document':
-      return entity_id ? `/commission-documents/${entity_id}` : '/commission-documents';
     case 'commission_submission':
-      return entity_id ? `/commissions/${entity_id}` : '/commissions';
+      return entity_id ? `/commissions/${entity_id}` : (isAdmin ? '/commission-manager' : '/commissions');
     case 'user':
       return '/admin';
     case 'it_request':

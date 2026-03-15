@@ -46,7 +46,7 @@ export function WarrantyForm({ open, onOpenChange, warranty }: WarrantyFormProps
   const updateMutation = useUpdateWarranty();
 
   const { isAdmin, isManager, role } = useAuth();
-  const canAssign = isAdmin || isManager || role === "sales_manager" || role === "production_manager";
+  const canAssign = isAdmin || isManager || role === "production_manager" || role === "production";
 
   // Fetch production department users only (for Assigned To dropdown)
   const { data: productionMembers = [] } = useQuery({
