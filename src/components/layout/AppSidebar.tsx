@@ -357,7 +357,7 @@ export function AppSidebar() {
   // Keep parent dropdown open when navigating to any of its subcategories
   useEffect(() => {
     const pathname = location.pathname;
-    navigationItems.forEach((item) => {
+    baseNavigationItems.forEach((item) => {
       if (item.children?.length) {
         const childActive = item.children.some(
           (c) => pathname === c.href || (c.href !== "/" && pathname.startsWith(c.href))
