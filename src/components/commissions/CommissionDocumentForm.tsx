@@ -401,17 +401,17 @@ export function CommissionDocumentForm({ document: existingDoc, readOnly = false
   // ── Auto-save for drafts ──
   const [autoSaveDocId, setAutoSaveDocId] = useState<string | null>(existingDoc?.id ?? null);
 
+  const canAutoSave = !!formData.job_name_id && !!formData.job_date && !!formData.sales_rep;
+
   const handleAutoSave = useCallback(async () => {
-    // Only auto-save if we have a document ID (already saved once) or minimal required fields
-    if (!formData.job_name_id && !autoSaveDocId) return;
+    if (!autoSaveDocId && !canAutoSave) return;
 
     const payload = buildPayload(false);
     
     try {
       if (autoSaveDocId) {
         await updateMutation.mutateAsync({ id: autoSaveDocId, ...payload });
-      } else if (formData.job_name_id) {
-        // Create new draft on first auto-save if job name exists
+      } else if (canAutoSave) {
         const result = await createMutation.mutateAsync(payload);
         if (result?.id) {
           setAutoSaveDocId(result.id);
@@ -420,14 +420,14 @@ export function CommissionDocumentForm({ document: existingDoc, readOnly = false
     } catch (error) {
       console.error("Auto-save failed:", error);
     }
-  }, [formData, additionalNegTotal, autoSaveDocId, buildPayload, updateMutation, createMutation]);
+  }, [formData, additionalNegTotal, autoSaveDocId, canAutoSave, buildPayload, updateMutation, createMutation]);
 
   const { lastSavedAt, isSaving: isAutoSaving, hasUnsavedChanges } = useAutoSave({
     data: { formData, additionalNegExpenses },
     onSave: handleAutoSave,
-    interval: 30000, // 30 seconds
-    enabled: canEdit && (!!autoSaveDocId || !!formData.job_name_id),
-    debounceMs: 3000, // 3 seconds after changes
+    interval: 30000,
+    enabled: canEdit && (!!autoSaveDocId || canAutoSave),
+    debounceMs: 3000,
   });
 
   // ── Save / Submit handlers ──
