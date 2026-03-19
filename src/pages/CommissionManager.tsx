@@ -55,21 +55,33 @@ const STATUS_MAP: Record<string, { label: string; color: string; bgClass: string
   manager_approved: { label: "Compliance Approved", color: "text-blue-700 dark:text-blue-400", bgClass: "bg-blue-100 dark:bg-blue-900/30 border-blue-300 dark:border-blue-700" },
   accounting_approved: { label: "Accounting Approved", color: "text-purple-700 dark:text-purple-400", bgClass: "bg-purple-100 dark:bg-purple-900/30 border-purple-300 dark:border-purple-700" },
   paid: { label: "Paid", color: "text-green-700 dark:text-green-400", bgClass: "bg-green-100 dark:bg-green-900/30 border-green-300 dark:border-green-700" },
-  rejected: { label: "Rejected", color: "text-red-700 dark:text-red-400", bgClass: "bg-red-100 dark:bg-red-900/30 border-red-300 dark:border-red-700" },
-  revision_required: { label: "Rejected", color: "text-red-700 dark:text-red-400", bgClass: "bg-red-100 dark:bg-red-900/30 border-red-300 dark:border-red-700" },
-  denied: { label: "Denied", color: "text-red-900 dark:text-red-300", bgClass: "bg-red-200 dark:bg-red-950/40 border-red-400 dark:border-red-800" },
+  rejected: { label: "Denied", color: "text-red-900 dark:text-red-300", bgClass: "bg-red-200 dark:bg-red-950/40 border-red-400 dark:border-red-800" },
+  revision_required: { label: "Revision Required", color: "text-amber-700 dark:text-amber-400", bgClass: "bg-amber-100 dark:bg-amber-900/30 border-amber-300 dark:border-amber-700" },
 };
 
 function formatCurrency(amount: number): string {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2 }).format(amount);
 }
 
-function StatusBadge({ status }: { status: string }) {
+function StatusBadge({ status, revisionCount }: { status: string; revisionCount?: number }) {
   const info = STATUS_MAP[status] || { label: status, color: "text-gray-600", bgClass: "bg-gray-100 border-gray-300" };
+  const wasRevised = (revisionCount ?? 0) > 0 && status !== "revision_required" && status !== "rejected";
   return (
-    <Badge variant="outline" className={`${info.bgClass} ${info.color} border`}>
-      {info.label}
-    </Badge>
+    <div className="flex items-center gap-1.5 flex-wrap">
+      <Badge variant="outline" className={`${info.bgClass} ${info.color} border`}>
+        {info.label}
+      </Badge>
+      {wasRevised && (
+        <Badge variant="outline" className="bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 border-amber-300 dark:border-amber-700 text-[10px]">
+          Revised
+        </Badge>
+      )}
+      {status === "rejected" && (
+        <Badge variant="outline" className="bg-red-50 dark:bg-red-950/30 text-red-800 dark:text-red-300 border-red-400 dark:border-red-700 text-[10px]">
+          Final
+        </Badge>
+      )}
+    </div>
   );
 }
 
@@ -523,7 +535,7 @@ export default function CommissionManager() {
                         {formatCurrency(c.rep_commission || 0)}
                       </TableCell>
                       <TableCell>
-                        <StatusBadge status={c.status} />
+                        <StatusBadge status={c.status} revisionCount={c.revision_count} />
                       </TableCell>
                       <TableCell className="hidden md:table-cell text-muted-foreground">
                         {c.paid_at ? new Date(c.paid_at).toLocaleDateString() : "—"}

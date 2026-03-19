@@ -84,13 +84,13 @@ export default function CommissionDocumentDetail() {
   // Accounting can mark as paid (Admin OR Accounting department)
   const canMarkAsPaid = (isAdmin || isAccountingUser) && document?.status === 'accounting_approved';
   
-  // Creator can edit drafts, revision_required, and rejected docs
+  // Creator can edit drafts and revision_required (rejected = denied, not editable)
   const canEdit = document?.created_by === user?.id && 
-    (document?.status === 'draft' || document?.status === 'revision_required' || document?.status === 'rejected');
+    (document?.status === 'draft' || document?.status === 'revision_required');
   
-  // Creator can resubmit revision_required or rejected docs
+  // Creator can resubmit revision_required docs (rejected = denied, no resubmit)
   const canResubmit = document?.created_by === user?.id && 
-    (document?.status === 'revision_required' || document?.status === 'rejected');
+    document?.status === 'revision_required';
 
   const handleApprovalAction = async () => {
     if (!id) return;
@@ -195,7 +195,7 @@ export default function CommissionDocumentDetail() {
       accounting_approved: "Approved — Payment Scheduled",
       approved: "Approved",
       rejected: "Denied",
-      revision_required: "Rejected",
+      revision_required: "Revision Required",
       paid: "Paid",
     };
     const colors: Record<string, string> = {
@@ -204,12 +204,26 @@ export default function CommissionDocumentDetail() {
       manager_approved: 'bg-blue-100 text-blue-800 border-blue-300',
       accounting_approved: 'bg-green-100 text-green-800 border-green-300',
       paid: 'bg-emerald-100 text-emerald-800 border-emerald-300',
-      revision_required: 'bg-red-100 text-red-800 border-red-300',
+      revision_required: 'bg-amber-100 text-amber-800 border-amber-300',
+      rejected: 'bg-red-200 text-red-900 border-red-400',
     };
+    const wasRevised = (document?.revision_count ?? 0) > 0 && status !== "revision_required" && status !== "rejected";
     return (
-      <Badge variant={variants[status] || "secondary"} className={colors[status] || ''}>
-        {labels[status] || status.charAt(0).toUpperCase() + status.slice(1)}
-      </Badge>
+      <div className="flex items-center gap-1.5 flex-wrap">
+        <Badge variant={variants[status] || "secondary"} className={colors[status] || ''}>
+          {labels[status] || status.charAt(0).toUpperCase() + status.slice(1)}
+        </Badge>
+        {wasRevised && (
+          <Badge variant="outline" className="bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 border-amber-300 dark:border-amber-700 text-[10px]">
+            Revised
+          </Badge>
+        )}
+        {status === "rejected" && (
+          <Badge variant="outline" className="bg-red-50 dark:bg-red-950/30 text-red-800 dark:text-red-300 border-red-400 dark:border-red-700 text-[10px]">
+            Final
+          </Badge>
+        )}
+      </div>
     );
   };
 
@@ -412,34 +426,36 @@ export default function CommissionDocumentDetail() {
         </CardContent>
       </Card>
 
-      {/* Rejection Notice */}
+      {/* Rejection Notice — editable, can be revised and resubmitted */}
       {document.status === 'revision_required' && document.revision_reason && (
-        <Card className="border-red-300 bg-red-50 dark:bg-red-950/20 dark:border-red-700">
+        <Card className="border-amber-300 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-700">
           <CardContent className="pt-4">
             <div className="flex items-start gap-2">
-              <RotateCcw className="h-5 w-5 text-red-600 mt-0.5" />
+              <RotateCcw className="h-5 w-5 text-amber-600 mt-0.5" />
               <div>
-                <p className="font-medium text-red-800 dark:text-red-400">Commission Rejected</p>
-                <p className="text-sm text-red-700 dark:text-red-300/80 mt-1">{document.revision_reason}</p>
+                <p className="font-medium text-amber-800 dark:text-amber-400">Revision Required</p>
+                <p className="text-sm text-amber-700 dark:text-amber-300/80 mt-1">{document.revision_reason}</p>
+                <p className="text-xs text-amber-600/70 dark:text-amber-400/60 mt-2">Please make the requested changes and resubmit.</p>
               </div>
             </div>
           </CardContent>
         </Card>
       )}
 
-      {/* Denied Notice */}
+      {/* Denied Notice — permanent, cannot be edited or resubmitted */}
       {document.status === 'rejected' && (
-        <Card className="border-red-300 bg-red-50 dark:bg-red-950/20 dark:border-red-700">
+        <Card className="border-red-400 bg-red-100 dark:bg-red-950/30 dark:border-red-700">
           <CardContent className="pt-4">
             <div className="flex items-start gap-2">
-              <X className="h-5 w-5 text-red-600 mt-0.5" />
+              <X className="h-5 w-5 text-red-700 mt-0.5" />
               <div>
-                <p className="font-medium text-red-800 dark:text-red-400">Commission Denied</p>
+                <p className="font-medium text-red-900 dark:text-red-300">Commission Denied — Final</p>
+                <p className="text-xs text-red-700/70 dark:text-red-400/60 mt-1">This commission has been permanently denied and cannot be revised or resubmitted.</p>
                 {document.approval_comment && (
-                  <p className="text-sm text-red-700 dark:text-red-300/80 mt-1">{document.approval_comment}</p>
+                  <p className="text-sm text-red-800 dark:text-red-300/80 mt-2">{document.approval_comment}</p>
                 )}
-                {document.revision_reason && (
-                  <p className="text-sm text-red-700 dark:text-red-300/80 mt-1">{document.revision_reason}</p>
+                {document.revision_reason && !document.approval_comment && (
+                  <p className="text-sm text-red-800 dark:text-red-300/80 mt-2">{document.revision_reason}</p>
                 )}
               </div>
             </div>

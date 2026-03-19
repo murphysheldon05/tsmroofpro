@@ -282,7 +282,7 @@ export function useUpdateCommissionDocumentStatus() {
         draft: ['submitted'],
         submitted: ['manager_approved', 'revision_required', 'rejected'],
         revision_required: ['submitted'],
-        rejected: ['submitted'],
+        rejected: [],
         manager_approved: ['accounting_approved', 'revision_required', 'rejected'],
         accounting_approved: ['paid', 'revision_required', 'rejected'],
         paid: [],
