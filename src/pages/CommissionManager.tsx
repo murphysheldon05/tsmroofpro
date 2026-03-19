@@ -554,18 +554,18 @@ export default function CommissionManager() {
       <Dialog open={rejectModalOpen} onOpenChange={setRejectModalOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Reject Commission</DialogTitle>
+            <DialogTitle>Send Back for Revision</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 mt-2">
             <p className="text-sm text-muted-foreground">
-              Rejecting commission for <span className="font-medium text-foreground">{rejectTarget?.jobName}</span>
+              Sending commission for <span className="font-medium text-foreground">{rejectTarget?.jobName}</span> back to the rep so they can correct and resubmit.
             </p>
             <div className="space-y-2">
-              <Label>Rejection Reason *</Label>
+              <Label>Reason for Rejection *</Label>
               <Textarea
                 value={rejectReason}
                 onChange={(e) => setRejectReason(e.target.value)}
-                placeholder="Provide a reason for rejection..."
+                placeholder="Explain what needs to be corrected..."
                 rows={3}
               />
             </div>
@@ -581,7 +581,7 @@ export default function CommissionManager() {
                 {rejectCommission.isPending ? (
                   <Loader2 className="w-4 h-4 animate-spin mr-2" />
                 ) : null}
-                Reject
+                Send Back
               </Button>
             </div>
           </div>

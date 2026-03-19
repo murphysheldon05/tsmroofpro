@@ -256,13 +256,20 @@ export function getProfitSplitFromLabel(label: string): { op: number; rep: numbe
  */
 export function validateCommissionDocument(data: Partial<CommissionDocumentData> & { 
   job_name_id?: string; 
+  job_number?: string;
+  customer_name?: string;
   job_date?: string; 
   sales_rep?: string;
   profit_split_label?: string;
 }): { valid: boolean; errors: string[] } {
   const errors: string[] = [];
 
-  if (!data.job_name_id?.trim()) errors.push('Job Name & ID is required');
+  if (data.job_number !== undefined || data.customer_name !== undefined) {
+    if (!data.job_number || !/^\d{4}$/.test(data.job_number)) errors.push('Job Number must be exactly 4 digits');
+    if (!data.customer_name?.trim()) errors.push('Customer Name is required');
+  } else if (!data.job_name_id?.trim()) {
+    errors.push('Job Name & ID is required');
+  }
   if (!data.job_date) errors.push('Job Date is required');
   if (!data.sales_rep?.trim()) errors.push('Sales Rep is required');
   if (data.gross_contract_total === undefined || data.gross_contract_total < 0) errors.push('Contract Total (Gross) must be >= 0');

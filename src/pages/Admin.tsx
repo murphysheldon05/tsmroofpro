@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useSearchParams, useLocation } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -56,7 +56,6 @@ import { formatDisplayName } from "@/lib/displayName";
 import { GuidedTour } from "@/components/tutorial/GuidedTour";
 import { adminSteps } from "@/components/tutorial/tutorialSteps";
 import { PendingActionsSection } from "@/components/admin/PendingActionsSection";
-import { PendingApprovals } from "@/components/admin/PendingApprovals";
 import OpsCompliance from "@/pages/OpsCompliance";
 import { WorkflowRoleAssignments } from "@/components/admin/WorkflowRoleAssignments";
 
@@ -94,22 +93,10 @@ function getDepartmentDisplayName(
 
 export default function Admin() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const location = useLocation();
   const tabParam = searchParams.get("tab");
   const activeTab = ADMIN_TAB_VALUES.includes(tabParam as any) ? tabParam : "users";
 
-  // Scroll to Pending Approvals when navigating with #pending-approvals hash
-  useEffect(() => {
-    if (location.hash === "#pending-approvals") {
-      const scroll = () => {
-        const el = document.getElementById("pending-approvals");
-        el?.scrollIntoView({ behavior: "smooth", block: "start" });
-      };
-      // Brief delay so the tab content is rendered
-      const t = setTimeout(scroll, 100);
-      return () => clearTimeout(t);
-    }
-  }, [location.hash, activeTab]);
+  
   const queryClient = useQueryClient();
   const { user: currentUser } = useAuth();
   const { data: departments } = useDepartments();
@@ -539,22 +526,10 @@ export default function Admin() {
             {/* Pending Actions - Sheldon only (admin with management department) */}
             <PendingActionsSection />
 
-            {/* Pending Approvals — scroll anchor for #pending-approvals */}
-            <div id="pending-approvals">
-              <h2 className="text-lg font-semibold text-foreground mb-4">Pending Approvals</h2>
-              <PendingApprovals />
-            </div>
-
             {/* Sent Invites Section */}
             <div>
               <h2 className="text-lg font-semibold text-foreground mb-4">Sent Invites</h2>
               <PendingInvites />
-            </div>
-
-            {/* Pending Approvals Section */}
-            <div id="pending-approvals" data-tutorial="admin-pending">
-              <h2 className="text-lg font-semibold text-foreground mb-4">Pending Approvals</h2>
-              <PendingApprovals />
             </div>
 
             <div className="flex justify-between items-center">

@@ -141,7 +141,7 @@ export default function Signup() {
           .update({ link_accessed_at: new Date().toISOString() })
           .eq("email", trimmedEmail);
 
-        // Notify admins of pending approval (fire-and-forget; don't block user flow)
+        // Notify admins of new signup (fire-and-forget; don't block user flow)
         if (data?.user) {
           supabase.functions
             .invoke("notify-new-signup", {

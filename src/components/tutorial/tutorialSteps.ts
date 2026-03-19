@@ -229,13 +229,7 @@ export const adminSteps: TutorialStep[] = [
   {
     target: "admin-users-tab",
     title: "User Management",
-    description: "View all users, edit roles and departments, approve or reject new signups.",
-    roles: ["admin"],
-  },
-  {
-    target: "admin-pending",
-    title: "Pending Approvals",
-    description: "New users waiting for your review. Assign their role, department, and commission tier.",
+    description: "View all users, edit roles, departments, commission tiers, and managers.",
     roles: ["admin"],
   },
   {

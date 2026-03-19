@@ -228,24 +228,13 @@ function ApprovalsModal({ open, onClose }: { open: boolean; onClose: () => void 
   const { data, isLoading } = useQuery({
     queryKey: ["pending-approvals-modal"],
     queryFn: async () => {
-      const [usersRes, commissionsRes] = await Promise.all([
-        supabase.from("pending_approvals").select("id, entity_id, created_at").eq("status", "pending").eq("entity_type", "user"),
-        supabase.from("commission_submissions").select("id, job_name, sales_rep_name, created_at").eq("status", "pending_review").limit(10),
-      ]);
-      
-      // Get profile names for pending users
-      const userIds = (usersRes.data || []).map(u => u.entity_id);
-      let profiles: any[] = [];
-      if (userIds.length > 0) {
-        const { data: p } = await supabase.from("profiles").select("id, full_name, email").in("id", userIds);
-        profiles = p || [];
-      }
+      const commissionsRes = await supabase
+        .from("commission_submissions")
+        .select("id, job_name, sales_rep_name, created_at")
+        .eq("status", "pending_review")
+        .limit(10);
 
       return {
-        users: (usersRes.data || []).map(u => {
-          const profile = profiles.find(p => p.id === u.entity_id);
-          return { ...u, name: formatDisplayName(profile?.full_name, profile?.email) || "Unknown", email: profile?.email || "" };
-        }),
         commissions: commissionsRes.data || [],
       };
     },
@@ -266,19 +255,6 @@ function ApprovalsModal({ open, onClose }: { open: boolean; onClose: () => void 
         ) : (
           <ScrollArea className="max-h-[350px]">
             <div className="space-y-3">
-              {data?.users && data.users.length > 0 && (
-                <div>
-                  <p className="text-xs font-semibold text-muted-foreground mb-1.5 uppercase tracking-wider">User Signups</p>
-                  <div className="space-y-1.5">
-                    {data.users.map(u => (
-                      <div key={u.id} className="p-2.5 rounded-lg border border-border/50 bg-card/50">
-                        <p className="font-medium text-sm">{u.name}</p>
-                        <p className="text-xs text-muted-foreground">{u.email}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
               {data?.commissions && data.commissions.length > 0 && (
                 <div>
                   <p className="text-xs font-semibold text-muted-foreground mb-1.5 uppercase tracking-wider">Commission Reviews</p>
@@ -292,7 +268,7 @@ function ApprovalsModal({ open, onClose }: { open: boolean; onClose: () => void 
                   </div>
                 </div>
               )}
-              {(!data?.users?.length && !data?.commissions?.length) && (
+              {!data?.commissions?.length && (
                 <p className="text-sm text-muted-foreground py-4">No pending approvals.</p>
               )}
             </div>

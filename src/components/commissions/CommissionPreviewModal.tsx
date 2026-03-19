@@ -81,7 +81,7 @@ export function CommissionPreviewModal({
               </h3>
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div>
-                  <p className="text-muted-foreground">Job Name & ID</p>
+                  <p className="text-muted-foreground">Job</p>
                   <p className="font-medium">{formData.job_name_id || "—"}</p>
                 </div>
                 <div>

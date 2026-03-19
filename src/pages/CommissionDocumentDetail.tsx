@@ -16,10 +16,11 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { ArrowLeft, Printer, Edit, Check, X, FileText, Calendar, CheckCircle2, RotateCcw, SendHorizontal, Trash2, Loader2 } from "lucide-react";
+import { ArrowLeft, Printer, Edit, Check, X, FileText, Calendar, CheckCircle2, RotateCcw, SendHorizontal, Trash2, Loader2, Eye, EyeOff } from "lucide-react";
 import { useCommissionDocument, useUpdateCommissionDocumentStatus, useDeleteCommissionDocument } from "@/hooks/useCommissionDocuments";
 import { useAuth } from "@/contexts/AuthContext";
 import { CommissionDocumentForm } from "@/components/commissions/CommissionDocumentForm";
+import { CommissionDocumentSummary } from "@/components/commissions/CommissionDocumentSummary";
 import { CommissionDocumentPrintView } from "@/components/commissions/CommissionDocumentPrintView";
 import { formatPayDateShort, getEstimatedPayDate } from "@/lib/commissionPayDateCalculations";
 import { formatDisplayName } from "@/lib/displayName";
@@ -44,6 +45,7 @@ export default function CommissionDocumentDetail() {
     'approved' | 'rejected' | 'manager_approved' | 'accounting_approved' | 'revision_required' | 'submitted' | 'paid'
   >('approved');
   const [approvalComment, setApprovalComment] = useState("");
+  const [showFullForm, setShowFullForm] = useState(false);
 
   // Resolve actor names for the stepper
   const [managerName, setManagerName] = useState<string | null>(null);
@@ -451,10 +453,25 @@ export default function CommissionDocumentDetail() {
             <CardTitle>Commission Document: {document.job_name_id}</CardTitle>
             {getPayDateBadge()}
           </div>
-          {getStatusBadge(document.status)}
+          <div className="flex items-center gap-2">
+            {getStatusBadge(document.status)}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-1.5 text-xs"
+              onClick={() => setShowFullForm((v) => !v)}
+            >
+              {showFullForm ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+              {showFullForm ? "Summary" : "Full Form"}
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
-          <CommissionDocumentForm document={document} readOnly />
+          {showFullForm ? (
+            <CommissionDocumentForm document={document} readOnly />
+          ) : (
+            <CommissionDocumentSummary document={document} />
+          )}
         </CardContent>
       </Card>
 

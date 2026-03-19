@@ -119,7 +119,6 @@ export function PendingInvites() {
 
       toast.success(profile?.id ? "User removed — you can re-invite" : "Invite deleted");
       queryClient.invalidateQueries({ queryKey: ["sent-invites"] });
-      queryClient.invalidateQueries({ queryKey: ["pending-approvals"] });
       queryClient.invalidateQueries({ queryKey: ["pending-actions-sheldon"] });
     } catch (error: any) {
       toast.error("Failed to delete invite: " + error.message);
@@ -184,13 +183,7 @@ export function PendingInvites() {
           </Button>
         </div>
         <p className="text-xs text-muted-foreground">
-          All invites sent. When users create an account, they appear in{" "}
-          <a
-            href="#pending-approvals"
-            className="text-primary hover:underline font-medium"
-          >
-            Pending Approvals
-          </a>
+          All invites sent. When users create an account they get immediate access and appear in the Active Users list.
         </p>
       </CardHeader>
       <CardContent>

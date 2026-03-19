@@ -195,7 +195,7 @@ You've been invited to join the TSM Roofing Hub — our internal portal for SOPs
 What to expect:
 - If you already have an account, log in and you'll be taken directly into the hub.
 - If you're new, create your login using this email address.
-- Access is role-based. If your access is still pending, you'll see a brief "Pending Approval" message until an admin approves your account.
+- You'll get immediate access once you sign up.
 
 Open the TSM Roofing Hub: ${loginUrl}
 ${pwBlockText}
@@ -263,7 +263,7 @@ If you have any trouble getting in, reply to this email and we'll fix it fast.
                 <ul style="font-size: 14px; color: #374151; margin: 0; padding-left: 20px;">
                   <li style="margin-bottom: 8px;">If you already have an account, log in and you'll be taken directly into the hub.</li>
                   <li style="margin-bottom: 8px;">If you're new, create your login using this email address.</li>
-                  <li style="margin-bottom: 8px;">Access is role-based. If your access is still pending, you'll see a brief "Pending Approval" message until an admin approves your account.</li>
+                  <li style="margin-bottom: 8px;">You'll get immediate access once you sign up.</li>
                 </ul>
               </div>
               

@@ -17,20 +17,14 @@ export function useSheldonPendingCount() {
   return useQuery({
     queryKey: ["sheldon-pending-count", user?.id, isSheldon],
     queryFn: async () => {
-      const [itRes, approvalsRes] = await Promise.all([
-        supabase
-          .from("requests")
-          .select("*", { count: "exact", head: true })
-          .eq("type", "it_access")
-          .eq("status", "pending")
-          .is("assigned_to", null),
-        supabase
-          .from("pending_approvals")
-          .select("*", { count: "exact", head: true })
-          .eq("entity_type", "user")
-          .eq("status", "pending"),
-      ]);
-      return (itRes.count ?? 0) + (approvalsRes.count ?? 0);
+      const itRes = await supabase
+        .from("requests")
+        .select("*", { count: "exact", head: true })
+        .eq("type", "it_access")
+        .eq("status", "pending")
+        .is("assigned_to", null);
+
+      return itRes.count ?? 0;
     },
     enabled: isSheldon,
     refetchInterval: 60000,

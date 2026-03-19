@@ -1,7 +1,6 @@
 import { ReactNode } from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { PendingApprovalScreen } from "@/components/auth/PendingApprovalScreen";
 import { RejectedScreen } from "@/components/auth/RejectedScreen";
 import { InactiveScreen } from "@/components/auth/InactiveScreen";
 import { AccessHoldScreen } from "@/components/compliance/AccessHoldScreen";
@@ -41,11 +40,10 @@ export function ProtectedRoute({
     case 'inactive':
       return <InactiveScreen />;
     
+    case 'active':
     case 'pending':
     case null:
-      return <PendingApprovalScreen />;
-    
-    case 'active':
+    default:
       if (requireAdmin && !isAdmin) {
         return <Navigate to="/command-center" replace />;
       }
@@ -55,8 +53,5 @@ export function ProtectedRoute({
       }
 
       return <>{children}</>;
-    
-    default:
-      return <PendingApprovalScreen />;
   }
 }

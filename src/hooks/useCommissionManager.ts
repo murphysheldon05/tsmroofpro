@@ -192,12 +192,19 @@ export function useRejectCommissionDoc() {
 
   return useMutation({
     mutationFn: async ({ id, reason, rejection_source }: { id: string; reason: string; rejection_source?: "compliance" | "accounting" }) => {
+      // Fetch current revision_count so we can increment it atomically in the update
+      const { data: current } = await supabase
+        .from("commission_documents")
+        .select("revision_count")
+        .eq("id", id)
+        .single();
+
       const { data, error } = await supabase
         .from("commission_documents")
         .update({
-          status: "rejected",
+          status: "revision_required",
           revision_reason: reason,
-          revision_count: supabase.rpc ? undefined : 0,
+          revision_count: (current?.revision_count || 0) + 1,
         })
         .eq("id", id)
         .select()
@@ -205,43 +212,42 @@ export function useRejectCommissionDoc() {
 
       if (error) throw error;
 
-      // Increment revision count
-      await supabase.rpc("increment_revision_count" as any, { doc_id: id }).catch(() => {
-        // RPC may not exist; ignore
-      });
+      // Notification is best-effort; failures must not mask a successful status change
+      try {
+        const { data: creatorProfile } = await supabase
+          .from("profiles")
+          .select("email, full_name")
+          .eq("id", data.created_by)
+          .single();
 
-      // Send rejection notification to rep
-      const { data: creatorProfile } = await supabase
-        .from("profiles")
-        .select("email, full_name")
-        .eq("id", data.created_by)
-        .single();
+        const { data: currentUserProfile } = await supabase
+          .from("profiles")
+          .select("full_name")
+          .eq("id", user!.id)
+          .single();
 
-      const { data: currentUserProfile } = await supabase
-        .from("profiles")
-        .select("full_name")
-        .eq("id", user!.id)
-        .single();
-
-      await supabase.functions.invoke("send-commission-notification", {
-        body: {
-          notification_type: "rejected",
-          document_type: "commission_document",
-          commission_id: data.id,
-          job_name: data.job_name_id,
-          job_address: data.job_name_id,
-          sales_rep_name: data.sales_rep,
-          submission_type: "employee",
-          contract_amount: data.gross_contract_total,
-          net_commission_owed: data.rep_commission,
-          submitter_email: creatorProfile?.email || data.submitter_email,
-          submitter_name: creatorProfile?.full_name || data.sales_rep,
-          status: "rejected",
-          notes: reason,
-          rejection_source: rejection_source || "compliance",
-          changed_by_name: currentUserProfile?.full_name || "Admin",
-        },
-      }).catch(console.error);
+        await supabase.functions.invoke("send-commission-notification", {
+          body: {
+            notification_type: "rejected",
+            document_type: "commission_document",
+            commission_id: data.id,
+            job_name: data.job_name_id,
+            job_address: data.job_name_id,
+            sales_rep_name: data.sales_rep,
+            submission_type: "employee",
+            contract_amount: data.gross_contract_total,
+            net_commission_owed: data.rep_commission,
+            submitter_email: creatorProfile?.email || data.submitter_email,
+            submitter_name: creatorProfile?.full_name || data.sales_rep,
+            status: "revision_required",
+            notes: reason,
+            rejection_source: rejection_source || "compliance",
+            changed_by_name: currentUserProfile?.full_name || "Admin",
+          },
+        });
+      } catch (notifyError) {
+        console.error("Notification failed (commission was still rejected):", notifyError);
+      }
 
       return data;
     },
@@ -249,7 +255,7 @@ export function useRejectCommissionDoc() {
       queryClient.invalidateQueries({ queryKey: ["manager-commissions"] });
       queryClient.invalidateQueries({ queryKey: ["manager-commission-summary"] });
       queryClient.invalidateQueries({ queryKey: ["commission-documents"] });
-      toast.success("Commission rejected");
+      toast.success("Commission sent back for revision");
     },
     onError: (error: Error) => {
       toast.error("Failed to reject commission: " + error.message);

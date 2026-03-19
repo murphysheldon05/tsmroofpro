@@ -202,6 +202,16 @@ export function CommissionDocumentForm({ document: existingDoc, readOnly = false
     };
   }, [userTier, isPrivileged]);
 
+  // ── Parse job_name_id into separate job number and customer name ──
+  const parseJobNameId = (value: string) => {
+    const match = value.match(/^(\d{1,4})\s*[-–—]\s*(.+)$/);
+    if (match) return { jobNumber: match[1], customerName: match[2].trim() };
+    return { jobNumber: "", customerName: value };
+  };
+  const parsedJob = existingDoc?.job_name_id ? parseJobNameId(existingDoc.job_name_id) : { jobNumber: "", customerName: "" };
+  const [jobNumber, setJobNumber] = useState(parsedJob.jobNumber);
+  const [customerName, setCustomerName] = useState(parsedJob.customerName);
+
   // ── Form state (identical field set to current) ──
   const [formData, setFormData] = useState(() => ({
     job_name_id: existingDoc?.job_name_id ?? "",
@@ -257,6 +267,14 @@ export function CommissionDocumentForm({ document: existingDoc, readOnly = false
       }));
     }
   }, [userProfile, existingDoc, user]);
+
+  // ── Keep job_name_id in sync with jobNumber + customerName ──
+  useEffect(() => {
+    const combined = jobNumber && customerName
+      ? `${jobNumber} - ${customerName}`
+      : customerName || jobNumber || "";
+    setFormData(prev => ({ ...prev, job_name_id: combined }));
+  }, [jobNumber, customerName]);
 
   // ── Set default profit split from tier (only for new documents) ──
   useEffect(() => {
@@ -401,7 +419,7 @@ export function CommissionDocumentForm({ document: existingDoc, readOnly = false
   // ── Auto-save for drafts ──
   const [autoSaveDocId, setAutoSaveDocId] = useState<string | null>(existingDoc?.id ?? null);
 
-  const canAutoSave = !!formData.job_name_id && !!formData.job_date && !!formData.sales_rep;
+  const canAutoSave = !!jobNumber && !!customerName && !!formData.job_date && !!formData.sales_rep;
 
   const handleAutoSave = useCallback(async () => {
     if (!autoSaveDocId && !canAutoSave) return;
@@ -434,7 +452,8 @@ export function CommissionDocumentForm({ document: existingDoc, readOnly = false
   const handleSave = async (submit: boolean = false) => {
     const validation = validateCommissionDocument({
       ...formData,
-      job_name_id: formData.job_name_id,
+      job_number: jobNumber,
+      customer_name: customerName,
       job_date: formData.job_date,
       sales_rep: formData.sales_rep,
       profit_split_label: formData.profit_split_label,
@@ -467,7 +486,8 @@ export function CommissionDocumentForm({ document: existingDoc, readOnly = false
   const handleSubmitClick = () => {
     const validation = validateCommissionDocument({
       ...formData,
-      job_name_id: formData.job_name_id,
+      job_number: jobNumber,
+      customer_name: customerName,
       job_date: formData.job_date,
       sales_rep: formData.sales_rep,
       profit_split_label: formData.profit_split_label,
@@ -592,8 +612,28 @@ export function CommissionDocumentForm({ document: existingDoc, readOnly = false
             <SectionHeader title="Job Information" icon={FileText} isOpen={openSections.job} onToggle={() => toggleSection('job')} />
             <CollapsibleContent>
               <div className="p-4 space-y-1">
-                <EnhancedFormRow label="Job Name & ID">
-                  <Input value={formData.job_name_id} onChange={(e) => setFormData(prev => ({ ...prev, job_name_id: e.target.value }))} disabled={!canEdit} className={inputBaseClasses} placeholder="e.g., Smith Residence - 4521" />
+                <EnhancedFormRow label="Job Number *" hint="4-digit AccuLynx Job Number">
+                  <Input
+                    value={jobNumber}
+                    onChange={(e) => {
+                      const v = e.target.value.replace(/\D/g, "").slice(0, 4);
+                      setJobNumber(v);
+                    }}
+                    disabled={!canEdit}
+                    className={cn(inputBaseClasses, "font-mono tracking-widest")}
+                    placeholder="e.g., 4521"
+                    maxLength={4}
+                    inputMode="numeric"
+                  />
+                </EnhancedFormRow>
+                <EnhancedFormRow label="Customer Name *">
+                  <Input
+                    value={customerName}
+                    onChange={(e) => setCustomerName(e.target.value)}
+                    disabled={!canEdit}
+                    className={inputBaseClasses}
+                    placeholder="e.g., Smith Residence"
+                  />
                 </EnhancedFormRow>
                 <EnhancedFormRow label="Job Date">
                   <Input type="date" value={formData.job_date} onChange={(e) => setFormData(prev => ({ ...prev, job_date: e.target.value }))} disabled={!canEdit} className={inputBaseClasses} />

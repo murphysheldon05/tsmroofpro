@@ -224,8 +224,8 @@ serve(async (req: Request): Promise<Response> => {
 
     const userId = created.user.id;
 
-    // Ensure profile exists - invited users still need approval after logging in
-    // GOVERNANCE: Set employee_status='pending' - they need admin approval after login
+    // Ensure profile exists — users get immediate active access.
+    // Admins are notified and can adjust role/department/tier afterwards.
     const { error: profileError } = await admin
       .from("profiles")
       .upsert(
@@ -234,8 +234,9 @@ serve(async (req: Request): Promise<Response> => {
           email,
           full_name: fullName,
           must_reset_password: true,
-          is_approved: false,
-          employee_status: "pending",
+          is_approved: true,
+          employee_status: "active",
+          approved_at: new Date().toISOString(),
           department_id: departmentId,
         },
         { onConflict: "id" }
@@ -301,7 +302,7 @@ You've been invited to join the TSM Roofing Hub — our internal portal for SOPs
 What to expect:
 - If you already have an account, log in and you'll be taken directly into the hub.
 - If you're new, create your login using this email address.
-- Access is role-based. If your access is still pending, you'll see a brief "Pending Approval" message until an admin approves your account.
+- You'll get immediate access once you sign up.
 
 Open the TSM Roofing Hub: ${loginUrl}
 
@@ -356,7 +357,7 @@ If you have any trouble getting in, reply to this email and we'll fix it fast.
                   <ul style="font-size: 14px; color: #374151; margin: 0; padding-left: 20px;">
                     <li style="margin-bottom: 8px;">If you already have an account, log in and you'll be taken directly into the hub.</li>
                     <li style="margin-bottom: 8px;">If you're new, create your login using this email address.</li>
-                    <li style="margin-bottom: 8px;">Access is role-based. If your access is still pending, you'll see a brief "Pending Approval" message until an admin approves your account.</li>
+                    <li style="margin-bottom: 8px;">You'll get immediate access once you sign up.</li>
                   </ul>
                 </div>
                 

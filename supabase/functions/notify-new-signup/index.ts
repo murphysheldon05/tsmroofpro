@@ -107,9 +107,9 @@ serve(async (req: Request): Promise<Response> => {
     const adminUrl = "https://tsmroofpro.com/admin";
 
     // Plain text version for deliverability
-    const plainText = `New User Signup - Action Required
+    const plainText = `New User Profile Created
 
-A new user has signed up and is waiting for approval.
+A new user has signed up and has been given default access (user role).
 
 User Details:
 - Name: ${full_name || "Not provided"}
@@ -117,9 +117,9 @@ User Details:
 ${requested_role ? `- Requested Role: ${requested_role}` : ""}
 ${requested_department ? `- Requested Department: ${requested_department}` : ""}
 
-ACTION REQUIRED: Please review and approve this user in the Admin panel.
+You can adjust their role, department, commission tier, and manager in the Admin panel.
 
-Review in Admin Panel: ${adminUrl}
+Manage Users: ${adminUrl}
 
 © ${new Date().getFullYear()} TSM Roofing. All rights reserved.`;
 
@@ -132,12 +132,12 @@ Review in Admin Panel: ${adminUrl}
       </head>
       <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%); padding: 30px; border-radius: 10px 10px 0 0; text-align: center;">
-          <h1 style="color: white; margin: 0; font-size: 24px;">New User Signup</h1>
+          <h1 style="color: white; margin: 0; font-size: 24px;">New User Profile Created</h1>
         </div>
         
         <div style="background: #f8fafc; padding: 30px; border: 1px solid #e2e8f0; border-top: none;">
           <p style="font-size: 16px; margin-bottom: 20px;">
-            A new user has signed up and is waiting for approval.
+            A new user has signed up and has been given default access (user role).
           </p>
           
           <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin: 20px 0;">
@@ -165,9 +165,9 @@ Review in Admin Panel: ${adminUrl}
             </table>
           </div>
           
-          <div style="background: #fef3c7; border: 1px solid #f59e0b; border-radius: 8px; padding: 15px; margin: 20px 0;">
-            <p style="margin: 0; font-size: 14px; color: #92400e;">
-              <strong>⚠️ Action Required:</strong> Please review and approve this user in the Admin panel.
+          <div style="background: #dbeafe; border: 1px solid #3b82f6; border-radius: 8px; padding: 15px; margin: 20px 0;">
+            <p style="margin: 0; font-size: 14px; color: #1e40af;">
+              This user now has default access. You can adjust their role, department, commission tier, and manager in the Admin panel.
             </p>
           </div>
           
@@ -177,7 +177,7 @@ Review in Admin Panel: ${adminUrl}
               <tr>
                 <td style="background-color: #111827; border: 2px solid #111827; border-radius: 8px;">
                   <a href="${adminUrl}" target="_blank" style="display: inline-block; padding: 14px 28px; font-size: 16px; font-weight: 600; color: #ffffff !important; text-decoration: none;">
-                    Review in Admin Panel
+                    Manage Users
                   </a>
                 </td>
               </tr>
@@ -191,7 +191,7 @@ Review in Admin Panel: ${adminUrl}
         
         <div style="background: #1e3a5f; padding: 20px; border-radius: 0 0 10px 10px; text-align: center;">
           <p style="color: #94a3b8; font-size: 12px; margin: 0;">
-            © ${new Date().getFullYear()} TSM Roofing. All rights reserved.
+            &copy; ${new Date().getFullYear()} TSM Roofing. All rights reserved.
           </p>
         </div>
       </body>
@@ -202,7 +202,7 @@ Review in Admin Panel: ${adminUrl}
       from: "TSM Roofing <notifications@tsmroofpro.com>",
       reply_to: "sheldonmurphy@tsmroofs.com",
       to: recipients,
-      subject: `New User Signup: ${full_name || email}`,
+      subject: `New User Profile Created: ${full_name || email}`,
       text: plainText,
       html: emailHtml,
     });

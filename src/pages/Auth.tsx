@@ -8,7 +8,6 @@ import { Logo } from "@/components/Logo";
 import { toast } from "sonner";
 import { Eye, EyeOff, ArrowLeft } from "lucide-react";
 import { z } from "zod";
-import { PendingApprovalScreen } from "@/components/auth/PendingApprovalScreen";
 import { AppLoadingScreen } from "@/components/AppLoadingScreen";
 
 const authSchema = z.object({
@@ -23,7 +22,7 @@ export default function Auth() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const { signIn, user, loading, isActive, employeeStatus } = useAuth();
+  const { signIn, user, loading, isActive } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -75,10 +74,6 @@ export default function Auth() {
 
   if (loading) {
     return <AppLoadingScreen />;
-  }
-
-  if (user && employeeStatus === 'pending') {
-    return <PendingApprovalScreen />;
   }
 
   return (
