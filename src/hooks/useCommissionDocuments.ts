@@ -452,7 +452,7 @@ async function sendCommissionDocumentNotification(
       'accounting_approved': 'accounting_approved',
       'paid': 'paid',
       'revision_required': 'rejected',
-      'rejected': 'rejected',
+      'rejected': 'denied',
     };
 
     const notificationType = notificationTypeMap[status];
