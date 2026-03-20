@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { Bell, Check, CheckCheck } from "lucide-react";
+import { Bell, Check, CheckCheck, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -7,7 +7,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useNotifications, useUnreadNotificationCount, useMarkNotificationRead, useMarkAllNotificationsRead } from "@/hooks/useNotifications";
+import { useNotifications, useUnreadNotificationCount, useMarkNotificationRead, useMarkAllNotificationsRead, useDeleteNotification, useClearAllNotifications } from "@/hooks/useNotifications";
 import { NotificationItem } from "./NotificationItem";
 import { cn } from "@/lib/utils";
 
@@ -16,6 +16,8 @@ export function NotificationBell() {
   const { data: unreadCount = 0 } = useUnreadNotificationCount();
   const markRead = useMarkNotificationRead();
   const markAllRead = useMarkAllNotificationsRead();
+  const deleteNotification = useDeleteNotification();
+  const clearAll = useClearAllNotifications();
 
   const handleMarkRead = (id: string) => {
     markRead.mutate(id);
@@ -23,6 +25,14 @@ export function NotificationBell() {
 
   const handleMarkAllRead = () => {
     markAllRead.mutate();
+  };
+
+  const handleDelete = (id: string) => {
+    deleteNotification.mutate(id);
+  };
+
+  const handleClearAll = () => {
+    clearAll.mutate();
   };
 
   const handleOpenChange = useCallback((open: boolean) => {
@@ -46,17 +56,30 @@ export function NotificationBell() {
       <PopoverContent className="w-80 p-0" align="end">
         <div className="flex items-center justify-between p-3 border-b">
           <h4 className="font-semibold text-sm">Notifications</h4>
-          {unreadCount > 0 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-auto p-1 text-xs text-muted-foreground hover:text-foreground"
-              onClick={handleMarkAllRead}
-            >
-              <CheckCheck className="h-3.5 w-3.5 mr-1" />
-              Mark all read
-            </Button>
-          )}
+          <div className="flex items-center gap-1">
+            {unreadCount > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-auto p-1 text-xs text-muted-foreground hover:text-foreground"
+                onClick={handleMarkAllRead}
+              >
+                <CheckCheck className="h-3.5 w-3.5 mr-1" />
+                Read all
+              </Button>
+            )}
+            {notifications.length > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-auto p-1 text-xs text-muted-foreground hover:text-destructive"
+                onClick={handleClearAll}
+              >
+                <Trash2 className="h-3.5 w-3.5 mr-1" />
+                Clear
+              </Button>
+            )}
+          </div>
         </div>
         <ScrollArea className="h-80">
           {isLoading ? (
@@ -75,6 +98,7 @@ export function NotificationBell() {
                   key={notification.id}
                   notification={notification}
                   onMarkRead={handleMarkRead}
+                  onDelete={handleDelete}
                 />
               ))}
             </div>

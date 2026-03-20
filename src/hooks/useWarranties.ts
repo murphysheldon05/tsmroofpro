@@ -117,54 +117,20 @@ export const WARRANTY_STATUSES: { value: WarrantyStatus; label: string; color: s
 ];
 
 export function useWarranties() {
-  const { user, isAdmin, isManager, userDepartment } = useAuth();
-  const userId = user?.id;
-  const isProductionDept = userDepartment === "Production";
-  const fullAccess = isAdmin || isManager;
+  const { user } = useAuth();
 
   return useQuery({
-    queryKey: ["warranties", userId, fullAccess, isProductionDept],
+    queryKey: ["warranties", user?.id],
     queryFn: async () => {
-      const { data: userData } = await supabase.auth.getUser();
-      const uid = userData.user?.id;
-
       const { data, error } = await supabase
         .from("warranty_requests")
         .select("*")
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      const all = data as WarrantyRequest[];
-
-      if (!uid) return [];
-
-      // Admin/manager see all warranties
-      const { data: roleData } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", uid)
-        .limit(1)
-        .maybeSingle();
-      const userRole = roleData?.role;
-      const fullAccessRoles = ["admin", "manager", "sales_manager", "production_manager"];
-      if (userRole && fullAccessRoles.includes(userRole)) {
-        return all;
-      }
-
-      // Production department users: only warranties assigned to them (not created_by or secondary_support)
-      if (userDepartment === "Production") {
-        return all.filter((w) => w.assigned_production_member === uid);
-      }
-
-      // Other roles (e.g. office, sales): assigned, secondary support, or created by them
-      return all.filter(
-        (w) =>
-          w.assigned_production_member === uid ||
-          w.secondary_support === uid ||
-          w.created_by === uid
-      );
+      return data as WarrantyRequest[];
     },
-    enabled: !!userId,
+    enabled: !!user?.id,
   });
 }
 

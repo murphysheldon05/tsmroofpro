@@ -3,8 +3,8 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import { Bell, CheckCheck, InboxIcon, Mail, Loader2 } from "lucide-react";
-import { useNotifications, useUnreadNotificationCount, useMarkNotificationRead, useMarkAllNotificationsRead, useNotificationPreferences, useUpdateNotificationPreferences, type NotificationPreferences } from "@/hooks/useNotifications";
+import { Bell, CheckCheck, InboxIcon, Mail, Loader2, Trash2 } from "lucide-react";
+import { useNotifications, useUnreadNotificationCount, useMarkNotificationRead, useMarkAllNotificationsRead, useDeleteNotification, useClearAllNotifications, useNotificationPreferences, useUpdateNotificationPreferences, type NotificationPreferences } from "@/hooks/useNotifications";
 import { NotificationItem } from "@/components/notifications/NotificationItem";
 import { toast } from "sonner";
 
@@ -23,6 +23,9 @@ export function ProfileNotificationsTab() {
   const markRead = useMarkNotificationRead();
   const markAllRead = useMarkAllNotificationsRead();
 
+  const deleteNotification = useDeleteNotification();
+  const clearAll = useClearAllNotifications();
+
   const { data: prefs, isLoading: prefsLoading } = useNotificationPreferences();
   const updatePrefs = useUpdateNotificationPreferences();
 
@@ -32,6 +35,16 @@ export function ProfileNotificationsTab() {
 
   const handleMarkAllRead = () => {
     markAllRead.mutate();
+  };
+
+  const handleDelete = (id: string) => {
+    deleteNotification.mutate(id);
+  };
+
+  const handleClearAll = () => {
+    clearAll.mutate(undefined, {
+      onSuccess: () => toast.success('All notifications cleared'),
+    });
   };
 
   const handleToggle = (key: keyof NotificationPreferences, current: boolean) => {
@@ -97,17 +110,31 @@ export function ProfileNotificationsTab() {
                 View your notifications and alerts
               </CardDescription>
             </div>
-            {unreadCount > 0 && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-muted-foreground hover:text-foreground"
-                onClick={handleMarkAllRead}
-              >
-                <CheckCheck className="h-4 w-4 mr-1.5" />
-                Mark all read
-              </Button>
-            )}
+            <div className="flex items-center gap-1">
+              {unreadCount > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-muted-foreground hover:text-foreground"
+                  onClick={handleMarkAllRead}
+                >
+                  <CheckCheck className="h-4 w-4 mr-1.5" />
+                  Mark all read
+                </Button>
+              )}
+              {notifications.length > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-muted-foreground hover:text-destructive"
+                  onClick={handleClearAll}
+                  disabled={clearAll.isPending}
+                >
+                  <Trash2 className="h-4 w-4 mr-1.5" />
+                  Clear all
+                </Button>
+              )}
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -131,6 +158,7 @@ export function ProfileNotificationsTab() {
                     key={notification.id}
                     notification={notification}
                     onMarkRead={handleMarkRead}
+                    onDelete={handleDelete}
                   />
                 ))}
               </div>

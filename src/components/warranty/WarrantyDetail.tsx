@@ -33,9 +33,10 @@ interface WarrantyDetailProps {
   onOpenChange: (open: boolean) => void;
   warranty: WarrantyRequest | null;
   onEdit: () => void;
+  canEdit?: boolean;
 }
 
-export function WarrantyDetail({ open, onOpenChange, warranty, onEdit }: WarrantyDetailProps) {
+export function WarrantyDetail({ open, onOpenChange, warranty, onEdit, canEdit = true }: WarrantyDetailProps) {
   const [newNote, setNewNote] = useState("");
   const [mentionedUserIds, setMentionedUserIds] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -169,7 +170,7 @@ export function WarrantyDetail({ open, onOpenChange, warranty, onEdit }: Warrant
                   {watchers.length}
                 </Badge>
               )}
-              <Button onClick={onEdit}>Edit</Button>
+              {canEdit && <Button onClick={onEdit}>Edit</Button>}
             </div>
           </div>
         </DialogHeader>

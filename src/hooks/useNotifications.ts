@@ -110,6 +110,47 @@ export function useMarkAllNotificationsRead() {
   });
 }
 
+export function useDeleteNotification() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (notificationId: string) => {
+      const { error } = await supabase
+        .from('user_notifications')
+        .delete()
+        .eq('id', notificationId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user-notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['unread-notification-count'] });
+    },
+  });
+}
+
+export function useClearAllNotifications() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  return useMutation({
+    mutationFn: async () => {
+      if (!user) return;
+
+      const { error } = await supabase
+        .from('user_notifications')
+        .delete()
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user-notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['unread-notification-count'] });
+    },
+  });
+}
+
 // Helper to create in-app notification (called from edge functions via service role)
 export async function createNotification(
   userId: string,

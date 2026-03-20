@@ -2,7 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
 import {
   FileText, AlertCircle, CheckCircle, DollarSign, RefreshCw,
-  UserPlus, Shield, Bell, Wrench, BookOpen, AlertTriangle,
+  UserPlus, Shield, Bell, Wrench, BookOpen, AlertTriangle, X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { UserNotification } from "@/hooks/useNotifications";
@@ -11,6 +11,7 @@ import { useAuth } from "@/contexts/AuthContext";
 interface NotificationItemProps {
   notification: UserNotification;
   onMarkRead: (id: string) => void;
+  onDelete?: (id: string) => void;
 }
 
 const notificationIcons: Record<string, React.ReactNode> = {
@@ -60,7 +61,7 @@ function getNavigationPath(notification: UserNotification, isAdmin: boolean): st
   }
 }
 
-export function NotificationItem({ notification, onMarkRead }: NotificationItemProps) {
+export function NotificationItem({ notification, onMarkRead, onDelete }: NotificationItemProps) {
   const navigate = useNavigate();
   const { isAdmin } = useAuth();
 
@@ -75,14 +76,19 @@ export function NotificationItem({ notification, onMarkRead }: NotificationItemP
     }
   };
 
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onDelete?.(notification.id);
+  };
+
   const icon = notificationIcons[notification.notification_type] || notificationIcons.default;
   const timeAgo = formatDistanceToNow(new Date(notification.created_at), { addSuffix: true });
 
   return (
-    <button
+    <div
       onClick={handleClick}
       className={cn(
-        "w-full text-left p-3 hover:bg-muted/50 transition-colors",
+        "w-full text-left p-3 hover:bg-muted/50 transition-colors cursor-pointer group relative",
         !notification.is_read && "bg-primary/5"
       )}
     >
@@ -102,10 +108,21 @@ export function NotificationItem({ notification, onMarkRead }: NotificationItemP
             {timeAgo}
           </p>
         </div>
-        {!notification.is_read && (
-          <div className="w-2 h-2 rounded-full bg-primary mt-1.5 shrink-0" />
-        )}
+        <div className="flex items-start gap-1 shrink-0">
+          {!notification.is_read && (
+            <div className="w-2 h-2 rounded-full bg-primary mt-1.5" />
+          )}
+          {onDelete && (
+            <button
+              onClick={handleDelete}
+              className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
+              title="Delete notification"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
       </div>
-    </button>
+    </div>
   );
 }

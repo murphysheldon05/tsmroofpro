@@ -314,9 +314,11 @@ export default function Warranties() {
               <p className="text-sm text-muted-foreground">Track and manage roofing warranty requests</p>
             </div>
           </div>
-          <Button onClick={handleCreate} className="bg-primary text-primary-foreground" data-tutorial="submit-warranty">
-            <Plus className="h-4 w-4 mr-1.5" />Submit Warranty
-          </Button>
+          {canManageWarranty && (
+            <Button onClick={handleCreate} className="bg-primary text-primary-foreground" data-tutorial="submit-warranty">
+              <Plus className="h-4 w-4 mr-1.5" />Submit Warranty
+            </Button>
+          )}
         </div>
 
         <Tabs defaultValue="board">
@@ -454,9 +456,11 @@ export default function Warranties() {
         </Tabs>
 
         {/* Mobile FAB */}
-        <button onClick={handleCreate} className="md:hidden fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center hover:bg-primary/90 active:scale-95 transition-transform">
-          <Plus className="h-6 w-6" />
-        </button>
+        {canManageWarranty && (
+          <button onClick={handleCreate} className="md:hidden fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center hover:bg-primary/90 active:scale-95 transition-transform">
+            <Plus className="h-6 w-6" />
+          </button>
+        )}
       </div>
 
       <WarrantyForm
@@ -470,6 +474,7 @@ export default function Warranties() {
         onOpenChange={o => { setIsDetailOpen(o); if (!o) setSelectedWarranty(null); }}
         warranty={selectedWarranty}
         onEdit={() => { setIsDetailOpen(false); setIsFormOpen(true); }}
+        canEdit={canManageWarranty}
       />
       <GuidedTour pageName="warranties" pageTitle="Warranty Tracker" steps={warrantySteps} />
     </>
