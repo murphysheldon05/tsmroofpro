@@ -164,6 +164,11 @@ export function calculateResubmissionPayDate(
 
 /**
  * Get display-friendly deadline info for the current pay cycle.
+ *
+ * Example: Week of March 23
+ *   Submission cutoff → Tuesday, Mar 24 at 3:00 PM MST
+ *   Revision grace    → Wednesday, Mar 25 at 12:00 PM MST
+ *   Pay run           → Friday, Mar 27
  */
 export function getCurrentDeadlineInfo(): {
   submissionDeadline: string;
@@ -172,24 +177,35 @@ export function getCurrentDeadlineInfo(): {
 } {
   const mst = toMST(new Date());
   const day = mst.getDay();
+  const hour = mst.getHours();
 
-  // Find this week's Tuesday
-  let daysToTuesday = (2 - day + 7) % 7;
-  if (day > 2) daysToTuesday += 7;
+  // Find the next relevant Tuesday cutoff.
+  // If we haven't passed Tuesday 3PM yet, use this week's Tuesday.
+  // If we have, use next week's Tuesday.
+  const isBeforeCutoff = day < 2 || (day === 2 && hour < 15);
+  let daysToTuesday: number;
+  if (isBeforeCutoff) {
+    daysToTuesday = 2 - day;
+  } else {
+    daysToTuesday = ((2 - day + 7) % 7) || 7;
+  }
+
   const tue = new Date(mst);
   tue.setDate(tue.getDate() + daysToTuesday);
   tue.setHours(15, 0, 0, 0);
 
-  // Wednesday = Tuesday + 1
+  // Wednesday noon = Tuesday + 1 day
   const wed = new Date(tue);
   wed.setDate(wed.getDate() + 1);
   wed.setHours(12, 0, 0, 0);
 
-  const payDate = calculateScheduledPayDate(new Date());
+  // Pay date = Friday of the same week = Tuesday + 3 days
+  const fri = new Date(tue);
+  fri.setDate(fri.getDate() + 3);
 
   return {
     submissionDeadline: tue.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" }) + " at 3:00 PM MST",
     revisionDeadline: wed.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" }) + " at 12:00 PM MST",
-    payDate: formatPayDateShort(payDate),
+    payDate: formatPayDateShort(fri),
   };
 }
