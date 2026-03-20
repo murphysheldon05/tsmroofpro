@@ -134,3 +134,83 @@ export async function createNotification(
   }
   return true;
 }
+
+// ─── Notification Preferences ─────────────────────────────────
+
+export interface NotificationPreferences {
+  id: string;
+  user_id: string;
+  email_commission_submitted: boolean;
+  email_commission_approved: boolean;
+  email_commission_rejected: boolean;
+  email_commission_denied: boolean;
+  email_commission_paid: boolean;
+  email_commission_accounting_approved: boolean;
+  updated_at: string;
+}
+
+const DEFAULT_PREFS: Omit<NotificationPreferences, 'id' | 'user_id' | 'updated_at'> = {
+  email_commission_submitted: true,
+  email_commission_approved: true,
+  email_commission_rejected: true,
+  email_commission_denied: true,
+  email_commission_paid: true,
+  email_commission_accounting_approved: true,
+};
+
+export function useNotificationPreferences() {
+  const { user } = useAuth();
+
+  return useQuery({
+    queryKey: ['notification-preferences', user?.id],
+    queryFn: async (): Promise<NotificationPreferences> => {
+      if (!user) throw new Error('Not authenticated');
+
+      const { data, error } = await supabase
+        .from('notification_preferences')
+        .select('*')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      if (!data) {
+        return {
+          id: '',
+          user_id: user.id,
+          updated_at: new Date().toISOString(),
+          ...DEFAULT_PREFS,
+        };
+      }
+
+      return data as NotificationPreferences;
+    },
+    enabled: !!user,
+  });
+}
+
+export function useUpdateNotificationPreferences() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  return useMutation({
+    mutationFn: async (prefs: Partial<Omit<NotificationPreferences, 'id' | 'user_id' | 'updated_at'>>) => {
+      if (!user) throw new Error('Not authenticated');
+
+      const { data, error } = await supabase
+        .from('notification_preferences')
+        .upsert(
+          { user_id: user.id, ...prefs, updated_at: new Date().toISOString() },
+          { onConflict: 'user_id' }
+        )
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notification-preferences'] });
+    },
+  });
+}

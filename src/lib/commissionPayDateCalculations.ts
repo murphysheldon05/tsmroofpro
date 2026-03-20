@@ -102,3 +102,94 @@ export function getScheduledPayDateString(timestamp: Date): string {
   const day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
 }
+
+// ─── Helpers for MST time conversion ──────────────────────────
+function toMST(date: Date): Date {
+  const mstOffset = -7 * 60;
+  const utcTime = date.getTime() + (date.getTimezoneOffset() * 60000);
+  return new Date(utcTime + (mstOffset * 60000));
+}
+
+function toDateString(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+/**
+ * Get this week's Friday as a YYYY-MM-DD string (MST-based).
+ */
+function getThisWeekFriday(): string {
+  const mst = toMST(new Date());
+  const day = mst.getDay();
+  let daysUntilFriday = (5 - day + 7) % 7;
+  if (daysUntilFriday === 0 && mst.getDay() === 5) daysUntilFriday = 0;
+  if (daysUntilFriday === 0 && mst.getDay() !== 5) daysUntilFriday = 7;
+  const fri = new Date(mst);
+  fri.setDate(fri.getDate() + daysUntilFriday);
+  return toDateString(fri);
+}
+
+/**
+ * Calculate the pay date for a resubmitted commission (after rejection).
+ *
+ * Grace-period rule:
+ *   If the commission was originally eligible for this week's pay run
+ *   (existing scheduled_pay_date is this week's Friday) AND the resubmission
+ *   happens before Wednesday 12:00 PM MST, the same-week pay date is preserved.
+ *   Otherwise a fresh calculation is performed (likely pushing to next week).
+ */
+export function calculateResubmissionPayDate(
+  existingPayDate: string | null
+): string {
+  if (!existingPayDate) {
+    return getScheduledPayDateString(new Date());
+  }
+
+  const mst = toMST(new Date());
+  const dayOfWeek = mst.getDay();
+  const hour = mst.getHours();
+
+  const thisWeekFri = getThisWeekFriday();
+  const isBeforeWednesdayNoon = dayOfWeek < 3 || (dayOfWeek === 3 && hour < 12);
+  const wasThisWeek = existingPayDate === thisWeekFri;
+
+  if (wasThisWeek && isBeforeWednesdayNoon) {
+    return existingPayDate;
+  }
+
+  return getScheduledPayDateString(new Date());
+}
+
+/**
+ * Get display-friendly deadline info for the current pay cycle.
+ */
+export function getCurrentDeadlineInfo(): {
+  submissionDeadline: string;
+  revisionDeadline: string;
+  payDate: string;
+} {
+  const mst = toMST(new Date());
+  const day = mst.getDay();
+
+  // Find this week's Tuesday
+  let daysToTuesday = (2 - day + 7) % 7;
+  if (day > 2) daysToTuesday += 7;
+  const tue = new Date(mst);
+  tue.setDate(tue.getDate() + daysToTuesday);
+  tue.setHours(15, 0, 0, 0);
+
+  // Wednesday = Tuesday + 1
+  const wed = new Date(tue);
+  wed.setDate(wed.getDate() + 1);
+  wed.setHours(12, 0, 0, 0);
+
+  const payDate = calculateScheduledPayDate(new Date());
+
+  return {
+    submissionDeadline: tue.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" }) + " at 3:00 PM MST",
+    revisionDeadline: wed.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" }) + " at 12:00 PM MST",
+    payDate: formatPayDateShort(payDate),
+  };
+}

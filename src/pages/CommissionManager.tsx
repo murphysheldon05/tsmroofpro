@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { getCurrentDeadlineInfo } from "@/lib/commissionPayDateCalculations";
 import { useNavigate } from "react-router-dom";
 import {
   useManagerCommissions,
@@ -81,6 +82,19 @@ function StatusBadge({ status, revisionCount }: { status: string; revisionCount?
           Final
         </Badge>
       )}
+    </div>
+  );
+}
+
+function DeadlineBanner() {
+  const info = getCurrentDeadlineInfo();
+  return (
+    <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg bg-muted/60 border px-4 py-2.5 text-xs text-muted-foreground">
+      <span><strong className="text-foreground">Submission cutoff:</strong> {info.submissionDeadline}</span>
+      <span className="hidden sm:inline text-border">|</span>
+      <span><strong className="text-foreground">Revision grace:</strong> {info.revisionDeadline}</span>
+      <span className="hidden sm:inline text-border">|</span>
+      <span><strong className="text-foreground">Pay run:</strong> {info.payDate}</span>
     </div>
   );
 }
@@ -237,6 +251,7 @@ export default function CommissionManager() {
             <p className="text-muted-foreground text-sm">Review and process all rep commissions</p>
           </div>
         </div>
+        <DeadlineBanner />
       </header>
 
       {/* Summary Cards */}

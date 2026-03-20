@@ -22,7 +22,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { CommissionDocumentForm } from "@/components/commissions/CommissionDocumentForm";
 import { CommissionDocumentSummary } from "@/components/commissions/CommissionDocumentSummary";
 import { CommissionDocumentPrintView } from "@/components/commissions/CommissionDocumentPrintView";
-import { formatPayDateShort, getEstimatedPayDate } from "@/lib/commissionPayDateCalculations";
+import { formatPayDateShort, getEstimatedPayDate, getCurrentDeadlineInfo } from "@/lib/commissionPayDateCalculations";
 import { formatDisplayName } from "@/lib/displayName";
 import { CommissionStatusStepper } from "@/components/commissions/CommissionStatusStepper";
 import { supabase } from "@/integrations/supabase/client";
@@ -230,28 +230,27 @@ export default function CommissionDocumentDetail() {
   const getPayDateBadge = () => {
     if (!document) return null;
     const status = document.status;
-    if (status === 'manager_approved') {
+    if (document.scheduled_pay_date && status !== 'draft' && status !== 'rejected') {
+      const label = status === 'paid' ? 'Paid' :
+        status === 'accounting_approved' ? 'Pay Run' :
+        'Est. Pay Run';
+      const color = status === 'paid' ? 'text-green-600' :
+        status === 'accounting_approved' ? 'text-blue-600' :
+        'text-muted-foreground';
+      const icon = status === 'paid' ? <CheckCircle2 className="h-4 w-4" /> : <Calendar className="h-4 w-4" />;
+      return (
+        <div className={`flex items-center gap-2 text-sm font-medium ${color}`}>
+          {icon}
+          <span>{label}: {formatPayDateShort(document.scheduled_pay_date)}</span>
+        </div>
+      );
+    }
+    if (!document.scheduled_pay_date && (status === 'submitted' || status === 'manager_approved')) {
       const estimatedDate = getEstimatedPayDate();
       return (
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Calendar className="h-4 w-4" />
           <span>Est. {formatPayDateShort(estimatedDate)}</span>
-        </div>
-      );
-    }
-    if (status === 'accounting_approved' && document.scheduled_pay_date) {
-      return (
-        <div className="flex items-center gap-2 text-sm font-medium text-blue-600">
-          <Calendar className="h-4 w-4" />
-          <span>📅 {formatPayDateShort(document.scheduled_pay_date)}</span>
-        </div>
-      );
-    }
-    if (status === 'paid' && document.scheduled_pay_date) {
-      return (
-        <div className="flex items-center gap-2 text-sm font-medium text-green-600">
-          <CheckCircle2 className="h-4 w-4" />
-          <span>✅ Paid {formatPayDateShort(document.scheduled_pay_date)}</span>
         </div>
       );
     }
@@ -427,20 +426,26 @@ export default function CommissionDocumentDetail() {
       </Card>
 
       {/* Rejection Notice — editable, can be revised and resubmitted */}
-      {document.status === 'revision_required' && document.revision_reason && (
-        <Card className="border-amber-300 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-700">
-          <CardContent className="pt-4">
-            <div className="flex items-start gap-2">
-              <RotateCcw className="h-5 w-5 text-amber-600 mt-0.5" />
-              <div>
-                <p className="font-medium text-amber-800 dark:text-amber-400">Revision Required</p>
-                <p className="text-sm text-amber-700 dark:text-amber-300/80 mt-1">{document.revision_reason}</p>
-                <p className="text-xs text-amber-600/70 dark:text-amber-400/60 mt-2">Please make the requested changes and resubmit.</p>
+      {document.status === 'revision_required' && document.revision_reason && (() => {
+        const deadlines = getCurrentDeadlineInfo();
+        return (
+          <Card className="border-amber-300 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-700">
+            <CardContent className="pt-4">
+              <div className="flex items-start gap-2">
+                <RotateCcw className="h-5 w-5 text-amber-600 mt-0.5" />
+                <div>
+                  <p className="font-medium text-amber-800 dark:text-amber-400">Revision Required</p>
+                  <p className="text-sm text-amber-700 dark:text-amber-300/80 mt-1">{document.revision_reason}</p>
+                  <p className="text-xs text-amber-600/70 dark:text-amber-400/60 mt-2">
+                    Resubmit by <strong>{deadlines.revisionDeadline}</strong> to keep the same-week pay run.
+                    After that, the commission moves to the following week.
+                  </p>
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+            </CardContent>
+          </Card>
+        );
+      })()}
 
       {/* Denied Notice — permanent, cannot be edited or resubmitted */}
       {document.status === 'rejected' && (

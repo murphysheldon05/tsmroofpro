@@ -58,6 +58,63 @@ async function resolveWorkflowAssignee(
   return null;
 }
 
+// Maps notification_type to the preference column name in notification_preferences
+const PREF_COLUMN_MAP: Record<string, string> = {
+  submitted: "email_commission_submitted",
+  manager_approved: "email_commission_approved",
+  accounting_approved: "email_commission_accounting_approved",
+  paid: "email_commission_paid",
+  rejected: "email_commission_rejected",
+  denied: "email_commission_denied",
+  rejected_commission_revised: "email_commission_submitted",
+};
+
+async function shouldSendEmail(
+  supabaseClient: any,
+  recipientEmail: string,
+  notificationType: string
+): Promise<boolean> {
+  const column = PREF_COLUMN_MAP[notificationType];
+  if (!column) return true; // No preference column → always send
+
+  try {
+    const { data: profile } = await supabaseClient
+      .from("profiles")
+      .select("id")
+      .eq("email", recipientEmail)
+      .maybeSingle();
+
+    if (!profile?.id) return true; // Can't find user → default send
+
+    const { data: prefs } = await supabaseClient
+      .from("notification_preferences")
+      .select(column)
+      .eq("user_id", profile.id)
+      .maybeSingle();
+
+    if (!prefs) return true; // No preferences row → defaults to all enabled
+    return prefs[column] !== false;
+  } catch {
+    return true; // On error, default to sending
+  }
+}
+
+// Filter recipient list by each user's notification preferences
+async function filterByPreferences(
+  supabaseClient: any,
+  emails: string[],
+  notificationType: string
+): Promise<string[]> {
+  const results = await Promise.all(
+    emails.map(async (email) => {
+      const allowed = await shouldSendEmail(supabaseClient, email, notificationType);
+      if (!allowed) console.log(`Email suppressed for ${email} (preference: ${notificationType})`);
+      return allowed ? email : null;
+    })
+  );
+  return results.filter(Boolean) as string[];
+}
+
 // Dynamic recipient resolution — tries workflow_role_assignments first, then legacy tables
 async function resolveRecipients(
   supabaseClient: any,
@@ -264,10 +321,22 @@ const handler = async (req: Request): Promise<Response> => {
         buttonText = "Review Commission";
         break;
 
-      case "accounting_approved":
-        // No email at this step per spec — only in-app notification
-        recipientEmails = [];
+      case "accounting_approved": {
+        const payDateStr = (rawPayload as any).scheduled_pay_date;
+        const payDateDisplay = payDateStr ? formatPayDateFn(payDateStr) : "this Friday";
+        subject = `Commission Approved for Payment — ${payload.job_name}`;
+        heading = "Commission Approved for Payment";
+        introText = `Your commission for <strong>${payload.job_name}</strong> has been approved and is scheduled for payment on <strong>${payDateDisplay}</strong>.`;
+        headerColor = "#7c3aed";
+        recipientEmails = payload.submitter_email ? [payload.submitter_email] : [];
+        additionalPlainText = `Job: ${payload.job_name}\nCommission Amount: ${formatCurrency(payload.net_commission_owed)}\nScheduled Pay Date: ${payDateDisplay}`;
+        additionalContent = `
+          <tr><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;"><strong>Job:</strong></td><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">${payload.job_name}</td></tr>
+          <tr><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;"><strong>Commission Amount:</strong></td><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb; font-weight: bold; color: #7c3aed;">${formatCurrency(payload.net_commission_owed)}</td></tr>
+          <tr><td style="padding: 10px 0;"><strong>Scheduled Pay Date:</strong></td><td style="padding: 10px 0; font-weight: bold; color: #059669;">📅 ${payDateDisplay}</td></tr>
+        `;
         break;
+      }
 
       case "paid":
         subject = `Commission Paid — ${payload.job_name} — ${formatCurrency(payload.net_commission_owed)}`;
@@ -436,6 +505,9 @@ If you have questions, please contact your supervisor or the accounting team.
       </html>
     `;
 
+    // Apply per-user notification preferences
+    recipientEmails = await filterByPreferences(supabaseClient, recipientEmails, payload.notification_type);
+
     console.log("Sending commission notification to:", recipientEmails);
 
     let emailResponse: unknown = null;
@@ -452,7 +524,7 @@ If you have questions, please contact your supervisor or the accounting team.
     }
 
     // REP TRIGGER 1: Commission successfully submitted — rep gets confirmation email (separate from compliance email)
-    if (payload.notification_type === "submitted" && payload.submitter_email) {
+    if (payload.notification_type === "submitted" && payload.submitter_email && await shouldSendEmail(supabaseClient, payload.submitter_email, "submitted")) {
       const repConfirmSubject = "Commission successfully submitted";
       const repConfirmHtml = `
         <!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
@@ -473,6 +545,30 @@ If you have questions, please contact your supervisor or the accounting team.
         text: `Your commission for ${payload.job_name} has been submitted and is in the compliance review queue. View: ${commissionUrl}`,
         html: repConfirmHtml,
       }).catch((e) => console.error("Rep confirmation email failed:", e));
+    }
+
+    // REP TRIGGER 2: Compliance approved — rep gets a heads-up that their commission passed compliance
+    if (payload.notification_type === "manager_approved" && payload.submitter_email && await shouldSendEmail(supabaseClient, payload.submitter_email, "manager_approved")) {
+      const repApprovedSubject = `Commission Passed Compliance Review — ${payload.job_name}`;
+      const repApprovedHtml = `
+        <!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background-color: #1d4ed8; padding: 24px; border-radius: 12px 12px 0 0; text-align: center;">
+            <h1 style="color: white; margin: 0; font-size: 22px;">Compliance Review Passed</h1>
+          </div>
+          <div style="background: #fff; padding: 24px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px;">
+            <p style="font-size: 16px;">Your commission for <strong>${payload.job_name}</strong> has passed compliance review and is now in the accounting queue.</p>
+            <p style="font-size: 14px; color: #6b7280;">You will be notified once accounting approves it for payment.</p>
+            <p style="text-align: center; margin-top: 24px;"><a href="${commissionUrl}" style="display: inline-block; background: #111827; color: #fff; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600;">View Commission</a></p>
+          </div>
+        </body></html>`;
+      await resend.emails.send({
+        from: "TSM Hub <notifications@tsmroofpro.com>",
+        reply_to: replyToEmail,
+        to: [payload.submitter_email],
+        subject: repApprovedSubject,
+        text: `Your commission for ${payload.job_name} has passed compliance review and is now in the accounting queue. View: ${commissionUrl}`,
+        html: repApprovedHtml,
+      }).catch((e) => console.error("Rep compliance-approved notification failed:", e));
     }
 
     // Create in-app notifications — check both commission_submissions and commission_documents tables

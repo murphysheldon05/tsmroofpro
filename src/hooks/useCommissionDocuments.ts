@@ -294,13 +294,30 @@ export function useUpdateCommissionDocumentStatus() {
 
       const updateData: Record<string, any> = { status };
       
-      // Handle submission - fetch manager from profile
+      // Handle submission - assign pay date, fetch manager from profile
       if (status === 'submitted') {
         updateData.submitted_at = new Date().toISOString();
         
         // Clear revision/rejection data on resubmission
         updateData.revision_reason = null;
         
+        // Assign pay date at submission time (Tue 3PM MST cutoff)
+        const { data: docForPayDate } = await supabase
+          .from('commission_documents')
+          .select('revision_count, scheduled_pay_date')
+          .eq('id', id)
+          .single();
+
+        if ((docForPayDate?.revision_count || 0) > 0 && docForPayDate?.scheduled_pay_date) {
+          // Resubmission after rejection — apply Wednesday noon grace period
+          const { calculateResubmissionPayDate } = await import('@/lib/commissionPayDateCalculations');
+          updateData.scheduled_pay_date = calculateResubmissionPayDate(docForPayDate.scheduled_pay_date);
+        } else {
+          // First submission — standard Tuesday 3PM cutoff
+          const { getScheduledPayDateString } = await import('@/lib/commissionPayDateCalculations');
+          updateData.scheduled_pay_date = getScheduledPayDateString(new Date());
+        }
+
         // Get user's profile to find their manager
         if (user) {
           const { data: profile } = await supabase
@@ -340,7 +357,7 @@ export function useUpdateCommissionDocumentStatus() {
         }
       }
 
-      // Calculate scheduled pay date when accounting approves
+      // Handle accounting approval (pay date was already set at submission time)
       if (status === 'accounting_approved') {
         updateData.accounting_approved_by = user?.id || null;
         updateData.accounting_approved_at = new Date().toISOString();
@@ -349,10 +366,17 @@ export function useUpdateCommissionDocumentStatus() {
         if (approval_comment) {
           updateData.approval_comment = approval_comment;
         }
-        // Calculate the Friday pay date based on Tue 3 PM MST rule
-        const { calculateScheduledPayDate } = await import('@/lib/commissionPayDateCalculations');
-        const payDate = calculateScheduledPayDate(new Date());
-        updateData.scheduled_pay_date = payDate.toISOString().split('T')[0]; // YYYY-MM-DD format
+        // Only set pay date if it wasn't already assigned at submission time
+        const { data: existingDoc } = await supabase
+          .from('commission_documents')
+          .select('scheduled_pay_date')
+          .eq('id', id)
+          .single();
+        if (!existingDoc?.scheduled_pay_date) {
+          const { calculateScheduledPayDate } = await import('@/lib/commissionPayDateCalculations');
+          const payDate = calculateScheduledPayDate(new Date());
+          updateData.scheduled_pay_date = payDate.toISOString().split('T')[0];
+        }
       }
 
       // Handle rejected/denied status
