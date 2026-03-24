@@ -57,6 +57,7 @@ export interface CommissionDocument {
   revision_count: number;
   submitted_at: string | null;
   submitter_email: string | null;
+  additional_neg_expenses: { amount: number; label?: string }[] | null;
 }
 
 export type CommissionDocumentInsert = Omit<CommissionDocument, 
@@ -64,8 +65,11 @@ export type CommissionDocumentInsert = Omit<CommissionDocument,
   'rep_commission' | 'company_profit' | 'dollars_increased' | 'supplement_fee' | 
   'scheduled_pay_date' | 'manager_id' | 'manager_approved_at' | 'manager_approved_by' |
   'accounting_approved_at' | 'accounting_approved_by' | 'paid_at' | 'paid_by' |
-  'revision_reason' | 'revision_count' | 'submitted_at' | 'submitter_email'
->;
+  'revision_reason' | 'revision_count' | 'submitted_at' | 'submitter_email' |
+  'additional_neg_expenses'
+> & {
+  additional_neg_expenses?: { amount: number; label?: string }[] | null;
+};
 
 export function useCommissionDocuments(statusFilter?: string) {
   const { user, isAdmin, isManager } = useAuth();

@@ -88,10 +88,27 @@ export function CommissionDocumentPrintView({ document, isAdmin = false }: Commi
                 <td className="py-1">#3</td>
                 <td className="py-1 text-right font-mono">-{formatCurrency(document.neg_exp_3)}</td>
               </tr>
-              <tr className="border-b">
-                <td className="py-1">#4 (Supplement Fees)</td>
-                <td className="py-1 text-right font-mono">-{formatCurrency(document.neg_exp_4 ?? document.supplement_fees_expense)}</td>
-              </tr>
+              {(() => {
+                const extras = Array.isArray(document.additional_neg_expenses) ? document.additional_neg_expenses : [];
+                const extrasTotal = extras.reduce((s, e) => s + (e.amount ?? 0), 0);
+                const baseNeg4 = extras.length > 0
+                  ? (document.neg_exp_4 ?? document.supplement_fees_expense ?? 0) - extrasTotal
+                  : (document.neg_exp_4 ?? document.supplement_fees_expense ?? 0);
+                return (
+                  <>
+                    <tr className="border-b">
+                      <td className="py-1">#4 (Supplement Fees)</td>
+                      <td className="py-1 text-right font-mono">-{formatCurrency(Math.max(baseNeg4, 0))}</td>
+                    </tr>
+                    {extras.map((exp, i) => (
+                      <tr key={i} className="border-b">
+                        <td className="py-1">{exp.label || `#${i + 5}`}</td>
+                        <td className="py-1 text-right font-mono">-{formatCurrency(exp.amount ?? 0)}</td>
+                      </tr>
+                    ))}
+                  </>
+                );
+              })()}
             </tbody>
           </table>
         </div>

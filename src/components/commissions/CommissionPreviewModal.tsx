@@ -131,21 +131,55 @@ export function CommissionPreviewModal({
 
             <Separator />
 
-            {/* Expenses Summary */}
+            {/* Expenses Breakdown */}
             <section>
               <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
                 <DollarSign className="h-4 w-4" />
                 Expenses
               </h3>
               <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Total Negative Expenses</span>
-                  <span className="font-mono text-destructive">−{formatCurrency(totalNegExpenses)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Total Positive Expenses</span>
-                  <span className="font-mono text-primary">+{formatCurrency(totalPosExpenses)}</span>
-                </div>
+                {[
+                  { label: "Expense #1", value: formData.neg_exp_1 },
+                  { label: "Expense #2", value: formData.neg_exp_2 },
+                  { label: "Expense #3", value: formData.neg_exp_3 },
+                  { label: "Expense #4 (Supplement Fees)", value: formData.neg_exp_4 },
+                  ...additionalNegExpenses.map((amount, i) => ({
+                    label: `Expense #${i + 5}`,
+                    value: amount,
+                  })),
+                ]
+                  .filter((e) => e.value > 0)
+                  .map((e) => (
+                    <div key={e.label} className="flex justify-between">
+                      <span className="text-muted-foreground">{e.label}</span>
+                      <span className="font-mono text-destructive">−{formatCurrency(e.value)}</span>
+                    </div>
+                  ))}
+                {totalNegExpenses > 0 && (
+                  <div className="flex justify-between pt-1 border-t border-border/30 font-medium">
+                    <span className="text-muted-foreground">Total Negative</span>
+                    <span className="font-mono text-destructive">−{formatCurrency(totalNegExpenses)}</span>
+                  </div>
+                )}
+                {[
+                  { label: "Positive #1", value: formData.pos_exp_1 },
+                  { label: "Positive #2", value: formData.pos_exp_2 },
+                  { label: "Positive #3", value: formData.pos_exp_3 },
+                  { label: "Positive #4", value: formData.pos_exp_4 },
+                ]
+                  .filter((e) => e.value > 0)
+                  .map((e) => (
+                    <div key={e.label} className="flex justify-between">
+                      <span className="text-muted-foreground">{e.label}</span>
+                      <span className="font-mono text-emerald-600">+{formatCurrency(e.value)}</span>
+                    </div>
+                  ))}
+                {totalPosExpenses > 0 && (
+                  <div className="flex justify-between pt-1 border-t border-border/30 font-medium">
+                    <span className="text-muted-foreground">Total Positive</span>
+                    <span className="font-mono text-primary">+{formatCurrency(totalPosExpenses)}</span>
+                  </div>
+                )}
               </div>
             </section>
 

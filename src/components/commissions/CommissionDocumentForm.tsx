@@ -213,32 +213,43 @@ export function CommissionDocumentForm({ document: existingDoc, readOnly = false
   const [customerName, setCustomerName] = useState(parsedJob.customerName);
 
   // ── Form state (identical field set to current) ──
-  const [formData, setFormData] = useState(() => ({
-    job_name_id: existingDoc?.job_name_id ?? "",
-    job_date: existingDoc?.job_date ?? "",
-    sales_rep: existingDoc?.sales_rep ?? "",
-    sales_rep_id: existingDoc?.sales_rep_id ?? user?.id ?? null,
-    gross_contract_total: existingDoc?.gross_contract_total ?? 0,
-    op_percent: existingDoc?.op_percent ?? 0.15,
-    material_cost: existingDoc?.material_cost ?? 0,
-    labor_cost: existingDoc?.labor_cost ?? 0,
-    neg_exp_1: existingDoc?.neg_exp_1 ?? 0,
-    neg_exp_2: existingDoc?.neg_exp_2 ?? 0,
-    neg_exp_3: existingDoc?.neg_exp_3 ?? 0,
-    neg_exp_4: existingDoc?.neg_exp_4 ?? existingDoc?.supplement_fees_expense ?? 0,
-    pos_exp_1: existingDoc?.pos_exp_1 ?? 0,
-    pos_exp_2: existingDoc?.pos_exp_2 ?? 0,
-    pos_exp_3: existingDoc?.pos_exp_3 ?? 0,
-    pos_exp_4: existingDoc?.pos_exp_4 ?? 0,
-    profit_split_label: existingDoc?.profit_split_label ?? "15/40/60",
-    rep_profit_percent: existingDoc?.rep_profit_percent ?? 0.40,
-    company_profit_percent: existingDoc?.company_profit_percent ?? 0.60,
-    advance_total: existingDoc?.advance_total ?? 0,
-    notes: existingDoc?.notes ?? "",
-  }));
+  const [formData, setFormData] = useState(() => {
+    const storedNeg4 = existingDoc?.neg_exp_4 ?? existingDoc?.supplement_fees_expense ?? 0;
+    const storedExtras = Array.isArray(existingDoc?.additional_neg_expenses)
+      ? existingDoc.additional_neg_expenses.reduce((s: number, e: { amount: number }) => s + (e.amount ?? 0), 0)
+      : 0;
+    return {
+      job_name_id: existingDoc?.job_name_id ?? "",
+      job_date: existingDoc?.job_date ?? "",
+      sales_rep: existingDoc?.sales_rep ?? "",
+      sales_rep_id: existingDoc?.sales_rep_id ?? user?.id ?? null,
+      gross_contract_total: existingDoc?.gross_contract_total ?? 0,
+      op_percent: existingDoc?.op_percent ?? 0.15,
+      material_cost: existingDoc?.material_cost ?? 0,
+      labor_cost: existingDoc?.labor_cost ?? 0,
+      neg_exp_1: existingDoc?.neg_exp_1 ?? 0,
+      neg_exp_2: existingDoc?.neg_exp_2 ?? 0,
+      neg_exp_3: existingDoc?.neg_exp_3 ?? 0,
+      neg_exp_4: storedNeg4 - storedExtras,
+      pos_exp_1: existingDoc?.pos_exp_1 ?? 0,
+      pos_exp_2: existingDoc?.pos_exp_2 ?? 0,
+      pos_exp_3: existingDoc?.pos_exp_3 ?? 0,
+      pos_exp_4: existingDoc?.pos_exp_4 ?? 0,
+      profit_split_label: existingDoc?.profit_split_label ?? "15/40/60",
+      rep_profit_percent: existingDoc?.rep_profit_percent ?? 0.40,
+      company_profit_percent: existingDoc?.company_profit_percent ?? 0.60,
+      advance_total: existingDoc?.advance_total ?? 0,
+      notes: existingDoc?.notes ?? "",
+    };
+  });
 
-  // ── NEW: Dynamic additional negative expenses ──
-  const [additionalNegExpenses, setAdditionalNegExpenses] = useState<number[]>([]);
+  // ── Dynamic additional negative expenses (restored from JSONB when editing) ──
+  const [additionalNegExpenses, setAdditionalNegExpenses] = useState<number[]>(() => {
+    if (existingDoc?.additional_neg_expenses && Array.isArray(existingDoc.additional_neg_expenses)) {
+      return existingDoc.additional_neg_expenses.map((e: { amount: number }) => e.amount ?? 0);
+    }
+    return [];
+  });
 
   // ── Preview modal state ──
   const [showPreview, setShowPreview] = useState(false);
@@ -411,7 +422,10 @@ export function CommissionDocumentForm({ document: existingDoc, readOnly = false
     approval_comment: null,
     starting_claim_amount: null,
     final_claim_amount: null,
-  }), [formData, additionalNegTotal]);
+    additional_neg_expenses: additionalNegExpenses
+      .filter(exp => exp > 0)
+      .map((amount, index) => ({ amount, label: `Expense #${index + 5}` })),
+  }), [formData, additionalNegTotal, additionalNegExpenses]);
 
   // ── Determine editability first (needed for auto-save) ──
   const canEdit = !readOnly && (!existingDoc || existingDoc.status === 'draft' || existingDoc.status === 'revision_required');

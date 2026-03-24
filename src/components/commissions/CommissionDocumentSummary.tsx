@@ -11,13 +11,22 @@ export function CommissionDocumentSummary({ document: doc }: CommissionDocumentS
   const { isAdmin, isManager } = useAuth();
   const isPrivileged = isAdmin || isManager;
 
-  const negExp4 = doc.neg_exp_4 ?? doc.supplement_fees_expense ?? 0;
+  const additionalItems = Array.isArray(doc.additional_neg_expenses) ? doc.additional_neg_expenses : [];
+  const hasIndividualExtras = additionalItems.length > 0;
+
+  const baseNegExp4 = hasIndividualExtras
+    ? (doc.neg_exp_4 ?? doc.supplement_fees_expense ?? 0) - additionalItems.reduce((s, e) => s + (e.amount ?? 0), 0)
+    : (doc.neg_exp_4 ?? doc.supplement_fees_expense ?? 0);
 
   const negExpenses = [
     { label: "Expense #1", value: doc.neg_exp_1 },
     { label: "Expense #2", value: doc.neg_exp_2 },
     { label: "Expense #3", value: doc.neg_exp_3 },
-    { label: "Expense #4 (Supplement Fees)", value: negExp4 },
+    { label: "Expense #4 (Supplement Fees)", value: Math.max(baseNegExp4, 0) },
+    ...additionalItems.map((e, i) => ({
+      label: e.label || `Expense #${i + 5}`,
+      value: e.amount ?? 0,
+    })),
   ].filter((e) => e.value > 0);
 
   const posExpenses = [
