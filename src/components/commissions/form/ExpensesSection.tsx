@@ -58,15 +58,15 @@ export function ExpensesSection({
 
 // Define expense field configurations
 export const NEGATIVE_EXPENSES: ExpenseField[] = [
-  { key: "neg_exp_1", label: "Additional expenses (-) #1", hint: "Will calls, lumber, Home Depot, Misc. expenses" },
-  { key: "neg_exp_2", label: "Additional expenses (-) #2", hint: "Will calls, lumber, Home Depot, Misc. expenses" },
-  { key: "neg_exp_3", label: "Additional expenses (-) #3", hint: "Will calls, lumber, Home Depot, Misc. expenses" },
-  { key: "neg_exp_4", label: "Additional expenses (-) #4", hint: "Supplement fees" },
+  { key: "neg_exp_1", label: "Expense #1", hint: "Will calls, lumber, Home Depot, Misc. expenses" },
+  { key: "neg_exp_2", label: "Expense #2", hint: "Will calls, lumber, Home Depot, Misc. expenses" },
+  { key: "neg_exp_3", label: "Expense #3", hint: "Will calls, lumber, Home Depot, Misc. expenses" },
+  { key: "neg_exp_4", label: "Expense #4 (Supplement/Appraisal Fees)", hint: "Supplement/Appraisal fees" },
 ];
 
 export const POSITIVE_EXPENSES: ExpenseField[] = [
-  { key: "pos_exp_1", label: "Additional expenses (+) #1", hint: "Returns added back if rep returns materials" },
-  { key: "pos_exp_2", label: "Additional expenses (+) #2" },
-  { key: "pos_exp_3", label: "Additional expenses (+) #3" },
-  { key: "pos_exp_4", label: "Additional expenses (+) #4" },
+  { key: "pos_exp_1", label: "Return #1", hint: "Returns added back if rep returns materials" },
+  { key: "pos_exp_2", label: "Return #2" },
+  { key: "pos_exp_3", label: "Return #3" },
+  { key: "pos_exp_4", label: "Return #4" },
 ];

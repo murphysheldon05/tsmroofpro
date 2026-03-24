@@ -97,7 +97,7 @@ export function CommissionDocumentPrintView({ document, isAdmin = false }: Commi
                 return (
                   <>
                     <tr className="border-b">
-                      <td className="py-1">#4 (Supplement Fees)</td>
+                      <td className="py-1">#4 (Supplement/Appraisal Fees)</td>
                       <td className="py-1 text-right font-mono">-{formatCurrency(Math.max(baseNeg4, 0))}</td>
                     </tr>
                     {extras.map((exp, i) => (
@@ -117,21 +117,38 @@ export function CommissionDocumentPrintView({ document, isAdmin = false }: Commi
           <table className="w-full border-collapse">
             <tbody>
               <tr className="border-b">
-                <td className="py-1">#1</td>
+                <td className="py-1">Return #1</td>
                 <td className="py-1 text-right font-mono">+{formatCurrency(document.pos_exp_1)}</td>
               </tr>
               <tr className="border-b">
-                <td className="py-1">#2</td>
+                <td className="py-1">Return #2</td>
                 <td className="py-1 text-right font-mono">+{formatCurrency(document.pos_exp_2)}</td>
               </tr>
               <tr className="border-b">
-                <td className="py-1">#3</td>
+                <td className="py-1">Return #3</td>
                 <td className="py-1 text-right font-mono">+{formatCurrency(document.pos_exp_3)}</td>
               </tr>
-              <tr className="border-b">
-                <td className="py-1">#4</td>
-                <td className="py-1 text-right font-mono">+{formatCurrency(document.pos_exp_4)}</td>
-              </tr>
+              {(() => {
+                const posExtras = Array.isArray(document.additional_pos_expenses) ? document.additional_pos_expenses : [];
+                const posExtrasTotal = posExtras.reduce((s, e) => s + (e.amount ?? 0), 0);
+                const basePos4 = posExtras.length > 0
+                  ? (document.pos_exp_4 ?? 0) - posExtrasTotal
+                  : (document.pos_exp_4 ?? 0);
+                return (
+                  <>
+                    <tr className="border-b">
+                      <td className="py-1">Return #4</td>
+                      <td className="py-1 text-right font-mono">+{formatCurrency(Math.max(basePos4, 0))}</td>
+                    </tr>
+                    {posExtras.map((exp, i) => (
+                      <tr key={i} className="border-b">
+                        <td className="py-1">{exp.label || `Return #${i + 5}`}</td>
+                        <td className="py-1 text-right font-mono">+{formatCurrency(exp.amount ?? 0)}</td>
+                      </tr>
+                    ))}
+                  </>
+                );
+              })()}
             </tbody>
           </table>
         </div>

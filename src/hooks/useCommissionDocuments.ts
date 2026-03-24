@@ -58,6 +58,7 @@ export interface CommissionDocument {
   submitted_at: string | null;
   submitter_email: string | null;
   additional_neg_expenses: { amount: number; label?: string }[] | null;
+  additional_pos_expenses: { amount: number; label?: string }[] | null;
 }
 
 export type CommissionDocumentInsert = Omit<CommissionDocument, 
@@ -66,9 +67,10 @@ export type CommissionDocumentInsert = Omit<CommissionDocument,
   'scheduled_pay_date' | 'manager_id' | 'manager_approved_at' | 'manager_approved_by' |
   'accounting_approved_at' | 'accounting_approved_by' | 'paid_at' | 'paid_by' |
   'revision_reason' | 'revision_count' | 'submitted_at' | 'submitter_email' |
-  'additional_neg_expenses'
+  'additional_neg_expenses' | 'additional_pos_expenses'
 > & {
   additional_neg_expenses?: { amount: number; label?: string }[] | null;
+  additional_pos_expenses?: { amount: number; label?: string }[] | null;
 };
 
 export function useCommissionDocuments(statusFilter?: string) {

@@ -34,6 +34,7 @@ interface CommissionPreviewModalProps {
     notes: string;
   };
   additionalNegExpenses: number[];
+  additionalPosExpenses: number[];
   calculated: {
     op_amount: number;
     contract_total_net: number;
@@ -51,12 +52,14 @@ export function CommissionPreviewModal({
   isSubmitting,
   formData,
   additionalNegExpenses,
+  additionalPosExpenses,
   calculated,
   tierName,
 }: CommissionPreviewModalProps) {
   const totalNegExpenses = formData.neg_exp_1 + formData.neg_exp_2 + formData.neg_exp_3 + formData.neg_exp_4 +
     additionalNegExpenses.reduce((sum, exp) => sum + (exp || 0), 0);
-  const totalPosExpenses = formData.pos_exp_1 + formData.pos_exp_2 + formData.pos_exp_3 + formData.pos_exp_4;
+  const totalPosExpenses = formData.pos_exp_1 + formData.pos_exp_2 + formData.pos_exp_3 + formData.pos_exp_4 +
+    additionalPosExpenses.reduce((sum, exp) => sum + (exp || 0), 0);
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
@@ -142,7 +145,7 @@ export function CommissionPreviewModal({
                   { label: "Expense #1", value: formData.neg_exp_1 },
                   { label: "Expense #2", value: formData.neg_exp_2 },
                   { label: "Expense #3", value: formData.neg_exp_3 },
-                  { label: "Expense #4 (Supplement Fees)", value: formData.neg_exp_4 },
+                  { label: "Expense #4 (Supplement/Appraisal Fees)", value: formData.neg_exp_4 },
                   ...additionalNegExpenses.map((amount, i) => ({
                     label: `Expense #${i + 5}`,
                     value: amount,
@@ -162,10 +165,14 @@ export function CommissionPreviewModal({
                   </div>
                 )}
                 {[
-                  { label: "Positive #1", value: formData.pos_exp_1 },
-                  { label: "Positive #2", value: formData.pos_exp_2 },
-                  { label: "Positive #3", value: formData.pos_exp_3 },
-                  { label: "Positive #4", value: formData.pos_exp_4 },
+                  { label: "Return #1", value: formData.pos_exp_1 },
+                  { label: "Return #2", value: formData.pos_exp_2 },
+                  { label: "Return #3", value: formData.pos_exp_3 },
+                  { label: "Return #4", value: formData.pos_exp_4 },
+                  ...additionalPosExpenses.map((amount, i) => ({
+                    label: `Return #${i + 5}`,
+                    value: amount,
+                  })),
                 ]
                   .filter((e) => e.value > 0)
                   .map((e) => (

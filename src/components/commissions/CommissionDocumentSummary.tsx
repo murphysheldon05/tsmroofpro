@@ -11,29 +11,37 @@ export function CommissionDocumentSummary({ document: doc }: CommissionDocumentS
   const { isAdmin, isManager } = useAuth();
   const isPrivileged = isAdmin || isManager;
 
-  const additionalItems = Array.isArray(doc.additional_neg_expenses) ? doc.additional_neg_expenses : [];
-  const hasIndividualExtras = additionalItems.length > 0;
+  const additionalNegItems = Array.isArray(doc.additional_neg_expenses) ? doc.additional_neg_expenses : [];
+  const additionalPosItems = Array.isArray(doc.additional_pos_expenses) ? doc.additional_pos_expenses : [];
 
-  const baseNegExp4 = hasIndividualExtras
-    ? (doc.neg_exp_4 ?? doc.supplement_fees_expense ?? 0) - additionalItems.reduce((s, e) => s + (e.amount ?? 0), 0)
+  const baseNegExp4 = additionalNegItems.length > 0
+    ? (doc.neg_exp_4 ?? doc.supplement_fees_expense ?? 0) - additionalNegItems.reduce((s, e) => s + (e.amount ?? 0), 0)
     : (doc.neg_exp_4 ?? doc.supplement_fees_expense ?? 0);
+
+  const basePos4 = additionalPosItems.length > 0
+    ? (doc.pos_exp_4 ?? 0) - additionalPosItems.reduce((s, e) => s + (e.amount ?? 0), 0)
+    : (doc.pos_exp_4 ?? 0);
 
   const negExpenses = [
     { label: "Expense #1", value: doc.neg_exp_1 },
     { label: "Expense #2", value: doc.neg_exp_2 },
     { label: "Expense #3", value: doc.neg_exp_3 },
-    { label: "Expense #4 (Supplement Fees)", value: Math.max(baseNegExp4, 0) },
-    ...additionalItems.map((e, i) => ({
+    { label: "Expense #4 (Supplement/Appraisal Fees)", value: Math.max(baseNegExp4, 0) },
+    ...additionalNegItems.map((e, i) => ({
       label: e.label || `Expense #${i + 5}`,
       value: e.amount ?? 0,
     })),
   ].filter((e) => e.value > 0);
 
   const posExpenses = [
-    { label: "Expense #1", value: doc.pos_exp_1 },
-    { label: "Expense #2", value: doc.pos_exp_2 },
-    { label: "Expense #3", value: doc.pos_exp_3 },
-    { label: "Expense #4", value: doc.pos_exp_4 },
+    { label: "Return #1", value: doc.pos_exp_1 },
+    { label: "Return #2", value: doc.pos_exp_2 },
+    { label: "Return #3", value: doc.pos_exp_3 },
+    { label: "Return #4", value: Math.max(basePos4, 0) },
+    ...additionalPosItems.map((e, i) => ({
+      label: e.label || `Return #${i + 5}`,
+      value: e.amount ?? 0,
+    })),
   ].filter((e) => e.value > 0);
 
   const totalNeg = negExpenses.reduce((s, e) => s + e.value, 0);

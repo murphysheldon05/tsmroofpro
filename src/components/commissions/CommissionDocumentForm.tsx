@@ -215,8 +215,12 @@ export function CommissionDocumentForm({ document: existingDoc, readOnly = false
   // ── Form state (identical field set to current) ──
   const [formData, setFormData] = useState(() => {
     const storedNeg4 = existingDoc?.neg_exp_4 ?? existingDoc?.supplement_fees_expense ?? 0;
-    const storedExtras = Array.isArray(existingDoc?.additional_neg_expenses)
+    const storedNegExtras = Array.isArray(existingDoc?.additional_neg_expenses)
       ? existingDoc.additional_neg_expenses.reduce((s: number, e: { amount: number }) => s + (e.amount ?? 0), 0)
+      : 0;
+    const storedPos4 = existingDoc?.pos_exp_4 ?? 0;
+    const storedPosExtras = Array.isArray(existingDoc?.additional_pos_expenses)
+      ? existingDoc.additional_pos_expenses.reduce((s: number, e: { amount: number }) => s + (e.amount ?? 0), 0)
       : 0;
     return {
       job_name_id: existingDoc?.job_name_id ?? "",
@@ -230,11 +234,11 @@ export function CommissionDocumentForm({ document: existingDoc, readOnly = false
       neg_exp_1: existingDoc?.neg_exp_1 ?? 0,
       neg_exp_2: existingDoc?.neg_exp_2 ?? 0,
       neg_exp_3: existingDoc?.neg_exp_3 ?? 0,
-      neg_exp_4: storedNeg4 - storedExtras,
+      neg_exp_4: storedNeg4 - storedNegExtras,
       pos_exp_1: existingDoc?.pos_exp_1 ?? 0,
       pos_exp_2: existingDoc?.pos_exp_2 ?? 0,
       pos_exp_3: existingDoc?.pos_exp_3 ?? 0,
-      pos_exp_4: existingDoc?.pos_exp_4 ?? 0,
+      pos_exp_4: storedPos4 - storedPosExtras,
       profit_split_label: existingDoc?.profit_split_label ?? "15/40/60",
       rep_profit_percent: existingDoc?.rep_profit_percent ?? 0.40,
       company_profit_percent: existingDoc?.company_profit_percent ?? 0.60,
@@ -243,10 +247,16 @@ export function CommissionDocumentForm({ document: existingDoc, readOnly = false
     };
   });
 
-  // ── Dynamic additional negative expenses (restored from JSONB when editing) ──
+  // ── Dynamic additional expenses (restored from JSONB when editing) ──
   const [additionalNegExpenses, setAdditionalNegExpenses] = useState<number[]>(() => {
     if (existingDoc?.additional_neg_expenses && Array.isArray(existingDoc.additional_neg_expenses)) {
       return existingDoc.additional_neg_expenses.map((e: { amount: number }) => e.amount ?? 0);
+    }
+    return [];
+  });
+  const [additionalPosExpenses, setAdditionalPosExpenses] = useState<number[]>(() => {
+    if (existingDoc?.additional_pos_expenses && Array.isArray(existingDoc.additional_pos_expenses)) {
+      return existingDoc.additional_pos_expenses.map((e: { amount: number }) => e.amount ?? 0);
     }
     return [];
   });
@@ -329,8 +339,9 @@ export function CommissionDocumentForm({ document: existingDoc, readOnly = false
     setFormData(prev => ({ ...prev, op_percent: parseFloat(value) }));
   };
 
-  // ── Calculations (exact same formulas + additional neg expenses) ──
+  // ── Calculations (formulas + additional expenses) ──
   const additionalNegTotal = additionalNegExpenses.reduce((sum, exp) => sum + (exp || 0), 0);
+  const additionalPosTotal = additionalPosExpenses.reduce((sum, exp) => sum + (exp || 0), 0);
 
   const calculated = useMemo(() => {
     const inputData: CommissionDocumentData = {
@@ -345,12 +356,12 @@ export function CommissionDocumentForm({ document: existingDoc, readOnly = false
       pos_exp_1: formData.pos_exp_1,
       pos_exp_2: formData.pos_exp_2,
       pos_exp_3: formData.pos_exp_3,
-      pos_exp_4: formData.pos_exp_4,
+      pos_exp_4: formData.pos_exp_4 + additionalPosTotal,
       rep_profit_percent: formData.rep_profit_percent,
       advance_total: formData.advance_total,
     };
     return calculateAllFields(inputData);
-  }, [formData, additionalNegTotal]);
+  }, [formData, additionalNegTotal, additionalPosTotal]);
 
   // ── Money input editing (per-field tracking for continuous entry) ──
   const [rawValues, setRawValues] = useState<Record<string, string>>({});
@@ -371,11 +382,12 @@ export function CommissionDocumentForm({ document: existingDoc, readOnly = false
       return updated;
     });
   };
-  const commitAdditionalExpenseValue = (index: number) => {
-    const fieldKey = `addl_neg_${index}`;
+  const commitAdditionalExpenseValue = (type: 'neg' | 'pos', index: number) => {
+    const fieldKey = `addl_${type}_${index}`;
     const raw = rawValues[fieldKey] ?? "";
     const numValue = parseCurrencyInput(raw);
-    setAdditionalNegExpenses(prev => {
+    const setter = type === 'neg' ? setAdditionalNegExpenses : setAdditionalPosExpenses;
+    setter(prev => {
       const updated = [...prev];
       updated[index] = numValue;
       return updated;
@@ -409,7 +421,7 @@ export function CommissionDocumentForm({ document: existingDoc, readOnly = false
     pos_exp_1: formData.pos_exp_1,
     pos_exp_2: formData.pos_exp_2,
     pos_exp_3: formData.pos_exp_3,
-    pos_exp_4: formData.pos_exp_4,
+    pos_exp_4: formData.pos_exp_4 + additionalPosTotal,
     profit_split_label: formData.profit_split_label,
     rep_profit_percent: formData.rep_profit_percent,
     company_profit_percent: formData.company_profit_percent,
@@ -425,7 +437,10 @@ export function CommissionDocumentForm({ document: existingDoc, readOnly = false
     additional_neg_expenses: additionalNegExpenses
       .filter(exp => exp > 0)
       .map((amount, index) => ({ amount, label: `Expense #${index + 5}` })),
-  }), [formData, additionalNegTotal, additionalNegExpenses]);
+    additional_pos_expenses: additionalPosExpenses
+      .filter(exp => exp > 0)
+      .map((amount, index) => ({ amount, label: `Return #${index + 5}` })),
+  }), [formData, additionalNegTotal, additionalNegExpenses, additionalPosTotal, additionalPosExpenses]);
 
   // ── Determine editability first (needed for auto-save) ──
   const canEdit = !readOnly && (!existingDoc || existingDoc.status === 'draft' || existingDoc.status === 'revision_required');
@@ -452,10 +467,10 @@ export function CommissionDocumentForm({ document: existingDoc, readOnly = false
     } catch (error) {
       console.error("Auto-save failed:", error);
     }
-  }, [formData, additionalNegTotal, autoSaveDocId, canAutoSave, buildPayload, updateMutation, createMutation]);
+  }, [formData, additionalNegTotal, additionalPosTotal, autoSaveDocId, canAutoSave, buildPayload, updateMutation, createMutation]);
 
   const { lastSavedAt, isSaving: isAutoSaving, hasUnsavedChanges } = useAutoSave({
-    data: { formData, additionalNegExpenses },
+    data: { formData, additionalNegExpenses, additionalPosExpenses },
     onSave: handleAutoSave,
     interval: 30000,
     enabled: canEdit && (!!autoSaveDocId || canAutoSave),
@@ -520,6 +535,7 @@ export function CommissionDocumentForm({ document: existingDoc, readOnly = false
 
   const isLoading = createMutation.isPending || updateMutation.isPending || statusMutation.isPending;
   const negExpenseCount = [formData.neg_exp_1, formData.neg_exp_2, formData.neg_exp_3, formData.neg_exp_4, ...additionalNegExpenses].filter(e => e > 0).length;
+  const posExpenseCount = [formData.pos_exp_1, formData.pos_exp_2, formData.pos_exp_3, formData.pos_exp_4, ...additionalPosExpenses].filter(e => e > 0).length;
 
   // ── Render helper for money inputs (inline, not a component) ──
   const renderMoneyInput = (field: keyof typeof formData, disabled?: boolean) => (
@@ -693,7 +709,7 @@ export function CommissionDocumentForm({ document: existingDoc, readOnly = false
                 <EnhancedFormRow label="Expense #1" variant="negative" hint="Will calls, lumber, Home Depot, misc.">{renderMoneyInput("neg_exp_1")}</EnhancedFormRow>
                 <EnhancedFormRow label="Expense #2" variant="negative">{renderMoneyInput("neg_exp_2")}</EnhancedFormRow>
                 <EnhancedFormRow label="Expense #3" variant="negative">{renderMoneyInput("neg_exp_3")}</EnhancedFormRow>
-                <EnhancedFormRow label="Expense #4 (Supplement Fees)" variant="negative">{renderMoneyInput("neg_exp_4")}</EnhancedFormRow>
+                <EnhancedFormRow label="Expense #4 (Supplement/Appraisal Fees)" variant="negative">{renderMoneyInput("neg_exp_4")}</EnhancedFormRow>
 
                 {/* Dynamic additional negative expenses */}
                 {additionalNegExpenses.map((expense, index) => {
@@ -707,7 +723,7 @@ export function CommissionDocumentForm({ document: existingDoc, readOnly = false
                           value={getMoneyInputValue(fieldKey, expense)}
                           onChange={(e) => handleMoneyChange(fieldKey, e.target.value)}
                           onFocus={() => handleMoneyFocus(fieldKey, expense)}
-                          onBlur={() => commitAdditionalExpenseValue(index)}
+                          onBlur={() => commitAdditionalExpenseValue('neg', index)}
                           onWheel={(e) => e.currentTarget.blur()}
                           disabled={!canEdit}
                           className={numberInputClasses}
@@ -737,15 +753,53 @@ export function CommissionDocumentForm({ document: existingDoc, readOnly = false
           </Collapsible>
           </div>
 
-          {/* ── Positive Expenses ── */}
+          {/* ── Positive Expenses (Returns) ── */}
           <Collapsible open={openSections.posExpenses} onOpenChange={() => toggleSection('posExpenses')}>
-            <SectionHeader title="Additional Expenses (+)" icon={DollarSign} color="success" isOpen={openSections.posExpenses} onToggle={() => toggleSection('posExpenses')} />
+            <SectionHeader title="Additional Expenses (+)" icon={DollarSign} color="success" isOpen={openSections.posExpenses} onToggle={() => toggleSection('posExpenses')} badge={posExpenseCount} />
             <CollapsibleContent>
               <div className="p-4 space-y-1">
-                <EnhancedFormRow label="Expense #1" variant="positive" hint="Returns added back if rep returns materials">{renderMoneyInput("pos_exp_1")}</EnhancedFormRow>
-                <EnhancedFormRow label="Expense #2" variant="positive">{renderMoneyInput("pos_exp_2")}</EnhancedFormRow>
-                <EnhancedFormRow label="Expense #3" variant="positive">{renderMoneyInput("pos_exp_3")}</EnhancedFormRow>
-                <EnhancedFormRow label="Expense #4" variant="positive">{renderMoneyInput("pos_exp_4")}</EnhancedFormRow>
+                <EnhancedFormRow label="Return #1" variant="positive" hint="Returns added back if rep returns materials">{renderMoneyInput("pos_exp_1")}</EnhancedFormRow>
+                <EnhancedFormRow label="Return #2" variant="positive">{renderMoneyInput("pos_exp_2")}</EnhancedFormRow>
+                <EnhancedFormRow label="Return #3" variant="positive">{renderMoneyInput("pos_exp_3")}</EnhancedFormRow>
+                <EnhancedFormRow label="Return #4" variant="positive">{renderMoneyInput("pos_exp_4")}</EnhancedFormRow>
+
+                {/* Dynamic additional positive expenses */}
+                {additionalPosExpenses.map((expense, index) => {
+                  const fieldKey = `addl_pos_${index}`;
+                  return (
+                    <EnhancedFormRow key={fieldKey} label={`Return #${index + 5}`} variant="positive">
+                      <div className="flex gap-2">
+                        <Input
+                          type="text"
+                          inputMode="decimal"
+                          value={getMoneyInputValue(fieldKey, expense)}
+                          onChange={(e) => handleMoneyChange(fieldKey, e.target.value)}
+                          onFocus={() => handleMoneyFocus(fieldKey, expense)}
+                          onBlur={() => commitAdditionalExpenseValue('pos', index)}
+                          onWheel={(e) => e.currentTarget.blur()}
+                          disabled={!canEdit}
+                          className={numberInputClasses}
+                          placeholder="$0.00"
+                        />
+                        {canEdit && (
+                          <Button type="button" variant="ghost" size="icon"
+                            onClick={() => setAdditionalPosExpenses(prev => prev.filter((_, i) => i !== index))}
+                            className="shrink-0 h-12 w-12 text-emerald-600 hover:text-emerald-600 hover:bg-emerald-500/10">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </EnhancedFormRow>
+                  );
+                })}
+
+                {canEdit && (
+                  <Button type="button" variant="outline"
+                    onClick={() => setAdditionalPosExpenses(prev => [...prev, 0])}
+                    className="w-full mt-4 h-12 border-dashed border-emerald-500/30 text-emerald-600 hover:bg-emerald-500/5 hover:border-emerald-500/50">
+                    <Plus className="h-4 w-4 mr-2" /> Add Return
+                  </Button>
+                )}
               </div>
             </CollapsibleContent>
           </Collapsible>
@@ -850,6 +904,7 @@ export function CommissionDocumentForm({ document: existingDoc, readOnly = false
         isSubmitting={isLoading}
         formData={formData}
         additionalNegExpenses={additionalNegExpenses}
+        additionalPosExpenses={additionalPosExpenses}
         calculated={calculated}
         tierName={userTier?.tier?.name}
       />
