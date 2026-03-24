@@ -269,7 +269,7 @@ export function CommissionDocumentForm({ document: existingDoc, readOnly = false
     job: true,
     contract: true,
     negExpenses: true,
-    posExpenses: false,
+    posExpenses: true,
     profitSplit: true,
     summary: true,
     notes: false,
