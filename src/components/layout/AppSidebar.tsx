@@ -40,6 +40,7 @@ import {
   Calendar,
   GripVertical,
   Compass,
+  BarChart3,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -342,6 +343,7 @@ export function AppSidebar() {
   const getRoleLabel = () => {
     if (role === 'admin') return 'Admin';
     if (role === 'manager') return 'Manager';
+    if (role === 'sales_manager') return 'Sales Manager';
     if (role === 'sales_rep') return 'Sales Rep';
     if (role === 'accounting') return 'Accounting';
     if (role === 'production_manager' || role === 'production') return 'Production';
@@ -371,7 +373,11 @@ export function AppSidebar() {
     });
   }, [location.pathname]);
 
-  const isActive = (href: string) => location.pathname === href;
+  const isActive = (href: string) => {
+    if (location.pathname === href) return true;
+    if (href === "/kpi-scorecards" && location.pathname.startsWith("/kpi-scorecards/")) return true;
+    return false;
+  };
   const isParentActive = (children?: { href: string }[]) =>
     children?.some((child) => location.pathname.startsWith(child.href));
 
@@ -398,9 +404,17 @@ export function AppSidebar() {
           tutorialTarget: "sidebar-commissions",
         };
 
+    const kpiScorecardsItem: NavItem = {
+      title: "KPI Scorecards",
+      href: "/kpi-scorecards",
+      icon: BarChart3,
+      sectionKey: "kpi-scorecards",
+    };
+
     const allItems: NavItem[] = [
       baseNavigationItems[0], // Command Center
       commissionItem,
+      kpiScorecardsItem,
       ...baseNavigationItems.slice(1), // Production, Subs & Vendors
     ];
 

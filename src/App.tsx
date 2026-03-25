@@ -9,6 +9,7 @@ import { WalkthroughProvider } from "@/contexts/WalkthroughContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageTransition } from "@/components/PageTransition";
+import { NavigationProgress } from "@/components/NavigationProgress";
 import { Loader2 } from "lucide-react";
 
 const Landing = lazy(() => import("./pages/Landing"));
@@ -28,6 +29,8 @@ const CommissionManager = lazy(() => import("./pages/CommissionManager"));
 const BuildSchedule = lazy(() => import("./pages/BuildSchedule"));
 const DeliverySchedule = lazy(() => import("./pages/DeliverySchedule"));
 const CommandCenter = lazy(() => import("./pages/CommandCenter"));
+const KpiScorecards = lazy(() => import("./pages/KpiScorecards"));
+const KpiScorecardDetail = lazy(() => import("./pages/KpiScorecardDetail"));
 const PendingReview = lazy(() => import("./pages/PendingReview"));
 const ContactList = lazy(() => import("./pages/ContactList"));
 const NotFound = lazy(() => import("./pages/NotFound"));
@@ -42,8 +45,18 @@ function PageLoader() {
 
 function InlinePageLoader() {
   return (
-    <div className="flex items-center justify-center py-32">
-      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+    <div className="animate-in fade-in duration-300 space-y-6 py-8 max-w-4xl">
+      <div className="h-8 w-48 rounded-lg bg-muted animate-pulse" />
+      <div className="space-y-3">
+        <div className="h-4 w-full rounded bg-muted/70 animate-pulse" />
+        <div className="h-4 w-3/4 rounded bg-muted/50 animate-pulse" />
+        <div className="h-4 w-5/6 rounded bg-muted/60 animate-pulse" />
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="h-32 rounded-xl bg-muted/40 animate-pulse" />
+        ))}
+      </div>
     </div>
   );
 }
@@ -68,7 +81,16 @@ function RequireAdmin() {
   return <Outlet />;
 }
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 2,
+      gcTime: 1000 * 60 * 10,
+      refetchOnWindowFocus: false,
+      retry: 1,
+    },
+  },
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -77,6 +99,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
+          <NavigationProgress />
           <WalkthroughProvider>
           <Suspense fallback={<PageLoader />}>
           <Routes>
@@ -87,6 +110,8 @@ const App = () => (
 
             <Route element={<ProtectedAppShell />}>
               <Route path="/command-center" element={<CommandCenter />} />
+              <Route path="/kpi-scorecards" element={<KpiScorecards />} />
+              <Route path="/kpi-scorecards/:id" element={<KpiScorecardDetail />} />
               <Route path="/pending-review" element={<PendingReview />} />
               <Route path="/requests" element={<Requests />} />
               <Route path="/profile" element={<Profile />} />

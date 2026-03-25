@@ -6,6 +6,7 @@ const STORAGE_KEY = "tsm_sidebar_order";
 const DEFAULT_ORDER = [
   "Command Center",
   "Commissions",
+  "KPI Scorecards",
   "Production",
   "Subs & Vendors",
 ];

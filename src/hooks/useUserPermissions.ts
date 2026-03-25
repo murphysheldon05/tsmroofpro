@@ -12,6 +12,7 @@ export const SIDEBAR_SECTIONS = [
   { key: "production-calendar/delivery", label: "Delivery Schedule", parent: "production-calendar" },
   { key: "requests", label: "Forms & Requests", parent: null },
   { key: "commissions", label: "Commissions", parent: null },
+  { key: "kpi-scorecards", label: "KPI Scorecards", parent: null },
   { key: "company", label: "Company", parent: null },
   { key: "directory", label: "Team Directory", parent: null },
   { key: "vendors", label: "Subs & Vendors", parent: null },
@@ -90,7 +91,7 @@ export function useUpdateUserPermissions() {
 // Sections that managers with custom visibility can be granted (no Commissions accounting, no OPS Compliance)
 export const MANAGER_ALLOWED_SECTION_KEYS = [
   "command-center", "dashboard", "production", "production-calendar",
-  "requests", "company", "directory", "vendors",
+  "requests", "company", "directory", "vendors", "kpi-scorecards",
 ] as const;
 
 // Helper: check if a section should be visible based on permissions

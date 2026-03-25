@@ -1,8 +1,9 @@
-import React, { ReactNode, useMemo, forwardRef } from "react";
+import React, { ReactNode, useMemo, useEffect, forwardRef } from "react";
 import { useLocation, useSearchParams, Link, useNavigate } from "react-router-dom";
 import { AppSidebar } from "./AppSidebar";
 import { Home, ChevronRight, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { scheduleIdlePrefetch } from "@/lib/routePrefetch";
 
 interface BreadcrumbItem {
   label: string;
@@ -94,6 +95,17 @@ function getBreadcrumbs(pathname: string): BreadcrumbItem[] {
     ];
   }
 
+  if (pathname === "/kpi-scorecards") {
+    return [{ label: "KPI Scorecards", href: "/kpi-scorecards" }];
+  }
+
+  if (pathname.startsWith("/kpi-scorecards/")) {
+    return [
+      { label: "KPI Scorecards", href: "/kpi-scorecards" },
+      { label: "Scorecard", href: pathname },
+    ];
+  }
+
   const segments = pathname.split("/").filter(Boolean);
   return segments.map((segment, index) => ({
     label: segment.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
@@ -111,6 +123,10 @@ export const AppLayout = forwardRef<HTMLDivElement, AppLayoutProps>(
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const isHome = location.pathname === "/command-center";
+
+  useEffect(() => {
+    scheduleIdlePrefetch();
+  }, []);
 
   const breadcrumbs = useMemo(() => {
     if (location.pathname === "/admin") {

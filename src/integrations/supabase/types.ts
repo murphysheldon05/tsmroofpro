@@ -2058,6 +2058,45 @@ export type Database = {
           },
         ]
       }
+      kpi_scorecards: {
+        Row: {
+          id: string
+          name: string
+          description: string | null
+          storage_path: string
+          assigned_reviewers: string[] | null
+          visible_to: string[] | null
+          status: string
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          description?: string | null
+          storage_path: string
+          assigned_reviewers?: string[] | null
+          visible_to?: string[] | null
+          status?: string
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          description?: string | null
+          storage_path?: string
+          assigned_reviewers?: string[] | null
+          visible_to?: string[] | null
+          status?: string
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       master_sop_acknowledgments: {
         Row: {
           acknowledged_at: string

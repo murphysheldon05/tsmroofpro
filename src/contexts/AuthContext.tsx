@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { PasswordResetPrompt } from '@/components/auth/PasswordResetPrompt';
 import { DisplayNamePrompt } from '@/components/auth/DisplayNamePrompt';
 
-type AppRole = 'admin' | 'manager' | 'sales_rep' | 'production' | 'accounting' | 'user' | 'production_manager' | 'employee';
+type AppRole = 'admin' | 'manager' | 'sales_manager' | 'sales_rep' | 'production' | 'accounting' | 'user' | 'production_manager' | 'employee';
 type EmployeeStatus = 'active' | 'pending' | 'rejected' | 'inactive';
 
 interface AuthContextType {
