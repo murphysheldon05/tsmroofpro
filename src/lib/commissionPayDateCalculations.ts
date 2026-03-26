@@ -209,3 +209,190 @@ export function getCurrentDeadlineInfo(): {
     payDate: formatPayDateShort(fri),
   };
 }
+
+// ═══════════════════════════════════════════════════════════════
+// Period-based pay run helpers (Saturday–Friday cycle)
+// ═══════════════════════════════════════════════════════════════
+
+export interface PayRunPeriod {
+  periodStart: string;   // YYYY-MM-DD Saturday
+  periodEnd: string;     // YYYY-MM-DD Friday
+  submissionDeadline: Date; // Tuesday 3PM MST as UTC Date
+  revisionDeadline: Date;   // Wednesday noon MST as UTC Date
+  submissionDeadlineDisplay: string;
+  revisionDeadlineDisplay: string;
+}
+
+/**
+ * Get the current pay run's Saturday start date (most recent Saturday at midnight MST).
+ * Pay run week: Saturday 12:00 AM MST through Friday 11:59 PM MST.
+ */
+function getMostRecentSaturday(mst: Date): Date {
+  const dow = mst.getDay(); // 0=Sun .. 6=Sat
+  const daysSinceSat = (dow + 1) % 7; // Sat=0, Sun=1, Mon=2 ...
+  const sat = new Date(mst);
+  sat.setDate(sat.getDate() - daysSinceSat);
+  sat.setHours(0, 0, 0, 0);
+  return sat;
+}
+
+export function getCurrentPayRunPeriod(): PayRunPeriod {
+  const mst = toMST(new Date());
+  const sat = getMostRecentSaturday(mst);
+  return buildPayRunPeriod(sat);
+}
+
+export function getNextPayRunPeriod(): PayRunPeriod {
+  const mst = toMST(new Date());
+  const sat = getMostRecentSaturday(mst);
+  const nextSat = new Date(sat);
+  nextSat.setDate(nextSat.getDate() + 7);
+  return buildPayRunPeriod(nextSat);
+}
+
+function buildPayRunPeriod(saturdayMST: Date): PayRunPeriod {
+  const fri = new Date(saturdayMST);
+  fri.setDate(fri.getDate() + 6);
+
+  // Tuesday = Saturday + 3 days, 3 PM MST
+  const tue = new Date(saturdayMST);
+  tue.setDate(tue.getDate() + 3);
+  tue.setHours(15, 0, 0, 0);
+
+  // Wednesday = Saturday + 4 days, noon MST
+  const wed = new Date(saturdayMST);
+  wed.setDate(wed.getDate() + 4);
+  wed.setHours(12, 0, 0, 0);
+
+  return {
+    periodStart: toDateString(saturdayMST),
+    periodEnd: toDateString(fri),
+    submissionDeadline: tue,
+    revisionDeadline: wed,
+    submissionDeadlineDisplay:
+      tue.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" }) + " at 3:00 PM MST",
+    revisionDeadlineDisplay:
+      wed.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" }) + " at 12:00 PM MST",
+  };
+}
+
+/**
+ * Check if the current time (MST) is on or before the Tuesday 3:00 PM submission deadline.
+ * Exactly 3:00:00 PM = ON TIME (edge case #1).
+ */
+export function isBeforeSubmissionDeadline(): boolean {
+  const mst = toMST(new Date());
+  const dow = mst.getDay();
+  const hour = mst.getHours();
+  const min = mst.getMinutes();
+  const sec = mst.getSeconds();
+
+  // Saturday(6), Sunday(0), Monday(1) → always before deadline
+  if (dow === 6 || dow === 0 || dow === 1) return true;
+  // Tuesday(2) at exactly 15:00:00 or before
+  if (dow === 2) return hour < 15 || (hour === 15 && min === 0 && sec === 0);
+  // Wed, Thu, Fri → past deadline
+  return false;
+}
+
+/**
+ * Check if the current time (MST) is on or before the Wednesday 12:00 PM revision deadline.
+ * Exactly 12:00:00 PM = ON TIME (edge case #2).
+ */
+export function isBeforeRevisionDeadline(): boolean {
+  const mst = toMST(new Date());
+  const dow = mst.getDay();
+  const hour = mst.getHours();
+  const min = mst.getMinutes();
+  const sec = mst.getSeconds();
+
+  // Saturday(6), Sunday(0), Monday(1), Tuesday(2) → always before revision deadline
+  if (dow === 6 || dow === 0 || dow === 1 || dow === 2) return true;
+  // Wednesday(3) at exactly 12:00:00 or before
+  if (dow === 3) return hour < 12 || (hour === 12 && min === 0 && sec === 0);
+  // Thu, Fri → past deadline
+  return false;
+}
+
+/**
+ * Format a pay run period as a display range: "Mar 22 – Mar 28"
+ */
+export function formatPayRunRange(periodStart: string, periodEnd: string): string {
+  const start = new Date(periodStart + "T00:00:00");
+  const end = new Date(periodEnd + "T00:00:00");
+  const fmt = (d: Date) => d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return `${fmt(start)} – ${fmt(end)}`;
+}
+
+/**
+ * Get countdown to the Tuesday 3:00 PM MST submission deadline.
+ * Returns null if the deadline has passed for this pay run.
+ */
+export function getDeadlineCountdown(): { hours: number; minutes: number; totalMs: number } | null {
+  const now = toMST(new Date());
+  const period = getCurrentPayRunPeriod();
+  const deadline = period.submissionDeadline;
+
+  const diff = deadline.getTime() - now.getTime();
+  if (diff <= 0) return null;
+
+  const hours = Math.floor(diff / (1000 * 60 * 60));
+  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+  return { hours, minutes, totalMs: diff };
+}
+
+/**
+ * Format a UTC timestamp for display in MST.
+ * Returns format like "Mar 25, 2026 at 2:47 PM MST"
+ */
+export function formatTimestampMST(isoString: string): string {
+  const date = new Date(isoString);
+  const mst = toMST(date);
+  const monthDay = mst.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  const time = mst.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+  return `${monthDay} at ${time} MST`;
+}
+
+/**
+ * Compute the Saturday-based period_start for a given Date, used for
+ * determining which pay run to assign to.
+ */
+export function getPeriodStartForDate(date: Date): string {
+  const mst = toMST(date);
+  const sat = getMostRecentSaturday(mst);
+  return toDateString(sat);
+}
+
+/**
+ * Determine which pay run period_start a new submission should be assigned to,
+ * and whether it is a late submission.
+ */
+export function determinePayRunForSubmission(): {
+  periodStart: string;
+  isLate: boolean;
+} {
+  if (isBeforeSubmissionDeadline()) {
+    return { periodStart: getCurrentPayRunPeriod().periodStart, isLate: false };
+  }
+  return { periodStart: getNextPayRunPeriod().periodStart, isLate: true };
+}
+
+/**
+ * Determine which pay run a revision resubmission should be assigned to.
+ * If the original pay run matches the current period and we're before Wednesday noon,
+ * keep it in the same pay run; otherwise roll to next.
+ */
+export function determinePayRunForRevision(originalPeriodStart: string | null): {
+  periodStart: string;
+  isLateRevision: boolean;
+  rolled: boolean;
+} {
+  const currentPeriod = getCurrentPayRunPeriod();
+
+  if (originalPeriodStart === currentPeriod.periodStart && isBeforeRevisionDeadline()) {
+    return { periodStart: originalPeriodStart, isLateRevision: false, rolled: false };
+  }
+
+  const nextPeriod = getNextPayRunPeriod();
+  return { periodStart: nextPeriod.periodStart, isLateRevision: true, rolled: true };
+}

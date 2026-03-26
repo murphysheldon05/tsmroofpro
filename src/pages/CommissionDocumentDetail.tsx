@@ -16,13 +16,16 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { ArrowLeft, Printer, Edit, Check, X, FileText, Calendar, CheckCircle2, RotateCcw, SendHorizontal, Trash2, Loader2, Eye, EyeOff } from "lucide-react";
+import { ArrowLeft, Printer, Edit, Check, X, FileText, Calendar, CheckCircle2, RotateCcw, SendHorizontal, Trash2, Loader2, Eye, EyeOff, Clock } from "lucide-react";
 import { useCommissionDocument, useUpdateCommissionDocumentStatus, useDeleteCommissionDocument } from "@/hooks/useCommissionDocuments";
 import { useAuth } from "@/contexts/AuthContext";
 import { CommissionDocumentForm } from "@/components/commissions/CommissionDocumentForm";
 import { CommissionDocumentSummary } from "@/components/commissions/CommissionDocumentSummary";
 import { CommissionDocumentPrintView } from "@/components/commissions/CommissionDocumentPrintView";
-import { formatPayDateShort, getEstimatedPayDate, getCurrentDeadlineInfo } from "@/lib/commissionPayDateCalculations";
+import { CommissionTimeline } from "@/components/commissions/CommissionTimeline";
+import { AdminOverrideButton } from "@/components/commissions/AdminOverrideButton";
+import { LateBadge } from "@/components/commissions/LateBadge";
+import { formatPayDateShort, getEstimatedPayDate, getCurrentDeadlineInfo, formatPayRunRange, formatTimestampMST } from "@/lib/commissionPayDateCalculations";
 import { formatDisplayName } from "@/lib/displayName";
 import { CommissionStatusStepper } from "@/components/commissions/CommissionStatusStepper";
 import { supabase } from "@/integrations/supabase/client";
@@ -51,6 +54,7 @@ export default function CommissionDocumentDetail() {
   const [managerName, setManagerName] = useState<string | null>(null);
   const [accountingName, setAccountingName] = useState<string | null>(null);
   const [paidByName, setPaidByName] = useState<string | null>(null);
+  const [payRunRange, setPayRunRange] = useState<string | null>(null);
 
   useEffect(() => {
     if (!document) return;
@@ -67,6 +71,21 @@ export default function CommissionDocumentDetail() {
     };
     fetchNames();
   }, [document]);
+
+  // Fetch pay run range for display
+  useEffect(() => {
+    if (!document?.pay_run_id) { setPayRunRange(null); return; }
+    supabase
+      .from("commission_pay_runs")
+      .select("period_start, period_end")
+      .eq("id", document.pay_run_id)
+      .single()
+      .then(({ data }) => {
+        if (data?.period_start && data?.period_end) {
+          setPayRunRange(formatPayRunRange(data.period_start, data.period_end));
+        }
+      });
+  }, [document?.pay_run_id]);
 
   // --- Role-based action permissions ---
   const isAccountingUser = userDepartment === 'Accounting';
@@ -365,6 +384,14 @@ export default function CommissionDocumentDetail() {
             </Button>
           )}
           {isAdmin && (
+            <AdminOverrideButton
+              commissionId={document.id}
+              currentPayRunId={document.pay_run_id}
+              isLateSubmission={document.is_late_submission}
+              isLateRevision={document.is_late_revision}
+            />
+          )}
+          {isAdmin && (
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button variant="ghost" size="sm" className="gap-2 text-destructive hover:text-destructive hover:bg-destructive/10">
@@ -424,6 +451,38 @@ export default function CommissionDocumentDetail() {
           />
         </CardContent>
       </Card>
+
+      {/* Key Info: Pay Run, Install Date, Submitted, Late Badge */}
+      {document.status !== 'draft' && (
+        <Card>
+          <CardContent className="pt-4 pb-3">
+            <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
+              {payRunRange && (
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-muted-foreground">Pay Run:</span>
+                  <Badge variant="outline" className="bg-gray-100 dark:bg-gray-800 text-xs">{payRunRange}</Badge>
+                  <LateBadge isLateSubmission={document.is_late_submission} isLateRevision={document.is_late_revision} />
+                </div>
+              )}
+              {document.install_date && (
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-muted-foreground">Install Date:</span>
+                  <span className="font-medium">{new Date(document.install_date + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
+                </div>
+              )}
+              {document.submitted_at && (
+                <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-muted-foreground">Submitted:</span>
+                  <span className="font-medium">{formatTimestampMST(document.submitted_at)}</span>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Rejection Notice — editable, can be revised and resubmitted */}
       {document.status === 'revision_required' && document.revision_reason && (() => {
@@ -495,6 +554,18 @@ export default function CommissionDocumentDetail() {
           )}
         </CardContent>
       </Card>
+
+      {/* Commission Timeline (Audit Trail) */}
+      {document.status !== 'draft' && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Commission Timeline</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <CommissionTimeline commissionId={document.id} />
+          </CardContent>
+        </Card>
+      )}
 
       {/* Action Dialog */}
       <Dialog open={showApprovalDialog} onOpenChange={setShowApprovalDialog}>

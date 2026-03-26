@@ -30,7 +30,9 @@ const BuildSchedule = lazy(() => import("./pages/BuildSchedule"));
 const DeliverySchedule = lazy(() => import("./pages/DeliverySchedule"));
 const CommandCenter = lazy(() => import("./pages/CommandCenter"));
 const KpiScorecards = lazy(() => import("./pages/KpiScorecards"));
-const KpiScorecardDetail = lazy(() => import("./pages/KpiScorecardDetail"));
+const KpiScorecardTemplateEditor = lazy(() => import("./pages/KpiScorecardTemplateEditor"));
+const KpiScorecardScore = lazy(() => import("./pages/KpiScorecardScore"));
+const KpiScorecardHistory = lazy(() => import("./pages/KpiScorecardHistory"));
 const PendingReview = lazy(() => import("./pages/PendingReview"));
 const ContactList = lazy(() => import("./pages/ContactList"));
 const NotFound = lazy(() => import("./pages/NotFound"));
@@ -111,7 +113,8 @@ const App = () => (
             <Route element={<ProtectedAppShell />}>
               <Route path="/command-center" element={<CommandCenter />} />
               <Route path="/kpi-scorecards" element={<KpiScorecards />} />
-              <Route path="/kpi-scorecards/:id" element={<KpiScorecardDetail />} />
+              <Route path="/kpi-scorecards/score/:assignmentId" element={<KpiScorecardScore />} />
+              <Route path="/kpi-scorecards/view/:assignmentId" element={<KpiScorecardHistory />} />
               <Route path="/pending-review" element={<PendingReview />} />
               <Route path="/requests" element={<Requests />} />
               <Route path="/profile" element={<Profile />} />
@@ -130,6 +133,7 @@ const App = () => (
               <Route element={<RequireAdmin />}>
                 <Route path="/admin" element={<Admin />} />
                 <Route path="/commission-manager" element={<CommissionManager />} />
+                <Route path="/kpi-scorecards/templates/:id" element={<KpiScorecardTemplateEditor />} />
               </Route>
             </Route>
 

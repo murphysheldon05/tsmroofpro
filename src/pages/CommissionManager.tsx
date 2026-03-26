@@ -49,7 +49,11 @@ import {
   Download,
   Upload,
   Loader2,
+  CalendarRange,
 } from "lucide-react";
+import { PayRunView } from "@/components/commissions/PayRunView";
+import { LateBadge } from "@/components/commissions/LateBadge";
+import { formatTimestampMST } from "@/lib/commissionPayDateCalculations";
 
 const STATUS_MAP: Record<string, { label: string; color: string; bgClass: string }> = {
   submitted: { label: "Pending Compliance", color: "text-yellow-700 dark:text-yellow-400", bgClass: "bg-yellow-100 dark:bg-yellow-900/30 border-yellow-300 dark:border-yellow-700" },
@@ -314,6 +318,10 @@ export default function CommissionManager() {
             )}
           </TabsTrigger>
           <TabsTrigger value="history">Payment History</TabsTrigger>
+          <TabsTrigger value="payruns" className="gap-2">
+            <CalendarRange className="h-3.5 w-3.5" />
+            Pay Runs
+          </TabsTrigger>
         </TabsList>
 
         {/* Compliance Queue */}
@@ -324,20 +332,21 @@ export default function CommissionManager() {
                 <TableRow>
                   <TableHead>Rep Name</TableHead>
                   <TableHead>Job Name</TableHead>
-                  <TableHead className="hidden sm:table-cell">Date</TableHead>
+                  <TableHead className="hidden sm:table-cell">Submitted</TableHead>
                   <TableHead className="text-right">Amount</TableHead>
+                  <TableHead className="hidden md:table-cell">Late</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {complianceQueue.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
+                    <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
                       No commissions pending compliance review
                     </TableCell>
                   </TableRow>
                 ) : (
-                  complianceQueue.map((c) => (
+                  complianceQueue.map((c: any) => (
                     <TableRow key={c.id}>
                       <TableCell className="font-medium">{c.rep_name}</TableCell>
                       <TableCell
@@ -346,13 +355,14 @@ export default function CommissionManager() {
                       >
                         {c.job_name_id || "—"}
                       </TableCell>
-                      <TableCell className="hidden sm:table-cell text-muted-foreground">
-                        {c.submitted_at
-                          ? new Date(c.submitted_at).toLocaleDateString()
-                          : new Date(c.created_at).toLocaleDateString()}
+                      <TableCell className="hidden sm:table-cell text-muted-foreground text-xs">
+                        {c.submitted_at ? formatTimestampMST(c.submitted_at) : new Date(c.created_at).toLocaleDateString()}
                       </TableCell>
                       <TableCell className="text-right font-medium">
                         {formatCurrency(c.rep_commission || 0)}
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        <LateBadge isLateSubmission={c.is_late_submission} isLateRevision={c.is_late_revision} />
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1">
@@ -391,20 +401,21 @@ export default function CommissionManager() {
                 <TableRow>
                   <TableHead>Rep Name</TableHead>
                   <TableHead>Job Name</TableHead>
-                  <TableHead className="hidden sm:table-cell">Date</TableHead>
+                  <TableHead className="hidden sm:table-cell">Submitted</TableHead>
                   <TableHead className="text-right">Amount</TableHead>
+                  <TableHead className="hidden md:table-cell">Late</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {accountingQueue.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
+                    <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
                       No commissions pending accounting review
                     </TableCell>
                   </TableRow>
                 ) : (
-                  accountingQueue.map((c) => (
+                  accountingQueue.map((c: any) => (
                     <TableRow key={c.id}>
                       <TableCell className="font-medium">{c.rep_name}</TableCell>
                       <TableCell
@@ -413,13 +424,14 @@ export default function CommissionManager() {
                       >
                         {c.job_name_id || "—"}
                       </TableCell>
-                      <TableCell className="hidden sm:table-cell text-muted-foreground">
-                        {c.submitted_at
-                          ? new Date(c.submitted_at).toLocaleDateString()
-                          : new Date(c.created_at).toLocaleDateString()}
+                      <TableCell className="hidden sm:table-cell text-muted-foreground text-xs">
+                        {c.submitted_at ? formatTimestampMST(c.submitted_at) : new Date(c.created_at).toLocaleDateString()}
                       </TableCell>
                       <TableCell className="text-right font-medium">
                         {formatCurrency(c.rep_commission || 0)}
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        <LateBadge isLateSubmission={c.is_late_submission} isLateRevision={c.is_late_revision} />
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1">
@@ -574,6 +586,11 @@ export default function CommissionManager() {
               </TableBody>
             </Table>
           </div>
+        </TabsContent>
+
+        {/* Pay Runs */}
+        <TabsContent value="payruns" className="mt-4">
+          <PayRunView />
         </TabsContent>
       </Tabs>
 

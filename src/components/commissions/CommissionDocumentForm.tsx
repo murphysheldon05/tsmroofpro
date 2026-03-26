@@ -37,6 +37,7 @@ import {
 import { useUserCommissionTier } from "@/hooks/useCommissionTiers";
 import { useAutoSave } from "@/hooks/useAutoSave";
 import { CommissionPreviewModal } from "./CommissionPreviewModal";
+import { PayRunDeadlineBanner } from "./PayRunDeadlineBanner";
 import { toast } from "sonner";
 import { cn, formatCurrency } from "@/lib/utils";
 
@@ -244,6 +245,7 @@ export function CommissionDocumentForm({ document: existingDoc, readOnly = false
       company_profit_percent: existingDoc?.company_profit_percent ?? 0.60,
       advance_total: existingDoc?.advance_total ?? 0,
       notes: existingDoc?.notes ?? "",
+      install_date: existingDoc?.install_date ?? "",
     };
   });
 
@@ -432,6 +434,7 @@ export function CommissionDocumentForm({ document: existingDoc, readOnly = false
     approved_by: null,
     approved_at: null,
     approval_comment: null,
+    install_date: formData.install_date || null,
     starting_claim_amount: null,
     final_claim_amount: null,
     additional_neg_expenses: additionalNegExpenses
@@ -523,6 +526,14 @@ export function CommissionDocumentForm({ document: existingDoc, readOnly = false
     });
     if (!validation.valid) {
       validation.errors.forEach(error => toast.error(error));
+      return;
+    }
+    if (!formData.install_date) {
+      toast.error("Install Date is required");
+      return;
+    }
+    if (formData.install_date > new Date().toISOString().split("T")[0]) {
+      toast.error("Install Date cannot be in the future");
       return;
     }
     setShowPreview(true);
@@ -619,6 +630,9 @@ export function CommissionDocumentForm({ document: existingDoc, readOnly = false
         </Alert>
       )}
 
+      {/* ── Pay Run Deadline Banner ── */}
+      {canEdit && !readOnly && <PayRunDeadlineBanner />}
+
       {/* ── Main Card ── */}
       <Card className="overflow-hidden border-border/50">
         <div className="bg-gradient-to-r from-primary/10 via-background to-primary/5 p-6 text-center border-b border-border/50">
@@ -667,6 +681,16 @@ export function CommissionDocumentForm({ document: existingDoc, readOnly = false
                 </EnhancedFormRow>
                 <EnhancedFormRow label="Job Date">
                   <Input type="date" value={formData.job_date} onChange={(e) => setFormData(prev => ({ ...prev, job_date: e.target.value }))} disabled={!canEdit} className={inputBaseClasses} />
+                </EnhancedFormRow>
+                <EnhancedFormRow label="Install Date *" hint="Date the roof installation was completed">
+                  <Input
+                    type="date"
+                    value={formData.install_date}
+                    onChange={(e) => setFormData(prev => ({ ...prev, install_date: e.target.value }))}
+                    disabled={!canEdit}
+                    max={new Date().toISOString().split("T")[0]}
+                    className={inputBaseClasses}
+                  />
                 </EnhancedFormRow>
                 <EnhancedFormRow label="Sales Rep" hint={isPrivileged ? "Managers can edit" : "Auto-populated from your profile"}>
                   <Input value={formData.sales_rep} onChange={(e) => setFormData(prev => ({ ...prev, sales_rep: e.target.value }))} disabled={!canEdit || !isPrivileged} className={cn(inputBaseClasses, !isPrivileged && "bg-muted/50")} />

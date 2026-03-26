@@ -25,6 +25,8 @@ import {
   Banknote,
   Loader2,
 } from "lucide-react";
+import { LateBadge } from "@/components/commissions/LateBadge";
+import { formatTimestampMST } from "@/lib/commissionPayDateCalculations";
 
 type StatusFilter = "submitted" | "manager_approved" | "accounting_approved" | "paid" | null;
 type TimeFilter = "week" | "month" | "year" | "all";
@@ -255,15 +257,17 @@ export default function MyCommissions() {
           <TableHeader>
             <TableRow>
               <TableHead>Job Name</TableHead>
-              <TableHead className="hidden sm:table-cell">Date Submitted</TableHead>
+              <TableHead className="hidden sm:table-cell">Submitted</TableHead>
+              <TableHead className="hidden md:table-cell">Install Date</TableHead>
               <TableHead className="text-right">Amount</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead className="hidden lg:table-cell">Late</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredCommissions.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} className="text-center py-12 text-muted-foreground">
+                <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
                   {statusFilter
                     ? "No commissions found with this status"
                     : "No commissions submitted yet. Click \"Submit Commission\" to get started."}
@@ -277,16 +281,22 @@ export default function MyCommissions() {
                   onClick={() => navigate(`/commission-documents/${commission.id}`)}
                 >
                   <TableCell className="font-medium">{commission.job_name_id || "—"}</TableCell>
-                  <TableCell className="hidden sm:table-cell text-muted-foreground">
+                  <TableCell className="hidden sm:table-cell text-muted-foreground text-xs">
                     {commission.submitted_at
-                      ? new Date(commission.submitted_at).toLocaleDateString()
+                      ? formatTimestampMST(commission.submitted_at)
                       : new Date(commission.created_at).toLocaleDateString()}
+                  </TableCell>
+                  <TableCell className="hidden md:table-cell text-muted-foreground">
+                    {commission.install_date || "—"}
                   </TableCell>
                   <TableCell className="text-right font-medium">
                     {formatCurrency(commission.rep_commission || 0)}
                   </TableCell>
                   <TableCell>
                     <StatusBadge status={commission.status} revisionCount={commission.revision_count} />
+                  </TableCell>
+                  <TableCell className="hidden lg:table-cell">
+                    <LateBadge isLateSubmission={commission.is_late_submission} isLateRevision={commission.is_late_revision} />
                   </TableCell>
                 </TableRow>
               ))

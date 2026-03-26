@@ -2,6 +2,9 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { logCommissionAction } from "@/hooks/useCommissionAuditLog";
+import { ensurePayRunExists } from "@/hooks/usePayRuns";
+import { getCurrentPayRunPeriod, isBeforeRevisionDeadline } from "@/lib/commissionPayDateCalculations";
 
 export interface ManagerCommission {
   id: string;
@@ -172,12 +175,29 @@ export function useApproveCommissionDoc() {
         },
       }).catch(console.error);
 
+      // Audit log
+      const auditActionMap: Record<string, string> = {
+        manager_approved: "approved",
+        accounting_approved: "approved",
+        paid: "paid",
+      };
+      try {
+        await logCommissionAction({
+          commissionId: id,
+          action: auditActionMap[newStatus] as any,
+          performedBy: user!.id,
+          payRunId: data.pay_run_id || null,
+          details: { stage: newStatus === "manager_approved" ? "compliance" : newStatus === "accounting_approved" ? "accounting" : "payment" },
+        });
+      } catch { /* non-blocking */ }
+
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["manager-commissions"] });
       queryClient.invalidateQueries({ queryKey: ["manager-commission-summary"] });
       queryClient.invalidateQueries({ queryKey: ["commission-documents"] });
+      queryClient.invalidateQueries({ queryKey: ["pay-run-commissions"] });
       toast.success("Commission updated successfully");
     },
     onError: (error: Error) => {
@@ -249,13 +269,36 @@ export function useRejectCommissionDoc() {
         console.error("Notification failed (commission was still rejected):", notifyError);
       }
 
-      return data;
+      // Audit log entries
+      try {
+        await logCommissionAction({
+          commissionId: id,
+          action: "rejected",
+          performedBy: user!.id,
+          payRunId: data.pay_run_id || null,
+          details: { reason, message: reason },
+        });
+        await logCommissionAction({
+          commissionId: id,
+          action: "revision_requested",
+          performedBy: user!.id,
+          payRunId: data.pay_run_id || null,
+        });
+      } catch { /* non-blocking */ }
+
+      // Return whether revision deadline has passed so UI can warn
+      return { ...data, revisionDeadlinePassed: !isBeforeRevisionDeadline() };
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["manager-commissions"] });
       queryClient.invalidateQueries({ queryKey: ["manager-commission-summary"] });
       queryClient.invalidateQueries({ queryKey: ["commission-documents"] });
-      toast.success("Commission sent back for revision");
+      queryClient.invalidateQueries({ queryKey: ["pay-run-commissions"] });
+      if (result.revisionDeadlinePassed) {
+        toast.warning("Commission sent back for revision. Note: The revision deadline has passed — if the rep resubmits, it will move to next week's pay run.");
+      } else {
+        toast.success("Commission sent back for revision");
+      }
     },
     onError: (error: Error) => {
       toast.error("Failed to reject commission: " + error.message);
@@ -324,6 +367,69 @@ export function useImportCommission() {
     },
     onError: (error: Error) => {
       toast.error("Import failed: " + error.message);
+    },
+  });
+}
+
+export function useAdminOverridePullIn() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  return useMutation({
+    mutationFn: async ({ commissionId }: { commissionId: string }) => {
+      if (!user) throw new Error("Not authenticated");
+
+      const { data: doc } = await supabase
+        .from("commission_documents")
+        .select("pay_run_id, is_late_submission, is_late_revision")
+        .eq("id", commissionId)
+        .single();
+
+      if (!doc) throw new Error("Commission not found");
+
+      const currentPeriod = getCurrentPayRunPeriod();
+      const currentPayRunId = await ensurePayRunExists(currentPeriod.periodStart);
+
+      if (doc.pay_run_id === currentPayRunId) {
+        throw new Error("Commission is already in the current pay run");
+      }
+
+      const { data, error } = await supabase
+        .from("commission_documents")
+        .update({
+          pay_run_id: currentPayRunId,
+          rolled_from_pay_run_id: doc.pay_run_id,
+        })
+        .eq("id", commissionId)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      try {
+        await logCommissionAction({
+          commissionId,
+          action: "admin_override_pulled_in",
+          performedBy: user.id,
+          payRunId: currentPayRunId,
+          details: {
+            from_pay_run: doc.pay_run_id,
+            to_pay_run: currentPayRunId,
+            override_by: user.id,
+          },
+        });
+      } catch { /* non-blocking */ }
+
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["manager-commissions"] });
+      queryClient.invalidateQueries({ queryKey: ["commission-documents"] });
+      queryClient.invalidateQueries({ queryKey: ["pay-run-commissions"] });
+      toast.success("Commission moved to current pay run");
+    },
+    onError: (error: Error) => {
+      toast.error("Failed to override: " + error.message);
     },
   });
 }

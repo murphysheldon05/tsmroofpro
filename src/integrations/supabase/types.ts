@@ -2058,14 +2058,16 @@ export type Database = {
           },
         ]
       }
-      kpi_scorecards: {
+      scorecard_templates: {
         Row: {
           id: string
           name: string
           description: string | null
-          storage_path: string
-          assigned_reviewers: string[] | null
-          visible_to: string[] | null
+          review_frequency: string
+          scoring_scale_max: number
+          has_bonus: boolean
+          bonus_tiers: Json | null
+          bonus_period: string
           status: string
           created_by: string | null
           created_at: string
@@ -2075,9 +2077,11 @@ export type Database = {
           id?: string
           name: string
           description?: string | null
-          storage_path: string
-          assigned_reviewers?: string[] | null
-          visible_to?: string[] | null
+          review_frequency?: string
+          scoring_scale_max?: number
+          has_bonus?: boolean
+          bonus_tiers?: Json | null
+          bonus_period?: string
           status?: string
           created_by?: string | null
           created_at?: string
@@ -2087,15 +2091,143 @@ export type Database = {
           id?: string
           name?: string
           description?: string | null
-          storage_path?: string
-          assigned_reviewers?: string[] | null
-          visible_to?: string[] | null
+          review_frequency?: string
+          scoring_scale_max?: number
+          has_bonus?: boolean
+          bonus_tiers?: Json | null
+          bonus_period?: string
           status?: string
           created_by?: string | null
           created_at?: string
           updated_at?: string
         }
         Relationships: []
+      }
+      scorecard_kpis: {
+        Row: {
+          id: string
+          template_id: string
+          name: string
+          full_name: string | null
+          description: string | null
+          scoring_guide: Json | null
+          sort_order: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          template_id: string
+          name: string
+          full_name?: string | null
+          description?: string | null
+          scoring_guide?: Json | null
+          sort_order?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          template_id?: string
+          name?: string
+          full_name?: string | null
+          description?: string | null
+          scoring_guide?: Json | null
+          sort_order?: number
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scorecard_kpis_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "scorecard_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scorecard_assignments: {
+        Row: {
+          id: string
+          template_id: string
+          employee_id: string
+          reviewer_ids: string[]
+          status: string
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          template_id: string
+          employee_id: string
+          reviewer_ids: string[]
+          status?: string
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          template_id?: string
+          employee_id?: string
+          reviewer_ids?: string[]
+          status?: string
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scorecard_assignments_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "scorecard_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scorecard_submissions: {
+        Row: {
+          id: string
+          assignment_id: string
+          reviewer_id: string
+          period_start: string
+          period_end: string
+          scores: Json
+          average: number
+          notes: string | null
+          submitted_at: string
+        }
+        Insert: {
+          id?: string
+          assignment_id: string
+          reviewer_id: string
+          period_start: string
+          period_end: string
+          scores: Json
+          average: number
+          notes?: string | null
+          submitted_at?: string
+        }
+        Update: {
+          id?: string
+          assignment_id?: string
+          reviewer_id?: string
+          period_start?: string
+          period_end?: string
+          scores?: Json
+          average?: number
+          notes?: string | null
+          submitted_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scorecard_submissions_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "scorecard_assignments"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       master_sop_acknowledgments: {
         Row: {

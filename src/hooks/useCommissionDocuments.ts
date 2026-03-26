@@ -3,6 +3,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { calculateAllFields, type CommissionDocumentData } from "@/lib/commissionDocumentCalculations";
+import { logCommissionAction } from "@/hooks/useCommissionAuditLog";
+import { ensurePayRunExists } from "@/hooks/usePayRuns";
+import {
+  determinePayRunForSubmission,
+  determinePayRunForRevision,
+  getCurrentPayRunPeriod,
+  formatPayRunRange,
+} from "@/lib/commissionPayDateCalculations";
 
 export interface CommissionDocument {
   id: string;
@@ -59,6 +67,12 @@ export interface CommissionDocument {
   submitter_email: string | null;
   additional_neg_expenses: { amount: number; label?: string }[] | null;
   additional_pos_expenses: { amount: number; label?: string }[] | null;
+  // Pay run & audit fields
+  pay_run_id: string | null;
+  install_date: string | null;
+  is_late_submission: boolean;
+  is_late_revision: boolean;
+  rolled_from_pay_run_id: string | null;
 }
 
 export type CommissionDocumentInsert = Omit<CommissionDocument, 
@@ -67,10 +81,12 @@ export type CommissionDocumentInsert = Omit<CommissionDocument,
   'scheduled_pay_date' | 'manager_id' | 'manager_approved_at' | 'manager_approved_by' |
   'accounting_approved_at' | 'accounting_approved_by' | 'paid_at' | 'paid_by' |
   'revision_reason' | 'revision_count' | 'submitted_at' | 'submitter_email' |
-  'additional_neg_expenses' | 'additional_pos_expenses'
+  'additional_neg_expenses' | 'additional_pos_expenses' |
+  'pay_run_id' | 'is_late_submission' | 'is_late_revision' | 'rolled_from_pay_run_id'
 > & {
   additional_neg_expenses?: { amount: number; label?: string }[] | null;
   additional_pos_expenses?: { amount: number; label?: string }[] | null;
+  install_date?: string | null;
 };
 
 export function useCommissionDocuments(statusFilter?: string) {
@@ -281,9 +297,22 @@ export function useUpdateCommissionDocumentStatus() {
       // Validate status transition
       const { data: currentDoc } = await supabase
         .from('commission_documents')
-        .select('status')
+        .select('status, revision_count, scheduled_pay_date, pay_run_id')
         .eq('id', id)
         .single();
+
+      // Block submissions to finalized pay runs
+      if (status === 'submitted' && currentDoc?.pay_run_id) {
+        const { data: payRun } = await supabase
+          .from('commission_pay_runs')
+          .select('status, period_start, period_end')
+          .eq('id', currentDoc.pay_run_id)
+          .single();
+        if (payRun?.status === 'finalized') {
+          throw new Error('This pay run has been finalized. Please submit for the current pay run.');
+        }
+      }
+
       const validTransitions: Record<string, string[]> = {
         draft: ['submitted'],
         submitted: ['manager_approved', 'revision_required', 'rejected'],
@@ -300,26 +329,40 @@ export function useUpdateCommissionDocumentStatus() {
 
       const updateData: Record<string, any> = { status };
       
-      // Handle submission - assign pay date, fetch manager from profile
+      // Handle submission — assign pay run, pay date, late flags
       if (status === 'submitted') {
         updateData.submitted_at = new Date().toISOString();
-        
-        // Clear revision/rejection data on resubmission
         updateData.revision_reason = null;
-        
-        // Assign pay date at submission time (Tue 3PM MST cutoff)
-        const { data: docForPayDate } = await supabase
-          .from('commission_documents')
-          .select('revision_count, scheduled_pay_date')
-          .eq('id', id)
-          .single();
 
-        if ((docForPayDate?.revision_count || 0) > 0 && docForPayDate?.scheduled_pay_date) {
+        const isResubmission = (currentDoc?.revision_count || 0) > 0;
+
+        if (isResubmission && currentDoc?.pay_run_id) {
           // Resubmission after rejection — apply Wednesday noon grace period
+          const { data: origPayRun } = await supabase
+            .from('commission_pay_runs')
+            .select('period_start')
+            .eq('id', currentDoc.pay_run_id)
+            .single();
+
+          const revResult = determinePayRunForRevision(origPayRun?.period_start || null);
+          const payRunId = await ensurePayRunExists(revResult.periodStart);
+          updateData.pay_run_id = payRunId;
+          updateData.is_late_revision = revResult.isLateRevision;
+
+          if (revResult.rolled) {
+            updateData.rolled_from_pay_run_id = currentDoc.pay_run_id;
+          }
+
+          // Keep scheduled_pay_date in sync (Friday of assigned pay run)
           const { calculateResubmissionPayDate } = await import('@/lib/commissionPayDateCalculations');
-          updateData.scheduled_pay_date = calculateResubmissionPayDate(docForPayDate.scheduled_pay_date);
+          updateData.scheduled_pay_date = calculateResubmissionPayDate(currentDoc.scheduled_pay_date);
         } else {
           // First submission — standard Tuesday 3PM cutoff
+          const subResult = determinePayRunForSubmission();
+          const payRunId = await ensurePayRunExists(subResult.periodStart);
+          updateData.pay_run_id = payRunId;
+          updateData.is_late_submission = subResult.isLate;
+
           const { getScheduledPayDateString } = await import('@/lib/commissionPayDateCalculations');
           updateData.scheduled_pay_date = getScheduledPayDateString(new Date());
         }
@@ -345,12 +388,6 @@ export function useUpdateCommissionDocumentStatus() {
           throw new Error('Revision reason is required');
         }
         updateData.revision_reason = revision_reason;
-        // Get current revision count and increment
-        const { data: currentDoc } = await supabase
-          .from('commission_documents')
-          .select('revision_count')
-          .eq('id', id)
-          .single();
         updateData.revision_count = ((currentDoc?.revision_count || 0) + 1);
       }
       
@@ -372,13 +409,7 @@ export function useUpdateCommissionDocumentStatus() {
         if (approval_comment) {
           updateData.approval_comment = approval_comment;
         }
-        // Only set pay date if it wasn't already assigned at submission time
-        const { data: existingDoc } = await supabase
-          .from('commission_documents')
-          .select('scheduled_pay_date')
-          .eq('id', id)
-          .single();
-        if (!existingDoc?.scheduled_pay_date) {
+        if (!currentDoc?.scheduled_pay_date) {
           const { calculateScheduledPayDate } = await import('@/lib/commissionPayDateCalculations');
           const payDate = calculateScheduledPayDate(new Date());
           updateData.scheduled_pay_date = payDate.toISOString().split('T')[0];
@@ -411,6 +442,76 @@ export function useUpdateCommissionDocumentStatus() {
 
       if (error) throw error;
       
+      // ── Audit log entries ──
+      const userId = user?.id || '';
+      const payRunId = (data as any).pay_run_id || null;
+
+      try {
+        if (status === 'submitted') {
+          const isResub = (currentDoc?.revision_count || 0) > 0;
+          if (isResub) {
+            await logCommissionAction({ commissionId: id, action: 'revision_submitted', performedBy: userId, payRunId });
+            if (updateData.rolled_from_pay_run_id) {
+              await logCommissionAction({
+                commissionId: id,
+                action: 'rolled_to_next_pay_run',
+                performedBy: userId,
+                payRunId,
+                details: {
+                  from_pay_run: updateData.rolled_from_pay_run_id,
+                  to_pay_run: payRunId,
+                  reason: 'late_revision',
+                },
+              });
+            }
+          } else {
+            await logCommissionAction({ commissionId: id, action: 'submitted', performedBy: userId, payRunId });
+          }
+        } else if (status === 'revision_required') {
+          await logCommissionAction({
+            commissionId: id,
+            action: 'rejected',
+            performedBy: userId,
+            payRunId,
+            details: { reason: revision_reason },
+          });
+          await logCommissionAction({
+            commissionId: id,
+            action: 'revision_requested',
+            performedBy: userId,
+            payRunId,
+          });
+        } else if (status === 'manager_approved') {
+          await logCommissionAction({
+            commissionId: id,
+            action: 'approved',
+            performedBy: userId,
+            payRunId,
+            details: { stage: 'compliance', comment: approval_comment || null },
+          });
+        } else if (status === 'accounting_approved') {
+          await logCommissionAction({
+            commissionId: id,
+            action: 'approved',
+            performedBy: userId,
+            payRunId,
+            details: { stage: 'accounting', comment: approval_comment || null },
+          });
+        } else if (status === 'rejected') {
+          await logCommissionAction({
+            commissionId: id,
+            action: 'rejected',
+            performedBy: userId,
+            payRunId,
+            details: { reason: revision_reason || approval_comment, final: true },
+          });
+        } else if (status === 'paid') {
+          await logCommissionAction({ commissionId: id, action: 'paid', performedBy: userId, payRunId });
+        }
+      } catch (auditErr) {
+        console.error('Audit log insert failed (non-blocking):', auditErr);
+      }
+
       // Send notification after successful status update
       await sendCommissionDocumentNotification(data as CommissionDocument, status, revision_reason || approval_comment);
       
@@ -419,6 +520,8 @@ export function useUpdateCommissionDocumentStatus() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['commission-documents'] });
       queryClient.invalidateQueries({ queryKey: ['commission-document', variables.id] });
+      queryClient.invalidateQueries({ queryKey: ['commission-audit-log', variables.id] });
+      queryClient.invalidateQueries({ queryKey: ['pay-run-commissions'] });
       if (variables.status === 'submitted') {
         toast.success('Commission Submitted');
       } else {

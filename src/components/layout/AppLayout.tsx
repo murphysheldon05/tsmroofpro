@@ -99,10 +99,31 @@ function getBreadcrumbs(pathname: string): BreadcrumbItem[] {
     return [{ label: "KPI Scorecards", href: "/kpi-scorecards" }];
   }
 
+  if (pathname.startsWith("/kpi-scorecards/templates/")) {
+    return [
+      { label: "KPI Scorecards", href: "/kpi-scorecards" },
+      { label: "Template", href: pathname },
+    ];
+  }
+
+  if (pathname.startsWith("/kpi-scorecards/score/")) {
+    return [
+      { label: "KPI Scorecards", href: "/kpi-scorecards" },
+      { label: "Score", href: pathname },
+    ];
+  }
+
+  if (pathname.startsWith("/kpi-scorecards/view/")) {
+    return [
+      { label: "KPI Scorecards", href: "/kpi-scorecards" },
+      { label: "History", href: pathname },
+    ];
+  }
+
   if (pathname.startsWith("/kpi-scorecards/")) {
     return [
       { label: "KPI Scorecards", href: "/kpi-scorecards" },
-      { label: "Scorecard", href: pathname },
+      { label: "Details", href: pathname },
     ];
   }
 
