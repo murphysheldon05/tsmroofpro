@@ -27,6 +27,11 @@ interface CommissionNotification {
   notes?: string;
   changed_by_name?: string;
   scheduled_pay_date?: string; // ISO date string of Friday pay date
+  pay_run_period_label?: string;
+  revision_deadline_text?: string;
+  commission_pay_run_context?: string;
+  revision_resubmit_reminder?: string;
+  rolled_to_next_pay_run_on_reject?: boolean;
 }
 
 // Resolve workflow role assignment (new table) — returns email or null
@@ -353,6 +358,13 @@ const handler = async (req: Request): Promise<Response> => {
 
       case "rejected": {
         const rejectionSource = (rawPayload as any).rejection_source;
+        const pr = rawPayload as CommissionNotification & {
+          pay_run_period_label?: string;
+          revision_deadline_text?: string;
+          commission_pay_run_context?: string;
+          revision_resubmit_reminder?: string;
+          rolled_to_next_pay_run_on_reject?: boolean;
+        };
         subject = rejectionSource === "accounting"
           ? `Commission Rejected by Accounting — ${payload.job_name}`
           : `Commission Rejected — ${payload.job_name}`;
@@ -360,11 +372,24 @@ const handler = async (req: Request): Promise<Response> => {
         introText = `Your commission for <strong>${payload.job_name}</strong> was rejected.${payload.notes ? ` Rejection reason: ${payload.notes}` : " Please review the notes below and resubmit."}`;
         headerColor = "#dc2626";
         recipientEmails = payload.submitter_email ? [payload.submitter_email] : [];
-        additionalPlainText = `Job: ${payload.job_name}${payload.notes ? `\nRejection Reason: ${payload.notes}` : ""}`;
+        const payRunPlain = pr.pay_run_period_label
+          ? `\nPay run: ${pr.pay_run_period_label}${pr.revision_deadline_text ? `\nRevision deadline: ${pr.revision_deadline_text}` : ""}${pr.commission_pay_run_context ? `\n${pr.commission_pay_run_context}` : ""}${pr.revision_resubmit_reminder ? `\n${pr.revision_resubmit_reminder}` : ""}`
+          : "";
+        additionalPlainText = `Job: ${payload.job_name}${payload.notes ? `\nRejection Reason: ${payload.notes}` : ""}${payRunPlain}`;
+        const payRunHtml = pr.pay_run_period_label
+          ? `<tr><td colspan="2" style="padding: 14px; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; font-size: 14px; color: #0c4a6e;">
+            <strong>Pay run:</strong> ${pr.pay_run_period_label}<br/>
+            ${pr.revision_deadline_text ? `<strong>Revision deadline:</strong> ${pr.revision_deadline_text}<br/>` : ""}
+            ${pr.commission_pay_run_context ? `<span style="display:block;margin-top:8px;">${pr.commission_pay_run_context}</span>` : ""}
+            ${pr.revision_resubmit_reminder ? `<span style="display:block;margin-top:8px;">${pr.revision_resubmit_reminder}</span>` : ""}
+            ${pr.rolled_to_next_pay_run_on_reject ? `<span style="display:block;margin-top:8px;font-weight:600;color:#b45309;">This commission was moved to the next pay run because the Wednesday noon revision deadline had already passed.</span>` : ""}
+          </td></tr>`
+          : "";
         additionalContent = `
           <tr><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;"><strong>Job:</strong></td><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">${payload.job_name}</td></tr>
           <tr><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;"><strong>Rep:</strong></td><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">${repName}</td></tr>
           <tr><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;"><strong>Commission Amount:</strong></td><td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">${formatCurrency(payload.net_commission_owed)}</td></tr>
+          ${payRunHtml}
           ${payload.notes ? `
           <tr><td colspan="2" style="padding: 20px; background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); border: 1px solid #fecaca; border-radius: 12px; margin-top: 15px;">
             <div style="font-size: 16px; font-weight: bold; color: #991b1b; margin-bottom: 8px;">📝 Rejection Reason:</div>

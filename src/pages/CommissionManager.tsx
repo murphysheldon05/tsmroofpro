@@ -1,5 +1,13 @@
-import { useState, useMemo } from "react";
-import { getCurrentDeadlineInfo } from "@/lib/commissionPayDateCalculations";
+import { useState, useMemo, useEffect } from "react";
+import {
+  formatPayRunRange,
+  formatTimestampMST,
+  getCurrentDeadlineInfo,
+  getCurrentPayRunPeriod,
+  getNextPayRunPeriod,
+  isBeforeRevisionDeadline,
+} from "@/lib/commissionPayDateCalculations";
+import { usePayRunList, ensurePayRunExists } from "@/hooks/usePayRuns";
 import { useNavigate } from "react-router-dom";
 import {
   useManagerCommissions,
@@ -50,10 +58,11 @@ import {
   Upload,
   Loader2,
   CalendarRange,
+  AlertTriangle,
 } from "lucide-react";
 import { PayRunView } from "@/components/commissions/PayRunView";
 import { LateBadge } from "@/components/commissions/LateBadge";
-import { formatTimestampMST } from "@/lib/commissionPayDateCalculations";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const STATUS_MAP: Record<string, { label: string; color: string; bgClass: string }> = {
   submitted: { label: "Pending Compliance", color: "text-yellow-700 dark:text-yellow-400", bgClass: "bg-yellow-100 dark:bg-yellow-900/30 border-yellow-300 dark:border-yellow-700" },
@@ -111,6 +120,25 @@ export default function CommissionManager() {
   const rejectCommission = useRejectCommissionDoc();
   const importCommission = useImportCommission();
   const { data: allReps } = useAllReps();
+  const { data: payRuns } = usePayRunList();
+  const [queuePayRunFilter, setQueuePayRunFilter] = useState("all");
+
+  useEffect(() => {
+    void (async () => {
+      await ensurePayRunExists(getCurrentPayRunPeriod().periodStart);
+      await ensurePayRunExists(getNextPayRunPeriod().periodStart);
+    })();
+  }, []);
+
+  const payRunLabelById = useMemo(() => {
+    const m: Record<string, string> = {};
+    (payRuns || []).forEach((pr) => {
+      if (pr.period_start && pr.period_end) {
+        m[pr.id] = formatPayRunRange(pr.period_start, pr.period_end);
+      }
+    });
+    return m;
+  }, [payRuns]);
 
   const [activeTab, setActiveTab] = useState("compliance");
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
@@ -132,15 +160,21 @@ export default function CommissionManager() {
   const [historyDateFrom, setHistoryDateFrom] = useState("");
   const [historyDateTo, setHistoryDateTo] = useState("");
 
-  const complianceQueue = useMemo(
-    () => (allCommissions || []).filter((c) => c.status === "submitted"),
-    [allCommissions]
-  );
+  const complianceQueue = useMemo(() => {
+    let list = (allCommissions || []).filter((c) => c.status === "submitted");
+    if (queuePayRunFilter !== "all") {
+      list = list.filter((c: { pay_run_id?: string | null }) => c.pay_run_id === queuePayRunFilter);
+    }
+    return list;
+  }, [allCommissions, queuePayRunFilter]);
 
-  const accountingQueue = useMemo(
-    () => (allCommissions || []).filter((c) => c.status === "manager_approved"),
-    [allCommissions]
-  );
+  const accountingQueue = useMemo(() => {
+    let list = (allCommissions || []).filter((c) => c.status === "manager_approved");
+    if (queuePayRunFilter !== "all") {
+      list = list.filter((c: { pay_run_id?: string | null }) => c.pay_run_id === queuePayRunFilter);
+    }
+    return list;
+  }, [allCommissions, queuePayRunFilter]);
 
   const paymentHistory = useMemo(() => {
     let filtered = allCommissions || [];
@@ -325,13 +359,35 @@ export default function CommissionManager() {
         </TabsList>
 
         {/* Compliance Queue */}
-        <TabsContent value="compliance" className="mt-4">
+        <TabsContent value="compliance" className="mt-4 space-y-3">
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Pay run</Label>
+              <Select value={queuePayRunFilter} onValueChange={setQueuePayRunFilter}>
+                <SelectTrigger className="w-[260px]">
+                  <SelectValue placeholder="All pay runs" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All pay runs</SelectItem>
+                  {(payRuns || []).map((pr) => (
+                    <SelectItem key={pr.id} value={pr.id}>
+                      {pr.period_start && pr.period_end
+                        ? formatPayRunRange(pr.period_start, pr.period_end)
+                        : pr.run_date}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
           <div className="glass-card rounded-xl overflow-hidden">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Rep Name</TableHead>
                   <TableHead>Job Name</TableHead>
+                  <TableHead className="hidden lg:table-cell">Install Date</TableHead>
+                  <TableHead className="hidden xl:table-cell">Pay Run</TableHead>
                   <TableHead className="hidden sm:table-cell">Submitted</TableHead>
                   <TableHead className="text-right">Amount</TableHead>
                   <TableHead className="hidden md:table-cell">Late</TableHead>
@@ -341,7 +397,7 @@ export default function CommissionManager() {
               <TableBody>
                 {complianceQueue.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
+                    <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
                       No commissions pending compliance review
                     </TableCell>
                   </TableRow>
@@ -351,9 +407,15 @@ export default function CommissionManager() {
                       <TableCell className="font-medium">{c.rep_name}</TableCell>
                       <TableCell
                         className="cursor-pointer hover:underline text-primary"
-                        onClick={() => navigate(`/commission-documents/${c.id}`)}
+                        onClick={() => navigate(`/commissions/${c.id}`)}
                       >
                         {c.job_name_id || "—"}
+                      </TableCell>
+                      <TableCell className="hidden lg:table-cell text-muted-foreground text-xs">
+                        {c.install_date || "—"}
+                      </TableCell>
+                      <TableCell className="hidden xl:table-cell text-muted-foreground text-xs max-w-[140px] truncate">
+                        {c.pay_run_id ? payRunLabelById[c.pay_run_id] || "—" : "—"}
                       </TableCell>
                       <TableCell className="hidden sm:table-cell text-muted-foreground text-xs">
                         {c.submitted_at ? formatTimestampMST(c.submitted_at) : new Date(c.created_at).toLocaleDateString()}
@@ -394,13 +456,35 @@ export default function CommissionManager() {
         </TabsContent>
 
         {/* Accounting Queue */}
-        <TabsContent value="accounting" className="mt-4">
+        <TabsContent value="accounting" className="mt-4 space-y-3">
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Pay run</Label>
+              <Select value={queuePayRunFilter} onValueChange={setQueuePayRunFilter}>
+                <SelectTrigger className="w-[260px]">
+                  <SelectValue placeholder="All pay runs" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All pay runs</SelectItem>
+                  {(payRuns || []).map((pr) => (
+                    <SelectItem key={pr.id} value={pr.id}>
+                      {pr.period_start && pr.period_end
+                        ? formatPayRunRange(pr.period_start, pr.period_end)
+                        : pr.run_date}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
           <div className="glass-card rounded-xl overflow-hidden">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Rep Name</TableHead>
                   <TableHead>Job Name</TableHead>
+                  <TableHead className="hidden lg:table-cell">Install Date</TableHead>
+                  <TableHead className="hidden xl:table-cell">Pay Run</TableHead>
                   <TableHead className="hidden sm:table-cell">Submitted</TableHead>
                   <TableHead className="text-right">Amount</TableHead>
                   <TableHead className="hidden md:table-cell">Late</TableHead>
@@ -410,7 +494,7 @@ export default function CommissionManager() {
               <TableBody>
                 {accountingQueue.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
+                    <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
                       No commissions pending accounting review
                     </TableCell>
                   </TableRow>
@@ -420,9 +504,15 @@ export default function CommissionManager() {
                       <TableCell className="font-medium">{c.rep_name}</TableCell>
                       <TableCell
                         className="cursor-pointer hover:underline text-primary"
-                        onClick={() => navigate(`/commission-documents/${c.id}`)}
+                        onClick={() => navigate(`/commissions/${c.id}`)}
                       >
                         {c.job_name_id || "—"}
+                      </TableCell>
+                      <TableCell className="hidden lg:table-cell text-muted-foreground text-xs">
+                        {c.install_date || "—"}
+                      </TableCell>
+                      <TableCell className="hidden xl:table-cell text-muted-foreground text-xs max-w-[140px] truncate">
+                        {c.pay_run_id ? payRunLabelById[c.pay_run_id] || "—" : "—"}
                       </TableCell>
                       <TableCell className="hidden sm:table-cell text-muted-foreground text-xs">
                         {c.submitted_at ? formatTimestampMST(c.submitted_at) : new Date(c.created_at).toLocaleDateString()}
@@ -604,6 +694,15 @@ export default function CommissionManager() {
             <p className="text-sm text-muted-foreground">
               Sending commission for <span className="font-medium text-foreground">{rejectTarget?.jobName}</span> back to the rep so they can correct and resubmit.
             </p>
+            {!isBeforeRevisionDeadline() && (
+              <Alert className="border-amber-500/60 bg-amber-50 dark:bg-amber-950/25">
+                <AlertTriangle className="h-4 w-4 text-amber-700" />
+                <AlertTitle className="text-amber-900 dark:text-amber-200">Revision deadline has passed</AlertTitle>
+                <AlertDescription className="text-amber-900/90 dark:text-amber-100/90">
+                  If you reject this commission, it will automatically roll to next week&apos;s pay run. The rep cannot stay in the current pay run for this submission.
+                </AlertDescription>
+              </Alert>
+            )}
             <div className="space-y-2">
               <Label>Reason for Rejection *</Label>
               <Textarea

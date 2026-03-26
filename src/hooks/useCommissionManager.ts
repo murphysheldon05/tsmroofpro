@@ -4,7 +4,13 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { logCommissionAction } from "@/hooks/useCommissionAuditLog";
 import { ensurePayRunExists } from "@/hooks/usePayRuns";
-import { getCurrentPayRunPeriod, isBeforeRevisionDeadline } from "@/lib/commissionPayDateCalculations";
+import {
+  formatPayRunRange,
+  getCurrentPayRunPeriod,
+  getFridayDateStringForPeriodStart,
+  getNextPayRunPeriod,
+  isBeforeRevisionDeadline,
+} from "@/lib/commissionPayDateCalculations";
 
 export interface ManagerCommission {
   id: string;
@@ -212,25 +218,46 @@ export function useRejectCommissionDoc() {
 
   return useMutation({
     mutationFn: async ({ id, reason, rejection_source }: { id: string; reason: string; rejection_source?: "compliance" | "accounting" }) => {
-      // Fetch current revision_count so we can increment it atomically in the update
       const { data: current } = await supabase
         .from("commission_documents")
-        .select("revision_count")
+        .select("revision_count, pay_run_id")
         .eq("id", id)
         .single();
 
+      const updatePayload: Record<string, unknown> = {
+        status: "revision_required",
+        revision_reason: reason,
+        revision_count: (current?.revision_count || 0) + 1,
+      };
+
+      let rolledOnReject = false;
+      if (current?.pay_run_id && !isBeforeRevisionDeadline()) {
+        const nextPeriod = getNextPayRunPeriod();
+        const nextPayRunId = await ensurePayRunExists(nextPeriod.periodStart);
+        updatePayload.pay_run_id = nextPayRunId;
+        updatePayload.rolled_from_pay_run_id = current.pay_run_id;
+        updatePayload.is_late_revision = true;
+        updatePayload.scheduled_pay_date = getFridayDateStringForPeriodStart(nextPeriod.periodStart);
+        rolledOnReject = true;
+      }
+
       const { data, error } = await supabase
         .from("commission_documents")
-        .update({
-          status: "revision_required",
-          revision_reason: reason,
-          revision_count: (current?.revision_count || 0) + 1,
-        })
+        .update(updatePayload)
         .eq("id", id)
         .select()
         .single();
 
       if (error) throw error;
+
+      const period = getCurrentPayRunPeriod();
+      const nextPeriod = getNextPayRunPeriod();
+      const payRunPeriodLabel = formatPayRunRange(period.periodStart, period.periodEnd);
+      const revisionResubmitCopy =
+        "Please resubmit by Wednesday 12:00 PM MST to stay in the current pay run when the revision deadline has not passed.";
+      const payRunContext = rolledOnReject
+        ? `This commission has been moved to the next pay run (${formatPayRunRange(nextPeriod.periodStart, nextPeriod.periodEnd)}) because the revision deadline has passed.`
+        : `Current pay run: ${payRunPeriodLabel}.`;
 
       // Notification is best-effort; failures must not mask a successful status change
       try {
@@ -263,13 +290,17 @@ export function useRejectCommissionDoc() {
             notes: reason,
             rejection_source: rejection_source || "compliance",
             changed_by_name: currentUserProfile?.full_name || "Admin",
+            pay_run_period_label: payRunPeriodLabel,
+            revision_deadline_text: period.revisionDeadlineDisplay,
+            commission_pay_run_context: payRunContext,
+            revision_resubmit_reminder: revisionResubmitCopy,
+            rolled_to_next_pay_run_on_reject: rolledOnReject,
           },
         });
       } catch (notifyError) {
         console.error("Notification failed (commission was still rejected):", notifyError);
       }
 
-      // Audit log entries
       try {
         await logCommissionAction({
           commissionId: id,
@@ -284,18 +315,37 @@ export function useRejectCommissionDoc() {
           performedBy: user!.id,
           payRunId: data.pay_run_id || null,
         });
+        if (rolledOnReject && updatePayload.rolled_from_pay_run_id && updatePayload.pay_run_id) {
+          await logCommissionAction({
+            commissionId: id,
+            action: "rolled_to_next_pay_run",
+            performedBy: user!.id,
+            payRunId: data.pay_run_id as string,
+            details: {
+              from_pay_run: updatePayload.rolled_from_pay_run_id,
+              to_pay_run: updatePayload.pay_run_id,
+              reason: "revision_deadline_passed",
+            },
+          });
+        }
       } catch { /* non-blocking */ }
 
-      // Return whether revision deadline has passed so UI can warn
-      return { ...data, revisionDeadlinePassed: !isBeforeRevisionDeadline() };
+      return { ...data, revisionDeadlinePassed: !isBeforeRevisionDeadline(), rolledOnReject };
     },
-    onSuccess: (result) => {
+    onSuccess: (result, variables) => {
       queryClient.invalidateQueries({ queryKey: ["manager-commissions"] });
       queryClient.invalidateQueries({ queryKey: ["manager-commission-summary"] });
       queryClient.invalidateQueries({ queryKey: ["commission-documents"] });
+      queryClient.invalidateQueries({ queryKey: ["commission-audit-log", variables.id] });
       queryClient.invalidateQueries({ queryKey: ["pay-run-commissions"] });
-      if (result.revisionDeadlinePassed) {
-        toast.warning("Commission sent back for revision. Note: The revision deadline has passed — if the rep resubmits, it will move to next week's pay run.");
+      if (result.rolledOnReject) {
+        toast.warning(
+          "Commission sent back for revision. It was moved to next week's pay run because the Wednesday noon revision deadline had already passed."
+        );
+      } else if (result.revisionDeadlinePassed) {
+        toast.warning(
+          "Commission sent back for revision. Note: The revision deadline has passed — if the rep resubmits, it will move to next week's pay run."
+        );
       } else {
         toast.success("Commission sent back for revision");
       }
@@ -399,6 +449,8 @@ export function useAdminOverridePullIn() {
         .update({
           pay_run_id: currentPayRunId,
           rolled_from_pay_run_id: doc.pay_run_id,
+          is_late_submission: false,
+          is_late_revision: false,
         })
         .eq("id", commissionId)
         .select()

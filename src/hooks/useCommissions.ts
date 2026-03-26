@@ -4,6 +4,8 @@ import type { Database } from "@/integrations/supabase/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { formatDisplayName } from "@/lib/displayName";
 import { toast } from "sonner";
+import { determinePayRunForSubmission, getNextPayRunPeriod, getScheduledPayDateString } from "@/lib/commissionPayDateCalculations";
+import { ensurePayRunExists } from "@/hooks/usePayRuns";
 
 export interface CommissionSubmission {
   id: string;
@@ -239,6 +241,20 @@ export function useCreateCommission() {
         .single();
       
       if (error) throw error;
+
+      // Align pay run with Saturday–Friday period model (overrides trigger-based Friday assignment)
+      const subTs = new Date(result.created_at);
+      const subResult = determinePayRunForSubmission(subTs);
+      const payRunId = await ensurePayRunExists(subResult.periodStart);
+      await ensurePayRunExists(getNextPayRunPeriod(subTs).periodStart);
+      const scheduled = getScheduledPayDateString(subTs);
+      await supabase
+        .from("commission_submissions")
+        .update({
+          pay_run_id: payRunId,
+          scheduled_pay_date: scheduled,
+        } as Database["public"]["Tables"]["commission_submissions"]["Update"])
+        .eq("id", result.id);
       
       // Log the initial status
       await supabase.from("commission_status_log").insert({

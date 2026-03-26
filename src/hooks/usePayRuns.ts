@@ -99,7 +99,7 @@ export function usePayRunCommissions(payRunId: string | undefined) {
         .select("*")
         .eq("pay_run_id", payRunId)
         .neq("status", "draft")
-        .order("submitted_at", { ascending: false });
+        .order("submitted_at", { ascending: true, nullsFirst: false });
       if (error) throw error;
 
       const userIds = [...new Set((data || []).map((d: any) => d.created_by).filter(Boolean))];

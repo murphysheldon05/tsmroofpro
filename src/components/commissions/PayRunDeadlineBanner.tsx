@@ -17,7 +17,7 @@ export function PayRunDeadlineBanner() {
     const interval = setInterval(() => {
       setCountdown(getDeadlineCountdown());
       setBeforeDeadline(isBeforeSubmissionDeadline());
-    }, 30_000);
+    }, 1000);
     return () => clearInterval(interval);
   }, []);
 

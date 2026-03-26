@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -17,7 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Clock, CheckCircle, AlertTriangle, Banknote, Loader2, Calendar } from "lucide-react";
+import { Clock, Loader2 } from "lucide-react";
 import {
   usePayRunList,
   usePayRunCommissions,
@@ -42,6 +42,27 @@ const STATUS_MAP: Record<string, { label: string; color: string; bgClass: string
 
 function formatCurrency(amount: number): string {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2 }).format(amount);
+}
+
+function CountdownTo({ deadlineIso }: { deadlineIso: string }) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+  const end = new Date(deadlineIso).getTime();
+  const diff = end - now;
+  if (diff <= 0) {
+    return <span className="text-muted-foreground text-sm">Passed</span>;
+  }
+  const h = Math.floor(diff / 3600000);
+  const m = Math.floor((diff % 3600000) / 60000);
+  const s = Math.floor((diff % 60000) / 1000);
+  return (
+    <span className="font-mono tabular-nums text-sm font-semibold">
+      {h}h {String(m).padStart(2, "0")}m {String(s).padStart(2, "0")}s
+    </span>
+  );
 }
 
 function PayRunStatusBadge({ status }: { status: string }) {
@@ -120,6 +141,42 @@ export function PayRunView() {
 
         {selectedPayRun && <PayRunStatusBadge status={selectedPayRun.status} />}
       </div>
+
+      {selectedPayRun?.status === "open" && selectedPayRun.submission_deadline && selectedPayRun.revision_deadline && (
+        <Card className="border-dashed">
+          <CardContent className="pt-4 pb-3 space-y-2">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Deadlines (MST)</p>
+            <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3 sm:gap-6 text-sm">
+              <div className="flex items-center gap-2">
+                <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
+                <div>
+                  <span className="text-muted-foreground">Initial submission: </span>
+                  <span className="font-medium">{formatTimestampMST(selectedPayRun.submission_deadline)}</span>
+                  {new Date(selectedPayRun.submission_deadline).getTime() > Date.now() && (
+                    <span className="ml-2 inline-flex items-center gap-1">
+                      <span className="text-muted-foreground">·</span>
+                      <CountdownTo deadlineIso={selectedPayRun.submission_deadline} />
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
+                <div>
+                  <span className="text-muted-foreground">Revision resubmit: </span>
+                  <span className="font-medium">{formatTimestampMST(selectedPayRun.revision_deadline)}</span>
+                  {new Date(selectedPayRun.revision_deadline).getTime() > Date.now() && (
+                    <span className="ml-2 inline-flex items-center gap-1">
+                      <span className="text-muted-foreground">·</span>
+                      <CountdownTo deadlineIso={selectedPayRun.revision_deadline} />
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Summary Cards */}
       {selectedPayRun && (

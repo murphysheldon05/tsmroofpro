@@ -8,8 +8,11 @@ import { ensurePayRunExists } from "@/hooks/usePayRuns";
 import {
   determinePayRunForSubmission,
   determinePayRunForRevision,
-  getCurrentPayRunPeriod,
   formatPayRunRange,
+  getCurrentPayRunPeriod,
+  getFridayDateStringForPeriodStart,
+  getNextPayRunPeriod,
+  isBeforeRevisionDeadline,
 } from "@/lib/commissionPayDateCalculations";
 
 export interface CommissionDocument {
@@ -215,9 +218,17 @@ export function useCreateCommissionDocument() {
 
 export function useUpdateCommissionDocument() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   return useMutation({
     mutationFn: async ({ id, ...data }: Partial<CommissionDocument> & { id: string }) => {
+      const { data: before, error: fetchErr } = await supabase
+        .from('commission_documents')
+        .select('*')
+        .eq('id', id)
+        .single();
+      if (fetchErr) throw fetchErr;
+
       // Use neg_exp_4 if available, otherwise fall back to supplement_fees_expense
       const negExp4 = data.neg_exp_4 ?? data.supplement_fees_expense ?? 0;
       const repProfitPercent = data.rep_profit_percent ?? data.commission_rate ?? 0;
@@ -264,11 +275,44 @@ export function useUpdateCommissionDocument() {
         .single();
 
       if (error) throw error;
+
+      if (user && before) {
+        const watchKeys = [
+          'job_name_id', 'job_date', 'sales_rep', 'gross_contract_total', 'notes',
+          'material_cost', 'labor_cost', 'neg_exp_1', 'neg_exp_2', 'neg_exp_3', 'neg_exp_4',
+          'pos_exp_1', 'pos_exp_2', 'pos_exp_3', 'pos_exp_4', 'advance_total', 'install_date',
+          'op_percent', 'rep_profit_percent', 'company_profit_percent',
+        ] as const;
+        const changed: string[] = [];
+        for (const k of watchKeys) {
+          if (k in data && (data as Record<string, unknown>)[k] !== undefined) {
+            const prev = (before as Record<string, unknown>)[k];
+            const next = (result as Record<string, unknown>)[k];
+            if (JSON.stringify(prev) !== JSON.stringify(next)) changed.push(k);
+          }
+        }
+        if (changed.length > 0) {
+          const onlyNotes = changed.length === 1 && changed[0] === 'notes';
+          try {
+            await logCommissionAction({
+              commissionId: id,
+              action: onlyNotes ? 'notes_added' : 'edited',
+              performedBy: user.id,
+              payRunId: result.pay_run_id || null,
+              details: { fields: changed },
+            });
+          } catch {
+            /* non-blocking */
+          }
+        }
+      }
+
       return result;
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['commission-documents'] });
       queryClient.invalidateQueries({ queryKey: ['commission-document', variables.id] });
+      queryClient.invalidateQueries({ queryKey: ['commission-audit-log', variables.id] });
     },
     onError: (error) => {
       console.error('Error updating commission document:', error);
@@ -356,6 +400,7 @@ export function useUpdateCommissionDocumentStatus() {
           // Keep scheduled_pay_date in sync (Friday of assigned pay run)
           const { calculateResubmissionPayDate } = await import('@/lib/commissionPayDateCalculations');
           updateData.scheduled_pay_date = calculateResubmissionPayDate(currentDoc.scheduled_pay_date);
+          await ensurePayRunExists(getNextPayRunPeriod(new Date()).periodStart);
         } else {
           // First submission — standard Tuesday 3PM cutoff
           const subResult = determinePayRunForSubmission();
@@ -365,6 +410,7 @@ export function useUpdateCommissionDocumentStatus() {
 
           const { getScheduledPayDateString } = await import('@/lib/commissionPayDateCalculations');
           updateData.scheduled_pay_date = getScheduledPayDateString(new Date());
+          await ensurePayRunExists(getNextPayRunPeriod(new Date()).periodStart);
         }
 
         // Get user's profile to find their manager
@@ -382,13 +428,22 @@ export function useUpdateCommissionDocumentStatus() {
         }
       }
 
-      // Handle revision required
+      // Handle revision required — after Wednesday noon, roll to next pay run immediately
       if (status === 'revision_required') {
         if (!revision_reason) {
           throw new Error('Revision reason is required');
         }
         updateData.revision_reason = revision_reason;
         updateData.revision_count = ((currentDoc?.revision_count || 0) + 1);
+
+        if (currentDoc?.pay_run_id && !isBeforeRevisionDeadline()) {
+          const nextPeriod = getNextPayRunPeriod();
+          const nextPayRunId = await ensurePayRunExists(nextPeriod.periodStart);
+          updateData.pay_run_id = nextPayRunId;
+          updateData.rolled_from_pay_run_id = currentDoc.pay_run_id;
+          updateData.is_late_revision = true;
+          updateData.scheduled_pay_date = getFridayDateStringForPeriodStart(nextPeriod.periodStart);
+        }
       }
       
       // Handle manager approval
@@ -481,6 +536,19 @@ export function useUpdateCommissionDocumentStatus() {
             performedBy: userId,
             payRunId,
           });
+          if (updateData.rolled_from_pay_run_id && updateData.pay_run_id) {
+            await logCommissionAction({
+              commissionId: id,
+              action: 'rolled_to_next_pay_run',
+              performedBy: userId,
+              payRunId,
+              details: {
+                from_pay_run: updateData.rolled_from_pay_run_id,
+                to_pay_run: updateData.pay_run_id,
+                reason: 'revision_deadline_passed',
+              },
+            });
+          }
         } else if (status === 'manager_approved') {
           await logCommissionAction({
             commissionId: id,
@@ -603,12 +671,17 @@ async function sendCommissionDocumentNotification(
       changedByName = currentUserProfile?.full_name || 'Unknown';
     }
 
-    const payload = {
+    const period = getCurrentPayRunPeriod();
+    const nextPeriod = getNextPayRunPeriod();
+    const payRunPeriodLabel = formatPayRunRange(period.periodStart, period.periodEnd);
+    const rolledOnReject = status === 'revision_required' && !!doc.rolled_from_pay_run_id;
+
+    const payload: Record<string, unknown> = {
       notification_type: notificationType,
       document_type: 'commission_document',
       commission_id: doc.id,
       job_name: doc.job_name_id,
-      job_address: doc.job_name_id, // Using job_name_id as we don't have separate address
+      job_address: doc.job_name_id,
       sales_rep_name: doc.sales_rep,
       subcontractor_name: null,
       submission_type: 'employee',
@@ -621,6 +694,17 @@ async function sendCommissionDocumentNotification(
       changed_by_name: changedByName,
       scheduled_pay_date: doc.scheduled_pay_date,
     };
+
+    if (status === 'revision_required') {
+      payload.pay_run_period_label = payRunPeriodLabel;
+      payload.revision_deadline_text = period.revisionDeadlineDisplay;
+      payload.revision_resubmit_reminder =
+        'Please resubmit by Wednesday 12:00 PM MST to stay in the current pay run when the revision deadline has not passed.';
+      payload.commission_pay_run_context = rolledOnReject
+        ? `This commission has been moved to the next pay run (${formatPayRunRange(nextPeriod.periodStart, nextPeriod.periodEnd)}) because the revision deadline has passed.`
+        : `Current pay run: ${payRunPeriodLabel}.`;
+      payload.rolled_to_next_pay_run_on_reject = rolledOnReject;
+    }
 
     await supabase.functions.invoke('send-commission-notification', {
       body: payload,
