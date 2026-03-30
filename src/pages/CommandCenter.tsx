@@ -11,6 +11,7 @@ import { WeatherWidget } from "@/components/command-center/WeatherWidget";
 import { NeedsAttentionWidget } from "@/components/command-center/NeedsAttentionWidget";
 import { CommandCenterSettings } from "@/components/command-center/CommandCenterSettings";
 import { useCommandCenterPreferences } from "@/hooks/useCommandCenterPreferences";
+import { MessageBoard } from "@/components/command-center/feed/MessageBoard";
 import { LayoutGrid } from "lucide-react";
 import { GuidedTour } from "@/components/tutorial/GuidedTour";
 import { commandCenterSteps } from "@/components/tutorial/tutorialSteps";
@@ -74,6 +75,9 @@ export default function CommandCenter() {
 
         {/* Needs Your Attention - Manager/Admin only */}
         <NeedsAttentionWidget />
+
+        {/* Team Feed / Message Board */}
+        <MessageBoard />
 
         {/* 7. TSM Roofing LLC contact bar */}
         <CompanyInfoWidget />
