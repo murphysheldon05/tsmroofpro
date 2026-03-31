@@ -468,7 +468,7 @@ export default function CommissionDocumentDetail() {
               {document.install_date && (
                 <div className="flex items-center gap-2">
                   <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-muted-foreground">Install Date:</span>
+                  <span className="text-muted-foreground">Completed Install:</span>
                   <span className="font-medium">{new Date(document.install_date + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
                 </div>
               )}

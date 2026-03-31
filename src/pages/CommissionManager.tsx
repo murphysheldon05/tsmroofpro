@@ -386,7 +386,7 @@ export default function CommissionManager() {
                 <TableRow>
                   <TableHead>Rep Name</TableHead>
                   <TableHead>Job Name</TableHead>
-                  <TableHead className="hidden lg:table-cell">Install Date</TableHead>
+                  <TableHead className="hidden lg:table-cell">Completed Install</TableHead>
                   <TableHead className="hidden xl:table-cell">Pay Run</TableHead>
                   <TableHead className="hidden sm:table-cell">Submitted</TableHead>
                   <TableHead className="text-right">Amount</TableHead>
@@ -483,7 +483,7 @@ export default function CommissionManager() {
                 <TableRow>
                   <TableHead>Rep Name</TableHead>
                   <TableHead>Job Name</TableHead>
-                  <TableHead className="hidden lg:table-cell">Install Date</TableHead>
+                  <TableHead className="hidden lg:table-cell">Completed Install</TableHead>
                   <TableHead className="hidden xl:table-cell">Pay Run</TableHead>
                   <TableHead className="hidden sm:table-cell">Submitted</TableHead>
                   <TableHead className="text-right">Amount</TableHead>

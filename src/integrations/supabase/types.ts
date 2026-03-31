@@ -2619,6 +2619,7 @@ export type Database = {
           end_date: string | null
           event_category: string
           id: string
+          roof_type: string | null
           start_date: string
           title: string
           updated_at: string
@@ -2632,6 +2633,7 @@ export type Database = {
           end_date?: string | null
           event_category?: string
           id?: string
+          roof_type?: string | null
           start_date: string
           title: string
           updated_at?: string
@@ -2645,6 +2647,7 @@ export type Database = {
           end_date?: string | null
           event_category?: string
           id?: string
+          roof_type?: string | null
           start_date?: string
           title?: string
           updated_at?: string

@@ -529,11 +529,11 @@ export function CommissionDocumentForm({ document: existingDoc, readOnly = false
       return;
     }
     if (!formData.install_date) {
-      toast.error("Install Date is required");
+      toast.error("Completed Install Date is required");
       return;
     }
     if (formData.install_date > new Date().toISOString().split("T")[0]) {
-      toast.error("Install Date cannot be in the future");
+      toast.error("Completed Install Date cannot be in the future");
       return;
     }
     setShowPreview(true);
@@ -679,10 +679,10 @@ export function CommissionDocumentForm({ document: existingDoc, readOnly = false
                     placeholder="e.g., Smith Residence"
                   />
                 </EnhancedFormRow>
-                <EnhancedFormRow label="Job Date">
+                <EnhancedFormRow label="Approved Date (AccuLynx Approval)">
                   <Input type="date" value={formData.job_date} onChange={(e) => setFormData(prev => ({ ...prev, job_date: e.target.value }))} disabled={!canEdit} className={inputBaseClasses} />
                 </EnhancedFormRow>
-                <EnhancedFormRow label="Install Date *" hint="Date the roof installation was completed">
+                <EnhancedFormRow label="Completed Install Date *" hint="Date the roof installation was completed">
                   <Input
                     type="date"
                     value={formData.install_date}

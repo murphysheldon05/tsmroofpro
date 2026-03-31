@@ -27,6 +27,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import {
   useProductionCalendarEvents, useCreateCalendarEvent, useUpdateCalendarEvent,
   useDeleteCalendarEvent, ProductionCalendarEvent, EVENT_CATEGORIES, EventCategory,
+  ROOF_TYPES, RoofType,
 } from "@/hooks/useProductionCalendar";
 import { useCrews, useCreateCrew, useUpdateCrew, useDeleteCrew, Crew } from "@/hooks/useCrews";
 import { cn } from "@/lib/utils";
@@ -37,6 +38,7 @@ import { useUserHoldsCheck } from "@/hooks/useComplianceHoldCheck";
 import { HoldWarningBanner } from "@/components/compliance/HoldWarningBanner";
 import { TodaysBuildsSection } from "@/components/production/TodaysBuildsSection";
 import { DayOverflowModal, OverflowTrigger } from "@/components/calendar/DayOverflowModal";
+import { ScheduleAIChat } from "@/components/production/ScheduleAIChat";
 
 type CalendarView = "day" | "week" | "month";
 
@@ -57,7 +59,7 @@ export default function BuildSchedule() {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<ProductionCalendarEvent | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
-  const [newEvent, setNewEvent] = useState({ title: "", description: "", start_date: "", end_date: "", event_category: "other" as EventCategory, crew_id: "" });
+  const [newEvent, setNewEvent] = useState({ title: "", description: "", start_date: "", end_date: "", event_category: "other" as EventCategory, roof_type: "" as string, crew_id: "" });
   const [overflowDate, setOverflowDate] = useState<Date | null>(null);
 
   const [isAddCrewOpen, setIsAddCrewOpen] = useState(false);
@@ -173,9 +175,11 @@ export default function BuildSchedule() {
     createEvent.mutate({
       title: newEvent.title, description: newEvent.description || undefined,
       start_date: newEvent.start_date, end_date: newEvent.end_date || undefined,
-      event_category: newEvent.event_category, crew_id: newEvent.crew_id || undefined,
+      event_category: newEvent.event_category,
+      roof_type: (newEvent.roof_type as RoofType) || null,
+      crew_id: newEvent.crew_id || undefined,
     }, {
-      onSuccess: () => { setIsAddOpen(false); setNewEvent({ title: "", description: "", start_date: "", end_date: "", event_category: "other", crew_id: "" }); },
+      onSuccess: () => { setIsAddOpen(false); setNewEvent({ title: "", description: "", start_date: "", end_date: "", event_category: "other", roof_type: "", crew_id: "" }); },
     });
   };
   const handleUpdateEvent = () => {
@@ -183,7 +187,9 @@ export default function BuildSchedule() {
     updateEvent.mutate({
       id: editingEvent.id, title: editingEvent.title, description: editingEvent.description || undefined,
       start_date: editingEvent.start_date, end_date: editingEvent.end_date || undefined,
-      event_category: editingEvent.event_category, crew_id: editingEvent.crew_id || undefined,
+      event_category: editingEvent.event_category,
+      roof_type: editingEvent.roof_type || null,
+      crew_id: editingEvent.crew_id || undefined,
     }, { onSuccess: () => setEditingEvent(null) });
   };
   const handleDeleteConfirm = () => {
@@ -515,11 +521,19 @@ export default function BuildSchedule() {
               <DatePickerField label="Start Date *" value={newEvent.start_date} onChange={d => setNewEvent({ ...newEvent, start_date: d })} />
               <DatePickerField label="End Date" value={newEvent.end_date} onChange={d => setNewEvent({ ...newEvent, end_date: d })} />
             </div>
-            <div><Label>Category</Label>
-              <Select value={newEvent.event_category} onValueChange={(v: EventCategory) => setNewEvent({ ...newEvent, event_category: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>{Object.entries(EVENT_CATEGORIES).map(([k, c]) => <SelectItem key={k} value={k}>{c.label}</SelectItem>)}</SelectContent>
-              </Select>
+            <div className="grid grid-cols-2 gap-4">
+              <div><Label>Category</Label>
+                <Select value={newEvent.event_category} onValueChange={(v: EventCategory) => setNewEvent({ ...newEvent, event_category: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>{Object.entries(EVENT_CATEGORIES).map(([k, c]) => <SelectItem key={k} value={k}>{c.label}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div><Label>Roof Type</Label>
+                <Select value={newEvent.roof_type} onValueChange={v => setNewEvent({ ...newEvent, roof_type: v })}>
+                  <SelectTrigger><SelectValue placeholder="Select roof type" /></SelectTrigger>
+                  <SelectContent>{Object.entries(ROOF_TYPES).map(([k, r]) => <SelectItem key={k} value={k}>{r.label}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
             </div>
             <div><Label>Crew</Label>
               <Select value={newEvent.crew_id} onValueChange={v => setNewEvent({ ...newEvent, crew_id: v })}>
@@ -547,11 +561,19 @@ export default function BuildSchedule() {
                 <DatePickerField label="Start Date" value={editingEvent.start_date} onChange={d => setEditingEvent({ ...editingEvent, start_date: d })} />
                 <DatePickerField label="End Date" value={editingEvent.end_date || ""} onChange={d => setEditingEvent({ ...editingEvent, end_date: d })} />
               </div>
-              <div><Label>Category</Label>
-                <Select value={editingEvent.event_category} onValueChange={(v: EventCategory) => setEditingEvent({ ...editingEvent, event_category: v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{Object.entries(EVENT_CATEGORIES).map(([k, c]) => <SelectItem key={k} value={k}>{c.label}</SelectItem>)}</SelectContent>
-                </Select>
+              <div className="grid grid-cols-2 gap-4">
+                <div><Label>Category</Label>
+                  <Select value={editingEvent.event_category} onValueChange={(v: EventCategory) => setEditingEvent({ ...editingEvent, event_category: v })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>{Object.entries(EVENT_CATEGORIES).map(([k, c]) => <SelectItem key={k} value={k}>{c.label}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+                <div><Label>Roof Type</Label>
+                  <Select value={editingEvent.roof_type || ""} onValueChange={v => setEditingEvent({ ...editingEvent, roof_type: (v as RoofType) || null })}>
+                    <SelectTrigger><SelectValue placeholder="Select roof type" /></SelectTrigger>
+                    <SelectContent>{Object.entries(ROOF_TYPES).map(([k, r]) => <SelectItem key={k} value={k}>{r.label}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
               </div>
               <div><Label>Crew</Label>
                 <Select value={editingEvent.crew_id || ""} onValueChange={v => setEditingEvent({ ...editingEvent, crew_id: v || null })}>
@@ -631,6 +653,7 @@ export default function BuildSchedule() {
         </AlertDialogContent>
       </AlertDialog>
       <GuidedTour pageName="build-schedule" pageTitle="Build Schedule" steps={buildScheduleSteps} />
+      <ScheduleAIChat />
     </>
   );
 }

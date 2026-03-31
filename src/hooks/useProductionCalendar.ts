@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 export type EventCategory = "new_install" | "repair" | "inspection" | "maintenance" | "delivery" | "other";
+export type RoofType = "tile" | "shingle" | "foam" | "coatings";
 
 export const EVENT_CATEGORIES: Record<EventCategory, { label: string; color: string; bgColor: string }> = {
   new_install: { label: "New Install", color: "text-emerald-700 dark:text-emerald-400", bgColor: "bg-emerald-100 dark:bg-emerald-900/40" },
@@ -13,6 +14,13 @@ export const EVENT_CATEGORIES: Record<EventCategory, { label: string; color: str
   other: { label: "Other", color: "text-slate-700 dark:text-slate-400", bgColor: "bg-slate-100 dark:bg-slate-900/40" },
 };
 
+export const ROOF_TYPES: Record<RoofType, { label: string }> = {
+  tile: { label: "Concrete Tile" },
+  shingle: { label: "Asphalt Shingles" },
+  foam: { label: "Foam" },
+  coatings: { label: "Coatings" },
+};
+
 export interface ProductionCalendarEvent {
   id: string;
   title: string;
@@ -21,6 +29,7 @@ export interface ProductionCalendarEvent {
   end_date: string | null;
   all_day: boolean;
   event_category: EventCategory;
+  roof_type: RoofType | null;
   crew_id: string | null;
   created_by: string | null;
   created_at: string;
@@ -52,6 +61,7 @@ export function useCreateCalendarEvent() {
       start_date: string;
       end_date?: string;
       event_category?: EventCategory;
+      roof_type?: RoofType | null;
       crew_id?: string;
     }) => {
       const { data: user } = await supabase.auth.getUser();
@@ -91,6 +101,7 @@ export function useUpdateCalendarEvent() {
       start_date?: string;
       end_date?: string | null;
       event_category?: EventCategory;
+      roof_type?: RoofType | null;
       crew_id?: string | null;
     }) => {
       const { data, error } = await supabase

@@ -226,7 +226,7 @@ export function PayRunView() {
               <TableRow>
                 <TableHead>Rep</TableHead>
                 <TableHead>Customer / Job</TableHead>
-                <TableHead>Install Date</TableHead>
+                <TableHead>Completed Install</TableHead>
                 <TableHead>Submitted</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Amount</TableHead>

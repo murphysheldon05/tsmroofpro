@@ -258,7 +258,7 @@ export default function MyCommissions() {
             <TableRow>
               <TableHead>Job Name</TableHead>
               <TableHead className="hidden sm:table-cell">Submitted</TableHead>
-              <TableHead className="hidden md:table-cell">Install Date</TableHead>
+              <TableHead className="hidden md:table-cell">Completed Install</TableHead>
               <TableHead className="text-right">Amount</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="hidden lg:table-cell">Late</TableHead>
