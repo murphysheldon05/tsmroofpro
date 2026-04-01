@@ -27,20 +27,29 @@ const ROOF_TYPE_KEYWORDS: Record<string, string[]> = {
   coatings: ["coating", "coatings", "coat"],
 };
 
-// Crew name patterns (case-insensitive match against crew.name from DB)
 const TILE_SHINGLE_CREW_PATTERNS = ["benjamin", "jimmy"];
 const FOAM_COATINGS_CREW_PATTERNS = ["arturo"];
 
-// Which roof types each crew group can handle
 const CREW_ROOF_CAPABILITIES: Record<string, string[]> = {
   tile_shingle: ["tile", "shingle"],
   foam_coatings: ["foam", "coatings"],
 };
 
+const SCHEDULE_INTENT_PHRASES = [
+  "schedule a job", "schedule a new job", "schedule this", "schedule it",
+  "book a job", "book it", "add a job", "add to schedule", "add to the schedule",
+  "put on the schedule", "put it on the schedule", "put on schedule",
+  "need to schedule", "want to schedule", "i need to schedule",
+  "set up a job", "create a job", "new job on the schedule",
+  "schedule a tile", "schedule a shingle", "schedule a foam", "schedule a coating",
+  "schedule tile", "schedule shingle", "schedule foam", "schedule coating",
+  "schedule an install", "add an install",
+];
+
 // ─── Duration Calculation ────────────────────────────────────────────────────
 
 function getDaysNeeded(roofType: string, squares: number | null): number {
-  const sq = squares || 25; // default assumption if not provided
+  const sq = squares || 25;
 
   switch (roofType) {
     case "tile":
@@ -48,15 +57,14 @@ function getDaysNeeded(roofType: string, squares: number | null): number {
       if (sq <= 35) return 2;
       if (sq <= 50) return 3;
       if (sq <= 60) return 4;
-      return 5; // 60+
+      return 5;
     case "shingle":
       if (sq <= 40) return 1;
-      return 2; // 40+
+      return 2;
     case "foam":
     case "coatings":
-      // Day 1: cleaning/prep, Day 2: foam + first coat, Day 3: final coat
       if (sq <= 20) return 2;
-      return 3; // 20-40+
+      return 3;
     default:
       return 1;
   }
@@ -115,6 +123,11 @@ function detectAllTypesQuery(message: string): boolean {
   );
 }
 
+function detectSchedulingIntent(message: string): boolean {
+  const lower = message.toLowerCase();
+  return SCHEDULE_INTENT_PHRASES.some((kw) => lower.includes(kw));
+}
+
 // ─── Crew Matching ───────────────────────────────────────────────────────────
 
 interface Crew {
@@ -137,7 +150,7 @@ function getCrewsForRoofType(roofType: string, crews: Crew[]): Crew[] {
     const group = getCrewGroup(c.name);
     if (isTileShingle && group === "tile_shingle") return true;
     if (isFoamCoatings && group === "foam_coatings") return true;
-    if (!group) return true; // unrecognized crews are considered available for anything
+    if (!group) return true;
     return false;
   });
 }
@@ -154,7 +167,7 @@ interface CalendarEvent {
 
 function isWeekday(date: Date): boolean {
   const day = date.getDay();
-  return day !== 0 && day !== 6; // not Sunday or Saturday
+  return day !== 0 && day !== 6;
 }
 
 function isSaturday(date: Date): boolean {
@@ -181,10 +194,8 @@ function findNextAvailableSlot(
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  // Start searching from tomorrow
   const searchStart = addDays(today, 1);
 
-  // Build a set of busy dates per crew
   const crewBusyDates: Record<string, Set<string>> = {};
   for (const cid of eligibleCrewIds) {
     crewBusyDates[cid] = new Set();
@@ -201,7 +212,6 @@ function findNextAvailableSlot(
     }
   }
 
-  // Search up to 120 days out
   for (const crewId of eligibleCrewIds) {
     const busy = crewBusyDates[crewId] || new Set();
 
@@ -213,7 +223,6 @@ function findNextAvailableSlot(
       for (let d = 0; d < daysNeeded; d++) {
         const workDay = addDays(candidateStart, d);
         if (!isWeekday(workDay)) {
-          // Skip weekends within the span -- extend by one more day
           fits = false;
           break;
         }
@@ -283,7 +292,7 @@ async function fetchScheduleData(
   return { events, crews, summaryByType };
 }
 
-// ─── Response Builders ───────────────────────────────────────────────────────
+// ─── Response Builders (Availability Queries) ────────────────────────────────
 
 function formatDate(date: Date): string {
   return date.toLocaleDateString("en-US", {
@@ -384,10 +393,176 @@ function buildFallbackReply(message: string, data: ScheduleData): string {
     return buildOverviewReply(data);
   }
 
-  return "I can help with schedule availability! Try asking about a specific roof type — for example:\n\n• \"How far out on tile, 35 squares?\"\n• \"When can we schedule a shingle job?\"\n• \"Give me an overview of all types\"";
+  return "I can help with schedule availability or put a job on the schedule! Try:\n\n• \"How far out on tile, 35 squares?\"\n• \"Schedule a new job\"\n• \"Give me an overview of all types\"";
 }
 
-// ─── OpenAI Integration ──────────────────────────────────────────────────────
+// ─── Scheduling Flow ─────────────────────────────────────────────────────────
+
+interface SchedulingCollected {
+  title?: string;
+  roof_type?: string;
+  squares?: number;
+}
+
+interface SchedulingState {
+  collected: SchedulingCollected;
+  asking_for?: string;
+}
+
+function processSchedulingMessage(
+  message: string,
+  currentState: SchedulingState
+): SchedulingState {
+  const collected = { ...currentState.collected };
+  let extractedRoofType = false;
+  let extractedSquares = false;
+
+  if (!collected.roof_type) {
+    const rt = detectRoofType(message);
+    if (rt) {
+      collected.roof_type = rt;
+      extractedRoofType = true;
+    }
+  }
+
+  if (!collected.squares) {
+    const sq = detectSquares(message);
+    if (sq) {
+      collected.squares = sq;
+      extractedSquares = true;
+    }
+    if (!sq && currentState.asking_for === "squares") {
+      const bareNum = message.trim().match(/^(\d+)$/);
+      if (bareNum) {
+        collected.squares = parseInt(bareNum[1], 10);
+        extractedSquares = true;
+      }
+    }
+  }
+
+  if (!collected.title && currentState.asking_for === "title") {
+    if (!extractedRoofType && !extractedSquares) {
+      collected.title = message.trim();
+    }
+  }
+
+  const missing = getSchedulingMissing(collected);
+  let asking_for: string | undefined;
+  if (missing.includes("roof_type")) asking_for = "roof_type";
+  else if (missing.includes("title")) asking_for = "title";
+  else if (missing.includes("squares")) asking_for = "squares";
+
+  return { collected, asking_for };
+}
+
+function getSchedulingMissing(collected: SchedulingCollected): string[] {
+  const missing: string[] = [];
+  if (!collected.roof_type) missing.push("roof_type");
+  if (!collected.title) missing.push("title");
+  if (!collected.squares) missing.push("squares");
+  return missing;
+}
+
+function getNextQuestion(askingFor: string | undefined): string {
+  switch (askingFor) {
+    case "roof_type":
+      return "What type of roof? (tile, shingle, foam, or coatings)";
+    case "title":
+      return "What's the job name or address?";
+    case "squares":
+      return "How many squares is the job?";
+    default:
+      return "";
+  }
+}
+
+function buildCollectedSummary(collected: SchedulingCollected): string {
+  const parts: string[] = [];
+  if (collected.roof_type) {
+    parts.push(ROOF_TYPE_LABELS[collected.roof_type] || collected.roof_type);
+  }
+  if (collected.title) {
+    parts.push(`"${collected.title}"`);
+  }
+  if (collected.squares) {
+    parts.push(`${collected.squares} squares`);
+  }
+  return parts.length > 0 ? parts.join(", ") + "." : "";
+}
+
+function buildSchedulingProposal(
+  collected: { title: string; roof_type: string; squares: number },
+  data: ScheduleData
+): { reply: string; event: Record<string, unknown> | null } {
+  const { title, roof_type, squares } = collected;
+  const label = ROOF_TYPE_LABELS[roof_type] || roof_type;
+  const daysNeeded = getDaysNeeded(roof_type, squares);
+
+  const eligibleCrews = getCrewsForRoofType(roof_type, data.crews);
+  if (eligibleCrews.length === 0) {
+    return {
+      reply: `I don't see any active crews for ${label} work right now. You may need to schedule this one manually or check with the production manager.`,
+      event: null,
+    };
+  }
+
+  const eligibleIds = eligibleCrews.map((c) => c.id);
+  const slot = findNextAvailableSlot(daysNeeded, roof_type, eligibleIds, data.events);
+
+  if (!slot) {
+    return {
+      reply: `I couldn't find an open ${daysNeeded}-day slot for ${label} in the next 4 months. The schedule may be very full — you might need to handle this one manually.`,
+      event: null,
+    };
+  }
+
+  const crew = data.crews.find((c) => c.id === slot.crewId);
+  const crewName = crew?.name || "Available crew";
+  const startDate = slot.startDate;
+  const endDate = daysNeeded > 1 ? addDays(startDate, daysNeeded - 1) : null;
+
+  const event = {
+    title,
+    start_date: dateToStr(startDate),
+    end_date: endDate ? dateToStr(endDate) : null,
+    crew_id: slot.crewId,
+    crew_name: crewName,
+    roof_type,
+    squares,
+    event_category: "new_install",
+  };
+
+  const reply =
+    `Here's what I've got:\n\n` +
+    `• Job: ${title}\n` +
+    `• Type: ${label}\n` +
+    `• Squares: ${squares}\n` +
+    `• Duration: ${daysNeeded} day${daysNeeded !== 1 ? "s" : ""}\n` +
+    `• Crew: ${crewName}\n` +
+    `• Start: ${formatDate(startDate)}` +
+    (endDate ? `\n• End: ${formatDate(endDate)}` : "") +
+    `\n\nShall I put this on the schedule?`;
+
+  return { reply, event };
+}
+
+async function insertScheduledEvent(
+  supabase: any,
+  event: Record<string, unknown>
+): Promise<{ eventId: string; error?: string }> {
+  const { crew_name: _, ...insertData } = event;
+
+  const { data, error } = await supabase
+    .from("production_calendar_events")
+    .insert({ ...insertData, all_day: true })
+    .select("id")
+    .single();
+
+  if (error) return { eventId: "", error: error.message };
+  return { eventId: data.id };
+}
+
+// ─── OpenAI Integration (availability queries only) ──────────────────────────
 
 async function tryOpenAI(message: string, data: ScheduleData): Promise<string | null> {
   const apiKey = Deno.env.get("OPENAI_API_KEY");
@@ -397,7 +572,6 @@ async function tryOpenAI(message: string, data: ScheduleData): Promise<string | 
     weekday: "long", month: "long", day: "numeric", year: "numeric",
   });
 
-  // Build rich context for the AI
   const contextLines: string[] = [];
   for (const [type, label] of Object.entries(ROOF_TYPE_LABELS)) {
     const summary = data.summaryByType[type];
@@ -439,7 +613,8 @@ RULES:
 - Use the schedule data above to answer. Do not make up dates.
 - If the user mentions squares, calculate duration and find the right opening.
 - Be concise and friendly. 2-3 sentences max.
-- Include the approximate date and how many weeks out.`;
+- Include the approximate date and how many weeks out.
+- If the user wants to schedule a job, tell them to use the "Schedule a Job" button or say "schedule a job".`;
 
   try {
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -467,6 +642,15 @@ RULES:
   }
 }
 
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function jsonResponse(body: Record<string, unknown>, status = 200): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
 // ─── Request Handler ─────────────────────────────────────────────────────────
 
 Deno.serve(async (req) => {
@@ -479,33 +663,87 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { message } = await req.json();
+    const body = await req.json();
+    const { message, scheduling_state, action, event } = body;
+
+    // ── Confirm & insert ──────────────────────────────────────────────────
+    if (action === "confirm_schedule" && event) {
+      const result = await insertScheduledEvent(supabase, event);
+      if (result.error) {
+        return jsonResponse({
+          reply: `Sorry, I couldn't save that to the schedule: ${result.error}`,
+        });
+      }
+      const crewLabel = event.crew_name || "the assigned crew";
+      const startLabel = (() => {
+        try { return formatDate(new Date(event.start_date + "T00:00:00")); }
+        catch { return event.start_date; }
+      })();
+      return jsonResponse({
+        reply: `Done! "${event.title}" has been added to the schedule starting ${startLabel} with ${crewLabel}.`,
+        action: { type: "scheduled", eventId: result.eventId },
+      });
+    }
+
     if (!message || typeof message !== "string") {
-      return new Response(
-        JSON.stringify({ reply: "Please send a message to get started." }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return jsonResponse({
+        reply: "Please send a message to get started.",
+      });
     }
 
     const data = await fetchScheduleData(supabase);
 
-    // Try OpenAI first for natural language finesse, fall back to deterministic logic
+    // ── Scheduling flow ───────────────────────────────────────────────────
+    if (scheduling_state || detectSchedulingIntent(message)) {
+      const prevState: SchedulingState = scheduling_state || {
+        collected: {},
+        asking_for: undefined,
+      };
+
+      const newState = processSchedulingMessage(message, prevState);
+      const missing = getSchedulingMissing(newState.collected);
+
+      if (missing.length === 0) {
+        const proposal = buildSchedulingProposal(
+          newState.collected as { title: string; roof_type: string; squares: number },
+          data
+        );
+
+        if (proposal.event) {
+          return jsonResponse({
+            reply: proposal.reply,
+            action: { type: "confirm", event: proposal.event },
+          });
+        }
+        return jsonResponse({ reply: proposal.reply });
+      }
+
+      const question = getNextQuestion(newState.asking_for);
+      const summary = buildCollectedSummary(newState.collected);
+      const reply = summary
+        ? `Got it — ${summary}\n\n${question}`
+        : `Let's get this job scheduled! ${question}`;
+
+      return jsonResponse({
+        reply,
+        action: {
+          type: "collect",
+          collected: newState.collected,
+          asking_for: newState.asking_for,
+        },
+      });
+    }
+
+    // ── Regular availability query ────────────────────────────────────────
     const aiReply = await tryOpenAI(message, data);
     const reply = aiReply || buildFallbackReply(message, data);
 
-    return new Response(JSON.stringify({ reply }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return jsonResponse({ reply });
   } catch (err) {
     console.error("production-schedule-ai error:", err);
-    return new Response(
-      JSON.stringify({
-        reply: "Sorry, I had trouble checking the schedule. Please try again in a moment.",
-      }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
+    return jsonResponse(
+      { reply: "Sorry, I had trouble checking the schedule. Please try again in a moment." },
+      500
     );
   }
 });
