@@ -407,7 +407,7 @@ export function useImportCommission() {
         insertData.paid_at = now;
       }
 
-      const { error } = await supabase.from("commission_documents").insert(insertData);
+      const { error } = await supabase.from("commission_documents").insert(insertData as any);
       if (error) throw error;
     },
     onSuccess: () => {

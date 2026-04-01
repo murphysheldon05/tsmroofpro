@@ -53,7 +53,7 @@ export function AdminTemplateGrid({
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
           {templates.map((t) => {
-            const bonusTiers = t.bonus_tiers as BonusTier[] | null;
+            const bonusTiers = (t.bonus_tiers as unknown) as BonusTier[] | null;
             return (
               <Card key={t.id} className="flex flex-col">
                 <CardHeader className="pb-2">

@@ -35,7 +35,7 @@ export function WorkflowRoleAssignments() {
         .from("workflow_role_assignments" as any)
         .select("role_key, assigned_user_id");
       if (error) throw error;
-      return data as WorkflowAssignment[];
+      return (data as unknown) as WorkflowAssignment[];
     },
   });
 

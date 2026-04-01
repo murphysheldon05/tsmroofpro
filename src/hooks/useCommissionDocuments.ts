@@ -581,7 +581,7 @@ export function useUpdateCommissionDocumentStatus() {
       }
 
       // Send notification after successful status update
-      await sendCommissionDocumentNotification(data as CommissionDocument, status, revision_reason || approval_comment);
+      await sendCommissionDocumentNotification((data as unknown) as CommissionDocument, status, revision_reason || approval_comment);
       
       return data;
     },

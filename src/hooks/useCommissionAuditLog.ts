@@ -32,8 +32,8 @@ export function useCommissionAuditLog(commissionId: string | undefined) {
     queryFn: async () => {
       if (!commissionId) return [];
 
-      const { data, error } = await supabase
-        .from("commission_audit_log")
+      const { data, error } = await (supabase
+        .from as any)("commission_audit_log")
         .select("*")
         .eq("commission_id", commissionId)
         .order("performed_at", { ascending: false });
