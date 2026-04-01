@@ -171,7 +171,7 @@ export default function CommissionManager() {
   const accountingQueue = useMemo(() => {
     let list = (allCommissions || []).filter((c) => c.status === "manager_approved");
     if (queuePayRunFilter !== "all") {
-      list = list.filter((c: { pay_run_id?: string | null }) => c.pay_run_id === queuePayRunFilter);
+      list = list.filter((c: any) => c.pay_run_id === queuePayRunFilter);
     }
     return list;
   }, [allCommissions, queuePayRunFilter]);
