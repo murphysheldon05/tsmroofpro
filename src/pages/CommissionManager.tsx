@@ -163,7 +163,7 @@ export default function CommissionManager() {
   const complianceQueue = useMemo(() => {
     let list = (allCommissions || []).filter((c) => c.status === "submitted");
     if (queuePayRunFilter !== "all") {
-      list = list.filter((c: { pay_run_id?: string | null }) => c.pay_run_id === queuePayRunFilter);
+      list = list.filter((c: any) => c.pay_run_id === queuePayRunFilter);
     }
     return list;
   }, [allCommissions, queuePayRunFilter]);
@@ -171,7 +171,7 @@ export default function CommissionManager() {
   const accountingQueue = useMemo(() => {
     let list = (allCommissions || []).filter((c) => c.status === "manager_approved");
     if (queuePayRunFilter !== "all") {
-      list = list.filter((c: { pay_run_id?: string | null }) => c.pay_run_id === queuePayRunFilter);
+      list = list.filter((c: any) => c.pay_run_id === queuePayRunFilter);
     }
     return list;
   }, [allCommissions, queuePayRunFilter]);
@@ -652,7 +652,7 @@ export default function CommissionManager() {
                         {formatCurrency(c.rep_commission || 0)}
                       </TableCell>
                       <TableCell>
-                        <StatusBadge status={c.status} revisionCount={c.revision_count} />
+                        <StatusBadge status={c.status} revisionCount={(c as any).revision_count} />
                       </TableCell>
                       <TableCell className="hidden md:table-cell text-muted-foreground">
                         {c.paid_at ? new Date(c.paid_at).toLocaleDateString() : "—"}

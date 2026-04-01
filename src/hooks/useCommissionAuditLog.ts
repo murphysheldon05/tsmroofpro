@@ -32,8 +32,8 @@ export function useCommissionAuditLog(commissionId: string | undefined) {
     queryFn: async () => {
       if (!commissionId) return [];
 
-      const { data, error } = await supabase
-        .from("commission_audit_log")
+      const { data, error } = await (supabase
+        .from as any)("commission_audit_log")
         .select("*")
         .eq("commission_id", commissionId)
         .order("performed_at", { ascending: false });
@@ -46,7 +46,7 @@ export function useCommissionAuditLog(commissionId: string | undefined) {
         const { data: profiles } = await supabase
           .from("profiles")
           .select("id, full_name, email")
-          .in("id", performerIds);
+          .in("id", performerIds as string[]);
         profileMap = (profiles || []).reduce(
           (acc: Record<string, { name: string; email: string }>, p: any) => {
             acc[p.id] = { name: p.full_name || p.email || "Unknown", email: p.email || "" };
@@ -77,7 +77,7 @@ export async function logCommissionAction(params: {
   details?: Record<string, any>;
   payRunId?: string | null;
 }): Promise<void> {
-  const { error } = await supabase.from("commission_audit_log").insert({
+  const { error } = await (supabase.from as any)("commission_audit_log").insert({
     commission_id: params.commissionId,
     action: params.action,
     performed_by: params.performedBy,

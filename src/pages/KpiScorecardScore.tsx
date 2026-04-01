@@ -39,8 +39,7 @@ export default function KpiScorecardScore() {
     queryKey: ["scorecard-assignment", assignmentId],
     queryFn: async () => {
       if (!assignmentId) return null;
-      const { data, error } = await supabase
-        .from("scorecard_assignments")
+      const { data, error } = await (supabase.from as any)("scorecard_assignments")
         .select("*")
         .eq("id", assignmentId)
         .maybeSingle();
@@ -54,8 +53,7 @@ export default function KpiScorecardScore() {
     queryKey: ["scorecard-template", assignment?.template_id],
     queryFn: async () => {
       if (!assignment?.template_id) return null;
-      const { data, error } = await supabase
-        .from("scorecard_templates")
+      const { data, error } = await (supabase.from as any)("scorecard_templates")
         .select("*")
         .eq("id", assignment.template_id)
         .maybeSingle();

@@ -18,7 +18,7 @@ function EmployeeCard({ assignmentId, templateId }: { assignmentId: string; temp
   const { data: submissions = [] } = useSubmissions(assignmentId);
 
   const template = templates.find((t) => t.id === templateId);
-  const bonusTiers = template?.bonus_tiers as BonusTier[] | null;
+  const bonusTiers = (template?.bonus_tiers as unknown) as BonusTier[] | null;
 
   const { latest, prior, monthAvg, trendDir } = useMemo(() => {
     if (submissions.length === 0)

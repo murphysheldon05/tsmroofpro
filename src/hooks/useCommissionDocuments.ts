@@ -115,7 +115,7 @@ export function useCommissionDocuments(statusFilter?: string) {
       const { data, error } = await query;
 
       if (error) throw error;
-      return data as CommissionDocument[];
+      return (data as unknown) as CommissionDocument[];
     },
     enabled: !!user,
   });
@@ -140,7 +140,7 @@ export function useCommissionDocument(id: string | undefined) {
       if (data && !isAdmin && !isManager && data.created_by !== user!.id) {
         return null;
       }
-      return data as CommissionDocument;
+      return (data as unknown) as CommissionDocument;
     },
     enabled: !!user && !!id,
   });
@@ -581,7 +581,7 @@ export function useUpdateCommissionDocumentStatus() {
       }
 
       // Send notification after successful status update
-      await sendCommissionDocumentNotification(data as CommissionDocument, status, revision_reason || approval_comment);
+      await sendCommissionDocumentNotification((data as unknown) as CommissionDocument, status, revision_reason || approval_comment);
       
       return data;
     },

@@ -91,10 +91,11 @@ export default function KpiScorecardTemplateEditor() {
         has_bonus: hasBonus,
         bonus_tiers: hasBonus ? bonusTiers : null,
         bonus_period: bonusPeriod,
-        kpis: kpis.map((k) => ({
+        kpis: kpis.map((k, i) => ({
           name: k.name,
           full_name: k.full_name || null,
           description: k.description || null,
+          sort_order: i,
           scoring_guide:
             k.scoring_guide.length > 0
               ? (k.scoring_guide as any)
