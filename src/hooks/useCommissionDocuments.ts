@@ -115,7 +115,7 @@ export function useCommissionDocuments(statusFilter?: string) {
       const { data, error } = await query;
 
       if (error) throw error;
-      return data as CommissionDocument[];
+      return (data as unknown) as CommissionDocument[];
     },
     enabled: !!user,
   });
