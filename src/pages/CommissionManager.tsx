@@ -652,7 +652,7 @@ export default function CommissionManager() {
                         {formatCurrency(c.rep_commission || 0)}
                       </TableCell>
                       <TableCell>
-                        <StatusBadge status={c.status} revisionCount={c.revision_count} />
+                        <StatusBadge status={c.status} revisionCount={(c as any).revision_count} />
                       </TableCell>
                       <TableCell className="hidden md:table-cell text-muted-foreground">
                         {c.paid_at ? new Date(c.paid_at).toLocaleDateString() : "—"}
