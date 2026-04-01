@@ -95,6 +95,7 @@ export default function KpiScorecardTemplateEditor() {
           name: k.name,
           full_name: k.full_name || null,
           description: k.description || null,
+          sort_order: i,
           scoring_guide:
             k.scoring_guide.length > 0
               ? (k.scoring_guide as any)
