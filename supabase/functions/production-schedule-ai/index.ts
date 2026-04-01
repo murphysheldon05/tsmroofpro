@@ -245,7 +245,7 @@ interface ScheduleData {
 }
 
 async function fetchScheduleData(
-  supabase: ReturnType<typeof createClient>
+  supabase: any
 ): Promise<ScheduleData> {
   const today = dateToStr(new Date());
 
