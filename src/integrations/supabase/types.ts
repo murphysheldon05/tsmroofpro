@@ -427,10 +427,57 @@ export type Database = {
           },
         ]
       }
+      commission_audit_log: {
+        Row: {
+          action: string
+          commission_id: string
+          details: Json | null
+          id: string
+          pay_run_id: string | null
+          performed_at: string
+          performed_by: string | null
+        }
+        Insert: {
+          action: string
+          commission_id: string
+          details?: Json | null
+          id?: string
+          pay_run_id?: string | null
+          performed_at?: string
+          performed_by?: string | null
+        }
+        Update: {
+          action?: string
+          commission_id?: string
+          details?: Json | null
+          id?: string
+          pay_run_id?: string | null
+          performed_at?: string
+          performed_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commission_audit_log_commission_id_fkey"
+            columns: ["commission_id"]
+            isOneToOne: false
+            referencedRelation: "commission_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_audit_log_pay_run_id_fkey"
+            columns: ["pay_run_id"]
+            isOneToOne: false
+            referencedRelation: "commission_pay_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       commission_documents: {
         Row: {
           accounting_approved_at: string | null
           accounting_approved_by: string | null
+          additional_neg_expenses: Json | null
+          additional_pos_expenses: Json | null
           advance_total: number
           approval_comment: string | null
           approved_at: string | null
@@ -445,6 +492,9 @@ export type Database = {
           final_claim_amount: number | null
           gross_contract_total: number
           id: string
+          install_date: string | null
+          is_late_revision: boolean
+          is_late_submission: boolean
           job_date: string
           job_name_id: string
           labor_cost: number
@@ -461,6 +511,7 @@ export type Database = {
           op_percent: number
           paid_at: string | null
           paid_by: string | null
+          pay_run_id: string | null
           pos_exp_1: number
           pos_exp_2: number
           pos_exp_3: number
@@ -478,6 +529,7 @@ export type Database = {
           review_requested_to_name: string | null
           revision_count: number | null
           revision_reason: string | null
+          rolled_from_pay_run_id: string | null
           sales_rep: string
           sales_rep_id: string | null
           scheduled_pay_date: string | null
@@ -493,6 +545,8 @@ export type Database = {
         Insert: {
           accounting_approved_at?: string | null
           accounting_approved_by?: string | null
+          additional_neg_expenses?: Json | null
+          additional_pos_expenses?: Json | null
           advance_total?: number
           approval_comment?: string | null
           approved_at?: string | null
@@ -507,6 +561,9 @@ export type Database = {
           final_claim_amount?: number | null
           gross_contract_total?: number
           id?: string
+          install_date?: string | null
+          is_late_revision?: boolean
+          is_late_submission?: boolean
           job_date: string
           job_name_id: string
           labor_cost?: number
@@ -523,6 +580,7 @@ export type Database = {
           op_percent?: number
           paid_at?: string | null
           paid_by?: string | null
+          pay_run_id?: string | null
           pos_exp_1?: number
           pos_exp_2?: number
           pos_exp_3?: number
@@ -540,6 +598,7 @@ export type Database = {
           review_requested_to_name?: string | null
           revision_count?: number | null
           revision_reason?: string | null
+          rolled_from_pay_run_id?: string | null
           sales_rep: string
           sales_rep_id?: string | null
           scheduled_pay_date?: string | null
@@ -555,6 +614,8 @@ export type Database = {
         Update: {
           accounting_approved_at?: string | null
           accounting_approved_by?: string | null
+          additional_neg_expenses?: Json | null
+          additional_pos_expenses?: Json | null
           advance_total?: number
           approval_comment?: string | null
           approved_at?: string | null
@@ -569,6 +630,9 @@ export type Database = {
           final_claim_amount?: number | null
           gross_contract_total?: number
           id?: string
+          install_date?: string | null
+          is_late_revision?: boolean
+          is_late_submission?: boolean
           job_date?: string
           job_name_id?: string
           labor_cost?: number
@@ -585,6 +649,7 @@ export type Database = {
           op_percent?: number
           paid_at?: string | null
           paid_by?: string | null
+          pay_run_id?: string | null
           pos_exp_1?: number
           pos_exp_2?: number
           pos_exp_3?: number
@@ -602,6 +667,7 @@ export type Database = {
           review_requested_to_name?: string | null
           revision_count?: number | null
           revision_reason?: string | null
+          rolled_from_pay_run_id?: string | null
           sales_rep?: string
           sales_rep_id?: string | null
           scheduled_pay_date?: string | null
@@ -641,6 +707,20 @@ export type Database = {
             columns: ["paid_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_documents_pay_run_id_fkey"
+            columns: ["pay_run_id"]
+            isOneToOne: false
+            referencedRelation: "commission_pay_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_documents_rolled_from_pay_run_id_fkey"
+            columns: ["rolled_from_pay_run_id"]
+            isOneToOne: false
+            referencedRelation: "commission_pay_runs"
             referencedColumns: ["id"]
           },
           {
@@ -737,24 +817,36 @@ export type Database = {
           completed_by: string | null
           created_at: string
           id: string
+          period_end: string | null
+          period_start: string | null
+          revision_deadline: string | null
           run_date: string
           status: string
+          submission_deadline: string | null
         }
         Insert: {
           completed_at?: string | null
           completed_by?: string | null
           created_at?: string
           id?: string
+          period_end?: string | null
+          period_start?: string | null
+          revision_deadline?: string | null
           run_date: string
           status?: string
+          submission_deadline?: string | null
         }
         Update: {
           completed_at?: string | null
           completed_by?: string | null
           created_at?: string
           id?: string
+          period_end?: string | null
+          period_start?: string | null
+          revision_deadline?: string | null
           run_date?: string
           status?: string
+          submission_deadline?: string | null
         }
         Relationships: []
       }
@@ -2058,177 +2150,6 @@ export type Database = {
           },
         ]
       }
-      scorecard_templates: {
-        Row: {
-          id: string
-          name: string
-          description: string | null
-          review_frequency: string
-          scoring_scale_max: number
-          has_bonus: boolean
-          bonus_tiers: Json | null
-          bonus_period: string
-          status: string
-          created_by: string | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          name: string
-          description?: string | null
-          review_frequency?: string
-          scoring_scale_max?: number
-          has_bonus?: boolean
-          bonus_tiers?: Json | null
-          bonus_period?: string
-          status?: string
-          created_by?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          name?: string
-          description?: string | null
-          review_frequency?: string
-          scoring_scale_max?: number
-          has_bonus?: boolean
-          bonus_tiers?: Json | null
-          bonus_period?: string
-          status?: string
-          created_by?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      scorecard_kpis: {
-        Row: {
-          id: string
-          template_id: string
-          name: string
-          full_name: string | null
-          description: string | null
-          scoring_guide: Json | null
-          sort_order: number
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          template_id: string
-          name: string
-          full_name?: string | null
-          description?: string | null
-          scoring_guide?: Json | null
-          sort_order?: number
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          template_id?: string
-          name?: string
-          full_name?: string | null
-          description?: string | null
-          scoring_guide?: Json | null
-          sort_order?: number
-          created_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "scorecard_kpis_template_id_fkey"
-            columns: ["template_id"]
-            isOneToOne: false
-            referencedRelation: "scorecard_templates"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      scorecard_assignments: {
-        Row: {
-          id: string
-          template_id: string
-          employee_id: string
-          reviewer_ids: string[]
-          status: string
-          created_by: string | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          template_id: string
-          employee_id: string
-          reviewer_ids: string[]
-          status?: string
-          created_by?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          template_id?: string
-          employee_id?: string
-          reviewer_ids?: string[]
-          status?: string
-          created_by?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "scorecard_assignments_template_id_fkey"
-            columns: ["template_id"]
-            isOneToOne: false
-            referencedRelation: "scorecard_templates"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      scorecard_submissions: {
-        Row: {
-          id: string
-          assignment_id: string
-          reviewer_id: string
-          period_start: string
-          period_end: string
-          scores: Json
-          average: number
-          notes: string | null
-          submitted_at: string
-        }
-        Insert: {
-          id?: string
-          assignment_id: string
-          reviewer_id: string
-          period_start: string
-          period_end: string
-          scores: Json
-          average: number
-          notes?: string | null
-          submitted_at?: string
-        }
-        Update: {
-          id?: string
-          assignment_id?: string
-          reviewer_id?: string
-          period_start?: string
-          period_end?: string
-          scores?: Json
-          average?: number
-          notes?: string | null
-          submitted_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "scorecard_submissions_assignment_id_fkey"
-            columns: ["assignment_id"]
-            isOneToOne: false
-            referencedRelation: "scorecard_assignments"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       master_sop_acknowledgments: {
         Row: {
           acknowledged_at: string
@@ -2365,6 +2286,45 @@ export type Database = {
           status?: string
           submitted_by?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      notification_preferences: {
+        Row: {
+          created_at: string
+          email_commission_accounting_approved: boolean
+          email_commission_approved: boolean
+          email_commission_denied: boolean
+          email_commission_paid: boolean
+          email_commission_rejected: boolean
+          email_commission_submitted: boolean
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email_commission_accounting_approved?: boolean
+          email_commission_approved?: boolean
+          email_commission_denied?: boolean
+          email_commission_paid?: boolean
+          email_commission_rejected?: boolean
+          email_commission_submitted?: boolean
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email_commission_accounting_approved?: boolean
+          email_commission_approved?: boolean
+          email_commission_denied?: boolean
+          email_commission_paid?: boolean
+          email_commission_rejected?: boolean
+          email_commission_submitted?: boolean
+          id?: string
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -4287,6 +4247,30 @@ export type Database = {
           },
         ]
       }
+      workflow_role_assignments: {
+        Row: {
+          assigned_user_id: string | null
+          id: string
+          role_key: string
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          assigned_user_id?: string | null
+          id?: string
+          role_key: string
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          assigned_user_id?: string | null
+          id?: string
+          role_key?: string
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -4303,6 +4287,10 @@ export type Database = {
       }
       create_submission_from_document: {
         Args: { document_id: string }
+        Returns: string
+      }
+      get_or_create_pay_run_for_period: {
+        Args: { p_period_start: string }
         Returns: string
       }
       get_user_role: {
@@ -4348,6 +4336,7 @@ export type Database = {
         | "sales_manager"
         | "accounting"
         | "user"
+        | "production"
       assignment_role:
         | "business_owner"
         | "system_admin"
@@ -4580,6 +4569,7 @@ export const Constants = {
         "sales_manager",
         "accounting",
         "user",
+        "production",
       ],
       assignment_role: [
         "business_owner",
