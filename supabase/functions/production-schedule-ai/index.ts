@@ -45,7 +45,7 @@ function getDaysNeeded(roofType: string, squares: number | null): number {
   switch (roofType) {
     case "tile":
       if (sq <= 25) return 1;
-      if (sq <= 40) return 2;
+      if (sq <= 35) return 2;
       if (sq <= 50) return 3;
       if (sq <= 60) return 4;
       return 5; // 60+
@@ -426,7 +426,7 @@ CURRENT SCHEDULE DATA:
 ${contextLines.join("\n\n")}
 
 DURATION RULES:
-- Concrete Tile: <=25 sq = 1 day, 25-40 sq = 2 days, 40-50 sq = 3 days, 50-60 sq = 4 days
+- Concrete Tile: <=25 sq = 1 day, 25-35 sq = 2 days, 35-50 sq = 3 days, 50-60 sq = 4 days
 - Asphalt Shingles: <=40 sq (1-2 layers) = 1 day. Avoid Saturdays unless Friday job rolls over.
 - Foam: Day 1 cleaning/prep, Day 2 foam + first coat, Day 3 final coat. 20-40 sq = at least 2 days.
 - Coatings: Same timeline as Foam.
