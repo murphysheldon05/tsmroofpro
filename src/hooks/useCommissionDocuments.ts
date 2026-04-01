@@ -140,7 +140,7 @@ export function useCommissionDocument(id: string | undefined) {
       if (data && !isAdmin && !isManager && data.created_by !== user!.id) {
         return null;
       }
-      return data as CommissionDocument;
+      return (data as unknown) as CommissionDocument;
     },
     enabled: !!user && !!id,
   });
