@@ -30,6 +30,7 @@ export interface ProductionCalendarEvent {
   all_day: boolean;
   event_category: EventCategory;
   roof_type: RoofType | null;
+  squares: number | null;
   crew_id: string | null;
   created_by: string | null;
   created_at: string;
@@ -62,6 +63,7 @@ export function useCreateCalendarEvent() {
       end_date?: string;
       event_category?: EventCategory;
       roof_type?: RoofType | null;
+      squares?: number | null;
       crew_id?: string;
     }) => {
       const { data: user } = await supabase.auth.getUser();
@@ -102,6 +104,7 @@ export function useUpdateCalendarEvent() {
       end_date?: string | null;
       event_category?: EventCategory;
       roof_type?: RoofType | null;
+      squares?: number | null;
       crew_id?: string | null;
     }) => {
       const { data, error } = await supabase

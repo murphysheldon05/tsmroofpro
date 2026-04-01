@@ -59,7 +59,7 @@ export default function BuildSchedule() {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<ProductionCalendarEvent | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
-  const [newEvent, setNewEvent] = useState({ title: "", description: "", start_date: "", end_date: "", event_category: "other" as EventCategory, roof_type: "" as string, crew_id: "" });
+  const [newEvent, setNewEvent] = useState({ title: "", description: "", start_date: "", end_date: "", event_category: "other" as EventCategory, roof_type: "" as string, squares: "" as string, crew_id: "" });
   const [overflowDate, setOverflowDate] = useState<Date | null>(null);
 
   const [isAddCrewOpen, setIsAddCrewOpen] = useState(false);
@@ -177,9 +177,10 @@ export default function BuildSchedule() {
       start_date: newEvent.start_date, end_date: newEvent.end_date || undefined,
       event_category: newEvent.event_category,
       roof_type: (newEvent.roof_type as RoofType) || null,
+      squares: newEvent.squares ? parseInt(newEvent.squares, 10) : null,
       crew_id: newEvent.crew_id || undefined,
     }, {
-      onSuccess: () => { setIsAddOpen(false); setNewEvent({ title: "", description: "", start_date: "", end_date: "", event_category: "other", roof_type: "", crew_id: "" }); },
+      onSuccess: () => { setIsAddOpen(false); setNewEvent({ title: "", description: "", start_date: "", end_date: "", event_category: "other", roof_type: "", squares: "", crew_id: "" }); },
     });
   };
   const handleUpdateEvent = () => {
@@ -189,6 +190,7 @@ export default function BuildSchedule() {
       start_date: editingEvent.start_date, end_date: editingEvent.end_date || undefined,
       event_category: editingEvent.event_category,
       roof_type: editingEvent.roof_type || null,
+      squares: editingEvent.squares || null,
       crew_id: editingEvent.crew_id || undefined,
     }, { onSuccess: () => setEditingEvent(null) });
   };
@@ -535,11 +537,16 @@ export default function BuildSchedule() {
                 </Select>
               </div>
             </div>
-            <div><Label>Crew</Label>
-              <Select value={newEvent.crew_id} onValueChange={v => setNewEvent({ ...newEvent, crew_id: v })}>
-                <SelectTrigger><SelectValue placeholder="Assign crew" /></SelectTrigger>
-                <SelectContent>{crews.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
-              </Select>
+            <div className="grid grid-cols-2 gap-4">
+              <div><Label>Squares</Label>
+                <Input type="number" min="1" value={newEvent.squares} onChange={e => setNewEvent({ ...newEvent, squares: e.target.value })} placeholder="e.g. 30" />
+              </div>
+              <div><Label>Crew</Label>
+                <Select value={newEvent.crew_id} onValueChange={v => setNewEvent({ ...newEvent, crew_id: v })}>
+                  <SelectTrigger><SelectValue placeholder="Assign crew" /></SelectTrigger>
+                  <SelectContent>{crews.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
           <DialogFooter>
@@ -575,11 +582,16 @@ export default function BuildSchedule() {
                   </Select>
                 </div>
               </div>
-              <div><Label>Crew</Label>
-                <Select value={editingEvent.crew_id || ""} onValueChange={v => setEditingEvent({ ...editingEvent, crew_id: v || null })}>
-                  <SelectTrigger><SelectValue placeholder="Assign crew" /></SelectTrigger>
-                  <SelectContent>{crews.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
-                </Select>
+              <div className="grid grid-cols-2 gap-4">
+                <div><Label>Squares</Label>
+                  <Input type="number" min="1" value={editingEvent.squares ?? ""} onChange={e => setEditingEvent({ ...editingEvent, squares: e.target.value ? parseInt(e.target.value, 10) : null })} placeholder="e.g. 30" />
+                </div>
+                <div><Label>Crew</Label>
+                  <Select value={editingEvent.crew_id || ""} onValueChange={v => setEditingEvent({ ...editingEvent, crew_id: v || null })}>
+                    <SelectTrigger><SelectValue placeholder="Assign crew" /></SelectTrigger>
+                    <SelectContent>{crews.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
               </div>
             </div>
           )}

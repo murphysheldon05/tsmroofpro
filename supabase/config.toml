@@ -50,3 +50,6 @@ verify_jwt = false
 
 [functions.send-draw-notification]
 verify_jwt = false
+
+[functions.production-schedule-ai]
+verify_jwt = false

@@ -2620,6 +2620,7 @@ export type Database = {
           event_category: string
           id: string
           roof_type: string | null
+          squares: number | null
           start_date: string
           title: string
           updated_at: string
@@ -2634,6 +2635,7 @@ export type Database = {
           event_category?: string
           id?: string
           roof_type?: string | null
+          squares?: number | null
           start_date: string
           title: string
           updated_at?: string
@@ -2648,6 +2650,7 @@ export type Database = {
           event_category?: string
           id?: string
           roof_type?: string | null
+          squares?: number | null
           start_date?: string
           title?: string
           updated_at?: string
