@@ -46,7 +46,7 @@ export function useCommissionAuditLog(commissionId: string | undefined) {
         const { data: profiles } = await supabase
           .from("profiles")
           .select("id, full_name, email")
-          .in("id", performerIds);
+          .in("id", performerIds as string[]);
         profileMap = (profiles || []).reduce(
           (acc: Record<string, { name: string; email: string }>, p: any) => {
             acc[p.id] = { name: p.full_name || p.email || "Unknown", email: p.email || "" };
