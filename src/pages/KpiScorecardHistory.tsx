@@ -32,8 +32,7 @@ export default function KpiScorecardHistory() {
     queryKey: ["scorecard-assignment", assignmentId],
     queryFn: async () => {
       if (!assignmentId) return null;
-      const { data, error } = await supabase
-        .from("scorecard_assignments")
+      const { data, error } = await (supabase.from as any)("scorecard_assignments")
         .select("*")
         .eq("id", assignmentId)
         .maybeSingle();
