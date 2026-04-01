@@ -1,26 +1,79 @@
-import type { Database } from "@/integrations/supabase/types";
+// These types mirror the scorecard_* tables which may not yet be in the
+// auto-generated Supabase types. Defined manually so the rest of the app
+// compiles regardless.
 
-export type ScorecardTemplate =
-  Database["public"]["Tables"]["scorecard_templates"]["Row"];
-export type ScorecardTemplateInsert =
-  Database["public"]["Tables"]["scorecard_templates"]["Insert"];
-export type ScorecardTemplateUpdate =
-  Database["public"]["Tables"]["scorecard_templates"]["Update"];
+export interface ScorecardTemplate {
+  id: string;
+  name: string;
+  description: string | null;
+  review_frequency: string;
+  status: string;
+  has_bonus: boolean;
+  bonus_tiers: any;
+  bonus_period: string;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
 
-export type ScorecardKpi =
-  Database["public"]["Tables"]["scorecard_kpis"]["Row"];
-export type ScorecardKpiInsert =
-  Database["public"]["Tables"]["scorecard_kpis"]["Insert"];
+export type ScorecardTemplateInsert = Omit<ScorecardTemplate, "id" | "created_at" | "updated_at"> & {
+  id?: string;
+  created_at?: string;
+  updated_at?: string;
+};
 
-export type ScorecardAssignment =
-  Database["public"]["Tables"]["scorecard_assignments"]["Row"];
-export type ScorecardAssignmentInsert =
-  Database["public"]["Tables"]["scorecard_assignments"]["Insert"];
+export type ScorecardTemplateUpdate = Partial<ScorecardTemplateInsert>;
 
-export type ScorecardSubmission =
-  Database["public"]["Tables"]["scorecard_submissions"]["Row"];
-export type ScorecardSubmissionInsert =
-  Database["public"]["Tables"]["scorecard_submissions"]["Insert"];
+export interface ScorecardKpi {
+  id: string;
+  template_id: string;
+  name: string;
+  full_name: string | null;
+  description: string | null;
+  scoring_guide: any;
+  sort_order: number;
+  created_at: string;
+}
+
+export type ScorecardKpiInsert = Omit<ScorecardKpi, "id" | "created_at"> & {
+  id?: string;
+  created_at?: string;
+};
+
+export interface ScorecardAssignment {
+  id: string;
+  template_id: string;
+  employee_id: string;
+  reviewer_ids: string[];
+  status: string;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type ScorecardAssignmentInsert = Omit<ScorecardAssignment, "id" | "created_at" | "updated_at"> & {
+  id?: string;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export interface ScorecardSubmission {
+  id: string;
+  assignment_id: string;
+  reviewer_id: string;
+  period_start: string;
+  period_end: string;
+  scores: any;
+  average: number;
+  notes: string | null;
+  submitted_at: string;
+  created_at: string;
+}
+
+export type ScorecardSubmissionInsert = Omit<ScorecardSubmission, "id" | "created_at"> & {
+  id?: string;
+  created_at?: string;
+};
 
 export interface BonusTier {
   label: string;

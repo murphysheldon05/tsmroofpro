@@ -11,6 +11,10 @@ import type {
 } from "@/lib/kpiTypes";
 import { toDateString } from "@/lib/kpiTypes";
 
+// Use `(supabase.from as any)(tableName)` for scorecard tables that aren't
+// in the auto-generated types yet.
+const fromAny = (table: string) => (supabase.from as any)(table);
+
 const KEYS = {
   templates: ["scorecard-templates"] as const,
   template: (id: string) => ["scorecard-template", id] as const,
@@ -33,8 +37,7 @@ export function useTemplates() {
   return useQuery({
     queryKey: KEYS.templates,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("scorecard_templates")
+      const { data, error } = await fromAny("scorecard_templates")
         .select("*")
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -48,8 +51,7 @@ export function useTemplate(id: string | undefined) {
     queryKey: KEYS.template(id ?? ""),
     queryFn: async () => {
       if (!id || id === "new") return null;
-      const { data, error } = await supabase
-        .from("scorecard_templates")
+      const { data, error } = await fromAny("scorecard_templates")
         .select("*")
         .eq("id", id)
         .maybeSingle();
@@ -65,8 +67,7 @@ export function useTemplateKpis(templateId: string | undefined) {
     queryKey: KEYS.kpis(templateId ?? ""),
     queryFn: async () => {
       if (!templateId || templateId === "new") return [];
-      const { data, error } = await supabase
-        .from("scorecard_kpis")
+      const { data, error } = await fromAny("scorecard_kpis")
         .select("*")
         .eq("template_id", templateId)
         .order("sort_order", { ascending: true });
@@ -99,8 +100,7 @@ export function useSaveTemplate() {
       let templateId = params.id;
 
       if (isNew) {
-        const { data, error } = await supabase
-          .from("scorecard_templates")
+        const { data, error } = await fromAny("scorecard_templates")
           .insert({
             name: params.name,
             description: params.description || null,
@@ -116,8 +116,7 @@ export function useSaveTemplate() {
         if (error) throw error;
         templateId = data.id;
       } else {
-        const { error } = await supabase
-          .from("scorecard_templates")
+        const { error } = await fromAny("scorecard_templates")
           .update({
             name: params.name,
             description: params.description || null,
@@ -133,8 +132,7 @@ export function useSaveTemplate() {
 
       // Replace KPIs: delete existing, insert new
       if (!isNew) {
-        const { error: delErr } = await supabase
-          .from("scorecard_kpis")
+        const { error: delErr } = await fromAny("scorecard_kpis")
           .delete()
           .eq("template_id", templateId!);
         if (delErr) throw delErr;
@@ -149,8 +147,7 @@ export function useSaveTemplate() {
           scoring_guide: k.scoring_guide as any,
           sort_order: i,
         }));
-        const { error: kpiErr } = await supabase
-          .from("scorecard_kpis")
+        const { error: kpiErr } = await fromAny("scorecard_kpis")
           .insert(rows);
         if (kpiErr) throw kpiErr;
       }
@@ -169,8 +166,7 @@ export function useAssignments(templateId?: string) {
   return useQuery({
     queryKey: KEYS.assignments(templateId),
     queryFn: async () => {
-      let q = supabase
-        .from("scorecard_assignments")
+      let q = fromAny("scorecard_assignments")
         .select("*")
         .neq("status", "removed")
         .order("created_at", { ascending: false });
@@ -188,8 +184,7 @@ export function useMyReviewAssignments() {
     queryKey: KEYS.assignmentsForReviewer,
     queryFn: async () => {
       if (!user?.id) return [];
-      const { data, error } = await supabase
-        .from("scorecard_assignments")
+      const { data, error } = await fromAny("scorecard_assignments")
         .select("*")
         .eq("status", "active")
         .contains("reviewer_ids", [user.id]);
@@ -206,8 +201,7 @@ export function useMyEmployeeAssignments() {
     queryKey: KEYS.assignmentsForEmployee,
     queryFn: async () => {
       if (!user?.id) return [];
-      const { data, error } = await supabase
-        .from("scorecard_assignments")
+      const { data, error } = await fromAny("scorecard_assignments")
         .select("*")
         .eq("status", "active")
         .eq("employee_id", user.id);
@@ -231,8 +225,7 @@ export function useSaveAssignment() {
       status?: string;
     }) => {
       if (params.id) {
-        const { error } = await supabase
-          .from("scorecard_assignments")
+        const { error } = await fromAny("scorecard_assignments")
           .update({
             employee_id: params.employee_id,
             reviewer_ids: params.reviewer_ids,
@@ -241,8 +234,7 @@ export function useSaveAssignment() {
           .eq("id", params.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase
-          .from("scorecard_assignments")
+        const { error } = await fromAny("scorecard_assignments")
           .insert({
             template_id: params.template_id,
             employee_id: params.employee_id,
@@ -262,8 +254,7 @@ export function useRemoveAssignment() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from("scorecard_assignments")
+      const { error } = await fromAny("scorecard_assignments")
         .update({ status: "removed" })
         .eq("id", id);
       if (error) throw error;
@@ -281,8 +272,7 @@ export function useSubmissions(assignmentId: string | undefined) {
     queryKey: KEYS.submissions(assignmentId ?? ""),
     queryFn: async () => {
       if (!assignmentId) return [];
-      const { data, error } = await supabase
-        .from("scorecard_submissions")
+      const { data, error } = await fromAny("scorecard_submissions")
         .select("*")
         .eq("assignment_id", assignmentId)
         .order("period_start", { ascending: false });
@@ -297,8 +287,7 @@ export function useRecentSubmissions() {
   return useQuery({
     queryKey: KEYS.recentSubmissions,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("scorecard_submissions")
+      const { data, error } = await fromAny("scorecard_submissions")
         .select("*")
         .order("submitted_at", { ascending: false })
         .limit(20);
@@ -320,8 +309,7 @@ export function useSubmitScore() {
       average: number;
       notes: string;
     }) => {
-      const { data, error } = await supabase
-        .from("scorecard_submissions")
+      const { data, error } = await fromAny("scorecard_submissions")
         .upsert(
           {
             assignment_id: params.assignment_id,

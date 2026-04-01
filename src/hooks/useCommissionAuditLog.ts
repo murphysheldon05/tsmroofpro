@@ -77,7 +77,7 @@ export async function logCommissionAction(params: {
   details?: Record<string, any>;
   payRunId?: string | null;
 }): Promise<void> {
-  const { error } = await supabase.from("commission_audit_log").insert({
+  const { error } = await (supabase.from as any)("commission_audit_log").insert({
     commission_id: params.commissionId,
     action: params.action,
     performed_by: params.performedBy,
