@@ -35,6 +35,7 @@ import {
   UserPlus,
   FileText,
   Trophy,
+  UserX,
 } from "lucide-react";
 import { UserPermissionsEditor } from "@/components/admin/UserPermissionsEditor";
 import { PendingInvites } from "@/components/admin/PendingInvites";
@@ -292,6 +293,35 @@ export default function Admin() {
       
       toast.success("Role updated");
       queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+    }
+  };
+
+  const handleInactivateUser = async (userId: string, userName: string) => {
+    if (!confirm(`Are you sure you want to deactivate ${userName}? They will lose access to the app immediately.`)) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ employee_status: "inactive" })
+        .eq("id", userId);
+
+      if (error) throw error;
+
+      logAction.mutate({
+        action_type: "user_deactivated",
+        object_type: OBJECT_TYPES.USER,
+        object_id: userId,
+        previous_value: { employee_status: "active" },
+        new_value: { employee_status: "inactive" },
+        notes: `Deactivated user ${userName}`,
+      });
+
+      toast.success(`${userName} has been deactivated`);
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+    } catch (error: any) {
+      toast.error("Failed to deactivate user: " + error.message);
     }
   };
 
@@ -870,6 +900,15 @@ export default function Admin() {
                                 </div>
                               </DialogContent>
                             </Dialog>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-amber-600 hover:text-amber-700"
+                              title="Deactivate user"
+                              onClick={() => handleInactivateUser(user.id, formatDisplayName(user.full_name, user.email) || user.email || "this user")}
+                            >
+                              <UserX className="w-4 h-4" />
+                            </Button>
                             <Button
                               variant="ghost"
                               size="icon"
