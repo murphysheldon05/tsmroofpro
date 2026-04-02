@@ -903,6 +903,15 @@ export default function Admin() {
                             <Button
                               variant="ghost"
                               size="icon"
+                              className="h-8 w-8 text-amber-600 hover:text-amber-700"
+                              title="Deactivate user"
+                              onClick={() => handleInactivateUser(user.id, formatDisplayName(user.full_name, user.email) || user.email || "this user")}
+                            >
+                              <UserX className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
                               className="h-8 w-8 text-destructive hover:text-destructive"
                               onClick={() => handleDeleteUser(user.id, formatDisplayName(user.full_name, user.email) || user.email || "this user")}
                             >
