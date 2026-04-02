@@ -35,6 +35,7 @@ import {
   UserPlus,
   FileText,
   Trophy,
+  UserX,
 } from "lucide-react";
 import { UserPermissionsEditor } from "@/components/admin/UserPermissionsEditor";
 import { PendingInvites } from "@/components/admin/PendingInvites";
