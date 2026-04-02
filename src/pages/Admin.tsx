@@ -296,6 +296,35 @@ export default function Admin() {
     }
   };
 
+  const handleInactivateUser = async (userId: string, userName: string) => {
+    if (!confirm(`Are you sure you want to deactivate ${userName}? They will lose access to the app immediately.`)) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ employee_status: "inactive" })
+        .eq("id", userId);
+
+      if (error) throw error;
+
+      logAction.mutate({
+        action_type: "user_deactivated",
+        object_type: OBJECT_TYPES.USER,
+        object_id: userId,
+        previous_value: { employee_status: "active" },
+        new_value: { employee_status: "inactive" },
+        notes: `Deactivated user ${userName}`,
+      });
+
+      toast.success(`${userName} has been deactivated`);
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+    } catch (error: any) {
+      toast.error("Failed to deactivate user: " + error.message);
+    }
+  };
+
   const handleDeleteUser = async (userId: string, userName: string) => {
     if (!confirm(`Are you sure you want to delete ${userName}? This cannot be undone.`)) {
       return;
