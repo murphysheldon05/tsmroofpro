@@ -1,16 +1,10 @@
-import { useState, useMemo, Fragment } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
 import {
   Dialog,
   DialogContent,
@@ -39,7 +33,6 @@ import {
   ExternalLink,
   Eye,
   EyeOff,
-  Plus,
   Trash2,
   UserPlus,
   Calendar,
@@ -48,10 +41,6 @@ import {
   Loader2,
   Edit,
   Search,
-  Clock,
-  MapPin,
-  Check,
-  X,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
@@ -73,16 +62,7 @@ import {
 } from "@/hooks/useChambers";
 import { format } from "date-fns";
 import { RepGuideContent } from "./RepGuideContent";
-
-const EVENT_TYPE_COLORS: Record<string, string> = {
-  Networking: "bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-900/30 dark:text-blue-300",
-  "Ribbon Cutting": "bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-900/30 dark:text-amber-300",
-  Education: "bg-purple-100 text-purple-800 border-purple-300 dark:bg-purple-900/30 dark:text-purple-300",
-  Meeting: "bg-gray-100 text-gray-700 border-gray-300 dark:bg-gray-800 dark:text-gray-300",
-  Community: "bg-green-100 text-green-800 border-green-300 dark:bg-green-900/30 dark:text-green-300",
-  Government: "bg-red-100 text-red-800 border-red-300 dark:bg-red-900/30 dark:text-red-300",
-  Signature: "bg-pink-100 text-pink-800 border-pink-300 dark:bg-pink-900/30 dark:text-pink-300",
-};
+import { ChamberMonthCalendar } from "./ChamberMonthCalendar";
 
 const EVENT_TYPES = ["Networking", "Ribbon Cutting", "Education", "Meeting", "Community", "Government", "Signature"];
 
@@ -116,15 +96,6 @@ function Chip({ label, active, onClick }: { label: string; active: boolean; onCl
       {label}
     </button>
   );
-}
-
-function StatusBorderColor(status: string) {
-  switch (status) {
-    case "assigned": return "border-l-blue-500";
-    case "confirmed": return "border-l-green-500";
-    case "declined": return "border-l-red-500";
-    default: return "border-l-transparent";
-  }
 }
 
 export function ChamberAdminView() {
@@ -242,25 +213,6 @@ export function ChamberAdminView() {
     }
     return evts;
   }, [allEvents, eventSearch, eventChamberFilter, eventTypeFilter, eventStatusFilter, eventAssignmentsByEventId]);
-
-  // Group events by month
-  const eventsByMonth = useMemo(() => {
-    const groups: { label: string; sortKey: string; events: ChamberEvent[] }[] = [];
-    const map = new Map<string, ChamberEvent[]>();
-    for (const e of filteredEvents) {
-      const d = new Date(e.event_date + "T12:00:00");
-      const key = `${d.getFullYear()}-${String(d.getMonth()).padStart(2, "0")}`;
-      const label = format(d, "MMMM yyyy");
-      if (!map.has(key)) map.set(key, []);
-      map.get(key)!.push(e);
-    }
-    for (const [key, events] of map.entries()) {
-      const d = new Date(events[0].event_date + "T12:00:00");
-      groups.push({ label: format(d, "MMMM yyyy"), sortKey: key, events });
-    }
-    groups.sort((a, b) => a.sortKey.localeCompare(b.sortKey));
-    return groups;
-  }, [filteredEvents]);
 
   function toggleCredentials(chamberId: string) {
     setShowCredentials((prev) => ({ ...prev, [chamberId]: !prev[chamberId] }));
@@ -510,103 +462,18 @@ export function ChamberAdminView() {
             </div>
           </div>
 
-          {/* Monthly Grouped Events */}
+          {/* Month Calendar View */}
           {filteredEvents.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground text-sm">No events match your filters.</div>
           ) : (
-            <div className="space-y-2">
-              {eventsByMonth.map((group) => (
-                <Fragment key={group.sortKey}>
-                  <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground pt-3 pb-1.5 border-b border-border">
-                    {group.label}
-                  </div>
-                  {group.events.map((event) => {
-                    const d = new Date(event.event_date + "T12:00:00");
-                    const ea = eventAssignmentsByEventId[event.id] || [];
-                    const topStatus = ea.length > 0
-                      ? ea.some((a) => a.status === "confirmed") ? "confirmed"
-                        : ea.some((a) => a.status === "assigned") ? "assigned"
-                        : "declined"
-                      : "unassigned";
-
-                    return (
-                      <Card key={event.id} className={`border-l-[3px] ${topStatus === "unassigned" ? "border-l-transparent" : StatusBorderColor(topStatus)}`}>
-                        <CardContent className="p-3 flex gap-3">
-                          {/* Date Badge */}
-                          <div className="text-center shrink-0 w-9">
-                            <div className="text-[9px] uppercase tracking-wider text-muted-foreground">{format(d, "MMM")}</div>
-                            <div className="text-xl font-bold leading-tight">{format(d, "d")}</div>
-                          </div>
-
-                          {/* Content */}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-start justify-between gap-2 mb-1">
-                              <span className="text-sm font-medium leading-tight">
-                                {event.name}
-                                {event.is_manual && (
-                                  <Badge variant="outline" className="ml-1.5 text-[9px] bg-green-50 text-green-700 border-green-300 dark:bg-green-900/30 dark:text-green-300">
-                                    Manual
-                                  </Badge>
-                                )}
-                              </span>
-                              <div className="flex gap-1.5 shrink-0 flex-wrap">
-                                <Badge variant="outline" className={`text-[10px] ${EVENT_TYPE_COLORS[event.event_type] || ""}`}>
-                                  {event.event_type}
-                                </Badge>
-                                <Badge variant="outline" className="text-[10px] bg-muted/50">
-                                  {event.chamber_name}
-                                </Badge>
-                              </div>
-                            </div>
-
-                            <div className="flex items-center gap-3 text-[11px] text-muted-foreground mb-2">
-                              {event.event_time && (
-                                <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{event.event_time}</span>
-                              )}
-                              {event.location && (
-                                <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{event.location}</span>
-                              )}
-                            </div>
-
-                            {/* Assignments & Actions */}
-                            <div className="flex items-center gap-2 flex-wrap">
-                              {ea.length > 0 ? (
-                                ea.map((a) => (
-                                  <Badge
-                                    key={a.id}
-                                    variant="outline"
-                                    className={`text-[10px] ${
-                                      a.status === "confirmed" ? "bg-green-50 text-green-700 border-green-300 dark:bg-green-900/30 dark:text-green-300"
-                                        : a.status === "declined" ? "bg-red-50 text-red-700 border-red-300 dark:bg-red-900/30 dark:text-red-300"
-                                        : "bg-blue-50 text-blue-700 border-blue-300 dark:bg-blue-900/30 dark:text-blue-300"
-                                    }`}
-                                  >
-                                    {a.user_name} · {a.status}
-                                  </Badge>
-                                ))
-                              ) : (
-                                <span className="text-[11px] text-muted-foreground italic">No reps assigned</span>
-                              )}
-                              <div className="flex gap-1 ml-auto">
-                                <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={() => setEventAssignModal({ eventId: event.id, eventName: event.name })}>
-                                  <UserPlus className="h-3 w-3" /> Assign
-                                </Button>
-                                <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => openEventForm(event)}>
-                                  <Edit className="h-3.5 w-3.5" />
-                                </Button>
-                                <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive" onClick={() => deleteEvent.mutate(event.id)}>
-                                  <Trash2 className="h-3.5 w-3.5" />
-                                </Button>
-                              </div>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                </Fragment>
-              ))}
-            </div>
+            <ChamberMonthCalendar
+              events={filteredEvents}
+              eventAssignments={eventAssignmentsByEventId}
+              isAdmin
+              onAssignEvent={(eventId, eventName) => setEventAssignModal({ eventId, eventName })}
+              onEditEvent={(event) => openEventForm(event)}
+              onDeleteEvent={(eventId) => deleteEvent.mutate(eventId)}
+            />
           )}
         </div>
       </TabsContent>

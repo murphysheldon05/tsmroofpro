@@ -1,6 +1,5 @@
-import { useMemo, useState, Fragment } from "react";
+import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -9,10 +8,6 @@ import {
   ExternalLink,
   Calendar,
   BookOpen,
-  Check,
-  X,
-  MapPin,
-  Clock,
   Loader2,
   Eye,
   EyeOff,
@@ -24,26 +19,11 @@ import {
   useChamberEvents,
   useMyEventAssignments,
   useUpdateEventAssignmentStatus,
-  type ChamberEvent,
 } from "@/hooks/useChambers";
-import { format, isPast, isToday } from "date-fns";
+import { isPast, isToday } from "date-fns";
 import { RepGuideContent } from "./RepGuideContent";
-
-const EVENT_TYPE_COLORS: Record<string, string> = {
-  Networking: "bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-900/30 dark:text-blue-300",
-  "Ribbon Cutting": "bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-900/30 dark:text-amber-300",
-  Education: "bg-purple-100 text-purple-800 border-purple-300 dark:bg-purple-900/30 dark:text-purple-300",
-  Meeting: "bg-gray-100 text-gray-700 border-gray-300 dark:bg-gray-800 dark:text-gray-300",
-  Community: "bg-green-100 text-green-800 border-green-300 dark:bg-green-900/30 dark:text-green-300",
-  Government: "bg-red-100 text-red-800 border-red-300 dark:bg-red-900/30 dark:text-red-300",
-  Signature: "bg-pink-100 text-pink-800 border-pink-300 dark:bg-pink-900/30 dark:text-pink-300",
-};
-
-const STATUS_COLORS: Record<string, string> = {
-  assigned: "bg-blue-50 text-blue-700 border-blue-300 dark:bg-blue-900/30 dark:text-blue-300",
-  confirmed: "bg-green-50 text-green-700 border-green-300 dark:bg-green-900/30 dark:text-green-300",
-  declined: "bg-red-50 text-red-700 border-red-300 dark:bg-red-900/30 dark:text-red-300",
-};
+import { ChamberMonthCalendar } from "./ChamberMonthCalendar";
+import { EventChecklist } from "./EventChecklist";
 
 function Chip({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
   return (
@@ -110,33 +90,13 @@ export function ChamberRepView() {
     return evts;
   }, [myEvents, eventSearch, typeFilter, statusFilter, myEventAssignmentMap]);
 
-  const upcomingFiltered = filteredEvents.filter((e) => {
-    const d = new Date(e.event_date + "T23:59:59");
-    return !isPast(d) || isToday(d);
-  });
-
-  const pastFiltered = filteredEvents.filter((e) => {
-    const d = new Date(e.event_date + "T23:59:59");
-    return isPast(d) && !isToday(d);
-  });
-
-  // Group by month
-  function groupByMonth(evts: ChamberEvent[]) {
-    const groups: { label: string; sortKey: string; events: ChamberEvent[] }[] = [];
-    const map = new Map<string, ChamberEvent[]>();
-    for (const e of evts) {
-      const d = new Date(e.event_date + "T12:00:00");
-      const key = `${d.getFullYear()}-${String(d.getMonth()).padStart(2, "0")}`;
-      if (!map.has(key)) map.set(key, []);
-      map.get(key)!.push(e);
-    }
-    for (const [key, events] of map.entries()) {
-      const d = new Date(events[0].event_date + "T12:00:00");
-      groups.push({ label: format(d, "MMMM yyyy"), sortKey: key, events });
-    }
-    groups.sort((a, b) => a.sortKey.localeCompare(b.sortKey));
-    return groups;
-  }
+  const pastConfirmedEvents = useMemo(() => {
+    return myEvents.filter((e) => {
+      const d = new Date(e.event_date + "T23:59:59");
+      const assignment = myEventAssignmentMap[e.id];
+      return (isPast(d) && !isToday(d)) && assignment?.status === "confirmed";
+    }).slice(-10);
+  }, [myEvents, myEventAssignmentMap]);
 
   const stats = useMemo(() => {
     const ea = myAssignments || [];
@@ -312,146 +272,31 @@ export function ChamberRepView() {
               </div>
             </div>
 
-            {/* Upcoming Events */}
-            {upcomingFiltered.length > 0 && (
-              <div>
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
-                  Upcoming Events
-                </h3>
-                {groupByMonth(upcomingFiltered).map((group) => (
-                  <Fragment key={group.sortKey}>
-                    <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground pt-2 pb-1.5 border-b border-border">
-                      {group.label}
-                    </div>
-                    <div className="space-y-2 mb-4">
-                      {group.events.map((event) => {
-                        const d = new Date(event.event_date + "T12:00:00");
-                        const assignment = myEventAssignmentMap[event.id];
-                        const status = assignment?.status || "assigned";
-                        const borderColor =
-                          status === "confirmed" ? "border-l-green-500"
-                          : status === "declined" ? "border-l-red-500"
-                          : "border-l-blue-500";
-
-                        return (
-                          <Card key={event.id} className={`border-l-[3px] ${borderColor} ${status === "declined" ? "opacity-60" : ""}`}>
-                            <CardContent className="p-3 flex gap-3">
-                              <div className="text-center shrink-0 w-9">
-                                <div className="text-[9px] uppercase tracking-wider text-muted-foreground">{format(d, "MMM")}</div>
-                                <div className="text-xl font-bold leading-tight">{format(d, "d")}</div>
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-start justify-between gap-2 mb-1">
-                                  <span className="text-sm font-medium leading-tight">{event.name}</span>
-                                  <div className="flex gap-1.5 shrink-0 flex-wrap">
-                                    <Badge variant="outline" className={`text-[10px] ${EVENT_TYPE_COLORS[event.event_type] || ""}`}>
-                                      {event.event_type}
-                                    </Badge>
-                                    <Badge variant="outline" className="text-[10px] bg-muted/50">
-                                      {event.chamber_name}
-                                    </Badge>
-                                  </div>
-                                </div>
-                                <div className="flex items-center gap-3 text-[11px] text-muted-foreground mb-2">
-                                  {event.event_time && (
-                                    <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{event.event_time}</span>
-                                  )}
-                                  {event.location && (
-                                    <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{event.location}</span>
-                                  )}
-                                </div>
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <Badge variant="outline" className={`text-[10px] ${STATUS_COLORS[status] || ""}`}>
-                                    {status === "assigned" ? "Pending" : status.charAt(0).toUpperCase() + status.slice(1)}
-                                  </Badge>
-                                  {status === "assigned" && assignment && (
-                                    <div className="flex items-center gap-1.5 ml-auto">
-                                      <Button
-                                        size="sm"
-                                        className="gap-1 bg-green-600 hover:bg-green-700 h-7 text-xs"
-                                        onClick={() => updateStatus.mutate({ id: assignment.id, status: "confirmed" })}
-                                        disabled={updateStatus.isPending}
-                                      >
-                                        <Check className="h-3 w-3" /> Confirm
-                                      </Button>
-                                      <Button
-                                        size="sm"
-                                        variant="outline"
-                                        className="gap-1 h-7 text-xs"
-                                        onClick={() => updateStatus.mutate({ id: assignment.id, status: "declined" })}
-                                        disabled={updateStatus.isPending}
-                                      >
-                                        <X className="h-3 w-3" /> Decline
-                                      </Button>
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        );
-                      })}
-                    </div>
-                  </Fragment>
-                ))}
-              </div>
-            )}
-
-            {/* Past Events */}
-            {pastFiltered.length > 0 && (
-              <div>
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
-                  Past Events
-                </h3>
-                <div className="space-y-2 opacity-60">
-                  {groupByMonth(pastFiltered).map((group) => (
-                    <Fragment key={group.sortKey}>
-                      <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground pt-2 pb-1.5 border-b border-border">
-                        {group.label}
-                      </div>
-                      {group.events.map((event) => {
-                        const d = new Date(event.event_date + "T12:00:00");
-                        const assignment = myEventAssignmentMap[event.id];
-                        const status = assignment?.status || "assigned";
-
-                        return (
-                          <Card key={event.id} className="border-l-[3px] border-l-transparent">
-                            <CardContent className="p-3 flex gap-3">
-                              <div className="text-center shrink-0 w-9">
-                                <div className="text-[9px] uppercase tracking-wider text-muted-foreground">{format(d, "MMM")}</div>
-                                <div className="text-xl font-bold leading-tight">{format(d, "d")}</div>
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-start justify-between gap-2 mb-1">
-                                  <span className="text-sm font-medium leading-tight">{event.name}</span>
-                                  <div className="flex gap-1.5 shrink-0">
-                                    <Badge variant="outline" className={`text-[10px] ${EVENT_TYPE_COLORS[event.event_type] || ""}`}>
-                                      {event.event_type}
-                                    </Badge>
-                                  </div>
-                                </div>
-                                <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
-                                  {event.event_time && (
-                                    <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{event.event_time}</span>
-                                  )}
-                                  <span className="flex items-center gap-1">{event.chamber_name}</span>
-                                  <Badge variant="outline" className={`text-[10px] ${STATUS_COLORS[status] || ""}`}>
-                                    {status.charAt(0).toUpperCase() + status.slice(1)}
-                                  </Badge>
-                                </div>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        );
-                      })}
-                    </Fragment>
-                  ))}
-                </div>
-              </div>
-            )}
+            {/* Month Calendar View */}
+            <ChamberMonthCalendar
+              events={filteredEvents}
+              myAssignmentMap={myEventAssignmentMap}
+              onConfirm={(id) => updateStatus.mutate({ id, status: "confirmed" })}
+              onDecline={(id) => updateStatus.mutate({ id, status: "declined" })}
+            />
 
             {filteredEvents.length === 0 && (
               <div className="text-center py-12 text-muted-foreground text-sm">No events match your filters.</div>
+            )}
+
+            {/* Event Checklists for past confirmed events */}
+            {pastConfirmedEvents.length > 0 && (
+              <div className="space-y-3">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground pt-2">
+                  Post-Event Checklists
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  Complete these action items for events you attended.
+                </p>
+                {pastConfirmedEvents.map((event) => (
+                  <EventChecklist key={event.id} event={event} />
+                ))}
+              </div>
             )}
           </div>
         )}
