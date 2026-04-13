@@ -68,7 +68,7 @@ export interface CommissionSubmission {
   paid_by: string | null;
   payout_batch_id: string | null;
 
-  // Pay run assignment (set at submission based on Tue 3PM MST cutoff)
+  // Pay run assignment (set at submission based on Friday 11:59 PM MST cutoff)
   scheduled_pay_date?: string | null;
   
   // Override tracking

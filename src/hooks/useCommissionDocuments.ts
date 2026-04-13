@@ -73,9 +73,22 @@ export interface CommissionDocument {
   // Pay run & audit fields
   pay_run_id: string | null;
   install_date: string | null;
+  is_friday_close: boolean;
   is_late_submission: boolean;
   is_late_revision: boolean;
   rolled_from_pay_run_id: string | null;
+  // Repair commission fields
+  form_type: 'standard' | 'repair';
+  customer_name: string | null;
+  customer_address: string | null;
+  customer_phone: string | null;
+  customer_email: string | null;
+  repair_description: string | null;
+  repair_date: string | null;
+  total_repair_amount: number | null;
+  repair_commission_amount: number | null;
+  repair_commission_rate: number | null;
+  repair_photos: string[] | null;
 }
 
 export type CommissionDocumentInsert = Omit<CommissionDocument, 
@@ -85,18 +98,32 @@ export type CommissionDocumentInsert = Omit<CommissionDocument,
   'accounting_approved_at' | 'accounting_approved_by' | 'paid_at' | 'paid_by' |
   'revision_reason' | 'revision_count' | 'submitted_at' | 'submitter_email' |
   'additional_neg_expenses' | 'additional_pos_expenses' |
-  'pay_run_id' | 'is_late_submission' | 'is_late_revision' | 'rolled_from_pay_run_id'
+  'pay_run_id' | 'is_late_submission' | 'is_late_revision' | 'rolled_from_pay_run_id' |
+  'form_type' | 'customer_name' | 'customer_address' | 'customer_phone' | 'customer_email' |
+  'repair_description' | 'repair_date' | 'total_repair_amount' | 'repair_commission_amount' |
+  'repair_commission_rate' | 'repair_photos'
 > & {
   additional_neg_expenses?: { amount: number; label?: string }[] | null;
   additional_pos_expenses?: { amount: number; label?: string }[] | null;
   install_date?: string | null;
+  form_type?: 'standard' | 'repair';
+  customer_name?: string | null;
+  customer_address?: string | null;
+  customer_phone?: string | null;
+  customer_email?: string | null;
+  repair_description?: string | null;
+  repair_date?: string | null;
+  total_repair_amount?: number | null;
+  repair_commission_amount?: number | null;
+  repair_commission_rate?: number | null;
+  repair_photos?: string[] | null;
 };
 
-export function useCommissionDocuments(statusFilter?: string) {
+export function useCommissionDocuments(statusFilter?: string, formTypeFilter?: string) {
   const { user, isAdmin, isManager } = useAuth();
 
   return useQuery({
-    queryKey: ['commission-documents', statusFilter, user?.id, isAdmin, isManager],
+    queryKey: ['commission-documents', statusFilter, formTypeFilter, user?.id, isAdmin, isManager],
     queryFn: async () => {
       let query = supabase
         .from('commission_documents')
@@ -110,6 +137,10 @@ export function useCommissionDocuments(statusFilter?: string) {
 
       if (statusFilter && statusFilter !== 'all') {
         query = query.eq('status', statusFilter);
+      }
+
+      if (formTypeFilter && formTypeFilter !== 'all') {
+        query = query.eq('form_type', formTypeFilter);
       }
 
       const { data, error } = await query;
@@ -341,7 +372,7 @@ export function useUpdateCommissionDocumentStatus() {
       // Validate status transition
       const { data: currentDoc } = await supabase
         .from('commission_documents')
-        .select('status, revision_count, scheduled_pay_date, pay_run_id')
+        .select('status, revision_count, scheduled_pay_date, pay_run_id, is_friday_close')
         .eq('id', id)
         .single();
 
@@ -402,14 +433,15 @@ export function useUpdateCommissionDocumentStatus() {
           updateData.scheduled_pay_date = calculateResubmissionPayDate(currentDoc.scheduled_pay_date);
           await ensurePayRunExists(getNextPayRunPeriod(new Date()).periodStart);
         } else {
-          // First submission — standard Tuesday 3PM cutoff
-          const subResult = determinePayRunForSubmission();
+          // First submission — Friday 11:59 PM cutoff (or Monday noon for Friday close)
+          const isFridayClose = !!(currentDoc as any)?.is_friday_close;
+          const subResult = determinePayRunForSubmission(new Date(), isFridayClose);
           const payRunId = await ensurePayRunExists(subResult.periodStart);
           updateData.pay_run_id = payRunId;
           updateData.is_late_submission = subResult.isLate;
 
           const { getScheduledPayDateString } = await import('@/lib/commissionPayDateCalculations');
-          updateData.scheduled_pay_date = getScheduledPayDateString(new Date());
+          updateData.scheduled_pay_date = getScheduledPayDateString(new Date(), isFridayClose);
           await ensurePayRunExists(getNextPayRunPeriod(new Date()).periodStart);
         }
 
@@ -578,6 +610,27 @@ export function useUpdateCommissionDocumentStatus() {
         }
       } catch (auditErr) {
         console.error('Audit log insert failed (non-blocking):', auditErr);
+      }
+
+      // ── Auto-insert commission comment for rejection/denial ──
+      try {
+        if (status === 'revision_required' && revision_reason && userId) {
+          await (supabase.from as any)('commission_comments').insert({
+            commission_id: id,
+            user_id: userId,
+            comment_text: revision_reason,
+            comment_type: 'rejection_note',
+          });
+        } else if (status === 'rejected' && (approval_comment || revision_reason) && userId) {
+          await (supabase.from as any)('commission_comments').insert({
+            commission_id: id,
+            user_id: userId,
+            comment_text: approval_comment || revision_reason,
+            comment_type: 'rejection_note',
+          });
+        }
+      } catch (commentErr) {
+        console.error('Commission comment insert failed (non-blocking):', commentErr);
       }
 
       // Send notification after successful status update

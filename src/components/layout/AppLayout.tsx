@@ -42,6 +42,7 @@ const routeHierarchy: Record<string, BreadcrumbItem[]> = {
   "/vendors": [{ label: "Subs & Vendors", href: "/vendors" }],
   "/profile": [{ label: "Profile", href: "/profile" }],
   "/admin": [{ label: "Admin", href: "/admin" }],
+  "/chamber-of-commerce": [{ label: "Chamber of Commerce", href: "/chamber-of-commerce" }],
 };
 
 function getAdminBreadcrumbs(searchParams: URLSearchParams): BreadcrumbItem[] {

@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCommissionDocuments, type CommissionDocument } from "@/hooks/useCommissionDocuments";
+import { usePayRunList } from "@/hooks/usePayRuns";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +16,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   DollarSign,
   Plus,
   Search,
@@ -24,12 +31,20 @@ import {
   FileCheck,
   Banknote,
   Loader2,
+  List,
+  CalendarRange,
+  Wrench,
+  FileText,
+  ChevronDown,
 } from "lucide-react";
 import { LateBadge } from "@/components/commissions/LateBadge";
-import { formatTimestampMST } from "@/lib/commissionPayDateCalculations";
+import { PayRunWeekAccordion, type CommissionRow } from "@/components/commissions/PayRunWeekAccordion";
+import { PayRunHoldingArea } from "@/components/commissions/PayRunHoldingArea";
+import { formatTimestampMST, getCurrentPayRunPeriod } from "@/lib/commissionPayDateCalculations";
 
 type StatusFilter = "submitted" | "manager_approved" | "accounting_approved" | "paid" | null;
-type TimeFilter = "week" | "month" | "year" | "all";
+type ViewMode = "weeks" | "flat";
+type FormTypeFilter = "all" | "standard" | "repair";
 
 const STATUS_MAP: Record<string, { label: string; color: string; bgClass: string }> = {
   submitted: { label: "Pending Compliance Review", color: "text-yellow-700 dark:text-yellow-400", bgClass: "bg-yellow-100 dark:bg-yellow-900/30 border-yellow-300 dark:border-yellow-700" },
@@ -71,42 +86,29 @@ function StatusBadge({ status, revisionCount }: { status: string; revisionCount?
   );
 }
 
-function getStartOfPeriod(filter: TimeFilter): Date | null {
-  const now = new Date();
-  switch (filter) {
-    case "week": {
-      const d = new Date(now);
-      d.setDate(d.getDate() - d.getDay());
-      d.setHours(0, 0, 0, 0);
-      return d;
-    }
-    case "month":
-      return new Date(now.getFullYear(), now.getMonth(), 1);
-    case "year":
-      return new Date(now.getFullYear(), 0, 1);
-    case "all":
-      return null;
-  }
-}
-
 export default function MyCommissions() {
   const navigate = useNavigate();
   const { isAdmin } = useAuth();
   const { data: commissions, isLoading } = useCommissionDocuments();
+  const { data: payRuns } = usePayRunList();
 
   const [statusFilter, setStatusFilter] = useState<StatusFilter>(null);
-  const [timeFilter, setTimeFilter] = useState<TimeFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [viewMode, setViewMode] = useState<ViewMode>("weeks");
+  const [formTypeFilter, setFormTypeFilter] = useState<FormTypeFilter>("all");
 
-  // Redirect admins to commission manager
   if (isAdmin) {
     navigate("/commission-manager", { replace: true });
     return null;
   }
 
   const activeCommissions = useMemo(
-    () => (commissions || []).filter((c) => c.status !== "draft"),
-    [commissions]
+    () => (commissions || []).filter((c) => {
+      if (c.status === "draft") return false;
+      if (formTypeFilter !== "all" && (c as any).form_type !== formTypeFilter) return false;
+      return true;
+    }),
+    [commissions, formTypeFilter]
   );
 
   const summaryCards = useMemo(() => {
@@ -137,16 +139,46 @@ export default function MyCommissions() {
     ];
   }, [activeCommissions]);
 
+  // Weekly grouping
+  const { weeklyData, holdingAreaDocs } = useMemo(() => {
+    const byPayRun: Record<string, CommissionRow[]> = {};
+    const orphans: CommissionRow[] = [];
+
+    for (const c of activeCommissions) {
+      const row: CommissionRow = {
+        id: c.id,
+        job_name_id: c.job_name_id,
+        sales_rep: c.sales_rep,
+        rep_commission: c.rep_commission,
+        status: c.status,
+        revision_count: c.revision_count ?? 0,
+        submitted_at: c.submitted_at,
+        created_at: c.created_at,
+        is_friday_close: (c as any).is_friday_close,
+      };
+      const prId = c.pay_run_id;
+      if (!prId) {
+        orphans.push(row);
+      } else {
+        if (!byPayRun[prId]) byPayRun[prId] = [];
+        byPayRun[prId].push(row);
+      }
+    }
+
+    return { weeklyData: byPayRun, holdingAreaDocs: orphans };
+  }, [activeCommissions]);
+
+  const currentPeriod = getCurrentPayRunPeriod();
+  const currentPayRunId = useMemo(() => {
+    return (payRuns || []).find((pr) => pr.period_start === currentPeriod.periodStart)?.id;
+  }, [payRuns, currentPeriod]);
+
+  // Flat list (filtered)
   const filteredCommissions = useMemo(() => {
     let filtered = activeCommissions;
 
     if (statusFilter) {
       filtered = filtered.filter((c) => c.status === statusFilter);
-    }
-
-    const startOfPeriod = getStartOfPeriod(timeFilter);
-    if (startOfPeriod) {
-      filtered = filtered.filter((c) => new Date(c.created_at) >= startOfPeriod);
     }
 
     if (searchQuery.trim()) {
@@ -155,10 +187,17 @@ export default function MyCommissions() {
     }
 
     return filtered.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-  }, [activeCommissions, statusFilter, timeFilter, searchQuery]);
+  }, [activeCommissions, statusFilter, searchQuery]);
+
+  // Pay runs with commissions for this rep
+  const repPayRuns = useMemo(() => {
+    if (!payRuns) return [];
+    return payRuns.filter((pr) => weeklyData[pr.id]?.length > 0);
+  }, [payRuns, weeklyData]);
 
   const handleCardClick = (filterKey: StatusFilter) => {
     setStatusFilter((prev) => (prev === filterKey ? null : filterKey));
+    if (viewMode === "weeks") setViewMode("flat");
   };
 
   if (isLoading) {
@@ -182,14 +221,41 @@ export default function MyCommissions() {
             <p className="text-muted-foreground text-sm">Track and manage your earnings</p>
           </div>
         </div>
-        <Button
-          onClick={() => navigate("/commission-documents/new")}
-          className="bg-green-600 hover:bg-green-700 text-white gap-2"
-        >
-          <Plus className="w-4 h-4" />
-          Submit Commission
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button className="bg-green-600 hover:bg-green-700 text-white gap-2">
+              <Plus className="w-4 h-4" />
+              Submit Commission
+              <ChevronDown className="w-3.5 h-3.5 ml-1" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => navigate("/commission-documents/new")} className="gap-2">
+              <FileText className="w-4 h-4" />
+              Standard Commission
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate("/commission-documents/new?type=repair")} className="gap-2">
+              <Wrench className="w-4 h-4" />
+              Repair Commission
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </header>
+
+      {/* Form Type Tabs */}
+      <div className="flex items-center gap-1 bg-secondary/50 rounded-lg p-1 w-fit">
+        {(["all", "standard", "repair"] as FormTypeFilter[]).map((ft) => (
+          <Button
+            key={ft}
+            variant={formTypeFilter === ft ? "default" : "ghost"}
+            size="sm"
+            onClick={() => setFormTypeFilter(ft)}
+            className="text-xs"
+          >
+            {ft === "all" ? "All" : ft === "standard" ? "Standard" : "Repair"}
+          </Button>
+        ))}
+      </div>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -214,13 +280,13 @@ export default function MyCommissions() {
         ))}
       </div>
 
-      {/* Filter Bar */}
+      {/* View toggle + search */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
         {statusFilter && (
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => setStatusFilter(null)}
+            onClick={() => { setStatusFilter(null); setViewMode("weeks"); }}
             className="gap-2 text-muted-foreground"
           >
             <ArrowLeft className="w-4 h-4" />
@@ -228,17 +294,22 @@ export default function MyCommissions() {
           </Button>
         )}
         <div className="flex items-center gap-1 bg-secondary/50 rounded-lg p-1">
-          {(["week", "month", "year", "all"] as TimeFilter[]).map((tf) => (
-            <Button
-              key={tf}
-              variant={timeFilter === tf ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setTimeFilter(tf)}
-              className="text-xs"
-            >
-              {tf === "week" ? "This Week" : tf === "month" ? "This Month" : tf === "year" ? "This Year" : "All Time"}
-            </Button>
-          ))}
+          <Button
+            variant={viewMode === "weeks" ? "default" : "ghost"}
+            size="sm"
+            onClick={() => setViewMode("weeks")}
+            className="text-xs gap-1.5"
+          >
+            <CalendarRange className="w-3.5 h-3.5" /> Weeks
+          </Button>
+          <Button
+            variant={viewMode === "flat" ? "default" : "ghost"}
+            size="sm"
+            onClick={() => setViewMode("flat")}
+            className="text-xs gap-1.5"
+          >
+            <List className="w-3.5 h-3.5" /> Flat List
+          </Button>
         </div>
         <div className="relative flex-1 max-w-xs">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -251,59 +322,91 @@ export default function MyCommissions() {
         </div>
       </div>
 
-      {/* Commission Table */}
-      <div className="glass-card rounded-xl overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Job Name</TableHead>
-              <TableHead className="hidden sm:table-cell">Submitted</TableHead>
-              <TableHead className="hidden md:table-cell">Completed Install</TableHead>
-              <TableHead className="text-right">Amount</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="hidden lg:table-cell">Late</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredCommissions.length === 0 ? (
+      {/* Weekly View */}
+      {viewMode === "weeks" && (
+        <div className="space-y-2">
+          <PayRunHoldingArea commissions={holdingAreaDocs} />
+          {repPayRuns.map((pr) => (
+            <PayRunWeekAccordion
+              key={pr.id}
+              payRun={pr}
+              commissions={weeklyData[pr.id] || []}
+              isCurrentWeek={pr.id === currentPayRunId}
+              defaultOpen={pr.id === currentPayRunId}
+            />
+          ))}
+          {repPayRuns.length === 0 && holdingAreaDocs.length === 0 && (
+            <p className="text-center text-muted-foreground py-12">
+              No commissions submitted yet. Click "Submit Commission" to get started.
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Flat List View */}
+      {viewMode === "flat" && (
+        <div className="glass-card rounded-xl overflow-hidden">
+          <Table>
+            <TableHeader>
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
-                  {statusFilter
-                    ? "No commissions found with this status"
-                    : "No commissions submitted yet. Click \"Submit Commission\" to get started."}
-                </TableCell>
+                <TableHead>Job Name</TableHead>
+                <TableHead className="hidden sm:table-cell">Submitted</TableHead>
+                <TableHead className="hidden md:table-cell">Completed Install</TableHead>
+                <TableHead className="text-right">Amount</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="hidden lg:table-cell">Late</TableHead>
               </TableRow>
-            ) : (
-              filteredCommissions.map((commission) => (
-                <TableRow
-                  key={commission.id}
-                  className="cursor-pointer hover:bg-muted/50"
-                  onClick={() => navigate(`/commission-documents/${commission.id}`)}
-                >
-                  <TableCell className="font-medium">{commission.job_name_id || "—"}</TableCell>
-                  <TableCell className="hidden sm:table-cell text-muted-foreground text-xs">
-                    {commission.submitted_at
-                      ? formatTimestampMST(commission.submitted_at)
-                      : new Date(commission.created_at).toLocaleDateString()}
-                  </TableCell>
-                  <TableCell className="hidden md:table-cell text-muted-foreground">
-                    {commission.install_date || "—"}
-                  </TableCell>
-                  <TableCell className="text-right font-medium">
-                    {formatCurrency(commission.rep_commission || 0)}
-                  </TableCell>
-                  <TableCell>
-                    <StatusBadge status={commission.status} revisionCount={commission.revision_count} />
-                  </TableCell>
-                  <TableCell className="hidden lg:table-cell">
-                    <LateBadge isLateSubmission={commission.is_late_submission} isLateRevision={commission.is_late_revision} />
+            </TableHeader>
+            <TableBody>
+              {filteredCommissions.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
+                    {statusFilter
+                      ? "No commissions found with this status"
+                      : "No commissions submitted yet. Click \"Submit Commission\" to get started."}
                   </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+              ) : (
+                filteredCommissions.map((commission) => (
+                  <TableRow
+                    key={commission.id}
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => navigate(`/commission-documents/${commission.id}`)}
+                  >
+                    <TableCell className="font-medium">
+                      <span className="flex items-center gap-1.5">
+                        {commission.job_name_id || "—"}
+                        {(commission as any).form_type === "repair" && (
+                          <Badge variant="outline" className="bg-purple-50 dark:bg-purple-950/30 text-purple-700 dark:text-purple-300 border-purple-300 dark:border-purple-700 text-[10px] shrink-0">
+                            Repair
+                          </Badge>
+                        )}
+                      </span>
+                    </TableCell>
+                    <TableCell className="hidden sm:table-cell text-muted-foreground text-xs">
+                      {commission.submitted_at
+                        ? formatTimestampMST(commission.submitted_at)
+                        : new Date(commission.created_at).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell text-muted-foreground">
+                      {commission.install_date || "—"}
+                    </TableCell>
+                    <TableCell className="text-right font-medium">
+                      {formatCurrency(commission.rep_commission || 0)}
+                    </TableCell>
+                    <TableCell>
+                      <StatusBadge status={commission.status} revisionCount={commission.revision_count} />
+                    </TableCell>
+                    <TableCell className="hidden lg:table-cell">
+                      <LateBadge isLateSubmission={commission.is_late_submission} isLateRevision={commission.is_late_revision} />
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      )}
     </div>
   );
 }

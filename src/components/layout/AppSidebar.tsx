@@ -41,6 +41,7 @@ import {
   GripVertical,
   Compass,
   BarChart3,
+  Building2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -411,10 +412,18 @@ export function AppSidebar() {
       sectionKey: "kpi-scorecards",
     };
 
+    const chamberItem: NavItem = {
+      title: "Chamber of Commerce",
+      href: "/chamber-of-commerce",
+      icon: Building2,
+      sectionKey: "chamber-of-commerce",
+    };
+
     const allItems: NavItem[] = [
       baseNavigationItems[0], // Command Center
       commissionItem,
       kpiScorecardsItem,
+      chamberItem,
       ...baseNavigationItems.slice(1), // Production, Subs & Vendors
     ];
 

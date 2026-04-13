@@ -61,6 +61,9 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { PayRunView } from "@/components/commissions/PayRunView";
+import { PayRunWeekAccordion, type CommissionRow } from "@/components/commissions/PayRunWeekAccordion";
+import { PayRunHoldingArea } from "@/components/commissions/PayRunHoldingArea";
+import { CommissionFilterBar, useFilteredCommissions, type FilterState } from "@/components/commissions/CommissionFilterBar";
 import { LateBadge } from "@/components/commissions/LateBadge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
@@ -105,7 +108,9 @@ function DeadlineBanner() {
     <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg bg-muted/60 border px-4 py-2.5 text-xs text-muted-foreground">
       <span><strong className="text-foreground">Submission cutoff:</strong> {info.submissionDeadline}</span>
       <span className="hidden sm:inline text-border">|</span>
-      <span><strong className="text-foreground">Revision grace:</strong> {info.revisionDeadline}</span>
+      <span><strong className="text-foreground">Friday-close exception:</strong> {info.fridayCloseDeadline}</span>
+      <span className="hidden sm:inline text-border">|</span>
+      <span><strong className="text-foreground">Correction cutoff:</strong> {info.revisionDeadline}</span>
       <span className="hidden sm:inline text-border">|</span>
       <span><strong className="text-foreground">Pay run:</strong> {info.payDate}</span>
     </div>
@@ -122,6 +127,7 @@ export default function CommissionManager() {
   const { data: allReps } = useAllReps();
   const { data: payRuns } = usePayRunList();
   const [queuePayRunFilter, setQueuePayRunFilter] = useState("all");
+  const [formTypeFilter, setFormTypeFilter] = useState("all");
 
   useEffect(() => {
     void (async () => {
@@ -140,7 +146,7 @@ export default function CommissionManager() {
     return m;
   }, [payRuns]);
 
-  const [activeTab, setActiveTab] = useState("compliance");
+  const [activeTab, setActiveTab] = useState("weeks");
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
   const [rejectTarget, setRejectTarget] = useState<{ id: string; jobName: string } | null>(null);
   const [rejectReason, setRejectReason] = useState("");
@@ -154,6 +160,15 @@ export default function CommissionManager() {
     mark_as_paid: false,
   });
 
+  // Unified filters for week view
+  const [weekFilters, setWeekFilters] = useState<FilterState>({
+    status: "all",
+    rep: "all",
+    week: "all",
+    search: "",
+    sort: "date_desc",
+  });
+
   // Filters for Payment History tab
   const [historyRepFilter, setHistoryRepFilter] = useState("all");
   const [historyStatusFilter, setHistoryStatusFilter] = useState("all");
@@ -165,16 +180,22 @@ export default function CommissionManager() {
     if (queuePayRunFilter !== "all") {
       list = list.filter((c: any) => c.pay_run_id === queuePayRunFilter);
     }
+    if (formTypeFilter !== "all") {
+      list = list.filter((c: any) => (c.form_type || "standard") === formTypeFilter);
+    }
     return list;
-  }, [allCommissions, queuePayRunFilter]);
+  }, [allCommissions, queuePayRunFilter, formTypeFilter]);
 
   const accountingQueue = useMemo(() => {
     let list = (allCommissions || []).filter((c) => c.status === "manager_approved");
     if (queuePayRunFilter !== "all") {
       list = list.filter((c: any) => c.pay_run_id === queuePayRunFilter);
     }
+    if (formTypeFilter !== "all") {
+      list = list.filter((c: any) => (c.form_type || "standard") === formTypeFilter);
+    }
     return list;
-  }, [allCommissions, queuePayRunFilter]);
+  }, [allCommissions, queuePayRunFilter, formTypeFilter]);
 
   const paymentHistory = useMemo(() => {
     let filtered = allCommissions || [];
@@ -196,6 +217,44 @@ export default function CommissionManager() {
 
     return filtered;
   }, [allCommissions, historyRepFilter, historyStatusFilter, historyDateFrom, historyDateTo]);
+
+  // Group commissions by pay run for the week view
+  const { weeklyData, holdingAreaDocs } = useMemo(() => {
+    const allDocs = (allCommissions || []) as (typeof allCommissions extends (infer T)[] | undefined ? T : never)[];
+    const byPayRun: Record<string, CommissionRow[]> = {};
+    const orphans: CommissionRow[] = [];
+
+    for (const c of allDocs) {
+      const row: CommissionRow = {
+        id: c.id,
+        job_name_id: c.job_name_id,
+        sales_rep: c.sales_rep,
+        rep_commission: c.rep_commission,
+        status: c.status,
+        revision_count: (c as any).revision_count ?? 0,
+        submitted_at: c.submitted_at,
+        created_at: c.created_at,
+        rep_name: c.rep_name,
+        is_friday_close: (c as any).is_friday_close,
+      };
+      const prId = (c as any).pay_run_id;
+      if (!prId) {
+        orphans.push(row);
+      } else {
+        if (!byPayRun[prId]) byPayRun[prId] = [];
+        byPayRun[prId].push(row);
+      }
+    }
+
+    return { weeklyData: byPayRun, holdingAreaDocs: orphans };
+  }, [allCommissions]);
+
+  const currentPeriod = getCurrentPayRunPeriod();
+  const currentPayRunId = useMemo(() => {
+    return (payRuns || []).find((pr) => pr.period_start === currentPeriod.periodStart)?.id;
+  }, [payRuns, currentPeriod]);
+
+  const filteredWeekCommissions = useFilteredCommissions(allCommissions || [], weekFilters);
 
   const handleApprove = (id: string, newStatus: "manager_approved" | "accounting_approved" | "paid") => {
     approveCommission.mutate({ id, newStatus });
@@ -332,9 +391,35 @@ export default function CommissionManager() {
         </Card>
       </div>
 
+      {/* Form Type Filter */}
+      <div className="flex items-center gap-2">
+        <span className="text-xs text-muted-foreground font-medium">Type:</span>
+        <div className="flex items-center gap-1 bg-secondary/50 rounded-lg p-1">
+          {[
+            { value: "all", label: "All" },
+            { value: "standard", label: "Standard" },
+            { value: "repair", label: "Repair" },
+          ].map((opt) => (
+            <Button
+              key={opt.value}
+              variant={formTypeFilter === opt.value ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setFormTypeFilter(opt.value)}
+              className="text-xs h-7"
+            >
+              {opt.label}
+            </Button>
+          ))}
+        </div>
+      </div>
+
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="bg-secondary/50">
+        <TabsList className="bg-secondary/50 flex-wrap">
+          <TabsTrigger value="weeks" className="gap-2">
+            <CalendarRange className="h-3.5 w-3.5" />
+            Week View
+          </TabsTrigger>
           <TabsTrigger value="compliance" className="gap-2">
             Compliance Queue
             {complianceQueue.length > 0 && (
@@ -352,11 +437,50 @@ export default function CommissionManager() {
             )}
           </TabsTrigger>
           <TabsTrigger value="history">Payment History</TabsTrigger>
-          <TabsTrigger value="payruns" className="gap-2">
-            <CalendarRange className="h-3.5 w-3.5" />
-            Pay Runs
-          </TabsTrigger>
         </TabsList>
+
+        {/* Week View */}
+        <TabsContent value="weeks" className="mt-4 space-y-4">
+          <CommissionFilterBar
+            filters={weekFilters}
+            onFilterChange={setWeekFilters}
+            reps={allReps}
+            payRuns={payRuns}
+            showRepFilter
+          />
+          <PayRunHoldingArea commissions={holdingAreaDocs} />
+          {(weekFilters.week !== "all"
+            ? (payRuns || []).filter((pr) => pr.id === weekFilters.week)
+            : payRuns || []
+          ).map((pr) => {
+            const prDocs = (weeklyData[pr.id] || []).filter((d) => {
+              if (weekFilters.status !== "all") {
+                if (weekFilters.status === "revision_required") {
+                  if (d.status !== "revision_required" && d.status !== "rejected") return false;
+                } else if (d.status !== weekFilters.status) return false;
+              }
+              if (weekFilters.search.trim()) {
+                if (!d.job_name_id?.toLowerCase().includes(weekFilters.search.toLowerCase())) return false;
+              }
+              return true;
+            });
+            if (prDocs.length === 0 && weekFilters.status !== "all") return null;
+            return (
+              <PayRunWeekAccordion
+                key={pr.id}
+                payRun={pr}
+                commissions={prDocs}
+                isCurrentWeek={pr.id === currentPayRunId}
+                defaultOpen={pr.id === currentPayRunId}
+              />
+            );
+          })}
+          {(!payRuns || payRuns.length === 0) && (
+            <p className="text-center text-muted-foreground py-12">
+              No pay runs found. Commissions will create pay runs automatically when submitted.
+            </p>
+          )}
+        </TabsContent>
 
         {/* Compliance Queue */}
         <TabsContent value="compliance" className="mt-4 space-y-3">
@@ -678,10 +802,6 @@ export default function CommissionManager() {
           </div>
         </TabsContent>
 
-        {/* Pay Runs */}
-        <TabsContent value="payruns" className="mt-4">
-          <PayRunView />
-        </TabsContent>
       </Tabs>
 
       {/* Reject Modal */}

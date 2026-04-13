@@ -20,9 +20,11 @@ import { ArrowLeft, Printer, Edit, Check, X, FileText, Calendar, CheckCircle2, R
 import { useCommissionDocument, useUpdateCommissionDocumentStatus, useDeleteCommissionDocument } from "@/hooks/useCommissionDocuments";
 import { useAuth } from "@/contexts/AuthContext";
 import { CommissionDocumentForm } from "@/components/commissions/CommissionDocumentForm";
+import { RepairCommissionForm } from "@/components/commissions/RepairCommissionForm";
 import { CommissionDocumentSummary } from "@/components/commissions/CommissionDocumentSummary";
 import { CommissionDocumentPrintView } from "@/components/commissions/CommissionDocumentPrintView";
 import { CommissionTimeline } from "@/components/commissions/CommissionTimeline";
+import { CommissionCommentThread } from "@/components/commissions/CommissionCommentThread";
 import { AdminOverrideButton } from "@/components/commissions/AdminOverrideButton";
 import { LateBadge } from "@/components/commissions/LateBadge";
 import { formatPayDateShort, getEstimatedPayDate, getCurrentDeadlineInfo, formatPayRunRange, formatTimestampMST } from "@/lib/commissionPayDateCalculations";
@@ -189,9 +191,14 @@ export default function CommissionDocumentDetail() {
   }
 
   if (isEditing) {
+    const isRepair = (document as any).form_type === 'repair';
     return (
         <div className="container mx-auto py-6">
-          <CommissionDocumentForm document={document} />
+          {isRepair ? (
+            <RepairCommissionForm document={document} />
+          ) : (
+            <CommissionDocumentForm document={document} />
+          )}
         </div>
     );
   }
@@ -463,6 +470,11 @@ export default function CommissionDocumentDetail() {
                   <span className="text-muted-foreground">Pay Run:</span>
                   <Badge variant="outline" className="bg-gray-100 dark:bg-gray-800 text-xs">{payRunRange}</Badge>
                   <LateBadge isLateSubmission={document.is_late_submission} isLateRevision={document.is_late_revision} />
+                  {(document as any).is_friday_close && (
+                    <Badge variant="outline" className="bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400 border-blue-300 dark:border-blue-700 text-[10px]">
+                      Friday Close
+                    </Badge>
+                  )}
                 </div>
               )}
               {document.install_date && (
@@ -547,7 +559,9 @@ export default function CommissionDocumentDetail() {
           </div>
         </CardHeader>
         <CardContent>
-          {showFullForm ? (
+          {(document as any).form_type === 'repair' ? (
+            <RepairCommissionForm document={document} readOnly />
+          ) : showFullForm ? (
             <CommissionDocumentForm document={document} readOnly />
           ) : (
             <CommissionDocumentSummary document={document} />
@@ -563,6 +577,18 @@ export default function CommissionDocumentDetail() {
           </CardHeader>
           <CardContent>
             <CommissionTimeline commissionId={document.id} />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Notes & Communication Thread */}
+      {document.status !== 'draft' && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Notes & Communication</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <CommissionCommentThread commissionId={document.id} />
           </CardContent>
         </Card>
       )}

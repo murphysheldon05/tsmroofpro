@@ -493,6 +493,7 @@ export type Database = {
           gross_contract_total: number
           id: string
           install_date: string | null
+          is_friday_close: boolean
           is_late_revision: boolean
           is_late_submission: boolean
           job_date: string
@@ -562,6 +563,7 @@ export type Database = {
           gross_contract_total?: number
           id?: string
           install_date?: string | null
+          is_friday_close?: boolean
           is_late_revision?: boolean
           is_late_submission?: boolean
           job_date: string
@@ -631,6 +633,7 @@ export type Database = {
           gross_contract_total?: number
           id?: string
           install_date?: string | null
+          is_friday_close?: boolean
           is_late_revision?: boolean
           is_late_submission?: boolean
           job_date?: string

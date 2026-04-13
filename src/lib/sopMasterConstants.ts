@@ -461,7 +461,7 @@ For any status or data changes in the system.
     rules: [
       "AccuLynx Payments tab is the ONLY source of truth",
       "No estimates or orders count — actual payment only",
-      "Tuesday 3:00 PM is a HARD cutoff — no exceptions",
+      "Friday 11:59 PM is a HARD cutoff — Friday-close exception extends to Monday noon",
       "Departing reps: $200 flat per reassigned job"
     ],
     zeroTolerance: [],
@@ -471,7 +471,7 @@ For any status or data changes in the system.
     ],
     fullContent: `
 ## Purpose
-Link commission approval to payroll processing with strict Tuesday 3PM cutoff.
+Link commission approval to payroll processing with strict Friday 11:59 PM cutoff.
 
 ## When to Use
 After commission approval, to determine which payroll cycle includes the payment.

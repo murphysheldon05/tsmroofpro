@@ -18,6 +18,7 @@ export const SIDEBAR_SECTIONS = [
   { key: "vendors", label: "Subs & Vendors", parent: null },
   { key: "vendors/subcontractors", label: "Sub-Contractors", parent: "vendors" },
   { key: "vendors/contact-list", label: "Contact List", parent: "vendors" },
+  { key: "chamber-of-commerce", label: "Chamber of Commerce", parent: null },
 ] as const;
 
 export type SectionKey = (typeof SIDEBAR_SECTIONS)[number]["key"];

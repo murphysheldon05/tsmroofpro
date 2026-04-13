@@ -1,25 +1,24 @@
-import { Navigate, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { CommissionSubmitForm } from "@/components/commissions/CommissionSubmitForm";
 import { CommissionDocumentForm } from "@/components/commissions/CommissionDocumentForm";
-import { FileSpreadsheet, Users } from "lucide-react";
+import { RepairCommissionForm } from "@/components/commissions/RepairCommissionForm";
+import { Users } from "lucide-react";
 
 export default function CommissionNew() {
   const [searchParams] = useSearchParams();
   const type = searchParams.get("type");
-  const isSubcontractor = type === "subcontractor";
 
-  // For employee commissions, use the new Commission Document form
-  if (!isSubcontractor) {
+  if (type === "repair") {
     return (
-        <div className="max-w-4xl mx-auto">
-          <CommissionDocumentForm />
-        </div>
+      <div className="max-w-4xl mx-auto">
+        <RepairCommissionForm />
+      </div>
     );
   }
 
-  return (
+  if (type === "subcontractor") {
+    return (
       <div className="max-w-4xl mx-auto space-y-6">
-        {/* Header */}
         <div className="flex items-center gap-3">
           <Users className="h-8 w-8 text-primary" />
           <div>
@@ -31,9 +30,15 @@ export default function CommissionNew() {
             </p>
           </div>
         </div>
-
-        {/* Form */}
         <CommissionSubmitForm variant="subcontractor" />
       </div>
+    );
+  }
+
+  // Default: standard employee commission form
+  return (
+    <div className="max-w-4xl mx-auto">
+      <CommissionDocumentForm />
+    </div>
   );
 }

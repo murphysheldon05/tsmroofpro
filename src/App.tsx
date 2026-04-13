@@ -35,6 +35,7 @@ const KpiScorecardScore = lazy(() => import("./pages/KpiScorecardScore"));
 const KpiScorecardHistory = lazy(() => import("./pages/KpiScorecardHistory"));
 const PendingReview = lazy(() => import("./pages/PendingReview"));
 const ContactList = lazy(() => import("./pages/ContactList"));
+const ChamberOfCommerce = lazy(() => import("./pages/ChamberOfCommerce"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 function PageLoader() {
@@ -129,6 +130,7 @@ const App = () => (
               <Route path="/commissions/:id" element={<CommissionDocumentDetail />} />
               <Route path="/commission-documents/new" element={<CommissionDocumentNew />} />
               <Route path="/commission-documents/:id" element={<CommissionDocumentDetail />} />
+              <Route path="/chamber-of-commerce" element={<ChamberOfCommerce />} />
 
               <Route element={<RequireAdmin />}>
                 <Route path="/admin" element={<Admin />} />

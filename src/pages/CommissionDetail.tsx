@@ -388,7 +388,7 @@ export default function CommissionDetail() {
                   {formatPayDateShort(submission.scheduled_pay_date)}
                 </span>
                 <span className="text-muted-foreground text-xs">
-                  (assigned at submission based on Tuesday 3:00 PM MST cutoff)
+                  (assigned at submission based on Friday 11:59 PM MST cutoff)
                 </span>
               </div>
             </CardContent>
