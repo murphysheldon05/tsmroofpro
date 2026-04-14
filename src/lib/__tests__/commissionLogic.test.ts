@@ -316,64 +316,54 @@ describe("Draw Close-Out Calculations", () => {
   });
 });
 
-// ── Pay Date Calculations ───────────────────────────────────────────────────
+// ── Pay Date Calculations (Friday 11:59 PM cutoff, pay date = following Friday) ──
 
-describe("Pay Date Calculations (Tuesday 3 PM MST cutoff)", () => {
+describe("Pay Date Calculations (Friday 11:59 PM cutoff, pay run = following Friday)", () => {
   function createMSTDate(year: number, month: number, day: number, hour: number): Date {
     // MST = UTC-7
     const utcHour = hour + 7;
     return new Date(Date.UTC(year, month - 1, day, utcHour, 0, 0));
   }
 
-  it("Monday submission → this Friday", () => {
-    // Monday Feb 23, 2026 at 10:00 AM MST
+  // Pay cycle: Sat Feb 21 – Fri Feb 27, 2026.  Pay date = Fri Mar 6.
+  // Next cycle: Sat Feb 28 – Fri Mar 6.         Pay date = Fri Mar 13.
+
+  it("Monday submission → pay date is the Friday after this period ends", () => {
+    // Mon Feb 23, 2026 10 AM MST — within Sat Feb 21 – Fri Feb 27 period
     const submitted = createMSTDate(2026, 2, 23, 10);
     const payDate = calculateScheduledPayDate(submitted);
     expect(payDate.getDay()).toBe(5); // Friday
+    // Pay date should be Mar 6 (Feb 27 + 7)
+    const payDateStr = getScheduledPayDateString(submitted);
+    expect(payDateStr).toBe("2026-03-06");
   });
 
-  it("Tuesday before 3 PM MST → this Friday", () => {
-    // Tuesday Feb 24, 2026 at 2:00 PM MST
-    const submitted = createMSTDate(2026, 2, 24, 14);
-    const payDate = calculateScheduledPayDate(submitted);
-    expect(payDate.getDay()).toBe(5);
-  });
-
-  it("Tuesday at 3 PM MST → next Friday (after deadline)", () => {
-    // Tuesday Feb 24, 2026 at 3:00 PM MST
-    const submitted = createMSTDate(2026, 2, 24, 15);
-    const payDate = calculateScheduledPayDate(submitted);
-    expect(payDate.getDay()).toBe(5);
-    // Should be next Friday (7 days later than this Friday)
-    const thisFriday = new Date(Date.UTC(2026, 1, 27)); // Feb 27 is a Friday
-    const nextFriday = new Date(Date.UTC(2026, 2, 6)); // Mar 6 is next Friday
-    const payDateNorm = new Date(payDate.getFullYear(), payDate.getMonth(), payDate.getDate());
-    expect(payDateNorm.getDate()).toBe(nextFriday.getUTCDate());
-  });
-
-  it("Wednesday → next Friday", () => {
-    // Wednesday Feb 25, 2026 at 9:00 AM MST
-    const submitted = createMSTDate(2026, 2, 25, 9);
-    const payDate = calculateScheduledPayDate(submitted);
-    expect(payDate.getDay()).toBe(5);
-  });
-
-  it("Friday submission → next Friday (not same day)", () => {
-    // Friday Feb 27, 2026 at 10:00 AM MST
+  it("Friday before 11:59 PM → same period, pay date following Friday", () => {
+    // Fri Feb 27, 2026 at 10 AM MST — still before 11:59 PM cutoff
     const submitted = createMSTDate(2026, 2, 27, 10);
     const payDate = calculateScheduledPayDate(submitted);
     expect(payDate.getDay()).toBe(5);
-    // Should be next Friday, not same-day
-    const payDateNorm = new Date(payDate.getFullYear(), payDate.getMonth(), payDate.getDate());
-    const submittedNorm = new Date(2026, 1, 27);
-    expect(payDateNorm.getTime()).toBeGreaterThan(submittedNorm.getTime());
+    const payDateStr = getScheduledPayDateString(submitted);
+    expect(payDateStr).toBe("2026-03-06");
   });
 
-  it("Sunday submission → this Friday", () => {
-    // Sunday Feb 22, 2026 at 10:00 AM MST
+  it("Saturday after midnight → rolls to next period, pay date two Fridays out", () => {
+    // Sat Feb 28, 2026 at 1 AM MST — past the Fri 11:59 PM cutoff, now in Sat Feb 28 period
+    const submitted = createMSTDate(2026, 2, 28, 1);
+    const payDate = calculateScheduledPayDate(submitted);
+    expect(payDate.getDay()).toBe(5);
+    // Period Sat Feb 28 – Fri Mar 6 → pay date Mar 13
+    const payDateStr = getScheduledPayDateString(submitted);
+    expect(payDateStr).toBe("2026-03-13");
+  });
+
+  it("Sunday submission → current period, pay date following Friday", () => {
+    // Sun Feb 22, 2026 at 10 AM MST — within Sat Feb 21 period
     const submitted = createMSTDate(2026, 2, 22, 10);
     const payDate = calculateScheduledPayDate(submitted);
     expect(payDate.getDay()).toBe(5);
+    const payDateStr = getScheduledPayDateString(submitted);
+    expect(payDateStr).toBe("2026-03-06");
   });
 
   it("pay date is always a Friday", () => {
@@ -388,6 +378,13 @@ describe("Pay Date Calculations (Tuesday 3 PM MST cutoff)", () => {
     const submitted = createMSTDate(2026, 2, 23, 10);
     const dateStr = getScheduledPayDateString(submitted);
     expect(dateStr).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+
+  it("April 17 period: submission deadline Fri Apr 17 → pay date Fri Apr 24", () => {
+    // Period: Sat Apr 11 – Fri Apr 17, 2026
+    const submitted = createMSTDate(2026, 4, 14, 10); // Tue Apr 14
+    const payDateStr = getScheduledPayDateString(submitted);
+    expect(payDateStr).toBe("2026-04-24");
   });
 });
 

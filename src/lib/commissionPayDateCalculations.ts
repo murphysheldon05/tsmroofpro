@@ -8,6 +8,9 @@
  *   3. Correction / revision:  Wednesday 12:00 PM (day +11 from period Saturday)
  *
  * Deadlines 2 and 3 fall in the calendar week *after* the pay run period ends.
+ *
+ * Pay run date (actual payday) is the Friday AFTER the period ends (day +13
+ * from the period's Saturday start).  E.g. period Apr 11–17 → pay date Apr 24.
  */
 
 import {
@@ -30,11 +33,11 @@ function parsePeriodStart(ymd: string): { year: number; month: number; day: numb
   return { year: y, month: m, day: d };
 }
 
-/** Friday YYYY-MM-DD for a pay run that starts on `periodStart` (Saturday). */
+/** Pay-date Friday YYYY-MM-DD — the Friday *after* the period ends (day +13 from Saturday start). */
 export function getFridayDateStringForPeriodStart(periodStartYmd: string): string {
   const s = parsePeriodStart(periodStartYmd);
-  const fri = addCalendarDaysYMD(s.year, s.month, s.day, 6);
-  return ymdToDateString(fri.year, fri.month, fri.day);
+  const payFri = addCalendarDaysYMD(s.year, s.month, s.day, 13);
+  return ymdToDateString(payFri.year, payFri.month, payFri.day);
 }
 
 export function calculateScheduledPayDate(approvalDate: Date): Date {
@@ -66,7 +69,8 @@ export function getEstimatedPayDate(): Date {
 }
 
 /**
- * Friday (period_end) YYYY-MM-DD for the pay run that contains this submission.
+ * Pay-date Friday YYYY-MM-DD for the pay run that contains this submission.
+ * The pay date is the Friday AFTER the period ends (day +13 from period Saturday).
  * Standard submissions use Friday 11:59 PM cutoff.
  * Friday-close submissions get until Monday noon of the following week.
  */
@@ -80,16 +84,16 @@ export function getScheduledPayDateString(timestamp: Date, isFridayClose = false
     if (timestamp.getTime() >= cutoff.getTime()) {
       periodSat = addCalendarDaysYMD(currentSat.year, currentSat.month, currentSat.day, 7);
     }
-    const fri = addCalendarDaysYMD(periodSat.year, periodSat.month, periodSat.day, 6);
-    return ymdToDateString(fri.year, fri.month, fri.day);
+    const payFri = addCalendarDaysYMD(periodSat.year, periodSat.month, periodSat.day, 13);
+    return ymdToDateString(payFri.year, payFri.month, payFri.day);
   }
 
   // Friday close: check if previous period's exception window is still open
   const prevSat = addCalendarDaysYMD(currentSat.year, currentSat.month, currentSat.day, -7);
   const prevFridayCloseCutoff = getFridayCloseExceptionCutoffInstant(prevSat);
   if (timestamp.getTime() < prevFridayCloseCutoff.getTime()) {
-    const fri = addCalendarDaysYMD(prevSat.year, prevSat.month, prevSat.day, 6);
-    return ymdToDateString(fri.year, fri.month, fri.day);
+    const payFri = addCalendarDaysYMD(prevSat.year, prevSat.month, prevSat.day, 13);
+    return ymdToDateString(payFri.year, payFri.month, payFri.day);
   }
 
   // Exception window passed — use standard logic for current period
@@ -98,13 +102,14 @@ export function getScheduledPayDateString(timestamp: Date, isFridayClose = false
   if (timestamp.getTime() >= cutoff.getTime()) {
     periodSat = addCalendarDaysYMD(currentSat.year, currentSat.month, currentSat.day, 7);
   }
-  const fri = addCalendarDaysYMD(periodSat.year, periodSat.month, periodSat.day, 6);
-  return ymdToDateString(fri.year, fri.month, fri.day);
+  const payFri = addCalendarDaysYMD(periodSat.year, periodSat.month, periodSat.day, 13);
+  return ymdToDateString(payFri.year, payFri.month, payFri.day);
 }
 
 /**
  * Pay date for a resubmitted commission (after rejection).
  * Checks the correction deadline for the commission's original pay run.
+ * Pay dates are the Friday after the period ends (day +13 from period Saturday).
  */
 export function calculateResubmissionPayDate(existingPayDate: string | null): string {
   if (!existingPayDate) {
@@ -115,11 +120,11 @@ export function calculateResubmissionPayDate(existingPayDate: string | null): st
   const p = getPhoenixParts(now);
   const currentSat = getMostRecentSaturdayYMD(p.year, p.month, p.day);
 
-  // Check current pay run
-  const currentFri = addCalendarDaysYMD(currentSat.year, currentSat.month, currentSat.day, 6);
-  const currentWeekFri = ymdToDateString(currentFri.year, currentFri.month, currentFri.day);
+  // Pay date for the current period (Friday after the period ends)
+  const currentPayFri = addCalendarDaysYMD(currentSat.year, currentSat.month, currentSat.day, 13);
+  const currentWeekPayDate = ymdToDateString(currentPayFri.year, currentPayFri.month, currentPayFri.day);
 
-  if (existingPayDate === currentWeekFri) {
+  if (existingPayDate === currentWeekPayDate) {
     const revCutoff = getRevisionCutoffExclusiveInstant(currentSat);
     if (now.getTime() < revCutoff.getTime()) {
       return existingPayDate;
@@ -128,10 +133,10 @@ export function calculateResubmissionPayDate(existingPayDate: string | null): st
 
   // Check previous pay run (correction deadline extends into current week)
   const prevSat = addCalendarDaysYMD(currentSat.year, currentSat.month, currentSat.day, -7);
-  const prevFri = addCalendarDaysYMD(prevSat.year, prevSat.month, prevSat.day, 6);
-  const prevWeekFri = ymdToDateString(prevFri.year, prevFri.month, prevFri.day);
+  const prevPayFri = addCalendarDaysYMD(prevSat.year, prevSat.month, prevSat.day, 13);
+  const prevWeekPayDate = ymdToDateString(prevPayFri.year, prevPayFri.month, prevPayFri.day);
 
-  if (existingPayDate === prevWeekFri) {
+  if (existingPayDate === prevWeekPayDate) {
     const revCutoff = getRevisionCutoffExclusiveInstant(prevSat);
     if (now.getTime() < revCutoff.getTime()) {
       return existingPayDate;
@@ -160,6 +165,7 @@ export function getCurrentDeadlineInfo(): {
   const fri = addCalendarDaysYMD(s.year, s.month, s.day, 6);
   const mon = addCalendarDaysYMD(s.year, s.month, s.day, 9);
   const wed = addCalendarDaysYMD(s.year, s.month, s.day, 11);
+  const payFri = addCalendarDaysYMD(s.year, s.month, s.day, 13);
 
   const friDt = phoenixWallToUtc(fri.year, fri.month, fri.day, 23, 59, 0);
   const monDt = phoenixWallToUtc(mon.year, mon.month, mon.day, 12, 0, 0);
@@ -169,7 +175,7 @@ export function getCurrentDeadlineInfo(): {
     submissionDeadline: fmtWeekday(friDt) + " at 11:59 PM MST",
     fridayCloseDeadline: fmtWeekday(monDt) + " at 12:00 PM MST",
     revisionDeadline: fmtWeekday(wedDt) + " at 12:00 PM MST",
-    payDate: formatPayDateShort(ymdToDateString(fri.year, fri.month, fri.day)),
+    payDate: formatPayDateShort(ymdToDateString(payFri.year, payFri.month, payFri.day)),
   };
 }
 
