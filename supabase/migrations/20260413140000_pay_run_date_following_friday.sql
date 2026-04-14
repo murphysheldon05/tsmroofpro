@@ -51,11 +51,11 @@ WHERE run_date = period_end;
 -- 3. Backfill scheduled_pay_date on commission_documents that still point to
 --    the old period-end Friday.  New value = old value + 7 days.
 UPDATE commission_documents cd
-SET scheduled_pay_date = (cd.scheduled_pay_date::DATE + 7)::TEXT
+SET scheduled_pay_date = cd.scheduled_pay_date + 7
 WHERE cd.scheduled_pay_date IS NOT NULL
   AND cd.pay_run_id IS NOT NULL
   AND EXISTS (
     SELECT 1 FROM commission_pay_runs pr
     WHERE pr.id = cd.pay_run_id
-      AND pr.period_end::TEXT = cd.scheduled_pay_date
+      AND cd.scheduled_pay_date = pr.period_end
   );
