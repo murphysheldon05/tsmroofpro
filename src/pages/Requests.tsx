@@ -335,7 +335,7 @@ export default function Requests() {
               <Send className="w-6 h-6 text-primary" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-foreground">Forms & Requests</h1>
+              <h1 className="text-2xl font-extrabold text-foreground">Forms & Requests</h1>
               <p className="text-muted-foreground text-sm">
                 Submit SOP updates, IT requests, and HR inquiries
               </p>

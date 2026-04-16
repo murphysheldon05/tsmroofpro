@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuickStats } from "@/hooks/useCommandCenter";
 import { useTodayLaborCount, useTodayDeliveriesCount, useTodayLabor, useTodayDeliveries } from "@/hooks/useAccuLynxToday";
+import { useCountUp } from "@/hooks/useCountUp";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +15,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { formatDisplayName } from "@/lib/displayName";
 import { cn } from "@/lib/utils";
 
+function AnimatedNumber({ value }: { value: number }) {
+  const display = useCountUp(value);
+  return <>{display}</>;
+}
+
 export function QuickStatsWidget() {
   const { data: stats, isLoading: statsLoading } = useQuickStats();
   const { data: laborCount, isLoading: laborLoading } = useTodayLaborCount();
@@ -23,10 +29,10 @@ export function QuickStatsWidget() {
   const isLoading = statsLoading || laborLoading || deliveriesLoading;
 
   const statItems = [
-    { key: "builds", label: "Builds Today", value: laborCount || 0, icon: Hammer, color: "text-emerald-500", bgColor: "bg-emerald-500/10" },
-    { key: "deliveries", label: "Deliveries Today", value: deliveriesCount || 0, icon: Truck, color: "text-amber-500", bgColor: "bg-amber-500/10" },
-    { key: "warranties", label: "Open Warranties", value: stats?.openWarranties || 0, icon: Shield, color: "text-blue-500", bgColor: "bg-blue-500/10" },
-    { key: "approvals", label: "Pending Approvals", value: stats?.pendingApprovals || 0, icon: Clock, color: "text-purple-500", bgColor: "bg-purple-500/10" },
+    { key: "builds", label: "Builds Today", value: laborCount || 0, icon: Hammer, color: "text-emerald-500", bgColor: "bg-emerald-500/10", barColor: "bg-emerald-500", hoverShadow: "hover:shadow-[0_4px_20px_rgba(16,185,129,0.15)]" },
+    { key: "deliveries", label: "Deliveries Today", value: deliveriesCount || 0, icon: Truck, color: "text-amber-500", bgColor: "bg-amber-500/10", barColor: "bg-amber-500", hoverShadow: "hover:shadow-[0_4px_20px_rgba(245,158,11,0.15)]" },
+    { key: "warranties", label: "Open Warranties", value: stats?.openWarranties || 0, icon: Shield, color: "text-blue-500", bgColor: "bg-blue-500/10", barColor: "bg-blue-500", hoverShadow: "hover:shadow-[0_4px_20px_rgba(59,130,246,0.15)]" },
+    { key: "approvals", label: "Pending Approvals", value: stats?.pendingApprovals || 0, icon: Clock, color: "text-purple-500", bgColor: "bg-purple-500/10", barColor: "bg-purple-500", hoverShadow: "hover:shadow-[0_4px_20px_rgba(168,85,247,0.15)]" },
   ];
 
   if (isLoading) {
@@ -45,16 +51,20 @@ export function QuickStatsWidget() {
         {statItems.map((item) => (
           <Card
             key={item.label}
-            className="border border-border/50 bg-card/60 hover:border-primary/20 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer group"
+            className={cn(
+              "relative overflow-hidden border border-border bg-card hover:-translate-y-0.5 transition-all duration-200 cursor-pointer group",
+              item.hoverShadow,
+            )}
             onClick={() => setOpenModal(item.key)}
           >
-            <CardContent className="p-4">
+            <div className={`absolute top-0 left-0 right-0 h-1 ${item.barColor}`} />
+            <CardContent className="p-4 pt-5">
               <div className="flex items-center gap-3">
                 <div className={`w-10 h-10 rounded-lg ${item.bgColor} flex items-center justify-center`}>
                   <item.icon className={`w-5 h-5 ${item.color}`} />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-foreground">{item.value}</p>
+                  <p className="text-2xl font-extrabold text-foreground"><AnimatedNumber value={item.value} /></p>
                   <p className="text-xs text-muted-foreground">{item.label}</p>
                 </div>
               </div>
@@ -90,7 +100,11 @@ function BuildsModal({ open, onClose }: { open: boolean; onClose: () => void }) 
         {isLoading ? (
           <div className="space-y-2">{[1,2,3].map(i => <Skeleton key={i} className="h-14" />)}</div>
         ) : !builds?.length ? (
-          <p className="text-sm text-muted-foreground py-4">No builds scheduled today.</p>
+          <div className="flex flex-col items-center py-6 text-muted-foreground">
+            <Hammer className="w-8 h-8 mb-2 opacity-30" />
+            <p className="text-sm font-medium">No builds today</p>
+            <p className="text-xs mt-0.5">Enjoy the breather!</p>
+          </div>
         ) : (
           <ScrollArea className="max-h-[350px]">
             <div className="space-y-2">
@@ -135,7 +149,11 @@ function DeliveriesModal({ open, onClose }: { open: boolean; onClose: () => void
         {isLoading ? (
           <div className="space-y-2">{[1,2,3].map(i => <Skeleton key={i} className="h-14" />)}</div>
         ) : !deliveries?.length ? (
-          <p className="text-sm text-muted-foreground py-4">No deliveries scheduled today.</p>
+          <div className="flex flex-col items-center py-6 text-muted-foreground">
+            <Truck className="w-8 h-8 mb-2 opacity-30" />
+            <p className="text-sm font-medium">No deliveries today</p>
+            <p className="text-xs mt-0.5">All clear on the road!</p>
+          </div>
         ) : (
           <ScrollArea className="max-h-[350px]">
             <div className="space-y-2">
@@ -191,7 +209,11 @@ function WarrantiesModal({ open, onClose }: { open: boolean; onClose: () => void
         {isLoading ? (
           <div className="space-y-2">{[1,2,3].map(i => <Skeleton key={i} className="h-14" />)}</div>
         ) : !warranties?.length ? (
-          <p className="text-sm text-muted-foreground py-4">No open warranty claims.</p>
+          <div className="flex flex-col items-center py-6 text-muted-foreground">
+            <Shield className="w-8 h-8 mb-2 opacity-30" />
+            <p className="text-sm font-medium">All warranties resolved</p>
+            <p className="text-xs mt-0.5">Nice work keeping it clean!</p>
+          </div>
         ) : (
           <ScrollArea className="max-h-[350px]">
             <div className="space-y-2">
@@ -269,7 +291,11 @@ function ApprovalsModal({ open, onClose }: { open: boolean; onClose: () => void 
                 </div>
               )}
               {!data?.commissions?.length && (
-                <p className="text-sm text-muted-foreground py-4">No pending approvals.</p>
+                <div className="flex flex-col items-center py-6 text-muted-foreground">
+                  <Clock className="w-8 h-8 mb-2 opacity-30" />
+                  <p className="text-sm font-medium">No pending approvals</p>
+                  <p className="text-xs mt-0.5">You're all caught up!</p>
+                </div>
               )}
             </div>
           </ScrollArea>

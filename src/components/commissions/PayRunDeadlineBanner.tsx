@@ -99,7 +99,7 @@ export function PayRunDeadlineBanner() {
             />
             <CountdownDisplay
               countdown={fridayCloseCountdown}
-              label={`Friday-close: ${currentPeriod.fridayCloseDeadlineDisplay}`}
+              label={`Friday build grace: ${currentPeriod.fridayBuildGraceDisplay}`}
             />
             <CountdownDisplay
               countdown={revisionCountdown}
@@ -129,7 +129,7 @@ export function PayRunDeadlineBanner() {
           />
           <CountdownDisplay
             countdown={fridayCloseCountdown}
-            label="Friday-close exception"
+            label="Friday build grace"
           />
           <CountdownDisplay
             countdown={revisionCountdown}

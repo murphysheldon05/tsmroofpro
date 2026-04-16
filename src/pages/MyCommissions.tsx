@@ -217,7 +217,7 @@ export default function MyCommissions() {
             <DollarSign className="w-6 h-6 text-primary" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-foreground">My Commissions</h1>
+            <h1 className="text-2xl font-extrabold text-foreground">My Commissions</h1>
             <p className="text-muted-foreground text-sm">Track and manage your earnings</p>
           </div>
         </div>

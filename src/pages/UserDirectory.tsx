@@ -157,7 +157,7 @@ export default function UserDirectory() {
               <Users className="w-6 h-6 text-primary" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-foreground">Company Directory</h1>
+              <h1 className="text-2xl font-extrabold text-foreground">Company Directory</h1>
               <p className="text-muted-foreground text-sm">Find the right person for your questions</p>
             </div>
           </div>

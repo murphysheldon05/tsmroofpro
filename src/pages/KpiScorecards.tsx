@@ -21,7 +21,7 @@ export default function KpiScorecards() {
           <BarChart3 className="w-5 h-5 text-primary" />
         </div>
         <div className="min-w-0">
-          <h1 className="text-xl sm:text-2xl font-bold text-foreground">
+          <h1 className="text-xl sm:text-2xl font-extrabold text-foreground">
             KPI Scorecards
           </h1>
           <p className="text-sm text-muted-foreground mt-0.5">

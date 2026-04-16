@@ -170,7 +170,7 @@ function StatusBucketSection({ bucket, items, onRowClick }: StatusBucketSectionP
                   </Badge>
                   {doc.is_friday_close && (
                     <Badge variant="outline" className="text-[10px] bg-blue-50 dark:bg-blue-950/30 text-blue-600 border-blue-200">
-                      Fri Close
+                      Fri Build
                     </Badge>
                   )}
                   {(doc.revision_count ?? 0) > 0 && bucket !== "rejected" && (

@@ -4,7 +4,10 @@ import {
   formatTimestampMST,
   getCurrentDeadlineInfo,
   getCurrentPayRunPeriod,
+  getCurrentPaydayInfo,
   getNextPayRunPeriod,
+  getFridayDateStringForPeriodStart,
+  formatPayDateShort,
   isBeforeRevisionDeadline,
 } from "@/lib/commissionPayDateCalculations";
 import { usePayRunList, ensurePayRunExists } from "@/hooks/usePayRuns";
@@ -102,17 +105,68 @@ function StatusBadge({ status, revisionCount }: { status: string; revisionCount?
   );
 }
 
-function DeadlineBanner() {
-  const info = getCurrentDeadlineInfo();
+function PayRunInfoBanner() {
+  const payday = getCurrentPaydayInfo();
+  const currentPeriod = getCurrentPayRunPeriod();
+  const deadlines = getCurrentDeadlineInfo();
+  const currentPeriodPayDate = formatPayDateShort(
+    getFridayDateStringForPeriodStart(currentPeriod.periodStart)
+  );
+
   return (
-    <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg bg-muted/60 border px-4 py-2.5 text-xs text-muted-foreground">
-      <span><strong className="text-foreground">Submission cutoff:</strong> {info.submissionDeadline}</span>
-      <span className="hidden sm:inline text-border">|</span>
-      <span><strong className="text-foreground">Friday-close exception:</strong> {info.fridayCloseDeadline}</span>
-      <span className="hidden sm:inline text-border">|</span>
-      <span><strong className="text-foreground">Correction cutoff:</strong> {info.revisionDeadline}</span>
-      <span className="hidden sm:inline text-border">|</span>
-      <span><strong className="text-foreground">Pay run:</strong> {info.payDate}</span>
+    <div className="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-3">
+      {/* This Week's Payday */}
+      <div className="rounded-xl border border-green-200 dark:border-green-800 bg-green-50/60 dark:bg-green-950/20 p-4">
+        <div className="flex items-center gap-2 mb-2">
+          <Banknote className="w-4 h-4 text-green-600" />
+          <span className="text-xs font-semibold uppercase tracking-wide text-green-700 dark:text-green-400">
+            This Week's Payday
+          </span>
+        </div>
+        <p className="text-lg font-bold text-green-900 dark:text-green-200">
+          {payday.payDateDisplay}
+        </p>
+        <p className="text-xs text-green-700 dark:text-green-400 mt-0.5">
+          Pay Run: {payday.periodDisplay}
+        </p>
+      </div>
+
+      {/* Current Submission Period */}
+      <div className="rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50/60 dark:bg-blue-950/20 p-4">
+        <div className="flex items-center gap-2 mb-2">
+          <CalendarRange className="w-4 h-4 text-blue-600" />
+          <span className="text-xs font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-400">
+            Current Period
+          </span>
+        </div>
+        <p className="text-lg font-bold text-blue-900 dark:text-blue-200">
+          {formatPayRunRange(currentPeriod.periodStart, currentPeriod.periodEnd)}
+        </p>
+        <p className="text-xs text-blue-700 dark:text-blue-400 mt-0.5">
+          Pay Date: {currentPeriodPayDate}
+        </p>
+      </div>
+
+      {/* Deadlines row */}
+      <div className="lg:col-span-2 rounded-xl border bg-muted/40 px-4 py-3">
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs">
+          <div className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-amber-500" />
+            <span className="text-muted-foreground">Submission cutoff:</span>
+            <span className="font-medium text-foreground">{deadlines.submissionDeadline}</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-blue-500" />
+            <span className="text-muted-foreground">Friday build grace:</span>
+            <span className="font-medium text-foreground">{deadlines.fridayBuildGrace}</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-orange-500" />
+            <span className="text-muted-foreground">Correction cutoff:</span>
+            <span className="font-medium text-foreground">{deadlines.revisionDeadline}</span>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -344,11 +398,11 @@ export default function CommissionManager() {
             <Settings className="w-6 h-6 text-primary" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Commission Manager</h1>
+            <h1 className="text-2xl font-extrabold text-foreground">Commission Manager</h1>
             <p className="text-muted-foreground text-sm">Review and process all rep commissions</p>
           </div>
         </div>
-        <DeadlineBanner />
+        <PayRunInfoBanner />
       </header>
 
       {/* Summary Cards */}

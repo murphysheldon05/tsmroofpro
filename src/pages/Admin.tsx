@@ -506,7 +506,7 @@ export default function Admin() {
               <Settings className="w-6 h-6 text-primary" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-foreground">Admin Panel</h1>
+              <h1 className="text-2xl font-extrabold text-foreground">Admin Panel</h1>
               <p className="text-muted-foreground text-sm">
                 Centralized system configuration — all editing authority lives here
               </p>

@@ -10,15 +10,14 @@ const coreValues = [
 export function CompactCoreIdentity() {
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-      {/* Core Focus - left 1/3 */}
-      <div className="bg-card border border-border/50 rounded-2xl p-4 flex flex-col">
+      <div className="bg-gradient-to-br from-primary/5 to-primary/10 border border-primary/15 rounded-2xl p-4 flex flex-col">
         <div className="flex items-center gap-2 mb-2">
           <Crown className="w-4 h-4 text-primary flex-shrink-0" />
           <span className="text-[11px] font-semibold text-primary uppercase tracking-wider">
             Core Focus
           </span>
         </div>
-        <h3 className="text-base font-bold text-foreground leading-tight mb-1">
+        <h3 className="text-base font-extrabold text-foreground leading-tight mb-1">
           The Authority in Roofing
         </h3>
         <p className="text-xs text-muted-foreground leading-relaxed">
@@ -26,8 +25,7 @@ export function CompactCoreIdentity() {
         </p>
       </div>
 
-      {/* Core Values - right 2/3 */}
-      <div className="md:col-span-2 bg-card border border-border/50 rounded-2xl p-4 flex flex-col">
+      <div className="md:col-span-2 bg-card border border-border rounded-2xl p-4 flex flex-col">
         <div className="flex items-center gap-2 mb-3">
           <Heart className="w-4 h-4 text-primary flex-shrink-0" />
           <span className="text-[11px] font-semibold text-primary uppercase tracking-wider">
@@ -38,15 +36,7 @@ export function CompactCoreIdentity() {
           {coreValues.map((value) => (
             <span
               key={value}
-              className="inline-flex items-center gap-1.5 rounded-lg text-xs font-semibold"
-              style={{
-                background: "rgba(22,163,74,.06)",
-                border: "1px solid rgba(22,163,74,.12)",
-                color: "#16a34a",
-                padding: "6px 14px",
-                borderRadius: "8px",
-                fontSize: "12px",
-              }}
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-primary/6 border border-primary/12 text-primary"
             >
               <CheckCircle className="w-3.5 h-3.5 flex-shrink-0" />
               {value}

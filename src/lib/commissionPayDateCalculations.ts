@@ -156,7 +156,7 @@ const fmtWeekday = (d: Date) =>
 
 export function getCurrentDeadlineInfo(): {
   submissionDeadline: string;
-  fridayCloseDeadline: string;
+  fridayBuildGrace: string;
   revisionDeadline: string;
   payDate: string;
 } {
@@ -173,9 +173,38 @@ export function getCurrentDeadlineInfo(): {
 
   return {
     submissionDeadline: fmtWeekday(friDt) + " at 11:59 PM MST",
-    fridayCloseDeadline: fmtWeekday(monDt) + " at 12:00 PM MST",
+    fridayBuildGrace: fmtWeekday(monDt) + " at 12:00 PM MST",
     revisionDeadline: fmtWeekday(wedDt) + " at 12:00 PM MST",
     payDate: formatPayDateShort(ymdToDateString(payFri.year, payFri.month, payFri.day)),
+  };
+}
+
+/** Info about the pay run being paid out this week (previous period). */
+export interface CurrentPaydayInfo {
+  payDate: string;
+  payDateDisplay: string;
+  periodStart: string;
+  periodEnd: string;
+  periodDisplay: string;
+}
+
+export function getCurrentPaydayInfo(now: Date = new Date()): CurrentPaydayInfo {
+  const p = getPhoenixParts(now);
+  const currentSat = getMostRecentSaturdayYMD(p.year, p.month, p.day);
+  const prevSat = addCalendarDaysYMD(currentSat.year, currentSat.month, currentSat.day, -7);
+  const prevFri = addCalendarDaysYMD(prevSat.year, prevSat.month, prevSat.day, 6);
+  const payFri = addCalendarDaysYMD(prevSat.year, prevSat.month, prevSat.day, 13);
+
+  const payDateYmd = ymdToDateString(payFri.year, payFri.month, payFri.day);
+  const periodStartYmd = ymdToDateString(prevSat.year, prevSat.month, prevSat.day);
+  const periodEndYmd = ymdToDateString(prevFri.year, prevFri.month, prevFri.day);
+
+  return {
+    payDate: payDateYmd,
+    payDateDisplay: formatPayDateShort(payDateYmd),
+    periodStart: periodStartYmd,
+    periodEnd: periodEndYmd,
+    periodDisplay: formatPayRunRange(periodStartYmd, periodEndYmd),
   };
 }
 
@@ -187,10 +216,10 @@ export interface PayRunPeriod {
   periodStart: string;
   periodEnd: string;
   submissionDeadline: Date;
-  fridayCloseDeadline: Date;
+  fridayBuildGraceDeadline: Date;
   revisionDeadline: Date;
   submissionDeadlineDisplay: string;
-  fridayCloseDeadlineDisplay: string;
+  fridayBuildGraceDisplay: string;
   revisionDeadlineDisplay: string;
 }
 
@@ -200,17 +229,17 @@ function buildPayRunPeriodFromSaturday(sat: { year: number; month: number; day: 
   const wed = addCalendarDaysYMD(sat.year, sat.month, sat.day, 11);
 
   const submissionDeadline = phoenixWallToUtc(fri.year, fri.month, fri.day, 23, 59, 0);
-  const fridayCloseDeadline = phoenixWallToUtc(mon.year, mon.month, mon.day, 12, 0, 0);
+  const fridayBuildGraceDeadline = phoenixWallToUtc(mon.year, mon.month, mon.day, 12, 0, 0);
   const revisionDeadline = phoenixWallToUtc(wed.year, wed.month, wed.day, 12, 0, 0);
 
   return {
     periodStart: ymdToDateString(sat.year, sat.month, sat.day),
     periodEnd: ymdToDateString(fri.year, fri.month, fri.day),
     submissionDeadline,
-    fridayCloseDeadline,
+    fridayBuildGraceDeadline,
     revisionDeadline,
     submissionDeadlineDisplay: fmtWeekday(submissionDeadline) + " at 11:59 PM MST",
-    fridayCloseDeadlineDisplay: fmtWeekday(fridayCloseDeadline) + " at 12:00 PM MST",
+    fridayBuildGraceDisplay: fmtWeekday(fridayBuildGraceDeadline) + " at 12:00 PM MST",
     revisionDeadlineDisplay: fmtWeekday(revisionDeadline) + " at 12:00 PM MST",
   };
 }

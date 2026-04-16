@@ -75,6 +75,7 @@ interface NavItem {
   sectionKey: string;
   children?: NavChild[];
   tutorialTarget?: string;
+  activeColor?: string;
 }
 
 // Base navigation items (commission item is added dynamically based on role)
@@ -84,11 +85,13 @@ const baseNavigationItems: NavItem[] = [
     href: "/command-center",
     icon: LayoutGrid,
     sectionKey: "command-center",
+    activeColor: "text-emerald-600 dark:text-emerald-400",
   },
   {
     title: "Production",
     icon: Hammer,
     sectionKey: "production",
+    activeColor: "text-orange-600 dark:text-orange-400",
     children: [
       { title: "Build Schedule", href: "/build-schedule", icon: Calendar, sectionKey: "production-calendar/build" },
       { title: "Delivery Schedule", href: "/delivery-schedule", icon: Truck, sectionKey: "production-calendar/delivery" },
@@ -99,6 +102,7 @@ const baseNavigationItems: NavItem[] = [
     title: "Subs & Vendors",
     icon: Truck,
     sectionKey: "vendors",
+    activeColor: "text-purple-600 dark:text-purple-400",
     children: [
       { title: "Sub-Contractors", href: "/vendors/subcontractors", icon: Wrench, sectionKey: "vendors/subcontractors" },
       { title: "Contact List", href: "/vendors/contact-list", icon: Users, sectionKey: "vendors/contact-list" },
@@ -141,6 +145,7 @@ function SortableNavItem({
   handleNavClick,
   badgeCount,
   badgeMoveToChildTitle,
+  activeColor,
 }: {
   item: NavItem;
   isActive: (href: string) => boolean;
@@ -150,6 +155,7 @@ function SortableNavItem({
   handleNavClick: (href: string) => void;
   badgeCount?: number;
   badgeMoveToChildTitle?: string;
+  activeColor?: string;
 }) {
   const {
     attributes,
@@ -192,7 +198,7 @@ function SortableNavItem({
                 )}
               >
                 <span className="flex items-center gap-3">
-                  <item.icon className={cn("w-4 h-4", isParentActive(item.children) && "nav-icon-glow")} />
+                  <item.icon className={cn("w-4 h-4", isParentActive(item.children) && "nav-icon-glow", isParentActive(item.children) && activeColor)} />
                   {item.title}
                   {badgeCount != null && badgeCount > 0 && !(openSections.includes(item.title) && badgeMoveToChildTitle) && (
                     <NavBadge count={badgeCount} />
@@ -222,7 +228,7 @@ function SortableNavItem({
                       : "text-sidebar-foreground/70 hover:bg-primary/5 hover:text-primary/80"
                   )}
                 >
-                  {child.icon && <child.icon className={cn("w-4 h-4", isActive(child.href) && "nav-icon-glow")} />}
+                  {child.icon && <child.icon className={cn("w-4 h-4", isActive(child.href) && "nav-icon-glow", isActive(child.href) && activeColor)} />}
                   {child.title}
                   {showBadgeOnChild && <span className="ml-auto"><NavBadge count={badgeCount!} /></span>}
                 </button>
@@ -250,7 +256,7 @@ function SortableNavItem({
                 : "text-sidebar-foreground hover:bg-primary/5 hover:text-primary/80"
             )}
           >
-            <item.icon className={cn("w-5 h-5 flex-shrink-0", isActive(item.href!) && "nav-icon-glow")} />
+            <item.icon className={cn("w-5 h-5 flex-shrink-0", isActive(item.href!) && "nav-icon-glow", isActive(item.href!) && activeColor)} />
             <span className="truncate flex-1">{item.title}</span>
             {badgeCount != null && badgeCount > 0 && <NavBadge count={badgeCount} />}
           </button>
@@ -396,6 +402,7 @@ export function AppSidebar() {
           icon: DollarSign,
           sectionKey: "commissions",
           tutorialTarget: "sidebar-commissions",
+          activeColor: "text-amber-600 dark:text-amber-400",
         }
       : {
           title: "Commissions",
@@ -403,6 +410,7 @@ export function AppSidebar() {
           icon: DollarSign,
           sectionKey: "commissions",
           tutorialTarget: "sidebar-commissions",
+          activeColor: "text-amber-600 dark:text-amber-400",
         };
 
     const kpiScorecardsItem: NavItem = {
@@ -410,6 +418,7 @@ export function AppSidebar() {
       href: "/kpi-scorecards",
       icon: BarChart3,
       sectionKey: "kpi-scorecards",
+      activeColor: "text-blue-600 dark:text-blue-400",
     };
 
     const chamberItem: NavItem = {
@@ -417,6 +426,7 @@ export function AppSidebar() {
       href: "/chamber-of-commerce",
       icon: Building2,
       sectionKey: "chamber-of-commerce",
+      activeColor: "text-rose-600 dark:text-rose-400",
     };
 
     const allItems: NavItem[] = [
@@ -506,6 +516,7 @@ export function AppSidebar() {
                   handleNavClick={handleNavClick}
                   badgeCount={badgeCount}
                   badgeMoveToChildTitle={badgeMoveToChildTitle}
+                  activeColor={item.activeColor}
                 />
               );
             })}

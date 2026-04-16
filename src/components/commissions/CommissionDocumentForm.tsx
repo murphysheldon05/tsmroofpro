@@ -13,6 +13,7 @@ import {
   Lock, Save, Send, ArrowLeft, AlertTriangle, Printer, Plus, Trash2, 
   DollarSign, Calculator, FileText, ChevronDown, Info, Sparkles, CheckCircle2, Loader2
 } from "lucide-react";
+import confetti from "canvas-confetti";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/contexts/AuthContext";
@@ -515,6 +516,9 @@ export function CommissionDocumentForm({ document: existingDoc, readOnly = false
     }
 
     toast.success(submit ? 'Commission Submitted' : 'Draft Saved');
+    if (submit) {
+      confetti({ particleCount: 60, spread: 50, origin: { y: 0.7 }, colors: ["#00D26A", "#7BC67E", "#FFB020", "#FFD700"] });
+    }
     navigate(-1);
   };
 
@@ -923,10 +927,10 @@ export function CommissionDocumentForm({ document: existingDoc, readOnly = false
           />
           <div className="grid gap-0.5 leading-none">
             <Label htmlFor="is_friday_close" className="text-sm font-medium cursor-pointer">
-              This job closed on Friday
+              Build completed on a Friday
             </Label>
             <p className="text-xs text-muted-foreground">
-              Extends the submission deadline to Monday 12:00 PM MST for this commission.
+              Grants a submission grace period until the upcoming Monday at 12:00 PM MST.
             </p>
           </div>
         </div>

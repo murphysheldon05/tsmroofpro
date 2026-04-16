@@ -25,20 +25,21 @@ export default function CommandCenter() {
   const displayName = formatDisplayName(fullName, user?.email);
   const firstName = displayName !== "Unknown" ? displayName.trim().split(/\s+/)[0] : "there";
 
+  const stagger = (i: number) => ({ animationDelay: `${i * 80}ms` });
+
   return (
     <div className="max-w-7xl mx-auto space-y-5 px-4 sm:px-0">
-        {/* 1. Header greeting */}
-        <header className="pt-4 lg:pt-0" data-tutorial="command-center-header">
+        <header className="pt-4 lg:pt-0 animate-stagger-up" style={stagger(0)} data-tutorial="command-center-header">
           <div className="flex items-center gap-3 min-w-0">
             <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
               <LayoutGrid className="w-5 h-5 text-primary" />
             </div>
             <div className="min-w-0 flex-1">
-              <h1 className="text-xl sm:text-2xl font-bold text-foreground truncate">
-                Command Center
+              <h1 className="text-xl sm:text-2xl font-extrabold text-foreground truncate">
+                Good {getTimeOfDay()}, {firstName}
               </h1>
               <p className="text-sm text-muted-foreground truncate">
-                Welcome Back, {firstName}! Here's your daily overview.
+                Here's your daily overview.
               </p>
             </div>
             <div data-tutorial="cc-settings-gear">
@@ -53,37 +54,37 @@ export default function CommandCenter() {
           </div>
         </header>
 
-        {/* 2. Core Focus + Core Values */}
-        <CompactCoreIdentity />
+        <div className="animate-stagger-up" style={stagger(1)}>
+          <CompactCoreIdentity />
+        </div>
 
-        {/* 3. Sales Leaderboard — only when admin has enabled it (default OFF during AccuLynx debug) */}
         {showSalesLeaderboard && (
-          <div data-tutorial="sales-leaderboard">
+          <div className="animate-stagger-up" style={stagger(2)} data-tutorial="sales-leaderboard">
             <SalesLeaderboardWidget />
           </div>
         )}
 
-        {/* 5. Quick Links row */}
-        <div data-tutorial="quick-links">
+        <div className="animate-stagger-up" style={stagger(3)} data-tutorial="quick-links">
           <QuickActionLinks />
         </div>
 
-        {/* 6. Stat boxes (clickable) */}
-        <div data-tutorial="quick-stats">
+        <div className="animate-stagger-up" style={stagger(4)} data-tutorial="quick-stats">
           <QuickStatsWidget />
         </div>
 
-        {/* Needs Your Attention - Manager/Admin only */}
-        <NeedsAttentionWidget />
+        <div className="animate-stagger-up" style={stagger(5)}>
+          <NeedsAttentionWidget />
+        </div>
 
-        {/* Team Feed / Message Board */}
-        <MessageBoard />
+        <div className="animate-stagger-up" style={stagger(6)}>
+          <MessageBoard />
+        </div>
 
-        {/* 7. TSM Roofing LLC contact bar */}
-        <CompanyInfoWidget />
+        <div className="animate-stagger-up" style={stagger(7)}>
+          <CompanyInfoWidget />
+        </div>
 
-        {/* 8. Weather widget */}
-        <div data-tutorial="weather-widget">
+        <div className="animate-stagger-up" style={stagger(8)} data-tutorial="weather-widget">
           <WeatherWidget />
         </div>
 

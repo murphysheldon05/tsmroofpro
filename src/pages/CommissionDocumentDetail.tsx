@@ -31,6 +31,7 @@ import { formatPayDateShort, getEstimatedPayDate, getCurrentDeadlineInfo, format
 import { formatDisplayName } from "@/lib/displayName";
 import { CommissionStatusStepper } from "@/components/commissions/CommissionStatusStepper";
 import { supabase } from "@/integrations/supabase/client";
+import confetti from "canvas-confetti";
 
 export default function CommissionDocumentDetail() {
   const { id } = useParams<{ id: string }>();
@@ -135,6 +136,14 @@ export default function CommissionDocumentDetail() {
         status: approvalAction as any,
         approval_comment: approvalComment,
       });
+      if (approvalAction === 'approved') {
+        confetti({
+          particleCount: 80,
+          spread: 60,
+          origin: { y: 0.7 },
+          colors: ["#00D26A", "#7BC67E", "#FFB020", "#FFD700"],
+        });
+      }
     }
     setShowApprovalDialog(false);
     setApprovalComment("");
@@ -472,7 +481,7 @@ export default function CommissionDocumentDetail() {
                   <LateBadge isLateSubmission={document.is_late_submission} isLateRevision={document.is_late_revision} />
                   {(document as any).is_friday_close && (
                     <Badge variant="outline" className="bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400 border-blue-300 dark:border-blue-700 text-[10px]">
-                      Friday Close
+                      Friday Build
                     </Badge>
                   )}
                 </div>

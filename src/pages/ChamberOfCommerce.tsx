@@ -14,7 +14,7 @@ export default function ChamberOfCommerce() {
           <Building2 className="w-6 h-6 text-primary" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Chamber of Commerce</h1>
+          <h1 className="text-2xl font-extrabold text-foreground">Chamber of Commerce</h1>
           <p className="text-muted-foreground text-sm">
             {isAdminOrManager ? "Manage chambers, events, and rep assignments" : "Your chamber assignments and events"}
           </p>
