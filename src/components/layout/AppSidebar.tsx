@@ -462,7 +462,7 @@ export function AppSidebar() {
         return item;
       })
       .filter(Boolean) as NavItem[];
-  }, [userPermissions, role, isAdmin]);
+  }, [userPermissions, role, isAdmin, profile?.full_name, user?.email]);
 
   // Sort navigation by user's preferred order
   const sortedNavigation = useMemo(() => {

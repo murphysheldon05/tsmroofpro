@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  WEEKLY_KPI_CARDS,
   getAccessibleWeeklyKpiCards,
   isWeeklyKpiManagerRole,
 } from "@/lib/weeklyKpiAccess";
