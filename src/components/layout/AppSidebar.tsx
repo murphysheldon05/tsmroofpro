@@ -395,6 +395,9 @@ export function AppSidebar() {
 
   // Build navigation with role-based commission item
   const filteredNavigation = useMemo(() => {
+    const canAccessKpiScorecards =
+      role === "admin" || role === "manager" || role === "sales_manager";
+
     const commissionItem: NavItem = isAdmin
       ? {
           title: "Commission Manager",
@@ -432,13 +435,17 @@ export function AppSidebar() {
     const allItems: NavItem[] = [
       baseNavigationItems[0], // Command Center
       commissionItem,
-      kpiScorecardsItem,
+      ...(canAccessKpiScorecards ? [kpiScorecardsItem] : []),
       chamberItem,
       ...baseNavigationItems.slice(1), // Production, Subs & Vendors
     ];
 
     return allItems
-      .filter((item) => isSectionVisible(item.sectionKey, userPermissions, role))
+      .filter((item) =>
+        item.sectionKey === "kpi-scorecards"
+          ? canAccessKpiScorecards
+          : isSectionVisible(item.sectionKey, userPermissions, role)
+      )
       .map((item) => {
         if (item.children) {
           const filteredChildren = item.children.filter((child) =>

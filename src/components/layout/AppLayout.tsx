@@ -121,6 +121,55 @@ function getBreadcrumbs(pathname: string): BreadcrumbItem[] {
     ];
   }
 
+  if (pathname === "/kpi-scorecards/sales-rep") {
+    return [
+      { label: "KPI Scorecards", href: "/kpi-scorecards" },
+      { label: "Sales Reps", href: pathname },
+    ];
+  }
+
+  if (pathname === "/kpi-scorecards/sales-manager") {
+    return [
+      { label: "KPI Scorecards", href: "/kpi-scorecards" },
+      { label: "Sales Managers", href: pathname },
+    ];
+  }
+
+  if (pathname === "/kpi-scorecards/office-admin") {
+    return [
+      { label: "KPI Scorecards", href: "/kpi-scorecards" },
+      { label: "Office Admin", href: pathname },
+    ];
+  }
+
+  if (pathname === "/kpi-scorecards/operations") {
+    return [
+      { label: "KPI Scorecards", href: "/kpi-scorecards" },
+      { label: "Operations & Compliance", href: pathname },
+    ];
+  }
+
+  if (pathname === "/kpi-scorecards/accounting") {
+    return [
+      { label: "KPI Scorecards", href: "/kpi-scorecards" },
+      { label: "Accounting", href: pathname },
+    ];
+  }
+
+  if (pathname === "/kpi-scorecards/production") {
+    return [
+      { label: "KPI Scorecards", href: "/kpi-scorecards" },
+      { label: "Production", href: pathname },
+    ];
+  }
+
+  if (pathname === "/kpi-scorecards/supplement") {
+    return [
+      { label: "KPI Scorecards", href: "/kpi-scorecards" },
+      { label: "Supplement", href: pathname },
+    ];
+  }
+
   if (pathname.startsWith("/kpi-scorecards/")) {
     return [
       { label: "KPI Scorecards", href: "/kpi-scorecards" },
