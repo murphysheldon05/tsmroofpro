@@ -22,7 +22,7 @@ export default function CommissionNew() {
         <div className="flex items-center gap-3">
           <Users className="h-8 w-8 text-primary" />
           <div>
-            <h1 className="text-2xl font-bold">
+            <h1 className="text-2xl font-extrabold">
               Subcontractor / Referral Commission
             </h1>
             <p className="text-muted-foreground">

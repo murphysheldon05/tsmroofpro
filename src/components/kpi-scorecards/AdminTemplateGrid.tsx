@@ -7,7 +7,8 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Users, Loader2 } from "lucide-react";
+import { Plus, Pencil, Users, Loader2, ClipboardList } from "lucide-react";
+import { EmptyState } from "@/components/ui/empty-state";
 import type { ScorecardTemplate, BonusTier } from "@/lib/kpiTypes";
 
 interface AdminTemplateGridProps {
@@ -37,7 +38,7 @@ export function AdminTemplateGrid({
   return (
     <section className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Scorecard Templates</h2>
+        <h2 className="text-lg font-bold text-foreground">Scorecard Templates</h2>
         <Button onClick={() => navigate("/kpi-scorecards/templates/new")}>
           <Plus className="w-4 h-4 mr-2" />
           Create Template
@@ -46,12 +47,24 @@ export function AdminTemplateGrid({
 
       {templates.length === 0 ? (
         <Card className="border-dashed">
-          <CardContent className="py-12 text-center text-muted-foreground">
-            No templates yet. Create your first scorecard template.
+          <CardContent className="p-0">
+            <EmptyState
+              icon={ClipboardList}
+              title="No templates yet"
+              description="Create your first scorecard template to start tracking team performance."
+              tone="primary"
+              size="lg"
+              action={
+                <Button onClick={() => navigate("/kpi-scorecards/templates/new")}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create Template
+                </Button>
+              }
+            />
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 row-stagger">
           {templates.map((t) => {
             const bonusTiers = (t.bonus_tiers as unknown) as BonusTier[] | null;
             return (

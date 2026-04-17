@@ -127,7 +127,7 @@ export default function KpiScorecardTemplateEditor() {
           <ArrowLeft className="w-4 h-4" />
           Back to KPI Scorecards
         </Link>
-        <h1 className="text-xl sm:text-2xl font-bold">
+        <h1 className="text-xl sm:text-2xl font-extrabold">
           {isNew ? "Create Scorecard Template" : "Edit Scorecard Template"}
         </h1>
       </header>

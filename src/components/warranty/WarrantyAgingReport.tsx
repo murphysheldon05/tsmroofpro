@@ -9,10 +9,15 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
   Cell,
 } from "recharts";
+import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
+import { EmptyState } from "@/components/ui/empty-state";
+
+const agingChartConfig: ChartConfig = {
+  count: { label: "Open warranties" },
+  avgDays: { label: "Avg. days" },
+};
 
 export function WarrantyAgingReport() {
   const { data: warranties = [], isLoading } = useWarranties();
@@ -199,21 +204,19 @@ export function WarrantyAgingReport() {
             <CardTitle className="text-base">Open Warranties by Age</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={agingMetrics.agingBuckets} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis type="number" />
-                  <YAxis dataKey="label" type="category" width={80} />
-                  <Tooltip />
-                  <Bar dataKey="count" name="Count">
-                    {agingMetrics.agingBuckets.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+            <ChartContainer config={agingChartConfig} className="h-64 w-full aspect-auto">
+              <BarChart data={agingMetrics.agingBuckets} layout="vertical">
+                <CartesianGrid horizontal={false} strokeDasharray="3 3" className="stroke-border/40" />
+                <XAxis type="number" tickLine={false} axisLine={false} />
+                <YAxis dataKey="label" type="category" width={80} tickLine={false} axisLine={false} />
+                <ChartTooltip cursor={{ fill: "hsl(var(--muted) / 0.3)" }} content={<ChartTooltipContent />} />
+                <Bar dataKey="count" name="count" radius={[0, 6, 6, 0]}>
+                  {agingMetrics.agingBuckets.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ChartContainer>
           </CardContent>
         </Card>
 
@@ -223,26 +226,22 @@ export function WarrantyAgingReport() {
             <CardTitle className="text-base">Avg. Resolution Time by Priority</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={agingMetrics.byPriority}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <Tooltip 
-                    formatter={(value: number, name: string) => [
-                      `${value} days`,
-                      name === "avgDays" ? "Avg. Days" : name
-                    ]}
-                  />
-                  <Bar dataKey="avgDays" name="Avg. Days">
-                    {agingMetrics.byPriority.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+            <ChartContainer config={agingChartConfig} className="h-64 w-full aspect-auto">
+              <BarChart data={agingMetrics.byPriority}>
+                <CartesianGrid vertical={false} strokeDasharray="3 3" className="stroke-border/40" />
+                <XAxis dataKey="name" tickLine={false} axisLine={false} />
+                <YAxis tickLine={false} axisLine={false} />
+                <ChartTooltip
+                  cursor={{ fill: "hsl(var(--muted) / 0.3)" }}
+                  content={<ChartTooltipContent formatter={(value) => `${value} days`} />}
+                />
+                <Bar dataKey="avgDays" name="avgDays" radius={[6, 6, 0, 0]}>
+                  {agingMetrics.byPriority.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ChartContainer>
           </CardContent>
         </Card>
 
@@ -253,9 +252,13 @@ export function WarrantyAgingReport() {
           </CardHeader>
           <CardContent>
             {agingMetrics.byRoofType.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-8 text-center">
-                No completed warranties data available
-              </p>
+              <EmptyState
+                icon={Home}
+                title="No completed warranties"
+                description="Once warranties are closed out, average resolution times by roof type will appear here."
+                tone="slate"
+                size="sm"
+              />
             ) : (
               <div className="space-y-3">
                 {agingMetrics.byRoofType.map((roof) => (
@@ -293,9 +296,13 @@ export function WarrantyAgingReport() {
           </CardHeader>
           <CardContent>
             {agingMetrics.byStatus.filter((s) => s.count > 0).length === 0 ? (
-              <p className="text-sm text-muted-foreground py-8 text-center">
-                No open warranties
-              </p>
+              <EmptyState
+                icon={Clock}
+                title="No open warranties"
+                description="All caught up — nothing sitting in an active status right now."
+                tone="emerald"
+                size="sm"
+              />
             ) : (
               <div className="space-y-3">
                 {agingMetrics.byStatus

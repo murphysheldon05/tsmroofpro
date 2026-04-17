@@ -435,7 +435,7 @@ export function RepairCommissionForm({ document: doc, readOnly = false }: Repair
             Save Draft
           </Button>
           <Button
-            className="bg-green-600 hover:bg-green-700"
+            variant="neon"
             onClick={() => handleSave(true)}
             disabled={createMutation.isPending || updateMutation.isPending || statusMutation.isPending}
           >

@@ -14,7 +14,7 @@ const Profile = () => {
   return (
     <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">My Profile</h1>
+          <h1 className="text-2xl font-extrabold tracking-tight">My Profile</h1>
           <p className="text-muted-foreground">
             Manage your account settings and preferences
           </p>

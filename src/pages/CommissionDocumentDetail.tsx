@@ -334,7 +334,7 @@ export default function CommissionDocumentDetail() {
           )}
           {canResubmit && (
             <Button
-              className="bg-blue-600 hover:bg-blue-700"
+              variant="neon"
               onClick={handleResubmit}
               disabled={updateStatusMutation.isPending}
             >
@@ -345,7 +345,7 @@ export default function CommissionDocumentDetail() {
           {canApproveAsManager && (
             <>
               <Button
-                className="bg-blue-600 hover:bg-blue-700"
+                className="bg-[hsl(var(--info))] hover:bg-[hsl(var(--info))]/90 text-[hsl(var(--info-foreground))]"
                 onClick={() => { setApprovalAction('manager_approved'); setShowApprovalDialog(true); }}
               >
                 <Check className="h-4 w-4 mr-2" />
@@ -375,7 +375,7 @@ export default function CommissionDocumentDetail() {
           {canApproveAsAccounting && (
             <>
               <Button
-                className="bg-green-600 hover:bg-green-700"
+                variant="neon"
                 onClick={() => { setApprovalAction('accounting_approved'); setShowApprovalDialog(true); }}
               >
                 <Check className="h-4 w-4 mr-2" />
@@ -621,8 +621,7 @@ export default function CommissionDocumentDetail() {
               Cancel
             </Button>
             <Button
-              variant={approvalAction === 'rejected' ? 'destructive' : 'default'}
-              className={approvalAction !== 'rejected' ? 'bg-green-600 hover:bg-green-700' : ''}
+              variant={approvalAction === 'rejected' ? 'destructive' : 'neon'}
               onClick={handleApprovalAction}
               disabled={updateStatusMutation.isPending || (requiresNotes && !approvalComment.trim())}
             >

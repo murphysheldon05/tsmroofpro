@@ -14,6 +14,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useMyManager } from "@/hooks/useTeamAssignments";
 import { formatDisplayName } from "@/lib/displayName";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
 
 interface UserProfile {
   id: string;
@@ -204,29 +205,35 @@ export default function UserDirectory() {
             {[1, 2, 3, 4, 5, 6].map(i => <Skeleton key={i} className="h-32 rounded-xl" />)}
           </div>
         ) : filteredUsers?.length === 0 ? (
-          <div className="text-center py-16">
-            <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-foreground mb-2">No colleagues found</h3>
-            <p className="text-muted-foreground">Try adjusting your search or filter criteria.</p>
+          <div className="py-8">
+            <EmptyState
+              icon={Users}
+              title="No colleagues found"
+              description="Try adjusting your search or filter criteria."
+              tone="slate"
+              size="lg"
+            />
           </div>
         ) : (
           <div className="space-y-6">
             {sortedDepartments.map((deptName) => (
               <div key={deptName} className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <Building2 className="w-4 h-4 text-muted-foreground" />
-                  <h2 className="text-lg font-semibold text-foreground">{deptName}</h2>
-                  <Badge variant="outline" className="ml-2">{groupedUsers?.[deptName]?.length || 0}</Badge>
+                <div className="flex items-center gap-2 pb-1 border-b border-border/60">
+                  <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <Building2 className="w-4 h-4 text-primary" />
+                  </div>
+                  <h2 className="text-base font-bold text-foreground">{deptName}</h2>
+                  <Badge variant="outline" className="ml-1 font-semibold">{groupedUsers?.[deptName]?.length || 0}</Badge>
                 </div>
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 row-stagger">
                   {groupedUsers?.[deptName]?.map((userProfile) => (
                     <Card
                       key={userProfile.id}
-                      className={`overflow-hidden transition-all hover:shadow-lg ${userProfile.id === user?.id ? "ring-2 ring-primary/50" : ""}`}
+                      className={`card-lift overflow-hidden ${userProfile.id === user?.id ? "ring-2 ring-primary/50 bg-gradient-to-br from-primary/5 to-transparent" : ""}`}
                     >
                       <CardContent className="p-4">
                         <div className="flex items-start gap-3">
-                          <div className="w-11 h-11 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                          <div className="w-11 h-11 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center flex-shrink-0 ring-1 ring-primary/20">
                             {userProfile.avatar_url ? (
                               <img src={userProfile.avatar_url} alt={formatDisplayName(userProfile.full_name, userProfile.email) || "User"} className="w-11 h-11 rounded-full object-cover" />
                             ) : (
@@ -239,20 +246,20 @@ export default function UserDirectory() {
                               <Badge variant="outline" className={`text-xs ${ROLE_COLORS[userProfile.role] || ""}`}>
                                 {ROLE_LABELS[userProfile.role] || userProfile.role}
                               </Badge>
-                              {userProfile.id === user?.id && <Badge variant="outline" className="text-xs">You</Badge>}
+                              {userProfile.id === user?.id && <Badge variant="outline" className="text-xs border-primary/40 text-primary">You</Badge>}
                             </div>
                           </div>
                         </div>
 
-                        <div className="mt-3 space-y-1.5 border-t border-border/30 pt-3">
+                        <div className="mt-3 space-y-1.5 border-t border-border/40 pt-3">
                           {userProfile.email && (
-                            <a href={`mailto:${userProfile.email}`} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
+                            <a href={`mailto:${userProfile.email}`} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors">
                               <Mail className="w-4 h-4 flex-shrink-0" />
                               <span className="truncate">{userProfile.email}</span>
                             </a>
                           )}
                           {userProfile.phone_number && (
-                            <a href={`tel:${userProfile.phone_number}`} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
+                            <a href={`tel:${userProfile.phone_number}`} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors">
                               <Phone className="w-4 h-4 flex-shrink-0" />
                               <span>{userProfile.phone_number}</span>
                             </a>

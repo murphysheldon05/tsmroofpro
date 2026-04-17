@@ -806,7 +806,7 @@ export function MasterSOPsTab() {
               </div>
             </div>
             <div className="flex items-start gap-3 p-3 bg-background rounded-lg border">
-              <Badge className="bg-blue-600 text-white shrink-0">Primary</Badge>
+              <Badge className="bg-[hsl(var(--info))] text-[hsl(var(--info-foreground))] border-transparent shrink-0">Primary</Badge>
               <div>
                 <p className="font-medium">Ops Compliance Officer (Manny)</p>
                 <p className="text-sm text-muted-foreground">

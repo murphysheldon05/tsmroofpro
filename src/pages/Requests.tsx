@@ -45,6 +45,8 @@ import { useRolePermissions } from "@/hooks/useRolePermissions";
 import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { EmptyState } from "@/components/ui/empty-state";
 import { formatDistanceToNow, format } from "date-fns";
 import { useRequestTypes, type RequestType } from "@/hooks/useRequestTypes";
 import { formatDisplayName } from "@/lib/displayName";
@@ -738,9 +740,14 @@ function SubmitRequestForm({
 function RequestsList({ title, requests }: { title: string; requests: Request[] }) {
   if (!requests.length) {
     return (
-      <div className="glass-card rounded-xl p-6 text-center text-muted-foreground">
-        <Archive className="w-8 h-8 mx-auto mb-2 opacity-50" />
-        <p className="text-sm">No requests found.</p>
+      <div className="glass-card rounded-xl p-6">
+        <EmptyState
+          icon={Archive}
+          title="No requests yet"
+          description="Requests you submit will show up here."
+          tone="slate"
+          size="sm"
+        />
       </div>
     );
   }
@@ -748,14 +755,17 @@ function RequestsList({ title, requests }: { title: string; requests: Request[] 
   return (
     <div className="glass-card rounded-xl p-6 space-y-4">
       <h2 className="font-semibold text-foreground">{title}</h2>
-      <div className="space-y-3">
+      <div className="space-y-2 row-stagger">
         {requests.map((request) => (
-          <div key={request.id} className="flex items-center justify-between p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors">
+          <div
+            key={request.id}
+            className="group flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg border border-transparent bg-surface-2/50 hover:bg-accent/40 hover:border-border transition-all"
+          >
             <div className="flex items-center gap-3 min-w-0">
-              <Badge variant="outline" className="capitalize shrink-0">
+              <Badge variant="outline" className="capitalize shrink-0 text-xs">
                 {request.type.replace("_", " ")}
               </Badge>
-              <span className="text-sm text-foreground truncate">{request.title}</span>
+              <span className="text-sm font-medium text-foreground truncate">{request.title}</span>
             </div>
             <div className="flex items-center gap-2 shrink-0">
               <Badge variant="outline" className={statusColors[request.status]}>
@@ -825,8 +835,14 @@ function RequestsTable({
 }) {
   if (!requests.length) {
     return (
-      <div className="text-center py-8 text-muted-foreground">
-        No requests found.
+      <div className="glass-card rounded-xl p-6">
+        <EmptyState
+          icon={Archive}
+          title="No requests found"
+          description="Try adjusting your filters or search."
+          tone="slate"
+          size="md"
+        />
       </div>
     );
   }
@@ -834,12 +850,12 @@ function RequestsTable({
   return (
     <>
       {/* Mobile Cards */}
-      <div className="sm:hidden space-y-3">
+      <div className="sm:hidden space-y-3 row-stagger">
         {requests.map((request) => (
           <button
             key={request.id}
             onClick={() => onView(request)}
-            className="w-full text-left p-4 rounded-lg border border-border bg-card hover:bg-muted/30 transition-all space-y-2"
+            className="w-full text-left p-4 rounded-xl border border-border bg-card hover:bg-accent/40 hover:-translate-y-0.5 hover:shadow-md transition-all space-y-2"
           >
             <div className="flex items-center justify-between gap-2">
               <Badge variant="outline" className="capitalize text-xs">
@@ -849,7 +865,7 @@ function RequestsTable({
                 {statusLabels[request.status] || request.status}
               </Badge>
             </div>
-            <p className="text-sm font-medium text-foreground truncate">{request.title}</p>
+            <p className="text-sm font-semibold text-foreground truncate">{request.title}</p>
             {showSubmitter && (
               <p className="text-xs text-muted-foreground">
                 {formatDisplayName(request.profiles?.full_name, request.profiles?.email)}
@@ -864,48 +880,59 @@ function RequestsTable({
 
       {/* Desktop Table */}
       <div className="hidden sm:block glass-card rounded-xl overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-secondary/50">
-            <tr>
-              <th className="text-left p-3 text-sm font-medium text-muted-foreground">Type</th>
-              <th className="text-left p-3 text-sm font-medium text-muted-foreground">Title</th>
-              {showSubmitter && <th className="text-left p-3 text-sm font-medium text-muted-foreground">Submitted By</th>}
-              <th className="text-left p-3 text-sm font-medium text-muted-foreground">Status</th>
-              <th className="text-left p-3 text-sm font-medium text-muted-foreground">Date</th>
-              <th className="text-right p-3 text-sm font-medium text-muted-foreground">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border/50">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Type</TableHead>
+              <TableHead>Title</TableHead>
+              {showSubmitter && <TableHead>Submitted By</TableHead>}
+              <TableHead>Status</TableHead>
+              <TableHead>Date</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {requests.map((request) => (
-              <tr key={request.id} className="hover:bg-secondary/30">
-                <td className="p-3">
+              <TableRow
+                key={request.id}
+                className="cursor-pointer"
+                onClick={() => onView(request)}
+              >
+                <TableCell>
                   <Badge variant="outline" className="capitalize">
                     {request.type.replace("_", " ")}
                   </Badge>
-                </td>
-                <td className="p-3 text-sm text-foreground">{request.title}</td>
+                </TableCell>
+                <TableCell className="text-sm font-medium text-foreground">{request.title}</TableCell>
                 {showSubmitter && (
-                  <td className="p-3 text-sm text-muted-foreground">
+                  <TableCell className="text-sm text-muted-foreground">
                     {formatDisplayName(request.profiles?.full_name, request.profiles?.email)}
-                  </td>
+                  </TableCell>
                 )}
-                <td className="p-3">
+                <TableCell>
                   <Badge variant="outline" className={statusColors[request.status]}>
                     {statusLabels[request.status] || request.status}
                   </Badge>
-                </td>
-                <td className="p-3 text-sm text-muted-foreground">
+                </TableCell>
+                <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
                   {formatDistanceToNow(new Date(request.created_at), { addSuffix: true })}
-                </td>
-                <td className="p-3 text-right">
-                  <Button variant="ghost" size="sm" onClick={() => onView(request)}>
+                </TableCell>
+                <TableCell className="text-right">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onView(request);
+                    }}
+                  >
                     <Eye className="w-4 h-4" />
                   </Button>
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
     </>
   );

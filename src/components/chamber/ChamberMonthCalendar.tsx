@@ -290,7 +290,7 @@ function EventPill({
           {/* Rep: show confirm/decline */}
           {!isAdmin && myAssignment && myAssignment.status === "assigned" && (
             <div className="border-t pt-2 flex gap-2">
-              <Button size="sm" className="flex-1 gap-1 bg-green-600 hover:bg-green-700 h-7 text-xs" onClick={() => onConfirm?.(myAssignment.id)}>
+              <Button size="sm" variant="neon" className="flex-1 gap-1 h-7 text-xs" onClick={() => onConfirm?.(myAssignment.id)}>
                 <Check className="h-3 w-3" /> Confirm
               </Button>
               <Button size="sm" variant="outline" className="flex-1 gap-1 h-7 text-xs" onClick={() => onDecline?.(myAssignment.id)}>

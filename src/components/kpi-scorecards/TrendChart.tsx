@@ -5,14 +5,14 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
   ReferenceLine,
   Legend,
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, TrendingUp } from "lucide-react";
+import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
+import { EmptyState } from "@/components/ui/empty-state";
 import {
   formatPeriodLabel,
   type ScorecardKpi,
@@ -165,62 +165,88 @@ export function TrendChart({
       </CardHeader>
       <CardContent>
         {chartData.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-8">
-            No data for this month.
-          </p>
+          <EmptyState
+            icon={TrendingUp}
+            title="No data for this month"
+            description="Scores submitted during this period will appear here as a trend line."
+            tone="slate"
+            size="md"
+          />
         ) : (
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-              <XAxis
-                dataKey="period"
-                tick={{ fontSize: 11 }}
-                interval="preserveStartEnd"
-              />
-              <YAxis domain={[1, 5]} ticks={[1, 2, 3, 4, 5]} tick={{ fontSize: 11 }} />
-              <Tooltip />
-              {showKpis && <Legend />}
+          (() => {
+            const chartConfig: ChartConfig = {
+              average: { label: "Average", color: "hsl(var(--primary))" },
+              ...Object.fromEntries(
+                kpis.map((k, i) => [
+                  k.id,
+                  { label: k.name, color: KPI_LINE_COLORS[i % KPI_LINE_COLORS.length] },
+                ])
+              ),
+            };
+            return (
+              <ChartContainer config={chartConfig} className="h-[300px] w-full aspect-auto">
+                <LineChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-border/40" vertical={false} />
+                  <XAxis
+                    dataKey="period"
+                    tick={{ fontSize: 11 }}
+                    tickLine={false}
+                    axisLine={false}
+                    interval="preserveStartEnd"
+                  />
+                  <YAxis
+                    domain={[1, 5]}
+                    ticks={[1, 2, 3, 4, 5]}
+                    tick={{ fontSize: 11 }}
+                    tickLine={false}
+                    axisLine={false}
+                  />
+                  <ChartTooltip cursor={{ stroke: "hsl(var(--border))", strokeWidth: 1 }} content={<ChartTooltipContent />} />
+                  {showKpis && <Legend iconType="circle" wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />}
 
-              <Line
-                type="monotone"
-                dataKey="average"
-                stroke="#00D26A"
-                strokeWidth={2.5}
-                dot={{ r: 4 }}
-                name="Average"
-              />
-
-              {showKpis &&
-                kpis.map((kpi, i) => (
                   <Line
-                    key={kpi.id}
                     type="monotone"
-                    dataKey={kpi.id}
-                    stroke={KPI_LINE_COLORS[i % KPI_LINE_COLORS.length]}
-                    strokeWidth={1.5}
-                    strokeDasharray="4 2"
-                    dot={{ r: 3 }}
-                    name={kpi.name}
+                    dataKey="average"
+                    stroke="hsl(var(--primary))"
+                    strokeWidth={2.5}
+                    dot={{ r: 4, fill: "hsl(var(--primary))", strokeWidth: 0 }}
+                    activeDot={{ r: 6, fill: "hsl(var(--primary))", stroke: "hsl(var(--background))", strokeWidth: 2 }}
+                    name="Average"
                   />
-                ))}
 
-              {hasBonus &&
-                bonusTiers?.map((tier) => (
-                  <ReferenceLine
-                    key={tier.label}
-                    y={tier.min_avg}
-                    stroke={tier.color ?? "#FFD700"}
-                    strokeDasharray="6 3"
-                    label={{
-                      value: tier.label,
-                      position: "right",
-                      fill: tier.color ?? "#FFD700",
-                      fontSize: 11,
-                    }}
-                  />
-                ))}
-            </LineChart>
-          </ResponsiveContainer>
+                  {showKpis &&
+                    kpis.map((kpi, i) => (
+                      <Line
+                        key={kpi.id}
+                        type="monotone"
+                        dataKey={kpi.id}
+                        stroke={KPI_LINE_COLORS[i % KPI_LINE_COLORS.length]}
+                        strokeWidth={1.5}
+                        strokeDasharray="4 2"
+                        dot={{ r: 3 }}
+                        name={kpi.name}
+                      />
+                    ))}
+
+                  {hasBonus &&
+                    bonusTiers?.map((tier) => (
+                      <ReferenceLine
+                        key={tier.label}
+                        y={tier.min_avg}
+                        stroke={tier.color ?? "#FFD700"}
+                        strokeDasharray="6 3"
+                        label={{
+                          value: tier.label,
+                          position: "right",
+                          fill: tier.color ?? "#FFD700",
+                          fontSize: 11,
+                        }}
+                      />
+                    ))}
+                </LineChart>
+              </ChartContainer>
+            );
+          })()
         )}
       </CardContent>
     </Card>

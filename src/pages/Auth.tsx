@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Logo } from "@/components/Logo";
 import { toast } from "sonner";
-import { Eye, EyeOff, ArrowLeft } from "lucide-react";
+import { Eye, EyeOff, ArrowLeft, Loader2, Sparkles, ShieldCheck, Zap } from "lucide-react";
 import { z } from "zod";
 import { AppLoadingScreen } from "@/components/AppLoadingScreen";
 
@@ -77,26 +77,32 @@ export default function Auth() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col relative overflow-hidden">
-      {/* Warm gradient background */}
-      <div className="fixed inset-0" style={{ background: "linear-gradient(160deg, #f0fdf4 0%, #f6f8fb 40%, #eff6ff 100%)" }} />
-      <div className="fixed" style={{ top: "-200px", right: "-200px", width: "500px", height: "500px", background: "radial-gradient(circle, rgba(22,163,74,.05), transparent 70%)", pointerEvents: "none" }} />
-      <div className="fixed" style={{ bottom: "-150px", left: "-150px", width: "400px", height: "400px", background: "radial-gradient(circle, rgba(37,99,235,.04), transparent 70%)", pointerEvents: "none" }} />
-
-      {/* Dark mode overrides */}
-      <style>{`
-        .dark .auth-bg-wrapper > div:first-child { background: hsl(222 47% 5%) !important; }
-        .dark .auth-bg-wrapper > div:nth-child(2),
-        .dark .auth-bg-wrapper > div:nth-child(3) { opacity: 0.3; }
-      `}</style>
+    <div className="min-h-screen flex flex-col relative overflow-hidden bg-background">
+      {/* Ambient background wash using design tokens */}
+      <div
+        aria-hidden
+        className="fixed inset-0 pointer-events-none"
+        style={{ background: "var(--gradient-dark)" }}
+      />
+      <div
+        aria-hidden
+        className="fixed -top-48 -right-48 w-[500px] h-[500px] rounded-full pointer-events-none"
+        style={{ background: "radial-gradient(circle, hsl(var(--primary) / 0.12), transparent 70%)" }}
+      />
+      <div
+        aria-hidden
+        className="fixed -bottom-32 -left-32 w-[400px] h-[400px] rounded-full pointer-events-none"
+        style={{ background: "radial-gradient(circle, hsl(var(--info) / 0.08), transparent 70%)" }}
+      />
+      <div
+        aria-hidden
+        className="fixed top-1/3 left-1/2 -translate-x-1/2 w-[540px] h-[540px] rounded-full blur-3xl pointer-events-none animate-[pulse_9s_ease-in-out_infinite]"
+        style={{ background: "radial-gradient(circle, hsl(var(--highlight) / 0.1), transparent 68%)" }}
+      />
 
       {/* Header */}
       <header className="relative z-10 p-6">
-        <Button
-          variant="ghost"
-          onClick={() => navigate("/")}
-          className="gap-2"
-        >
+        <Button variant="ghost" onClick={() => navigate("/")} className="gap-2 rounded-full border border-border/60 bg-card/50 backdrop-blur-sm hover:bg-accent/60">
           <ArrowLeft className="w-4 h-4" />
           Back
         </Button>
@@ -104,30 +110,53 @@ export default function Auth() {
 
       {/* Auth Form */}
       <main className="relative z-10 flex-1 flex items-center justify-center px-4 pb-20">
-        <div className="w-full max-w-[420px]">
-          {/* Logo hero - large and prominent */}
+        <div className="w-full max-w-[440px] animate-fade-in">
+          {/* Hero */}
           <div className="text-center mb-8">
             <Logo size="lg" className="justify-center mb-6" />
-            <h1 className="text-2xl font-bold text-foreground mb-2">
+            <h1 className="text-4xl font-extrabold text-foreground mb-2 tracking-tight">
               Welcome back
             </h1>
-            <p className="text-muted-foreground">
+            <p className="text-muted-foreground mb-4">
               Sign in to access the employee portal
             </p>
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              <div className="inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-card/70 px-3 py-1 text-xs font-semibold text-foreground shadow-sm backdrop-blur-sm">
+                <ShieldCheck className="h-3.5 w-3.5 text-primary" />
+                Secure
+              </div>
+              <div className="inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-card/70 px-3 py-1 text-xs font-semibold text-foreground shadow-sm backdrop-blur-sm">
+                <Zap className="h-3.5 w-3.5 text-[hsl(var(--info))]" />
+                Fast updates
+              </div>
+              <div className="inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-card/70 px-3 py-1 text-xs font-semibold text-foreground shadow-sm backdrop-blur-sm">
+                <Sparkles className="h-3.5 w-3.5 text-[hsl(var(--highlight))]" />
+                Built for crews
+              </div>
+            </div>
           </div>
 
           {/* Login card */}
-          <div style={{ maxWidth: "420px", padding: "40px 36px", borderRadius: "20px", boxShadow: "0 8px 30px rgba(0,0,0,.08)", border: "1px solid rgba(228,233,240,.6)", background: "#ffffff" }} className="dark:bg-card dark:border-border/40 mx-auto">
+          <div className="relative group">
+            <div
+              aria-hidden
+              className="pointer-events-none absolute -inset-px rounded-2xl blur-sm opacity-65 transition-opacity duration-500 group-hover:opacity-95"
+              style={{
+                background:
+                  "linear-gradient(135deg, hsl(var(--primary) / 0.45), hsl(var(--info) / 0.35), hsl(var(--highlight) / 0.35))",
+              }}
+            />
+            <div className="glass-card relative rounded-2xl p-8 shadow-lg">
             <form onSubmit={handleSubmit} className="space-y-5">
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email" className="section-label">Email</Label>
                 <Input
                   id="email"
                   type="email"
                   placeholder="you@tsmroofing.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className={`rounded-[10px] transition-all focus:border-primary focus:ring-[3px] focus:ring-primary/10 placeholder:text-[hsl(220_9%_64%)] ${errors.email ? "border-destructive" : ""}`}
+                  className={errors.email ? "border-destructive" : ""}
                 />
                 {errors.email && (
                   <p className="text-sm text-destructive">{errors.email}</p>
@@ -135,7 +164,16 @@ export default function Auth() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password" className="section-label">Password</Label>
+                  <button
+                    type="button"
+                    className="text-xs text-primary hover:underline font-semibold"
+                    onClick={() => toast.info("Contact your administrator to reset your password.")}
+                  >
+                    Forgot password?
+                  </button>
+                </div>
                 <div className="relative">
                   <Input
                     id="password"
@@ -143,7 +181,7 @@ export default function Auth() {
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className={`rounded-[10px] pr-10 transition-all focus:border-primary focus:ring-[3px] focus:ring-primary/10 placeholder:text-[hsl(220_9%_64%)] ${errors.password ? "border-destructive" : ""}`}
+                    className={`pr-10 ${errors.password ? "border-destructive" : ""}`}
                   />
                   <button
                     type="button"
@@ -156,61 +194,41 @@ export default function Auth() {
                 {errors.password && (
                   <p className="text-sm text-destructive">{errors.password}</p>
                 )}
-                {/* B5: Forgot password link */}
-                <div className="text-right">
-                  <button
-                    type="button"
-                    className="text-xs text-primary hover:underline font-medium"
-                    onClick={() => toast.info("Contact your administrator to reset your password.")}
-                  >
-                    Forgot password?
-                  </button>
-                </div>
               </div>
 
-              {/* Premium sign in button */}
-              <button
+              <Button
                 type="submit"
+                variant="neon"
+                size="lg"
+                className="w-full shadow-[0_0_28px_hsl(var(--primary)/0.32)] hover:scale-[1.01] active:scale-[0.995]"
                 disabled={isSubmitting}
-                className="w-full rounded-[11px] text-[15px] font-bold text-white transition-all duration-200 disabled:opacity-60"
-                style={{
-                  background: "linear-gradient(135deg, #16a34a, #15803d)",
-                  boxShadow: "0 2px 8px rgba(22,163,74,.25)",
-                  padding: "13px",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.boxShadow = "0 4px 16px rgba(22,163,74,.3)";
-                  e.currentTarget.style.transform = "translateY(-1px)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.boxShadow = "0 2px 8px rgba(22,163,74,.25)";
-                  e.currentTarget.style.transform = "translateY(0)";
-                }}
               >
                 {isSubmitting ? (
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto" />
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Signing in...
+                  </>
                 ) : (
                   "Sign In"
                 )}
-              </button>
+              </Button>
             </form>
 
-            {/* B7: Updated create account text */}
             <p className="mt-6 text-center text-sm text-muted-foreground">
               Got an invite?{" "}
               <button
                 onClick={() => navigate("/signup")}
-                className="text-primary hover:underline font-medium"
+                className="text-primary hover:underline font-semibold"
               >
                 Create your account
               </button>
             </p>
 
-            {/* B6: Footer */}
-            <div className="mt-6 pt-4 border-t border-border/30 text-center">
+            <div className="mt-6 pt-4 border-t border-border/40 text-center">
               <p className="text-xs text-muted-foreground">
                 © 2026 TSM Roofing LLC • Phoenix & Prescott, AZ
               </p>
+            </div>
             </div>
           </div>
         </div>

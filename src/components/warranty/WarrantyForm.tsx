@@ -450,7 +450,7 @@ export function WarrantyForm({ open, onOpenChange, warranty }: WarrantyFormProps
 
           <div className="flex justify-end gap-2 pt-4">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
+            <Button type="submit" variant="neon" disabled={createMutation.isPending || updateMutation.isPending}>
               {isEditing ? "Update" : "Submit"} Warranty Request
             </Button>
           </div>

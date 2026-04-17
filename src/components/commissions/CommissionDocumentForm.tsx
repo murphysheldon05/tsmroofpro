@@ -942,7 +942,7 @@ export function CommissionDocumentForm({ document: existingDoc, readOnly = false
           <Button variant="outline" onClick={() => handleSave(false)} disabled={isLoading || isAutoSaving} className="flex-1 h-12 sm:h-10">
             <Save className="h-4 w-4 mr-2" /> Save Draft
           </Button>
-          <Button onClick={handleSubmitClick} disabled={isLoading} className="flex-1 h-12 sm:h-10">
+          <Button variant="neon" onClick={handleSubmitClick} disabled={isLoading} className="flex-1 h-12 sm:h-10">
             <Send className="h-4 w-4 mr-2" /> Review & Submit
           </Button>
         </div>

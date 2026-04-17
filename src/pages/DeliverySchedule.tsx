@@ -221,7 +221,7 @@ export default function DeliverySchedule() {
           <div className="flex items-center gap-3">
             <Truck className="h-7 w-7 text-primary" />
             <div>
-              <h1 className="text-2xl font-bold">Delivery Schedule</h1>
+              <h1 className="text-2xl font-extrabold">Delivery Schedule</h1>
               <p className="text-sm text-muted-foreground">Material delivery tracking</p>
             </div>
           </div>

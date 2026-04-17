@@ -5,12 +5,13 @@ import {
   useTemplates,
   useSubmissions,
 } from "@/hooks/useKpiScorecards";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Loader2, TrendingUp, TrendingDown, Minus, Eye } from "lucide-react";
-import type { BonusTier, ScorecardSubmission } from "@/lib/kpiTypes";
-import { getScoreBgClass, matchBonusTier } from "@/lib/kpiTypes";
+import { Loader2, TrendingUp, TrendingDown, Minus, Eye, Trophy, BarChart3 } from "lucide-react";
+import type { BonusTier } from "@/lib/kpiTypes";
+import { getScoreColor, matchBonusTier } from "@/lib/kpiTypes";
+import { EmptyState } from "@/components/ui/empty-state";
+import { cn } from "@/lib/utils";
 
 function EmployeeCard({ assignmentId, templateId }: { assignmentId: string; templateId: string }) {
   const navigate = useNavigate();
@@ -52,44 +53,96 @@ function EmployeeCard({ assignmentId, templateId }: { assignmentId: string; temp
   }, [submissions]);
 
   const tier = monthAvg !== null ? matchBonusTier(monthAvg, bonusTiers) : null;
+  const latestScore = latest ? Number(latest.average) : null;
+  const scoreColor = latestScore !== null ? getScoreColor(latestScore) : null;
 
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-base">{template?.name ?? "—"}</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3 pt-0">
-        {latest ? (
-          <>
-            <div className="flex items-center gap-2">
-              <Badge variant="outline" className={getScoreBgClass(Number(latest.average))}>
-                {Number(latest.average).toFixed(1)}
-              </Badge>
-              {trendDir === "up" && <TrendingUp className="w-4 h-4 text-green-500" />}
-              {trendDir === "down" && <TrendingDown className="w-4 h-4 text-red-500" />}
-              {trendDir === "flat" && <Minus className="w-4 h-4 text-muted-foreground" />}
-              <span className="text-xs text-muted-foreground">Latest</span>
+    <Card className="card-lift overflow-hidden relative">
+      {latestScore !== null && scoreColor && (
+        <div
+          aria-hidden
+          className="absolute top-0 left-0 right-0 h-1"
+          style={{ background: scoreColor }}
+        />
+      )}
+      <CardContent className="p-5 space-y-4">
+        {/* Header: template name + trend */}
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <p className="section-label mb-1">Scorecard</p>
+            <h3 className="text-sm font-bold text-foreground truncate">{template?.name ?? "—"}</h3>
+          </div>
+          {latest && (
+            <div
+              className={cn(
+                "flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-md",
+                trendDir === "up" && "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+                trendDir === "down" && "bg-rose-500/10 text-rose-600 dark:text-rose-400",
+                trendDir === "flat" && "bg-muted text-muted-foreground",
+              )}
+            >
+              {trendDir === "up" && <TrendingUp className="w-3 h-3" />}
+              {trendDir === "down" && <TrendingDown className="w-3 h-3" />}
+              {trendDir === "flat" && <Minus className="w-3 h-3" />}
+              {prior && latest && (
+                <span>
+                  {Number(latest.average) - Number(prior.average) >= 0 ? "+" : ""}
+                  {(Number(latest.average) - Number(prior.average)).toFixed(2)}
+                </span>
+              )}
             </div>
-            {monthAvg !== null && (
-              <p className="text-sm text-muted-foreground">
-                Month avg: <span className="font-medium text-foreground">{monthAvg.toFixed(1)}</span>
-              </p>
-            )}
-          </>
+          )}
+        </div>
+
+        {/* Big score */}
+        {latestScore !== null ? (
+          <div className="flex items-end gap-2">
+            <span
+              className="text-5xl font-extrabold leading-none tracking-tight"
+              style={{ color: scoreColor ?? undefined }}
+            >
+              {latestScore.toFixed(1)}
+            </span>
+            <span className="text-sm text-muted-foreground pb-1">/ 5.0</span>
+          </div>
         ) : (
-          <p className="text-sm text-muted-foreground">No scores yet</p>
+          <div className="py-3">
+            <div className="flex items-center gap-3">
+              <BarChart3 className="w-6 h-6 text-muted-foreground/40" />
+              <div>
+                <p className="text-sm font-semibold text-foreground">No scores yet</p>
+                <p className="text-xs text-muted-foreground">Your first scorecard will appear here.</p>
+              </div>
+            </div>
+          </div>
         )}
 
-        {template?.has_bonus ? (
+        {/* Month avg */}
+        {monthAvg !== null && (
+          <div className="flex items-center justify-between text-xs pt-2 border-t border-border/60">
+            <span className="text-muted-foreground">Month average</span>
+            <span className="font-semibold text-foreground">{monthAvg.toFixed(2)}</span>
+          </div>
+        )}
+
+        {/* Bonus */}
+        {template?.has_bonus && (
           tier ? (
-            <p className="text-sm font-medium" style={{ color: tier.color ?? "#FFD700" }}>
-              On track for {tier.label} (${tier.amount})
-            </p>
+            <div
+              className="flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-semibold"
+              style={{
+                borderColor: `${tier.color ?? "#FFD700"}40`,
+                background: `${tier.color ?? "#FFD700"}14`,
+                color: tier.color ?? "#C9A227",
+              }}
+            >
+              <Trophy className="w-3.5 h-3.5 flex-shrink-0" />
+              <span>On track for {tier.label}</span>
+              <span className="ml-auto">${tier.amount}</span>
+            </div>
           ) : (
-            <p className="text-sm text-muted-foreground">Below bonus threshold</p>
+            <p className="text-xs text-muted-foreground">Below bonus threshold</p>
           )
-        ) : (
-          <p className="text-xs text-muted-foreground">No bonus structure</p>
         )}
 
         <Button
@@ -119,15 +172,21 @@ export function EmployeeDashboard() {
 
   return (
     <section className="space-y-4">
-      <h2 className="text-lg font-semibold">My Scorecards</h2>
+      <h2 className="text-lg font-bold text-foreground">My Scorecards</h2>
       {assignments.length === 0 ? (
         <Card className="border-dashed">
-          <CardContent className="py-12 text-center text-muted-foreground">
-            No scorecards assigned to you yet. Contact your admin.
+          <CardContent className="p-0">
+            <EmptyState
+              icon={BarChart3}
+              title="No scorecards assigned yet"
+              description="Once an admin assigns a scorecard to you, it'll appear here with your scores and trends."
+              tone="primary"
+              size="lg"
+            />
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 row-stagger">
           {assignments.map((a) => (
             <EmployeeCard
               key={a.id}

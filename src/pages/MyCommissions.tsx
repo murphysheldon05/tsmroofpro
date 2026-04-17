@@ -38,6 +38,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { LateBadge } from "@/components/commissions/LateBadge";
+import { EmptyState } from "@/components/ui/empty-state";
 import { PayRunWeekAccordion, type CommissionRow } from "@/components/commissions/PayRunWeekAccordion";
 import { PayRunHoldingArea } from "@/components/commissions/PayRunHoldingArea";
 import { formatTimestampMST, getCurrentPayRunPeriod } from "@/lib/commissionPayDateCalculations";
@@ -223,7 +224,7 @@ export default function MyCommissions() {
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button className="bg-green-600 hover:bg-green-700 text-white gap-2">
+            <Button variant="neon" className="gap-2">
               <Plus className="w-4 h-4" />
               Submit Commission
               <ChevronDown className="w-3.5 h-3.5 ml-1" />
@@ -336,9 +337,15 @@ export default function MyCommissions() {
             />
           ))}
           {repPayRuns.length === 0 && holdingAreaDocs.length === 0 && (
-            <p className="text-center text-muted-foreground py-12">
-              No commissions submitted yet. Click "Submit Commission" to get started.
-            </p>
+            <div className="glass-card rounded-xl">
+              <EmptyState
+                icon={DollarSign}
+                title="No commissions yet"
+                description="Click Submit Commission above to get your first one on the board."
+                tone="emerald"
+                size="lg"
+              />
+            </div>
           )}
         </div>
       )}
@@ -360,10 +367,14 @@ export default function MyCommissions() {
             <TableBody>
               {filteredCommissions.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
-                    {statusFilter
-                      ? "No commissions found with this status"
-                      : "No commissions submitted yet. Click \"Submit Commission\" to get started."}
+                  <TableCell colSpan={6} className="py-8">
+                    <EmptyState
+                      icon={DollarSign}
+                      title={statusFilter ? "No matches for this status" : "No commissions yet"}
+                      description={statusFilter ? "Try clearing filters to see all commissions." : "Submit your first commission to get started."}
+                      tone="slate"
+                      size="md"
+                    />
                   </TableCell>
                 </TableRow>
               ) : (

@@ -194,7 +194,7 @@ export default function OpsCompliance({ embedded = false }: OpsComplianceProps) 
               <ShieldCheck className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <h1 className="text-xl sm:text-2xl font-bold">Compliance</h1>
+              <h1 className="text-xl sm:text-2xl font-extrabold">Compliance</h1>
               <p className="text-sm text-muted-foreground">
                 Report compliance issues to the Ops Compliance team
               </p>
@@ -222,7 +222,7 @@ export default function OpsCompliance({ embedded = false }: OpsComplianceProps) 
             <ShieldCheck className="w-5 h-5 text-primary" />
           </div>
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold">Ops Compliance</h1>
+            <h1 className="text-xl sm:text-2xl font-extrabold">Ops Compliance</h1>
             <p className="text-sm text-muted-foreground">
               Manage violations, holds, escalations, and SOP compliance
             </p>

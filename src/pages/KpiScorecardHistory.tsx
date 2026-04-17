@@ -131,7 +131,7 @@ export default function KpiScorecardHistory() {
         </Link>
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold">
+            <h1 className="text-xl sm:text-2xl font-extrabold">
               {employee?.full_name ?? "Employee"}
             </h1>
             <p className="text-sm text-muted-foreground">

@@ -272,7 +272,7 @@ export default function CommissionDetail() {
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div>
-              <h1 className="text-2xl font-bold">Close Out Job — Request Final Commission</h1>
+              <h1 className="text-2xl font-extrabold">Close Out Job — Request Final Commission</h1>
               <p className="text-muted-foreground">{submission.job_name}</p>
             </div>
           </div>
@@ -291,7 +291,7 @@ export default function CommissionDetail() {
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div>
-              <h1 className="text-2xl font-bold">Edit Commission</h1>
+              <h1 className="text-2xl font-extrabold">Edit Commission</h1>
               <p className="text-muted-foreground">{submission.job_name}</p>
             </div>
           </div>
@@ -315,7 +315,7 @@ export default function CommissionDetail() {
             </Button>
             <div>
               <div className="flex items-center gap-3 flex-wrap">
-                <h1 className="text-2xl font-bold">{submission.job_name}</h1>
+                <h1 className="text-2xl font-extrabold">{submission.job_name}</h1>
                 <Badge variant={statusConfig?.variant} className="gap-1">
                   {statusConfig?.icon}
                   {statusConfig?.label}
@@ -417,8 +417,9 @@ export default function CommissionDetail() {
                   </p>
                   <Button 
                     onClick={() => setIsEditing(true)} 
+                    variant="neon"
                     size="sm" 
-                    className="mt-3 gap-2 bg-green-600 hover:bg-green-700"
+                    className="mt-3 gap-2"
                   >
                     <Edit className="h-4 w-4" />
                     Edit & Resubmit
@@ -446,8 +447,9 @@ export default function CommissionDetail() {
                   )}
                   <Button 
                     onClick={() => setIsEditing(true)} 
+                    variant="neon"
                     size="sm" 
-                    className="mt-3 gap-2 bg-green-600 hover:bg-green-700"
+                    className="mt-3 gap-2"
                   >
                     <Edit className="h-4 w-4" />
                     Edit & Resubmit
@@ -516,7 +518,7 @@ export default function CommissionDetail() {
                   <Button 
                     onClick={handleComplianceApprove}
                     disabled={updateStatus.isPending}
-                    className="gap-2 bg-blue-600 hover:bg-blue-700"
+                    className="gap-2 bg-[hsl(var(--info))] hover:bg-[hsl(var(--info))]/90 text-[hsl(var(--info-foreground))]"
                   >
                     {updateStatus.isPending ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
@@ -532,7 +534,8 @@ export default function CommissionDetail() {
                   <Button 
                     onClick={handleAccountingApprove}
                     disabled={updateStatus.isPending}
-                    className="gap-2 bg-green-600 hover:bg-green-700"
+                    variant="neon"
+                    className="gap-2"
                   >
                     {updateStatus.isPending ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
@@ -548,7 +551,8 @@ export default function CommissionDetail() {
                   <Button 
                     onClick={handleAdminApprove}
                     disabled={updateStatus.isPending}
-                    className="gap-2 bg-green-600 hover:bg-green-700"
+                    variant="neon"
+                    className="gap-2"
                   >
                     {updateStatus.isPending ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
@@ -648,7 +652,7 @@ export default function CommissionDetail() {
                 {canMarkPaid && (
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
-                      <Button className="gap-2 bg-green-600 hover:bg-green-700">
+                      <Button variant="neon" className="gap-2">
                         <DollarSign className="h-4 w-4" />
                         Mark as Paid
                       </Button>
@@ -679,7 +683,7 @@ export default function CommissionDetail() {
                         <AlertDialogAction 
                           onClick={handleMarkPaid}
                           disabled={updateStatus.isPending}
-                          className="bg-green-600 hover:bg-green-700"
+                          className="bg-primary text-primary-foreground hover:bg-primary/90"
                         >
                           Confirm Payment
                         </AlertDialogAction>

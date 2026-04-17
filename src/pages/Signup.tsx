@@ -190,7 +190,7 @@ export default function Signup() {
                 <CheckCircle className="w-8 h-8 text-green-600 dark:text-green-400" />
               </div>
 
-              <h1 className="text-2xl font-bold text-foreground mb-2">
+              <h1 className="text-2xl font-extrabold text-foreground mb-2 tracking-tight">
                 Account Created!
               </h1>
               <p className="text-muted-foreground mb-6">
@@ -230,7 +230,7 @@ export default function Signup() {
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
             <Logo size="lg" className="justify-center mb-6" />
-            <h1 className="text-2xl font-bold text-foreground mb-2">
+            <h1 className="text-3xl font-extrabold text-foreground mb-2 tracking-tight">
               Create your account
             </h1>
             <p className="text-muted-foreground">

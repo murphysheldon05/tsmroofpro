@@ -485,7 +485,7 @@ export default function CommissionManager() {
           <TabsTrigger value="accounting" className="gap-2">
             Accounting Queue
             {accountingQueue.length > 0 && (
-              <Badge className="ml-1 h-5 min-w-[20px] px-1.5 text-[11px] bg-blue-600">
+              <Badge className="ml-1 h-5 min-w-[20px] px-1.5 text-[11px] bg-[hsl(var(--info))] text-[hsl(var(--info-foreground))] border-transparent">
                 {accountingQueue.length}
               </Badge>
             )}

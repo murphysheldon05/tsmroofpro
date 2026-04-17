@@ -310,7 +310,7 @@ export default function Warranties() {
           <div className="flex items-center gap-3">
             <Shield className="h-7 w-7 text-primary" />
             <div>
-              <h1 className="text-2xl font-bold">Warranty Tracker</h1>
+              <h1 className="text-2xl font-extrabold">Warranty Tracker</h1>
               <p className="text-sm text-muted-foreground">Track and manage roofing warranty requests</p>
             </div>
           </div>
@@ -357,7 +357,12 @@ export default function Warranties() {
                     </div>
                     <DroppableColumn id={col.key}>
                       {col.items.length === 0 ? (
-                        <p className="text-xs text-muted-foreground text-center py-8">No warranties</p>
+                        <div className="flex flex-col items-center justify-center py-8 text-center">
+                          <div className="w-8 h-8 rounded-full bg-muted/50 flex items-center justify-center mb-2">
+                            <Archive className="w-4 h-4 text-muted-foreground/60" />
+                          </div>
+                          <p className="text-xs text-muted-foreground">Nothing here</p>
+                        </div>
                       ) : (
                         col.items.map(w => (
                           <DraggableWarrantyCard
@@ -397,7 +402,12 @@ export default function Warranties() {
                   <TabsContent key={col.key} value={col.key} className="mt-3">
                     <div className="space-y-2">
                       {col.items.length === 0 ? (
-                        <p className="text-sm text-muted-foreground text-center py-8">No warranties</p>
+                        <div className="flex flex-col items-center justify-center py-10 text-center">
+                          <div className="w-10 h-10 rounded-full bg-muted/50 flex items-center justify-center mb-2">
+                            <Archive className="w-5 h-5 text-muted-foreground/60" />
+                          </div>
+                          <p className="text-sm text-muted-foreground">Nothing in {col.label.toLowerCase()}</p>
+                        </div>
                       ) : (
                         col.items.map(w => <WarrantyCardSimple key={w.id} warranty={w} onView={handleView} />)
                       )}
