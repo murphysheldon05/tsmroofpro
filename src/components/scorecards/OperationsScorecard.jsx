@@ -40,7 +40,7 @@ function RatingButtons({ value, onChange }) {
   );
 }
 
-export function OperationsScorecard() {
+export function OperationsScorecard({ assignedUserId = null }) {
   const [week, setWeek] = useState(() => {
     const d = new Date(); const day = d.getDay();
     const monday = new Date(d.setDate(d.getDate() - day + (day === 0 ? -6 : 1)));
@@ -59,6 +59,7 @@ export function OperationsScorecard() {
       employeeName: "Manny Madrid",
       reviewerName: "Sheldon Murphy",
       weekStartDate: week,
+      assignedUserId,
       scores: {
         ...scores,
         average_score: avgScore,

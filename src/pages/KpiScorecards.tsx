@@ -1,62 +1,42 @@
 import { Link, Navigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { BarChart3, ArrowRight } from "lucide-react";
 
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-
-const SCORECARD_CARDS = [
-  {
-    title: "Sales Reps",
-    subtitle: "Weekly rep selector",
-    reviewedBy: "Sales Managers -> Manny",
-    href: "/kpi-scorecards/sales-rep",
-  },
-  {
-    title: "Sales Managers",
-    subtitle: "Jordan Pollei, Conrad Demecs",
-    reviewedBy: "Sheldon + Manny",
-    href: "/kpi-scorecards/sales-manager",
-  },
-  {
-    title: "Office Admin",
-    subtitle: "Jayden Abramsen",
-    reviewedBy: "Sheldon + Manny",
-    href: "/kpi-scorecards/office-admin",
-  },
-  {
-    title: "Operations & Compliance",
-    subtitle: "Manny Madrid",
-    reviewedBy: "Sheldon (tracking only)",
-    href: "/kpi-scorecards/operations",
-  },
-  {
-    title: "Accounting",
-    subtitle: "Renice",
-    reviewedBy: "Courtney + Sheldon",
-    href: "/kpi-scorecards/accounting",
-  },
-  {
-    title: "Production",
-    subtitle: "Tim Brown",
-    reviewedBy: "Manny + Sheldon",
-    href: "/kpi-scorecards/production",
-  },
-  {
-    title: "Supplement",
-    subtitle: "Supplement Coordinator",
-    reviewedBy: "Manny + Sheldon",
-    href: "/kpi-scorecards/supplement",
-  },
-] as const;
+import { supabase } from "@/integrations/supabase/client";
+import {
+  WEEKLY_KPI_CARDS,
+  getAccessibleWeeklyKpiCards,
+  isWeeklyKpiManagerRole,
+} from "@/lib/weeklyKpiAccess";
 
 export default function KpiScorecards() {
-  const { role } = useAuth();
+  const { role, user } = useAuth();
+  const { data: profile } = useQuery({
+    queryKey: ["weekly-kpi-profile", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("full_name, email")
+        .eq("id", user.id)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id,
+  });
   const isAdmin = role === "admin";
-  const isManager = role === "manager" || role === "sales_manager";
+  const accessibleCards = getAccessibleWeeklyKpiCards({
+    role,
+    fullName: profile?.full_name,
+    email: profile?.email ?? user?.email,
+  });
 
-  if (!isAdmin && !isManager) {
+  if (accessibleCards.length === 0) {
     return <Navigate to="/command-center" replace />;
   }
 
@@ -79,14 +59,16 @@ export default function KpiScorecards() {
             className="border-primary/30 bg-primary/5 text-primary"
           >
             {isAdmin
-              ? "Admin access: all scorecards editable"
-              : "Manager access: all scorecards editable"}
+              ? "Admin access: all scorecards"
+              : isWeeklyKpiManagerRole(role)
+              ? "Manager access: all scorecards"
+              : "Assigned access only"}
           </Badge>
         </div>
       </header>
 
       <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-        {SCORECARD_CARDS.map((card) => (
+        {accessibleCards.map((card) => (
           <Card
             key={card.href}
             className="overflow-hidden border-border/70 bg-card shadow-sm"

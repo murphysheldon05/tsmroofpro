@@ -86,7 +86,7 @@ function getBonusTier(pct) {
   return { label: "No Bonus", color: "text-red-600", bg: "bg-red-50 border-red-300" };
 }
 
-export default function OfficeAdminScorecard() {
+export default function OfficeAdminScorecard({ assignedUserId = null }) {
   const [week, setWeek] = useState(() => {
     const d = new Date();
     const day = d.getDay();
@@ -117,6 +117,7 @@ export default function OfficeAdminScorecard() {
       employeeName: "Jayden Abramsen",
       reviewerName: reviewer,
       weekStartDate: week,
+      assignedUserId,
       scores: {
         ...scores,
         compliance_passed: passed,

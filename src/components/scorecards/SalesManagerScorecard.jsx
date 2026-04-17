@@ -116,7 +116,7 @@ function getBonusTier(pct) {
   return { label: "No Bonus", color: "text-red-600", bg: "bg-red-50 border-red-300" };
 }
 
-export default function SalesManagerScorecard({ managerName = "Sales Manager" }) {
+export default function SalesManagerScorecard({ managerName = "Sales Manager", assignedUserId = null }) {
   const [week, setWeek] = useState(() => {
     const d = new Date();
     const day = d.getDay();
@@ -147,6 +147,7 @@ export default function SalesManagerScorecard({ managerName = "Sales Manager" })
       employeeName: managerName,
       reviewerName: reviewer,
       weekStartDate: week,
+      assignedUserId,
       scores: {
         ...scores,
         compliance_passed: passed,

@@ -57,7 +57,7 @@ const ACCOUNTING_BONUS_TIERS = [
   { min: 0, label: "No Bonus", color: "text-red-600", bg: "bg-red-50 border-red-300" },
 ];
 
-export function AccountingScorecard() {
+export function AccountingScorecard({ assignedUserId = null }) {
   const [week, setWeek] = useState(() => {
     const d = new Date(); const day = d.getDay();
     const monday = new Date(d.setDate(d.getDate() - day + (day === 0 ? -6 : 1)));
@@ -82,6 +82,7 @@ export function AccountingScorecard() {
       employeeName: "Renice",
       reviewerName: reviewer,
       weekStartDate: week,
+      assignedUserId,
       scores: {
         ...scores,
         compliance_passed: passed,

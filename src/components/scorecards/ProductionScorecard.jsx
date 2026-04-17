@@ -51,7 +51,7 @@ const PRODUCTION_KPIS = [
   { id: "jobs_completed", name: "Jobs Completed This Week", description: "Total number of roofing jobs completed and closed out this week", type: "number", target: 5 },
 ];
 
-export function ProductionScorecard() {
+export function ProductionScorecard({ assignedUserId = null }) {
   const [week, setWeek] = useState(() => {
     const d = new Date(); const day = d.getDay();
     const monday = new Date(d.setDate(d.getDate() - day + (day === 0 ? -6 : 1)));
@@ -77,6 +77,7 @@ export function ProductionScorecard() {
       employeeName: "Tim Brown",
       reviewerName: reviewer,
       weekStartDate: week,
+      assignedUserId,
       scores: {
         ...scores,
         compliance_passed: passed,

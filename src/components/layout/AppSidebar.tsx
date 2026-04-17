@@ -54,6 +54,7 @@ import { useSidebarOrder } from "@/hooks/useSidebarOrder";
 import { useWalkthroughContext } from "@/contexts/WalkthroughContext";
 import { usePendingComplianceCount, useNewWarrantyCount, useSheldonPendingCount } from "@/hooks/useNavBadgeCounts";
 import { formatDisplayName } from "@/lib/displayName";
+import { getAccessibleWeeklyKpiCards } from "@/lib/weeklyKpiAccess";
 import { supabase } from "@/integrations/supabase/client";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -396,7 +397,11 @@ export function AppSidebar() {
   // Build navigation with role-based commission item
   const filteredNavigation = useMemo(() => {
     const canAccessKpiScorecards =
-      role === "admin" || role === "manager" || role === "sales_manager";
+      getAccessibleWeeklyKpiCards({
+        role,
+        fullName: profile?.full_name,
+        email: user?.email,
+      }).length > 0;
 
     const commissionItem: NavItem = isAdmin
       ? {

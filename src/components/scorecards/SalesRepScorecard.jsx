@@ -222,6 +222,7 @@ export default function SalesRepScorecard({ repName = "Sales Rep", repId }) {
       employeeName: repName,
       reviewerName: reviewer,
       weekStartDate: week,
+      assignedUserId: repId ?? null,
       scores: {
         ...scores,
         rep_id: repId ?? null,

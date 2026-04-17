@@ -87,7 +87,7 @@ const KPIS = [
   },
 ];
 
-export function SupplementScorecard({ coordinatorName = "Supplement Coordinator" }) {
+export function SupplementScorecard({ coordinatorName = "Supplement Coordinator", assignedUserId = null }) {
   const [week, setWeek] = useState(() => {
     const d = new Date(); const day = d.getDay();
     const monday = new Date(d.setDate(d.getDate() - day + (day === 0 ? -6 : 1)));
@@ -114,6 +114,7 @@ export function SupplementScorecard({ coordinatorName = "Supplement Coordinator"
       employeeName: coordinatorName,
       reviewerName: reviewer,
       weekStartDate: week,
+      assignedUserId,
       scores: {
         ...scores,
         compliance_passed: passed,
