@@ -64,9 +64,10 @@ function getInitials(name: string) {
 
 interface FeedPostProps {
   post: FeedPostData;
+  isHighlighted?: boolean;
 }
 
-export function FeedPost({ post }: FeedPostProps) {
+export function FeedPost({ post, isHighlighted = false }: FeedPostProps) {
   const { user, isAdmin } = useAuth();
   const toggleReaction = useToggleReaction();
   const deletePost = useDeletePost();
@@ -104,7 +105,15 @@ export function FeedPost({ post }: FeedPostProps) {
   }
 
   return (
-    <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
+    <article
+      id={`feed-post-${post.id}`}
+      className={cn(
+        "overflow-hidden rounded-3xl border bg-card shadow-sm transition-all duration-300",
+        isHighlighted
+          ? "border-primary/40 ring-2 ring-primary/20 shadow-[0_12px_35px_rgba(16,185,129,0.14)]"
+          : "border-border"
+      )}
+    >
       {/* Header */}
       <div className="flex items-start gap-3 p-4 pb-0">
         <Avatar className="h-10 w-10">
@@ -212,7 +221,7 @@ export function FeedPost({ post }: FeedPostProps) {
       )}
 
       {/* Action bar */}
-      <div className="flex items-center border-t border-border mx-4">
+      <div className="mx-4 flex items-center border-t border-border">
         <button
           onClick={() => handleReaction("thumbs_up")}
           className={cn(
@@ -262,6 +271,6 @@ export function FeedPost({ post }: FeedPostProps) {
       {showComments && (
         <CommentSection postId={post.id} comments={post.comments} />
       )}
-    </div>
+    </article>
   );
 }

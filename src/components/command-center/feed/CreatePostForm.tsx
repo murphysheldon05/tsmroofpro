@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ImagePlus, X, Send, Megaphone, Trophy, Newspaper } from "lucide-react";
+import { ImagePlus, X, Send, Megaphone, Trophy, Newspaper, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { formatDisplayName } from "@/lib/displayName";
 import type { Database } from "@/integrations/supabase/types";
@@ -90,7 +90,7 @@ export function CreatePostForm() {
 
   if (!expanded) {
     return (
-      <div className="bg-card border border-border rounded-xl p-4 shadow-sm">
+      <div className="rounded-3xl border border-primary/15 bg-gradient-to-r from-primary/8 via-background to-background p-4 shadow-sm">
         <div className="flex items-center gap-3">
           <Avatar className="h-10 w-10">
             <AvatarImage src={user?.user_metadata?.avatar_url} />
@@ -100,17 +100,27 @@ export function CreatePostForm() {
           </Avatar>
           <button
             onClick={() => setExpanded(true)}
-            className="flex-1 text-left px-4 py-2.5 bg-muted/50 hover:bg-muted rounded-full text-muted-foreground text-sm transition-colors"
+            className="flex-1 text-left rounded-full border border-border/60 bg-background/90 px-4 py-3 text-sm text-muted-foreground shadow-sm transition-colors hover:bg-muted/60"
           >
             What's on your mind, {displayName.split(" ")[0]}?
           </button>
+          <div className="hidden rounded-full border border-primary/15 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary sm:flex sm:items-center sm:gap-1.5">
+            <Sparkles className="h-3.5 w-3.5" />
+            Share with the team
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
+    <div className="overflow-hidden rounded-3xl border border-primary/15 bg-card shadow-sm">
+      <div className="border-b border-primary/10 bg-gradient-to-r from-primary/10 via-background to-background px-4 py-3">
+        <p className="text-sm font-semibold text-foreground">Post to the whole team</p>
+        <p className="text-xs text-muted-foreground">
+          Wins, announcements, and updates will stand out in Command Center.
+        </p>
+      </div>
       <div className="p-4 pb-3">
         <div className="flex items-center gap-3 mb-3">
           <Avatar className="h-10 w-10">
@@ -121,10 +131,7 @@ export function CreatePostForm() {
           </Avatar>
           <div className="flex-1 min-w-0">
             <p className="font-semibold text-sm text-foreground">{displayName}</p>
-            <Select
-              value={postType}
-              onValueChange={(v) => setPostType(v as FeedPostType)}
-            >
+            <Select value={postType} onValueChange={(v) => setPostType(v as FeedPostType)}>
               <SelectTrigger className="h-7 w-auto text-xs gap-1 border-0 bg-muted/50 px-2">
                 <SelectValue />
               </SelectTrigger>

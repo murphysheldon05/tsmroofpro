@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { Bell, Check, CheckCheck, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,14 +10,21 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useNotifications, useUnreadNotificationCount, useMarkNotificationRead, useMarkAllNotificationsRead, useDeleteNotification, useClearAllNotifications } from "@/hooks/useNotifications";
 import { NotificationItem } from "./NotificationItem";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 export function NotificationBell() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
   const { data: notifications = [], isLoading } = useNotifications();
   const { data: unreadCount = 0 } = useUnreadNotificationCount();
   const markRead = useMarkNotificationRead();
   const markAllRead = useMarkAllNotificationsRead();
   const deleteNotification = useDeleteNotification();
   const clearAll = useClearAllNotifications();
+  const lastToastIdRef = useRef<string | null>(null);
 
   const handleMarkRead = (id: string) => {
     markRead.mutate(id);
@@ -40,6 +47,46 @@ export function NotificationBell() {
       markAllRead.mutate();
     }
   }, [unreadCount, markAllRead]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const channel = supabase
+      .channel(`user-notifications-${user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "user_notifications",
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          queryClient.invalidateQueries({ queryKey: ["user-notifications"] });
+          queryClient.invalidateQueries({ queryKey: ["unread-notification-count"] });
+
+          if (payload.eventType === "INSERT") {
+            const next = payload.new as {
+              id?: string;
+              title?: string;
+              message?: string;
+            };
+
+            if (next.id && lastToastIdRef.current !== next.id && document.visibilityState === "visible") {
+              lastToastIdRef.current = next.id;
+              toast(next.title ?? "New notification", {
+                description: next.message ?? "",
+              });
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient, user?.id]);
 
   return (
     <Popover onOpenChange={handleOpenChange}>

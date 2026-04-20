@@ -10,6 +10,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageTransition } from "@/components/PageTransition";
 import { NavigationProgress } from "@/components/NavigationProgress";
+import { PushNotificationManager } from "@/components/notifications/PushNotificationManager";
 import {
   SalesRepScorecardRoute,
   SalesManagerScorecardRoute,
@@ -76,6 +77,7 @@ function InlinePageLoader() {
 function ProtectedAppShell() {
   return (
     <ProtectedRoute>
+      <PushNotificationManager />
       <AppLayout>
         <PageTransition>
           <Suspense fallback={<InlinePageLoader />}>

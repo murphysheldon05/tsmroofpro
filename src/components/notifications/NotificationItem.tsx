@@ -2,7 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
 import {
   FileText, AlertCircle, CheckCircle, DollarSign, RefreshCw,
-  UserPlus, Shield, Bell, Wrench, BookOpen, AlertTriangle, X,
+  UserPlus, Shield, Bell, Wrench, BookOpen, AlertTriangle, X, MessageSquare,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { UserNotification } from "@/hooks/useNotifications";
@@ -46,6 +46,7 @@ const notificationIcons: Record<string, React.ReactNode> = {
   chamber_event_updated: <RefreshCw className="h-4 w-4 text-amber-500" />,
   chamber_activity_logged: <CheckCircle className="h-4 w-4 text-green-500" />,
   chamber_attendance_shortfall: <AlertTriangle className="h-4 w-4 text-red-500" />,
+  feed_post: <MessageSquare className="h-4 w-4 text-primary" />,
   default: <AlertCircle className="h-4 w-4 text-muted-foreground" />,
 };
 
@@ -70,6 +71,8 @@ function getNavigationPath(notification: UserNotification, isAdmin: boolean): st
       return '/kpi-scorecards';
     case 'chamber':
       return '/chamber-of-commerce';
+    case 'feed_post':
+      return entity_id ? `/command-center#feed-post-${entity_id}` : '/command-center';
     default:
       return null;
   }

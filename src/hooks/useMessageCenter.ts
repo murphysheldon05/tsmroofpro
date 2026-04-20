@@ -99,6 +99,18 @@ export function useCreatePost() {
         .select()
         .single();
       if (error) throw error;
+
+      const { error: notifyError } = await supabase.functions.invoke(
+        "send-feed-post-notification",
+        {
+          body: { post_id: data.id },
+        }
+      );
+
+      if (notifyError) {
+        console.error("Failed to broadcast feed post notification:", notifyError);
+      }
+
       return data;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["feed-posts"] }),
