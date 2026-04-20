@@ -29,14 +29,12 @@ interface TrendChartProps {
 }
 
 const KPI_LINE_COLORS = [
-  "#8884d8",
-  "#82ca9d",
-  "#ffc658",
-  "#ff7c7c",
-  "#8dd1e1",
-  "#a4de6c",
-  "#d0a6e6",
-  "#ffb347",
+  "hsl(var(--info))",
+  "hsl(var(--highlight))",
+  "hsl(var(--primary))",
+  "hsl(var(--destructive))",
+  "hsl(var(--sidebar-primary))",
+  "hsl(var(--accent-foreground))",
 ];
 
 /** One chart point per review period; multiple reviewer submissions are averaged. */

@@ -345,7 +345,7 @@ export default function CommissionDocumentDetail() {
           {canApproveAsManager && (
             <>
               <Button
-                className="bg-[hsl(var(--info))] hover:bg-[hsl(var(--info))]/90 text-[hsl(var(--info-foreground))]"
+                variant="default"
                 onClick={() => { setApprovalAction('manager_approved'); setShowApprovalDialog(true); }}
               >
                 <Check className="h-4 w-4 mr-2" />
@@ -392,7 +392,7 @@ export default function CommissionDocumentDetail() {
           )}
           {canMarkAsPaid && (
             <Button
-              className="bg-emerald-600 hover:bg-emerald-700"
+              variant="neon"
               onClick={() => { setApprovalAction('paid' as any); setShowApprovalDialog(true); }}
             >
               <CheckCircle2 className="h-4 w-4 mr-2" />

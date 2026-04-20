@@ -18,6 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { DatePickerField } from "@/components/ui/date-picker-field";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -370,7 +371,13 @@ export default function BuildSchedule() {
             <CardContent className="pt-4">
               <div className="space-y-2">
                 {getEventsForDate(currentDate).length === 0 ? (
-                  <p className="text-center text-muted-foreground py-12">No builds scheduled for this day</p>
+                  <EmptyState
+                    icon={Calendar}
+                    title="No builds scheduled"
+                    description="Add a build event to start planning this day."
+                    tone="slate"
+                    size="sm"
+                  />
                 ) : (
                   getEventsForDate(currentDate).map(e => <EventCard key={e.id} event={e} />)
                 )}
