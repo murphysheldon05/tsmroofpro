@@ -36,6 +36,16 @@ const notificationIcons: Record<string, React.ReactNode> = {
   warranty_status_change: <Shield className="h-4 w-4 text-amber-500" />,
   warranty_assigned: <Shield className="h-4 w-4 text-purple-500" />,
   warranty_completed: <CheckCircle className="h-4 w-4 text-green-500" />,
+  scorecard_submitted: <CheckCircle className="h-4 w-4 text-green-500" />,
+  scorecard_edited: <RefreshCw className="h-4 w-4 text-amber-500" />,
+  scorecard_fail: <AlertTriangle className="h-4 w-4 text-red-500" />,
+  scorecard_correction_plan: <AlertTriangle className="h-4 w-4 text-red-600" />,
+  scorecard_overdue: <AlertCircle className="h-4 w-4 text-amber-500" />,
+  chamber_assignment: <UserPlus className="h-4 w-4 text-blue-500" />,
+  chamber_event_created: <Bell className="h-4 w-4 text-blue-500" />,
+  chamber_event_updated: <RefreshCw className="h-4 w-4 text-amber-500" />,
+  chamber_activity_logged: <CheckCircle className="h-4 w-4 text-green-500" />,
+  chamber_attendance_shortfall: <AlertTriangle className="h-4 w-4 text-red-500" />,
   default: <AlertCircle className="h-4 w-4 text-muted-foreground" />,
 };
 
@@ -56,6 +66,10 @@ function getNavigationPath(notification: UserNotification, isAdmin: boolean): st
       return '/admin?tab=ops-compliance';
     case 'warranty':
       return '/warranties';
+    case 'kpi_scorecard':
+      return '/kpi-scorecards';
+    case 'chamber':
+      return '/chamber-of-commerce';
     default:
       return null;
   }

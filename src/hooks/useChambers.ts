@@ -50,6 +50,32 @@ export interface ChamberEventAssignment {
   user_name?: string;
 }
 
+export interface ChamberActivityLog {
+  id: string;
+  chamber_id: string | null;
+  chamber_name: string | null;
+  event_id: string;
+  event_assignment_id: string | null;
+  rep_user_id: string;
+  manager_user_id: string | null;
+  attended_on: string;
+  attendance_confirmed: boolean;
+  contacts_made: number;
+  inspections_generated: number;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+  rep_name?: string;
+}
+
+async function invokeChamberNotification(body: Record<string, unknown>) {
+  try {
+    await supabase.functions.invoke("send-chamber-notification", { body });
+  } catch (error) {
+    console.error("Failed to invoke send-chamber-notification", error);
+  }
+}
+
 // ─── Chambers ─────────────────────────────────────
 
 export function useChambers() {
@@ -162,10 +188,22 @@ export function useAssignRepToChamber() {
           notes: notes || null,
         });
       if (error) throw error;
+      return { chamberId, userId };
     },
-    onSuccess: () => {
+    onSuccess: async ({ chamberId, userId }) => {
       qc.invalidateQueries({ queryKey: ["chamber-assignments"] });
       toast.success("Rep assigned to chamber");
+      const { data: chamber } = await (supabase.from as any)("chambers")
+        .select("id, name")
+        .eq("id", chamberId)
+        .maybeSingle();
+      await invokeChamberNotification({
+        eventType: "chamber_assignment",
+        chamberId,
+        chamberName: chamber?.name ?? null,
+        repUserId: userId,
+        actorUserId: user?.id ?? null,
+      });
     },
     onError: (e: any) => {
       if (e.message?.includes("duplicate")) {
@@ -238,9 +276,23 @@ export function useCreateChamberEvent() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
+    onSuccess: async (data) => {
       qc.invalidateQueries({ queryKey: ["chamber-events"] });
       toast.success("Event created");
+      const { data: chamber } = await (supabase.from as any)("chambers")
+        .select("id, name")
+        .eq("id", data.chamber_id)
+        .maybeSingle();
+      await invokeChamberNotification({
+        eventType: "chamber_event_created",
+        chamberId: data.chamber_id,
+        chamberName: chamber?.name ?? null,
+        eventId: data.id,
+        eventName: data.name,
+        eventDate: data.event_date,
+        eventTime: data.event_time,
+        eventLocation: data.location,
+      });
     },
     onError: () => toast.error("Failed to create event"),
   });
@@ -250,14 +302,31 @@ export function useUpdateChamberEvent() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ...data }: Partial<ChamberEvent> & { id: string }) => {
-      const { error } = await (supabase.from as any)("chamber_events")
+      const { data: updated, error } = await (supabase.from as any)("chamber_events")
         .update(data)
-        .eq("id", id);
+        .eq("id", id)
+        .select("*")
+        .single();
       if (error) throw error;
+      return updated;
     },
-    onSuccess: () => {
+    onSuccess: async (updated) => {
       qc.invalidateQueries({ queryKey: ["chamber-events"] });
       toast.success("Event updated");
+      const { data: chamber } = await (supabase.from as any)("chambers")
+        .select("id, name")
+        .eq("id", updated.chamber_id)
+        .maybeSingle();
+      await invokeChamberNotification({
+        eventType: "chamber_event_updated",
+        chamberId: updated.chamber_id,
+        chamberName: chamber?.name ?? null,
+        eventId: updated.id,
+        eventName: updated.name,
+        eventDate: updated.event_date,
+        eventTime: updated.event_time,
+        eventLocation: updated.location,
+      });
     },
     onError: () => toast.error("Failed to update event"),
   });
@@ -369,6 +438,127 @@ export function useUpdateEventAssignmentStatus() {
       toast.success("Status updated");
     },
     onError: () => toast.error("Failed to update status"),
+  });
+}
+
+export function useChamberActivityLogs() {
+  return useQuery({
+    queryKey: ["chamber-activity-logs"],
+    queryFn: async () => {
+      const { data, error } = await (supabase.from as any)("chamber_activity_logs")
+        .select("*")
+        .order("attended_on", { ascending: false });
+      if (error) throw error;
+
+      const repIds = [...new Set((data ?? []).map((row: any) => row.rep_user_id).filter(Boolean))];
+      let profileMap: Record<string, any> = {};
+      if (repIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("id, full_name, manager_id")
+          .in("id", repIds);
+        profileMap = (profiles ?? []).reduce<Record<string, any>>((acc, profile) => {
+          acc[profile.id] = profile;
+          return acc;
+        }, {});
+      }
+
+      return (data ?? []).map((row: any) => ({
+        ...row,
+        rep_name: profileMap[row.rep_user_id]?.full_name ?? "Unknown",
+      })) as ChamberActivityLog[];
+    },
+  });
+}
+
+export function useMyChamberActivityLogs() {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ["my-chamber-activity-logs", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      const { data, error } = await (supabase.from as any)("chamber_activity_logs")
+        .select("*")
+        .eq("rep_user_id", user.id)
+        .order("attended_on", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as ChamberActivityLog[];
+    },
+    enabled: !!user?.id,
+  });
+}
+
+export function useSubmitChamberActivityLog() {
+  const qc = useQueryClient();
+  const { user } = useAuth();
+
+  return useMutation({
+    mutationFn: async (params: {
+      chamber_id: string | null;
+      chamber_name: string | null;
+      event_id: string;
+      event_assignment_id?: string | null;
+      attended_on: string;
+      contacts_made: number;
+      inspections_generated: number;
+      notes?: string;
+    }) => {
+      if (!user?.id) throw new Error("You must be signed in.");
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("manager_id")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      const { data, error } = await (supabase.from as any)("chamber_activity_logs")
+        .upsert(
+          {
+            chamber_id: params.chamber_id,
+            chamber_name: params.chamber_name,
+            event_id: params.event_id,
+            event_assignment_id: params.event_assignment_id ?? null,
+            rep_user_id: user.id,
+            manager_user_id: profile?.manager_id ?? null,
+            attended_on: params.attended_on,
+            attendance_confirmed: true,
+            contacts_made: params.contacts_made,
+            inspections_generated: params.inspections_generated,
+            notes: params.notes?.trim() ? params.notes.trim() : null,
+          },
+          { onConflict: "event_id,rep_user_id" },
+        )
+        .select("*")
+        .single();
+
+      if (error) throw error;
+      return data as ChamberActivityLog;
+    },
+    onSuccess: async (data) => {
+      qc.invalidateQueries({ queryKey: ["chamber-activity-logs"] });
+      qc.invalidateQueries({ queryKey: ["my-chamber-activity-logs"] });
+      toast.success("Chamber activity logged");
+
+      const { data: event } = await (supabase.from as any)("chamber_events")
+        .select("id, name")
+        .eq("id", data.event_id)
+        .maybeSingle();
+
+      await invokeChamberNotification({
+        eventType: "chamber_activity_logged",
+        chamberId: data.chamber_id,
+        chamberName: data.chamber_name,
+        eventId: data.event_id,
+        eventName: event?.name ?? null,
+        repUserId: data.rep_user_id,
+        managerUserId: data.manager_user_id,
+        actorUserId: user?.id ?? null,
+        contactsMade: data.contacts_made,
+        inspectionsGenerated: data.inspections_generated,
+        notes: data.notes,
+      });
+    },
+    onError: () => toast.error("Failed to log Chamber activity"),
   });
 }
 

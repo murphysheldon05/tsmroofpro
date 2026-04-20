@@ -308,6 +308,8 @@ export function useSubmitScore() {
       scores: Record<string, number>;
       average: number;
       notes: string;
+      reviewer_name_snapshot?: string | null;
+      reviewer_email_snapshot?: string | null;
     }) => {
       const { data, error } = await fromAny("scorecard_submissions")
         .upsert(
@@ -319,6 +321,8 @@ export function useSubmitScore() {
             scores: params.scores as any,
             average: params.average,
             notes: params.notes || null,
+            reviewer_name_snapshot: params.reviewer_name_snapshot ?? null,
+            reviewer_email_snapshot: params.reviewer_email_snapshot ?? null,
             submitted_at: new Date().toISOString(),
           },
           { onConflict: "assignment_id,reviewer_id,period_start" }

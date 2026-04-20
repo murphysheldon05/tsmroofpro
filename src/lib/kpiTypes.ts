@@ -61,6 +61,8 @@ export interface ScorecardSubmission {
   id: string;
   assignment_id: string;
   reviewer_id: string;
+  reviewer_name_snapshot: string | null;
+  reviewer_email_snapshot: string | null;
   period_start: string;
   period_end: string;
   scores: any;

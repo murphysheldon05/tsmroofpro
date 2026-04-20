@@ -28,6 +28,7 @@ import {
   type ScorecardTemplate,
   type ScoringGuideLevel,
 } from "@/lib/kpiTypes";
+import { formatDisplayName } from "@/lib/displayName";
 
 export default function KpiScorecardScore() {
   const { assignmentId } = useParams<{ assignmentId: string }>();
@@ -96,6 +97,7 @@ export default function KpiScorecardScore() {
   }, [existingSubmission]);
 
   const employee = profiles.find((p) => p.id === assignment?.employee_id);
+  const reviewerProfile = profiles.find((p) => p.id === user?.id);
   const allScored = kpis.length > 0 && kpis.every((k) => scores[k.id] != null);
   const bonusTiers = template?.bonus_tiers as BonusTier[] | null;
 
@@ -127,6 +129,11 @@ export default function KpiScorecardScore() {
         scores,
         average: Math.round(average * 100) / 100,
         notes,
+        reviewer_name_snapshot: formatDisplayName(
+          reviewerProfile?.full_name,
+          reviewerProfile?.email ?? user.email
+        ),
+        reviewer_email_snapshot: reviewerProfile?.email ?? user.email ?? null,
       });
 
       setSubmitted(true);

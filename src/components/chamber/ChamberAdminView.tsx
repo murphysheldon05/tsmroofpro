@@ -56,6 +56,7 @@ import {
   useAssignRepToEvent,
   useChamberEventAssignments,
   useChamberStats,
+  useChamberActivityLogs,
   type Chamber,
   type ChamberEvent,
   type ChamberEventAssignment,
@@ -102,6 +103,7 @@ export function ChamberAdminView() {
   const { data: chambers, isLoading } = useChambers();
   const { data: allAssignments } = useChamberAssignments();
   const { data: allEvents } = useChamberEvents();
+  const { data: activityLogs = [] } = useChamberActivityLogs();
   const { data: profiles } = useAllProfiles();
   const { data: allEventAssignments } = useQuery({
     queryKey: ["all-chamber-event-assignments"],
@@ -279,6 +281,9 @@ export function ChamberAdminView() {
         </TabsTrigger>
         <TabsTrigger value="assignments" className="gap-2">
           <Users className="h-4 w-4" /> Assignment Log
+        </TabsTrigger>
+        <TabsTrigger value="activity" className="gap-2">
+          <BookOpen className="h-4 w-4" /> Activity Logs
         </TabsTrigger>
         <TabsTrigger value="guide" className="gap-2">
           <BookOpen className="h-4 w-4" /> Rep Guide
@@ -517,6 +522,49 @@ export function ChamberAdminView() {
                 <TableRow>
                   <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                     No assignments yet.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </TabsContent>
+
+      <TabsContent value="activity">
+        <div className="glass-card rounded-xl overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Rep</TableHead>
+                <TableHead>Event</TableHead>
+                <TableHead>Date</TableHead>
+                <TableHead>Contacts</TableHead>
+                <TableHead>Inspections</TableHead>
+                <TableHead>Notes</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {activityLogs.map((log) => {
+                const event = (allEvents || []).find((item) => item.id === log.event_id);
+                return (
+                  <TableRow key={log.id}>
+                    <TableCell className="font-medium">{log.rep_name}</TableCell>
+                    <TableCell>{event?.name ?? "Chamber Event"}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {format(new Date(log.attended_on), "MMM d, yyyy")}
+                    </TableCell>
+                    <TableCell>{log.contacts_made}</TableCell>
+                    <TableCell>{log.inspections_generated}</TableCell>
+                    <TableCell className="max-w-[280px] truncate text-sm text-muted-foreground">
+                      {log.notes || "—"}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+              {activityLogs.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                    No activity logs yet.
                   </TableCell>
                 </TableRow>
               )}

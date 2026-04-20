@@ -19,11 +19,14 @@ import {
   useChamberEvents,
   useMyEventAssignments,
   useUpdateEventAssignmentStatus,
+  useMyChamberActivityLogs,
+  useSubmitChamberActivityLog,
 } from "@/hooks/useChambers";
 import { isPast, isToday } from "date-fns";
 import { RepGuideContent } from "./RepGuideContent";
 import { ChamberMonthCalendar } from "./ChamberMonthCalendar";
 import { EventChecklist } from "./EventChecklist";
+import { ChamberActivityLogForm } from "./ChamberActivityLogForm";
 
 function Chip({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
   return (
@@ -47,7 +50,9 @@ export function ChamberRepView() {
   const { data: chambers, isLoading: chambersLoading } = useChambers();
   const { data: events, isLoading: eventsLoading } = useChamberEvents();
   const { data: myAssignments } = useMyEventAssignments();
+  const { data: myActivityLogs = [] } = useMyChamberActivityLogs();
   const updateStatus = useUpdateEventAssignmentStatus();
+  const submitActivityLog = useSubmitChamberActivityLog();
 
   const [showCredentials, setShowCredentials] = useState<Record<string, boolean>>({});
   const [eventSearch, setEventSearch] = useState("");
@@ -97,6 +102,13 @@ export function ChamberRepView() {
       return (isPast(d) && !isToday(d)) && assignment?.status === "confirmed";
     }).slice(-10);
   }, [myEvents, myEventAssignmentMap]);
+
+  const activityLogMap = useMemo(() => {
+    return myActivityLogs.reduce<Record<string, (typeof myActivityLogs)[number]>>((acc, log) => {
+      acc[log.event_id] = log;
+      return acc;
+    }, {});
+  }, [myActivityLogs]);
 
   const stats = useMemo(() => {
     const ea = myAssignments || [];
@@ -288,13 +300,32 @@ export function ChamberRepView() {
             {pastConfirmedEvents.length > 0 && (
               <div className="space-y-3">
                 <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground pt-2">
-                  Post-Event Checklists
+                  Post-Event Follow-Up
                 </h3>
                 <p className="text-xs text-muted-foreground">
-                  Complete these action items for events you attended.
+                  Complete the checklist and submit your activity log for events you attended.
                 </p>
                 {pastConfirmedEvents.map((event) => (
-                  <EventChecklist key={event.id} event={event} />
+                  <div key={event.id} className="space-y-3">
+                    <EventChecklist event={event} />
+                    <ChamberActivityLogForm
+                      event={event}
+                      existingLog={activityLogMap[event.id]}
+                      isSubmitting={submitActivityLog.isPending}
+                      onSubmit={async (payload) => {
+                        await submitActivityLog.mutateAsync({
+                          chamber_id: event.chamber_id,
+                          chamber_name: event.chamber_name ?? null,
+                          event_id: event.id,
+                          event_assignment_id: myEventAssignmentMap[event.id]?.id ?? null,
+                          attended_on: payload.attended_on,
+                          contacts_made: payload.contacts_made,
+                          inspections_generated: payload.inspections_generated,
+                          notes: payload.notes,
+                        });
+                      }}
+                    />
+                  </div>
                 ))}
               </div>
             )}

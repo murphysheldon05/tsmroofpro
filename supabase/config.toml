@@ -53,3 +53,12 @@ verify_jwt = false
 
 [functions.production-schedule-ai]
 verify_jwt = false
+
+[functions.send-scorecard-notification]
+verify_jwt = false
+
+[functions.generate-monthly-rollup]
+verify_jwt = false
+
+[functions.send-chamber-notification]
+verify_jwt = false
