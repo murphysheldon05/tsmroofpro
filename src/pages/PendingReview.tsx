@@ -168,6 +168,19 @@ export default function PendingReview() {
       } finally {
         setIsSubmitting(false);
       }
+    } else if (item.type === "warranty") {
+      setIsSubmitting(true);
+      try {
+        await updateWarranty.mutateAsync({
+          id: item.id,
+          status: "in_review",
+          previousStatus: item.status,
+          userRole: role || undefined,
+        });
+        refetch();
+      } finally {
+        setIsSubmitting(false);
+      }
     }
   };
 
@@ -419,32 +432,32 @@ export default function PendingReview() {
                                 <Eye className="w-3 h-3 mr-1" />
                                 Review
                               </Button>
-                              {item.type === "commission" && (
-                                <>
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className="text-emerald-600"
-                                    onClick={(e) => { e.stopPropagation(); handleApprove(item); }}
-                                    disabled={isSubmitting}
-                                  >
-                                    <CheckCircle className="w-3 h-3 mr-1" />
-                                    Approve
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className="text-destructive"
-                                    onClick={(e) => { e.stopPropagation(); handleOpenReject(item); }}
-                                    disabled={isSubmitting}
-                                  >
-                                    <XCircle className="w-3 h-3 mr-1" />
-                                    Reject
-                                  </Button>
-                                </>
+                              {(item.type === "commission" || item.type === "warranty") && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-emerald-600"
+                                  onClick={(e) => { e.stopPropagation(); handleApprove(item); }}
+                                  disabled={isSubmitting}
+                                >
+                                  <CheckCircle className="w-3 h-3 mr-1" />
+                                  Approve
+                                </Button>
                               )}
-                              {/* Complete button for Requests and Warranties */}
-                              {(item.type === "request" || item.type === "warranty") && (
+                              {item.type === "commission" && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-destructive"
+                                  onClick={(e) => { e.stopPropagation(); handleOpenReject(item); }}
+                                  disabled={isSubmitting}
+                                >
+                                  <XCircle className="w-3 h-3 mr-1" />
+                                  Reject
+                                </Button>
+                              )}
+                              {/* Complete button for requests only */}
+                              {item.type === "request" && (
                                 <Button
                                   size="sm"
                                   variant="outline"
@@ -544,32 +557,32 @@ export default function PendingReview() {
                                       <Eye className="w-4 h-4 mr-1" />
                                       Review
                                     </Button>
-                                    {item.type === "commission" && (
-                                      <>
-                                        <Button
-                                          variant="ghost"
-                                          size="sm"
-                                          className="text-emerald-600 hover:text-emerald-700"
-                                          onClick={() => handleApprove(item)}
-                                          disabled={isSubmitting}
-                                        >
-                                          <CheckCircle className="w-4 h-4 mr-1" />
-                                          Approve
-                                        </Button>
-                                        <Button
-                                          variant="ghost"
-                                          size="sm"
-                                          className="text-destructive hover:text-destructive"
-                                          onClick={() => handleOpenReject(item)}
-                                          disabled={isSubmitting}
-                                        >
-                                          <XCircle className="w-4 h-4 mr-1" />
-                                          Reject
-                                        </Button>
-                                      </>
+                                    {(item.type === "commission" || item.type === "warranty") && (
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="text-emerald-600 hover:text-emerald-700"
+                                        onClick={() => handleApprove(item)}
+                                        disabled={isSubmitting}
+                                      >
+                                        <CheckCircle className="w-4 h-4 mr-1" />
+                                        Approve
+                                      </Button>
                                     )}
-                                    {/* Complete button for Requests and Warranties */}
-                                    {(item.type === "request" || item.type === "warranty") && (
+                                    {item.type === "commission" && (
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="text-destructive hover:text-destructive"
+                                        onClick={() => handleOpenReject(item)}
+                                        disabled={isSubmitting}
+                                      >
+                                        <XCircle className="w-4 h-4 mr-1" />
+                                        Reject
+                                      </Button>
+                                    )}
+                                    {/* Complete button for requests only */}
+                                    {item.type === "request" && (
                                       <Button
                                         variant="ghost"
                                         size="sm"

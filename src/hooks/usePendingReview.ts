@@ -183,16 +183,16 @@ export function usePendingReview() {
           });
         });
 
-        // Pending warranties needing review (exclude completed/denied)
+        // Pending warranties needing review by production leadership
         const { data: pendingWarranties } = await supabase
           .from("warranty_requests")
           .select("id, customer_name, job_address, status, priority_level, updated_at, created_at, date_submitted")
-          .in("status", ["new", "assigned", "in_review", "scheduled", "in_progress", "waiting_on_materials", "waiting_on_manufacturer"])
+          .eq("status", "new")
           .order("created_at", { ascending: true })
           .limit(20);
 
         pendingWarranties?.forEach((w) => {
-          const priority = w.priority_level === "high" || w.priority_level === "urgent" ? "high" : 
+          const priority = w.priority_level === "high" || w.priority_level === "emergency" ? "high" :
                           w.priority_level === "medium" ? "medium" : "low";
           const submittedAt = new Date(w.date_submitted || w.created_at);
           const slaDays = getSlaDays("warranty", "review");
