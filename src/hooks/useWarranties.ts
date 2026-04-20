@@ -25,11 +25,11 @@ export interface WarrantyRequest {
   customer_name: string;
   job_address: string;
   original_job_number: string;
-  original_install_date: string;
+  original_install_date: string | null;
   roof_type: RoofType;
   warranty_type: WarrantyType;
-  warranty_coverage_description: string;
-  warranty_expiration_date: string;
+  warranty_coverage_description: string | null;
+  warranty_expiration_date: string | null;
   manufacturer: string | null;
   date_submitted: string;
   issue_description: string;
@@ -173,6 +173,35 @@ export function useCreateWarranty() {
 
       if (error) throw error;
 
+      // Create in-app notifications for production review.
+      try {
+        const { data: reviewerRoles } = await supabase
+          .from("user_roles")
+          .select("user_id, role")
+          .in("role", ["production_manager", "manager", "admin"]);
+
+        const reviewerIds = [...new Set(
+          (reviewerRoles || [])
+            .map((reviewer) => reviewer.user_id)
+            .filter((reviewerId): reviewerId is string => Boolean(reviewerId) && reviewerId !== userId)
+        )];
+
+        if (reviewerIds.length > 0) {
+          await supabase.from("user_notifications").insert(
+            reviewerIds.map((reviewerId) => ({
+              user_id: reviewerId,
+              notification_type: "warranty",
+              title: "Warranty Request Needs Review",
+              message: `${data.customer_name} submitted a new warranty request for ${data.job_address}`,
+              entity_type: "warranty",
+              entity_id: data.id,
+            }))
+          );
+        }
+      } catch (notificationError) {
+        console.error("Failed to create in-app warranty review notifications:", notificationError);
+      }
+
       // Send notification for new warranty
       try {
         await supabase.functions.invoke("send-warranty-notification", {
@@ -194,6 +223,8 @@ export function useCreateWarranty() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["warranties"] });
+      queryClient.invalidateQueries({ queryKey: ["user-notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["unread-notification-count"] });
       toast.success("Warranty request created successfully");
     },
     onError: (error) => {
@@ -257,6 +288,22 @@ export function useUpdateWarranty() {
 
       // E4: Create in-app notifications for status changes and assignments
       if (updates.status && previousStatus && updates.status !== previousStatus) {
+        if (
+          previousStatus === "new" &&
+          updates.status !== "new" &&
+          data.created_by &&
+          data.created_by !== authUserId
+        ) {
+          await supabase.from("user_notifications").insert({
+            user_id: data.created_by,
+            notification_type: "warranty_status_change",
+            title: "Warranty Approved for Tracking",
+            message: `${data.customer_name} was reviewed and moved into the warranty tracker`,
+            entity_type: "warranty",
+            entity_id: data.id,
+          }).then(() => {});
+        }
+
         // Notify the assigned user about status change
         if (data.assigned_production_member) {
           const statusLabel = WARRANTY_STATUSES.find(s => s.value === updates.status)?.label || updates.status;
@@ -299,6 +346,7 @@ export function useUpdateWarranty() {
               status: data.status,
               previous_status: previousStatus,
               assigned_to: data.assigned_production_member,
+              assigned_to_user_id: data.assigned_production_member,
             },
           });
         } catch (notifyError) {

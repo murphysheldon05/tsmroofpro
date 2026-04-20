@@ -23,7 +23,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { formatDisplayName } from "@/lib/displayName";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { format, parseISO, differenceInDays } from "date-fns";
+import { format, parseISO, differenceInDays, isValid } from "date-fns";
 import { Send, Upload, FileText, Image, Download, Clock, AlertTriangle, History, Eye, EyeOff, Users } from "lucide-react";
 import { ActivityHistory } from "@/components/audit/ActivityHistory";
 import { OBJECT_TYPES } from "@/hooks/useAdminAuditLog";
@@ -34,6 +34,22 @@ interface WarrantyDetailProps {
   warranty: WarrantyRequest | null;
   onEdit: () => void;
   canEdit?: boolean;
+}
+
+function parseOptionalDate(value?: string | null) {
+  if (!value) return null;
+  const parsed = parseISO(value);
+  return isValid(parsed) ? parsed : null;
+}
+
+function formatOptionalDate(value?: string | null, fallback = "Not provided") {
+  const parsed = parseOptionalDate(value);
+  return parsed ? format(parsed, "MMM d, yyyy") : fallback;
+}
+
+function formatOptionalDateTime(value?: string | null, fallback = "Not available") {
+  const parsed = parseOptionalDate(value);
+  return parsed ? format(parsed, "MMM d, yyyy h:mm a") : fallback;
 }
 
 export function WarrantyDetail({ open, onOpenChange, warranty, onEdit, canEdit = true }: WarrantyDetailProps) {
@@ -74,7 +90,20 @@ export function WarrantyDetail({ open, onOpenChange, warranty, onEdit, canEdit =
     setMentionedUserIds(ids);
   }, []);
 
-  if (!warranty) return null;
+  if (!warranty) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Warranty Request</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            This warranty could not be loaded. Close this window and try opening it again from the tracker.
+          </p>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   const statusConfig = WARRANTY_STATUSES.find((s) => s.value === warranty.status);
   const priorityConfig = PRIORITY_LEVELS.find((p) => p.value === warranty.priority_level);
@@ -83,8 +112,10 @@ export function WarrantyDetail({ open, onOpenChange, warranty, onEdit, canEdit =
   const sourceConfig = SOURCE_OPTIONS.find((s) => s.value === warranty.source_of_request);
 
   // 7-day no-status-change overdue
+  const lastStatusChangedAt = parseOptionalDate(warranty.last_status_change_at);
   const statusOverdue = warranty.status !== "completed" && warranty.status !== "denied" && warranty.status !== "closed" &&
-    differenceInDays(new Date(), parseISO(warranty.last_status_change_at)) >= 7;
+    !!lastStatusChangedAt &&
+    differenceInDays(new Date(), lastStatusChangedAt) >= 7;
 
   // 48h unanswered @mention overdue: check if any note has mentions and no follow-up reply
   const mentionOverdue = (() => {
@@ -187,7 +218,7 @@ export function WarrantyDetail({ open, onOpenChange, warranty, onEdit, canEdit =
           )}
           <div className="ml-auto flex items-center gap-1 text-sm text-muted-foreground">
             <Clock className="h-4 w-4" />
-            Last updated: {format(parseISO(warranty.last_status_change_at), "MMM d, yyyy h:mm a")}
+            Last updated: {formatOptionalDateTime(warranty.last_status_change_at)}
           </div>
         </div>
 
@@ -223,7 +254,7 @@ export function WarrantyDetail({ open, onOpenChange, warranty, onEdit, canEdit =
                 </div>
                 <div>
                   <span className="text-muted-foreground">Install Date</span>
-                  <p className="font-medium">{format(parseISO(warranty.original_install_date), "MMM d, yyyy")}</p>
+                  <p className="font-medium">{formatOptionalDate(warranty.original_install_date)}</p>
                 </div>
                 <div>
                   <span className="text-muted-foreground">Roof Type</span>
@@ -244,7 +275,7 @@ export function WarrantyDetail({ open, onOpenChange, warranty, onEdit, canEdit =
                 </div>
                 <div>
                   <span className="text-muted-foreground">Expiration Date</span>
-                  <p className="font-medium">{format(parseISO(warranty.warranty_expiration_date), "MMM d, yyyy")}</p>
+                  <p className="font-medium">{formatOptionalDate(warranty.warranty_expiration_date)}</p>
                 </div>
                 {warranty.manufacturer && (
                   <div>
@@ -267,7 +298,7 @@ export function WarrantyDetail({ open, onOpenChange, warranty, onEdit, canEdit =
               <CardContent className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <span className="text-muted-foreground">Date Submitted</span>
-                  <p className="font-medium">{format(parseISO(warranty.date_submitted), "MMM d, yyyy")}</p>
+                  <p className="font-medium">{formatOptionalDate(warranty.date_submitted, "Unknown")}</p>
                 </div>
                 <div>
                   <span className="text-muted-foreground">Source</span>
@@ -306,7 +337,7 @@ export function WarrantyDetail({ open, onOpenChange, warranty, onEdit, canEdit =
                   <span className="text-muted-foreground">Date Assigned</span>
                   <p className="font-medium">
                     {warranty.date_assigned
-                      ? format(parseISO(warranty.date_assigned), "MMM d, yyyy")
+                      ? formatOptionalDate(warranty.date_assigned)
                       : "Not assigned"}
                   </p>
                 </div>
@@ -329,7 +360,7 @@ export function WarrantyDetail({ open, onOpenChange, warranty, onEdit, canEdit =
                   {warranty.date_completed && (
                     <div>
                       <span className="text-muted-foreground">Date Completed</span>
-                      <p className="font-medium">{format(parseISO(warranty.date_completed), "MMM d, yyyy")}</p>
+                      <p className="font-medium">{formatOptionalDate(warranty.date_completed)}</p>
                     </div>
                   )}
                   {warranty.labor_cost !== null && (
@@ -370,7 +401,7 @@ export function WarrantyDetail({ open, onOpenChange, warranty, onEdit, canEdit =
                   {warranty.closed_date && (
                     <div>
                       <span className="text-muted-foreground">Closed Date</span>
-                      <p className="font-medium">{format(parseISO(warranty.closed_date), "MMM d, yyyy")}</p>
+                      <p className="font-medium">{formatOptionalDate(warranty.closed_date)}</p>
                     </div>
                   )}
                   <div>

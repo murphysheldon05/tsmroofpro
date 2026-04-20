@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
-import { Navigate } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
-import { BarChart3, Sparkles } from "lucide-react";
+import { BarChart3, Sparkles, ArrowRight } from "lucide-react";
 
 import { useAuth } from "@/contexts/AuthContext";
 import { AdminTemplateGrid } from "@/components/kpi-scorecards/AdminTemplateGrid";
@@ -10,17 +11,44 @@ import { EmployeeDashboard } from "@/components/kpi-scorecards/EmployeeDashboard
 import { AdminRecentSubmissions } from "@/components/kpi-scorecards/AdminRecentSubmissions";
 import { AssignmentsModal } from "@/components/kpi-scorecards/AssignmentsModal";
 import { useMyEmployeeAssignments, useMyReviewAssignments } from "@/hooks/useKpiScorecards";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
+import { getAccessibleWeeklyKpiCards } from "@/lib/weeklyKpiAccess";
 import type { ScorecardTemplate } from "@/lib/kpiTypes";
 
 export default function KpiScorecards() {
-  const { role } = useAuth();
+  const { role, user } = useAuth();
   const isAdmin = role === "admin";
   const [selectedTemplate, setSelectedTemplate] = useState<ScorecardTemplate | null>(null);
+  const { data: profile } = useQuery({
+    queryKey: ["weekly-kpi-profile", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("full_name, email")
+        .eq("id", user.id)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id,
+  });
 
   const { data: reviewAssignments = [], isLoading: loadingReviewAssignments } =
     useMyReviewAssignments();
   const { data: employeeAssignments = [], isLoading: loadingEmployeeAssignments } =
     useMyEmployeeAssignments();
+  const legacyCards = useMemo(
+    () =>
+      getAccessibleWeeklyKpiCards({
+        role,
+        fullName: profile?.full_name,
+        email: profile?.email ?? user?.email,
+      }),
+    [role, profile?.full_name, profile?.email, user?.email],
+  );
 
   const hasAssignedAccess = useMemo(
     () => reviewAssignments.length > 0 || employeeAssignments.length > 0,
@@ -31,7 +59,7 @@ export default function KpiScorecards() {
     return <div className="mx-auto max-w-7xl py-12 text-sm text-muted-foreground">Loading KPI scorecards...</div>;
   }
 
-  if (!isAdmin && !hasAssignedAccess) {
+  if (!isAdmin && !hasAssignedAccess && legacyCards.length === 0) {
     return <Navigate to="/command-center" replace />;
   }
 
@@ -46,7 +74,7 @@ export default function KpiScorecards() {
             KPI Scorecards
           </h1>
           <p className="max-w-3xl text-sm text-muted-foreground">
-            Admins can build templates and manage assignments. Assigned employees and reviewers see only their own scorecards.
+            Keep using your existing scorecards while editing and assigning the new template-based scorecards.
           </p>
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant="outline" className="border-primary/30 bg-primary/5 text-primary">
@@ -59,6 +87,36 @@ export default function KpiScorecards() {
           </div>
         </div>
       </header>
+
+      {legacyCards.length > 0 && (
+        <section className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-bold text-foreground">Legacy Weekly Scorecards</h2>
+            <Badge variant="outline" className="border-border/70">
+              Kept active for edits
+            </Badge>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {legacyCards.map((card) => (
+              <Card key={card.href} className="overflow-hidden border-border/70 card-lift">
+                <div className="bg-gradient-to-r from-primary/20 via-surface-3 to-surface-2 px-5 py-4 border-b border-border/60">
+                  <h3 className="text-base font-bold text-foreground">{card.title}</h3>
+                </div>
+                <CardContent className="space-y-4 p-5">
+                  <p className="text-sm text-muted-foreground">{card.subtitle}</p>
+                  <p className="text-xs text-muted-foreground">Reviewed by: {card.reviewedBy}</p>
+                  <Button asChild variant="neon" className="w-full">
+                    <Link to={card.href}>
+                      Open and Edit
+                      <ArrowRight className="h-4 w-4" />
+                    </Link>
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </section>
+      )}
 
       {isAdmin ? (
         <div className="space-y-8">

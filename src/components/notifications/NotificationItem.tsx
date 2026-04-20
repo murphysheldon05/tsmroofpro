@@ -65,7 +65,7 @@ function getNavigationPath(notification: UserNotification, isAdmin: boolean): st
     case 'compliance':
       return '/admin?tab=ops-compliance';
     case 'warranty':
-      return '/warranties';
+      return entity_id ? `/warranties?id=${entity_id}` : '/warranties';
     case 'kpi_scorecard':
       return '/kpi-scorecards';
     case 'chamber':
