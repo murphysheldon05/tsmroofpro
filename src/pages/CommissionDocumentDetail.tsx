@@ -479,11 +479,6 @@ export default function CommissionDocumentDetail() {
                   <span className="text-muted-foreground">Pay Run:</span>
                   <Badge variant="outline" className="bg-gray-100 dark:bg-gray-800 text-xs">{payRunRange}</Badge>
                   <LateBadge isLateSubmission={document.is_late_submission} isLateRevision={document.is_late_revision} />
-                  {(document as any).is_friday_close && (
-                    <Badge variant="outline" className="bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400 border-blue-300 dark:border-blue-700 text-[10px]">
-                      Friday Build
-                    </Badge>
-                  )}
                 </div>
               )}
               {document.install_date && (

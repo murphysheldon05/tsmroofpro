@@ -461,7 +461,7 @@ For any status or data changes in the system.
     rules: [
       "AccuLynx Payments tab is the ONLY source of truth",
       "No estimates or orders count — actual payment only",
-      "Friday 11:59 PM is a HARD cutoff — builds completed on Fridays get a grace period until Monday noon",
+      "Friday 11:59 PM is a HARD cutoff — revisions for rejections have a grace period until Tuesday 11:59 PM",
       "Departing reps: $200 flat per reassigned job"
     ],
     zeroTolerance: [],

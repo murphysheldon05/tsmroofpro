@@ -156,13 +156,8 @@ function PayRunInfoBanner() {
             <span className="font-medium text-foreground">{deadlines.submissionDeadline}</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-blue-500" />
-            <span className="text-muted-foreground">Friday build grace:</span>
-            <span className="font-medium text-foreground">{deadlines.fridayBuildGrace}</span>
-          </div>
-          <div className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-orange-500" />
-            <span className="text-muted-foreground">Correction cutoff:</span>
+            <span className="text-muted-foreground">Revision grace:</span>
             <span className="font-medium text-foreground">{deadlines.revisionDeadline}</span>
           </div>
         </div>
@@ -289,7 +284,6 @@ export default function CommissionManager() {
         submitted_at: c.submitted_at,
         created_at: c.created_at,
         rep_name: c.rep_name,
-        is_friday_close: (c as any).is_friday_close,
       };
       const prId = (c as any).pay_run_id;
       if (!prId) {

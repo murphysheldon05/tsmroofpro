@@ -155,7 +155,6 @@ export default function MyCommissions() {
         revision_count: c.revision_count ?? 0,
         submitted_at: c.submitted_at,
         created_at: c.created_at,
-        is_friday_close: (c as any).is_friday_close,
       };
       const prId = c.pay_run_id;
       if (!prId) {

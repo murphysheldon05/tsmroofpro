@@ -168,11 +168,6 @@ function StatusBucketSection({ bucket, items, onRowClick }: StatusBucketSectionP
                   >
                     {doc.commission_type === "repair" ? "Repair" : "Standard"}
                   </Badge>
-                  {doc.is_friday_close && (
-                    <Badge variant="outline" className="text-[10px] bg-blue-50 dark:bg-blue-950/30 text-blue-600 border-blue-200">
-                      Fri Build
-                    </Badge>
-                  )}
                   {(doc.revision_count ?? 0) > 0 && bucket !== "rejected" && (
                     <Badge variant="outline" className="text-[10px] bg-amber-50 dark:bg-amber-950/30 text-amber-600 border-amber-200">
                       Revised

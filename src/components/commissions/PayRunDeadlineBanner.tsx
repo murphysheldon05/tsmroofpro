@@ -8,7 +8,6 @@ import {
   getCurrentPayRunPeriod,
   getNextPayRunPeriod,
   getDeadlineCountdown,
-  getFridayCloseDeadlineCountdown,
   getRevisionDeadlineCountdown,
   formatPayRunRange,
 } from "@/lib/commissionPayDateCalculations";
@@ -50,14 +49,12 @@ function CountdownDisplay({ countdown, label }: { countdown: Countdown; label: s
 
 export function PayRunDeadlineBanner() {
   const [submissionCountdown, setSubmissionCountdown] = useState<Countdown>(getDeadlineCountdown());
-  const [fridayCloseCountdown, setFridayCloseCountdown] = useState<Countdown>(getFridayCloseDeadlineCountdown());
   const [revisionCountdown, setRevisionCountdown] = useState<Countdown>(getRevisionDeadlineCountdown());
   const [beforeDeadline, setBeforeDeadline] = useState(isBeforeSubmissionDeadline());
 
   useEffect(() => {
     const interval = setInterval(() => {
       setSubmissionCountdown(getDeadlineCountdown());
-      setFridayCloseCountdown(getFridayCloseDeadlineCountdown());
       setRevisionCountdown(getRevisionDeadlineCountdown());
       setBeforeDeadline(isBeforeSubmissionDeadline());
     }, 1000);
@@ -67,7 +64,7 @@ export function PayRunDeadlineBanner() {
   const currentPeriod = getCurrentPayRunPeriod();
   const nextPeriod = getNextPayRunPeriod();
 
-  const allPassed = !submissionCountdown && !fridayCloseCountdown && !revisionCountdown;
+  const allPassed = !submissionCountdown && !revisionCountdown;
 
   if (allPassed) {
     return (
@@ -95,15 +92,11 @@ export function PayRunDeadlineBanner() {
           <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1">
             <CountdownDisplay
               countdown={submissionCountdown}
-              label={`Standard: ${currentPeriod.submissionDeadlineDisplay}`}
-            />
-            <CountdownDisplay
-              countdown={fridayCloseCountdown}
-              label={`Friday build grace: ${currentPeriod.fridayBuildGraceDisplay}`}
+              label={`Submission: ${currentPeriod.submissionDeadlineDisplay}`}
             />
             <CountdownDisplay
               countdown={revisionCountdown}
-              label={`Correction: ${currentPeriod.revisionDeadlineDisplay}`}
+              label={`Revision grace: ${currentPeriod.revisionDeadlineDisplay}`}
             />
           </div>
         </AlertDescription>
@@ -115,25 +108,21 @@ export function PayRunDeadlineBanner() {
     <Alert className="border-yellow-300 bg-yellow-50 dark:bg-yellow-950/20 dark:border-yellow-700">
       <AlertTriangle className="h-4 w-4 text-yellow-600" />
       <AlertTitle className="text-yellow-800 dark:text-yellow-300">
-        Standard Friday 11:59 PM Deadline Has Passed
+        Friday 11:59 PM Submission Deadline Has Passed
       </AlertTitle>
       <AlertDescription className="text-yellow-700 dark:text-yellow-400">
         <p>
-          Standard submissions will go into next week's pay run:{" "}
+          New submissions will go into next week's pay run:{" "}
           <strong>{formatPayRunRange(nextPeriod.periodStart, nextPeriod.periodEnd)}</strong>
         </p>
         <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2">
           <CountdownDisplay
             countdown={submissionCountdown}
-            label="Standard submission"
-          />
-          <CountdownDisplay
-            countdown={fridayCloseCountdown}
-            label="Friday build grace"
+            label="Submission cutoff"
           />
           <CountdownDisplay
             countdown={revisionCountdown}
-            label="Correction cutoff"
+            label="Revision grace"
           />
         </div>
       </AlertDescription>
