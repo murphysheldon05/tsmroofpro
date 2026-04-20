@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { Logo } from "@/components/Logo";
 import { cn } from "@/lib/utils";
@@ -54,7 +55,6 @@ import { useSidebarOrder } from "@/hooks/useSidebarOrder";
 import { useWalkthroughContext } from "@/contexts/WalkthroughContext";
 import { usePendingComplianceCount, useNewWarrantyCount, useSheldonPendingCount } from "@/hooks/useNavBadgeCounts";
 import { formatDisplayName } from "@/lib/displayName";
-import { getAccessibleWeeklyKpiCards } from "@/lib/weeklyKpiAccess";
 import { supabase } from "@/integrations/supabase/client";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -279,6 +279,23 @@ export function AppSidebar() {
   const { data: pendingComplianceCount = 0 } = usePendingComplianceCount();
   const { data: newWarrantyCount = 0 } = useNewWarrantyCount();
   const { data: sheldonPendingCount = 0 } = useSheldonPendingCount();
+  const { data: hasKpiAssignment = false } = useQuery({
+    queryKey: ["can-access-kpi-scorecards", user?.id, role],
+    queryFn: async () => {
+      if (!user?.id) return false;
+      if (role === "admin") return true;
+
+      const { data, error } = await (supabase.from as any)("scorecard_assignments")
+        .select("id")
+        .eq("status", "active")
+        .or(`employee_id.eq.${user.id},reviewer_ids.cs.{${user.id}}`)
+        .limit(1);
+
+      if (error) throw error;
+      return (data ?? []).length > 0;
+    },
+    enabled: !!user?.id,
+  });
   const showCommissionsBadge = isAdmin && pendingComplianceCount > 0;
   const showAdminPanelBadge = sheldonPendingCount > 0;
   const showProductionBadge = isSectionVisible("production", userPermissions, role) && newWarrantyCount > 0;
@@ -396,12 +413,7 @@ export function AppSidebar() {
 
   // Build navigation with role-based commission item
   const filteredNavigation = useMemo(() => {
-    const canAccessKpiScorecards =
-      getAccessibleWeeklyKpiCards({
-        role,
-        fullName: profile?.full_name,
-        email: user?.email,
-      }).length > 0;
+    const canAccessKpiScorecards = isAdmin || hasKpiAssignment;
 
     const commissionItem: NavItem = isAdmin
       ? {
@@ -462,7 +474,7 @@ export function AppSidebar() {
         return item;
       })
       .filter(Boolean) as NavItem[];
-  }, [userPermissions, role, isAdmin, profile?.full_name, user?.email]);
+  }, [userPermissions, role, isAdmin, hasKpiAssignment]);
 
   // Sort navigation by user's preferred order
   const sortedNavigation = useMemo(() => {

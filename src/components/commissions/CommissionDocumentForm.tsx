@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import confetti from "canvas-confetti";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
+
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
@@ -248,7 +248,6 @@ export function CommissionDocumentForm({ document: existingDoc, readOnly = false
       advance_total: existingDoc?.advance_total ?? 0,
       notes: existingDoc?.notes ?? "",
       install_date: existingDoc?.install_date ?? "",
-      is_friday_close: existingDoc?.is_friday_close ?? false,
     };
   });
 
@@ -438,7 +437,7 @@ export function CommissionDocumentForm({ document: existingDoc, readOnly = false
     approved_at: null,
     approval_comment: null,
     install_date: formData.install_date || null,
-    is_friday_close: formData.is_friday_close,
+    is_friday_close: false,
     starting_claim_amount: null,
     final_claim_amount: null,
     additional_neg_expenses: additionalNegExpenses
@@ -914,27 +913,6 @@ export function CommissionDocumentForm({ document: existingDoc, readOnly = false
           </CardContent>
         </Card>
       </div>
-
-      {/* ── Friday Close Flag ── */}
-      {canEdit && (
-        <div className="flex items-start gap-3 mt-4 p-4 rounded-xl border border-border/50 bg-muted/30">
-          <Checkbox
-            id="is_friday_close"
-            checked={formData.is_friday_close}
-            onCheckedChange={(checked) =>
-              setFormData((prev) => ({ ...prev, is_friday_close: !!checked }))
-            }
-          />
-          <div className="grid gap-0.5 leading-none">
-            <Label htmlFor="is_friday_close" className="text-sm font-medium cursor-pointer">
-              Build completed on a Friday
-            </Label>
-            <p className="text-xs text-muted-foreground">
-              Grants a submission grace period until the upcoming Monday at 12:00 PM MST.
-            </p>
-          </div>
-        </div>
-      )}
 
       {/* ── Bottom Action Buttons ── */}
       {canEdit && (

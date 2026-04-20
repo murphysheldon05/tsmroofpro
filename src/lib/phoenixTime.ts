@@ -116,29 +116,16 @@ export function getSubmissionCutoffExclusiveInstant(periodSaturday: {
 }
 
 /**
- * Monday 12:00:01 PM Phoenix instant — extended deadline for Friday-close jobs.
- * Monday is day +9 from the period's Saturday start.
- */
-export function getFridayCloseExceptionCutoffInstant(periodSaturday: {
-  year: number;
-  month: number;
-  day: number;
-}): Date {
-  const mon = addCalendarDaysYMD(periodSaturday.year, periodSaturday.month, periodSaturday.day, 9);
-  return phoenixWallToUtc(mon.year, mon.month, mon.day, 12, 0, 1);
-}
-
-/**
- * Wednesday 12:00:01 PM Phoenix instant — times strictly before this are "on time" for correction/revision cutoff.
- * Wednesday is day +11 from the period's Saturday start (the following week).
+ * Tuesday 11:59:01 PM Phoenix instant — times strictly before this are "on time" for revision/correction cutoff.
+ * Tuesday is day +10 from the period's Saturday start (the following week).
  */
 export function getRevisionCutoffExclusiveInstant(periodSaturday: {
   year: number;
   month: number;
   day: number;
 }): Date {
-  const wed = addCalendarDaysYMD(periodSaturday.year, periodSaturday.month, periodSaturday.day, 11);
-  return phoenixWallToUtc(wed.year, wed.month, wed.day, 12, 0, 1);
+  const tue = addCalendarDaysYMD(periodSaturday.year, periodSaturday.month, periodSaturday.day, 10);
+  return phoenixWallToUtc(tue.year, tue.month, tue.day, 23, 59, 1);
 }
 
 /** Format ISO instant for display in Phoenix (MST). */

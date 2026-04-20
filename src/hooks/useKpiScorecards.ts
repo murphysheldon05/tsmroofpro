@@ -15,6 +15,14 @@ import { toDateString } from "@/lib/kpiTypes";
 // in the auto-generated types yet.
 const fromAny = (table: string) => (supabase.from as any)(table);
 
+async function invokeScorecardNotification(body: Record<string, unknown>) {
+  try {
+    await supabase.functions.invoke("send-scorecard-notification", { body });
+  } catch (error) {
+    console.error("Failed to invoke send-scorecard-notification", error);
+  }
+}
+
 const KEYS = {
   templates: ["scorecard-templates"] as const,
   template: (id: string) => ["scorecard-template", id] as const,
@@ -224,6 +232,12 @@ export function useSaveAssignment() {
       reviewer_ids: string[];
       status?: string;
     }) => {
+      if (!user?.id) throw new Error("You must be signed in.");
+
+      let assignmentId = params.id ?? null;
+      let eventType: "native_scorecard_assignment_created" | "native_scorecard_assignment_updated" =
+        "native_scorecard_assignment_created";
+
       if (params.id) {
         const { error } = await fromAny("scorecard_assignments")
           .update({
@@ -233,15 +247,31 @@ export function useSaveAssignment() {
           })
           .eq("id", params.id);
         if (error) throw error;
+        assignmentId = params.id;
+        eventType = "native_scorecard_assignment_updated";
       } else {
-        const { error } = await fromAny("scorecard_assignments")
+        const { data, error } = await fromAny("scorecard_assignments")
           .insert({
             template_id: params.template_id,
             employee_id: params.employee_id,
             reviewer_ids: params.reviewer_ids,
             created_by: user?.id,
-          });
+          })
+          .select("id")
+          .single();
         if (error) throw error;
+        assignmentId = data?.id ?? null;
+      }
+
+      if (assignmentId) {
+        await invokeScorecardNotification({
+          eventType,
+          assignmentId,
+          templateId: params.template_id,
+          employeeId: params.employee_id,
+          reviewerIds: params.reviewer_ids,
+          assignedByUserId: user.id,
+        });
       }
     },
     onSuccess: () => {
@@ -299,6 +329,8 @@ export function useRecentSubmissions() {
 
 export function useSubmitScore() {
   const qc = useQueryClient();
+  const { user } = useAuth();
+
   return useMutation({
     mutationFn: async (params: {
       assignment_id: string;
@@ -332,11 +364,25 @@ export function useSubmitScore() {
       if (error) throw error;
       return data as ScorecardSubmission;
     },
-    onSuccess: (_, vars) => {
+    onSuccess: async (submission, vars) => {
       qc.invalidateQueries({
         queryKey: KEYS.submissions(vars.assignment_id),
       });
       qc.invalidateQueries({ queryKey: KEYS.recentSubmissions });
+
+      if (user?.id) {
+        await invokeScorecardNotification({
+          eventType: "native_scorecard_submitted",
+          assignmentId: vars.assignment_id,
+          submissionId: submission.id,
+          reviewerId: vars.reviewer_id,
+          submittedByUserId: user.id,
+          periodStart: toDateString(vars.period_start),
+          periodEnd: toDateString(vars.period_end),
+          average: vars.average,
+          notes: vars.notes || null,
+        });
+      }
     },
   });
 }

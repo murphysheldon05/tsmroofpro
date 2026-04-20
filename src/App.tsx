@@ -10,15 +10,6 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageTransition } from "@/components/PageTransition";
 import { NavigationProgress } from "@/components/NavigationProgress";
-import {
-  SalesRepScorecardRoute,
-  SalesManagerScorecardRoute,
-  OfficeAdminScorecardRoute,
-  OperationsScorecardRoute,
-  AccountingScorecardRoute,
-  ProductionScorecardRoute,
-  SupplementScorecardRoute,
-} from "@/pages/KpiWeeklyScorecardRoutes";
 import { Loader2 } from "lucide-react";
 
 const Landing = lazy(() => import("./pages/Landing"));
@@ -123,13 +114,6 @@ const App = () => (
             <Route element={<ProtectedAppShell />}>
               <Route path="/command-center" element={<CommandCenter />} />
               <Route path="/kpi-scorecards" element={<KpiScorecards />} />
-              <Route path="/kpi-scorecards/sales-rep" element={<SalesRepScorecardRoute />} />
-              <Route path="/kpi-scorecards/sales-manager" element={<SalesManagerScorecardRoute />} />
-              <Route path="/kpi-scorecards/office-admin" element={<OfficeAdminScorecardRoute />} />
-              <Route path="/kpi-scorecards/operations" element={<OperationsScorecardRoute />} />
-              <Route path="/kpi-scorecards/accounting" element={<AccountingScorecardRoute />} />
-              <Route path="/kpi-scorecards/production" element={<ProductionScorecardRoute />} />
-              <Route path="/kpi-scorecards/supplement" element={<SupplementScorecardRoute />} />
               <Route path="/kpi-scorecards/score/:assignmentId" element={<KpiScorecardScore />} />
               <Route path="/kpi-scorecards/view/:assignmentId" element={<KpiScorecardHistory />} />
               <Route path="/pending-review" element={<PendingReview />} />

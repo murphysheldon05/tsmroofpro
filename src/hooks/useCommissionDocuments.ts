@@ -372,7 +372,7 @@ export function useUpdateCommissionDocumentStatus() {
       // Validate status transition
       const { data: currentDoc } = await supabase
         .from('commission_documents')
-        .select('status, revision_count, scheduled_pay_date, pay_run_id, is_friday_close')
+        .select('status, revision_count, scheduled_pay_date, pay_run_id')
         .eq('id', id)
         .single();
 
@@ -412,7 +412,7 @@ export function useUpdateCommissionDocumentStatus() {
         const isResubmission = (currentDoc?.revision_count || 0) > 0;
 
         if (isResubmission && currentDoc?.pay_run_id) {
-          // Resubmission after rejection — apply Wednesday noon grace period
+          // Resubmission after rejection — apply Tuesday 11:59 PM grace period
           const { data: origPayRun } = await supabase
             .from('commission_pay_runs')
             .select('period_start')
@@ -433,15 +433,14 @@ export function useUpdateCommissionDocumentStatus() {
           updateData.scheduled_pay_date = calculateResubmissionPayDate(currentDoc.scheduled_pay_date);
           await ensurePayRunExists(getNextPayRunPeriod(new Date()).periodStart);
         } else {
-          // First submission — Friday 11:59 PM cutoff (or Monday noon for Friday close)
-          const isFridayClose = !!(currentDoc as any)?.is_friday_close;
-          const subResult = determinePayRunForSubmission(new Date(), isFridayClose);
+          // First submission — Friday 11:59 PM cutoff
+          const subResult = determinePayRunForSubmission(new Date());
           const payRunId = await ensurePayRunExists(subResult.periodStart);
           updateData.pay_run_id = payRunId;
           updateData.is_late_submission = subResult.isLate;
 
           const { getScheduledPayDateString } = await import('@/lib/commissionPayDateCalculations');
-          updateData.scheduled_pay_date = getScheduledPayDateString(new Date(), isFridayClose);
+          updateData.scheduled_pay_date = getScheduledPayDateString(new Date());
           await ensurePayRunExists(getNextPayRunPeriod(new Date()).periodStart);
         }
 

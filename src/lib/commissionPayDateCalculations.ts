@@ -2,12 +2,9 @@
  * Pay Date Calculation Utility for Commission Submissions
  *
  * Pay cycle: Saturday through Friday.
- * Three deadlines per pay run (all times MST / America/Phoenix):
- *   1. Standard submission:   Friday   11:59 PM  (day +6 from period Saturday)
- *   2. Friday-close exception: Monday  12:00 PM  (day +9 from period Saturday)
- *   3. Correction / revision:  Wednesday 12:00 PM (day +11 from period Saturday)
- *
- * Deadlines 2 and 3 fall in the calendar week *after* the pay run period ends.
+ * Two deadlines per pay run (all times MST / America/Phoenix):
+ *   1. Submission cutoff:     Friday   11:59 PM  (day +6 from period Saturday)
+ *   2. Revision grace period: Tuesday  11:59 PM  (day +10 from period Saturday)
  *
  * Pay run date (actual payday) is the Friday AFTER the period ends (day +13
  * from the period's Saturday start).  E.g. period Apr 11–17 → pay date Apr 24.
@@ -19,7 +16,6 @@ import {
   getMostRecentSaturdayYMD,
   addCalendarDaysYMD,
   getSubmissionCutoffExclusiveInstant,
-  getFridayCloseExceptionCutoffInstant,
   getRevisionCutoffExclusiveInstant,
   formatInstantInPhoenixMST,
 } from "./phoenixTime";
@@ -70,33 +66,12 @@ export function getEstimatedPayDate(): Date {
 
 /**
  * Pay-date Friday YYYY-MM-DD for the pay run that contains this submission.
- * The pay date is the Friday AFTER the period ends (day +13 from period Saturday).
- * Standard submissions use Friday 11:59 PM cutoff.
- * Friday-close submissions get until Monday noon of the following week.
+ * Before Friday 11:59 PM → current period. After → next period.
+ * Pay date is always the Friday after the period ends (day +13 from Saturday).
  */
-export function getScheduledPayDateString(timestamp: Date, isFridayClose = false): string {
+export function getScheduledPayDateString(timestamp: Date): string {
   const p = getPhoenixParts(timestamp);
   const currentSat = getMostRecentSaturdayYMD(p.year, p.month, p.day);
-
-  if (!isFridayClose) {
-    const cutoff = getSubmissionCutoffExclusiveInstant(currentSat);
-    let periodSat = currentSat;
-    if (timestamp.getTime() >= cutoff.getTime()) {
-      periodSat = addCalendarDaysYMD(currentSat.year, currentSat.month, currentSat.day, 7);
-    }
-    const payFri = addCalendarDaysYMD(periodSat.year, periodSat.month, periodSat.day, 13);
-    return ymdToDateString(payFri.year, payFri.month, payFri.day);
-  }
-
-  // Friday close: check if previous period's exception window is still open
-  const prevSat = addCalendarDaysYMD(currentSat.year, currentSat.month, currentSat.day, -7);
-  const prevFridayCloseCutoff = getFridayCloseExceptionCutoffInstant(prevSat);
-  if (timestamp.getTime() < prevFridayCloseCutoff.getTime()) {
-    const payFri = addCalendarDaysYMD(prevSat.year, prevSat.month, prevSat.day, 13);
-    return ymdToDateString(payFri.year, payFri.month, payFri.day);
-  }
-
-  // Exception window passed — use standard logic for current period
   const cutoff = getSubmissionCutoffExclusiveInstant(currentSat);
   let periodSat = currentSat;
   if (timestamp.getTime() >= cutoff.getTime()) {
@@ -156,25 +131,21 @@ const fmtWeekday = (d: Date) =>
 
 export function getCurrentDeadlineInfo(): {
   submissionDeadline: string;
-  fridayBuildGrace: string;
   revisionDeadline: string;
   payDate: string;
 } {
   const period = getCurrentPayRunPeriod();
   const s = parsePeriodStart(period.periodStart);
   const fri = addCalendarDaysYMD(s.year, s.month, s.day, 6);
-  const mon = addCalendarDaysYMD(s.year, s.month, s.day, 9);
-  const wed = addCalendarDaysYMD(s.year, s.month, s.day, 11);
+  const tue = addCalendarDaysYMD(s.year, s.month, s.day, 10);
   const payFri = addCalendarDaysYMD(s.year, s.month, s.day, 13);
 
   const friDt = phoenixWallToUtc(fri.year, fri.month, fri.day, 23, 59, 0);
-  const monDt = phoenixWallToUtc(mon.year, mon.month, mon.day, 12, 0, 0);
-  const wedDt = phoenixWallToUtc(wed.year, wed.month, wed.day, 12, 0, 0);
+  const tueDt = phoenixWallToUtc(tue.year, tue.month, tue.day, 23, 59, 0);
 
   return {
     submissionDeadline: fmtWeekday(friDt) + " at 11:59 PM MST",
-    fridayBuildGrace: fmtWeekday(monDt) + " at 12:00 PM MST",
-    revisionDeadline: fmtWeekday(wedDt) + " at 12:00 PM MST",
+    revisionDeadline: fmtWeekday(tueDt) + " at 11:59 PM MST",
     payDate: formatPayDateShort(ymdToDateString(payFri.year, payFri.month, payFri.day)),
   };
 }
@@ -216,31 +187,25 @@ export interface PayRunPeriod {
   periodStart: string;
   periodEnd: string;
   submissionDeadline: Date;
-  fridayBuildGraceDeadline: Date;
   revisionDeadline: Date;
   submissionDeadlineDisplay: string;
-  fridayBuildGraceDisplay: string;
   revisionDeadlineDisplay: string;
 }
 
 function buildPayRunPeriodFromSaturday(sat: { year: number; month: number; day: number }): PayRunPeriod {
   const fri = addCalendarDaysYMD(sat.year, sat.month, sat.day, 6);
-  const mon = addCalendarDaysYMD(sat.year, sat.month, sat.day, 9);
-  const wed = addCalendarDaysYMD(sat.year, sat.month, sat.day, 11);
+  const tue = addCalendarDaysYMD(sat.year, sat.month, sat.day, 10);
 
   const submissionDeadline = phoenixWallToUtc(fri.year, fri.month, fri.day, 23, 59, 0);
-  const fridayBuildGraceDeadline = phoenixWallToUtc(mon.year, mon.month, mon.day, 12, 0, 0);
-  const revisionDeadline = phoenixWallToUtc(wed.year, wed.month, wed.day, 12, 0, 0);
+  const revisionDeadline = phoenixWallToUtc(tue.year, tue.month, tue.day, 23, 59, 0);
 
   return {
     periodStart: ymdToDateString(sat.year, sat.month, sat.day),
     periodEnd: ymdToDateString(fri.year, fri.month, fri.day),
     submissionDeadline,
-    fridayBuildGraceDeadline,
     revisionDeadline,
     submissionDeadlineDisplay: fmtWeekday(submissionDeadline) + " at 11:59 PM MST",
-    fridayBuildGraceDisplay: fmtWeekday(fridayBuildGraceDeadline) + " at 12:00 PM MST",
-    revisionDeadlineDisplay: fmtWeekday(revisionDeadline) + " at 12:00 PM MST",
+    revisionDeadlineDisplay: fmtWeekday(revisionDeadline) + " at 11:59 PM MST",
   };
 }
 
@@ -273,20 +238,8 @@ export function isBeforeSubmissionDeadline(now: Date = new Date()): boolean {
 }
 
 /**
- * True if the Friday-close exception window for the *previous* pay run is still open.
- * (Monday noon falls in the current calendar week but belongs to the prior pay run.)
- */
-export function isBeforeFridayCloseDeadline(now: Date = new Date()): boolean {
-  const p = getPhoenixParts(now);
-  const currentSat = getMostRecentSaturdayYMD(p.year, p.month, p.day);
-  const prevSat = addCalendarDaysYMD(currentSat.year, currentSat.month, currentSat.day, -7);
-  const cutoff = getFridayCloseExceptionCutoffInstant(prevSat);
-  return now.getTime() < cutoff.getTime();
-}
-
-/**
- * True if the correction/revision deadline for the current pay run has not passed.
- * (Wednesday noon at day +11 from this week's Saturday.)
+ * True if the revision grace period for the current pay run has not passed.
+ * (Tuesday 11:59 PM at day +10 from this week's Saturday.)
  */
 export function isBeforeRevisionDeadline(now: Date = new Date()): boolean {
   const p = getPhoenixParts(now);
@@ -327,21 +280,12 @@ export function getDeadlineCountdown(now: Date = new Date()): Countdown {
   return msToCountdown(deadline.getTime() - now.getTime());
 }
 
-/** Countdown to the current pay run's Monday noon Friday-close exception. */
-export function getFridayCloseDeadlineCountdown(now: Date = new Date()): Countdown {
-  const p = getPhoenixParts(now);
-  const sat = getMostRecentSaturdayYMD(p.year, p.month, p.day);
-  const mon = addCalendarDaysYMD(sat.year, sat.month, sat.day, 9);
-  const deadline = phoenixWallToUtc(mon.year, mon.month, mon.day, 12, 0, 0);
-  return msToCountdown(deadline.getTime() - now.getTime());
-}
-
-/** Countdown to the current pay run's Wednesday noon correction deadline. */
+/** Countdown to the current pay run's Tuesday 11:59 PM revision grace deadline. */
 export function getRevisionDeadlineCountdown(now: Date = new Date()): Countdown {
   const p = getPhoenixParts(now);
   const sat = getMostRecentSaturdayYMD(p.year, p.month, p.day);
-  const wed = addCalendarDaysYMD(sat.year, sat.month, sat.day, 11);
-  const deadline = phoenixWallToUtc(wed.year, wed.month, wed.day, 12, 0, 0);
+  const tue = addCalendarDaysYMD(sat.year, sat.month, sat.day, 10);
+  const deadline = phoenixWallToUtc(tue.year, tue.month, tue.day, 23, 59, 0);
   return msToCountdown(deadline.getTime() - now.getTime());
 }
 
@@ -357,37 +301,15 @@ export function getPeriodStartForDate(date: Date): string {
 
 /**
  * Determine which pay run a new submission belongs to.
- * Standard: before Friday 11:59 PM = current period; after = next period.
- * Friday close: extends into Monday noon of the following week for the previous period.
+ * Before Friday 11:59 PM = current period; after = next period.
  */
-export function determinePayRunForSubmission(now: Date = new Date(), isFridayClose = false): {
+export function determinePayRunForSubmission(now: Date = new Date()): {
   periodStart: string;
   isLate: boolean;
 } {
-  const p = getPhoenixParts(now);
-  const currentSat = getMostRecentSaturdayYMD(p.year, p.month, p.day);
-
-  if (!isFridayClose) {
-    if (isBeforeSubmissionDeadline(now)) {
-      return { periodStart: getCurrentPayRunPeriod(now).periodStart, isLate: false };
-    }
-    return { periodStart: getNextPayRunPeriod(now).periodStart, isLate: true };
+  if (isBeforeSubmissionDeadline(now)) {
+    return { periodStart: getCurrentPayRunPeriod(now).periodStart, isLate: false };
   }
-
-  // Friday close: check if previous period's exception window is still open
-  const prevSat = addCalendarDaysYMD(currentSat.year, currentSat.month, currentSat.day, -7);
-  const prevFridayCloseCutoff = getFridayCloseExceptionCutoffInstant(prevSat);
-
-  if (now.getTime() < prevFridayCloseCutoff.getTime()) {
-    return { periodStart: ymdToDateString(prevSat.year, prevSat.month, prevSat.day), isLate: false };
-  }
-
-  // Standard window check for current period
-  const standardCutoff = getSubmissionCutoffExclusiveInstant(currentSat);
-  if (now.getTime() < standardCutoff.getTime()) {
-    return { periodStart: getCurrentPayRunPeriod(now).periodStart, isLate: true };
-  }
-
   return { periodStart: getNextPayRunPeriod(now).periodStart, isLate: true };
 }
 

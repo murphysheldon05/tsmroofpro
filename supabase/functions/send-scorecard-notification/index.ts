@@ -15,7 +15,10 @@ type ScorecardEventType =
   | "scorecard_edited"
   | "scorecard_overdue"
   | "scorecard_fail"
-  | "scorecard_correction_plan";
+  | "scorecard_correction_plan"
+  | "native_scorecard_assignment_created"
+  | "native_scorecard_assignment_updated"
+  | "native_scorecard_submitted";
 
 interface ScorecardPayload {
   eventType: ScorecardEventType;
@@ -32,6 +35,16 @@ interface ScorecardPayload {
   recipientEmail?: string | null;
   kpiName?: string | null;
   overrideActorName?: string | null;
+  assignmentId?: string | null;
+  submissionId?: string | null;
+  templateId?: string | null;
+  employeeId?: string | null;
+  reviewerIds?: string[] | null;
+  assignedByUserId?: string | null;
+  reviewerId?: string | null;
+  periodStart?: string | null;
+  periodEnd?: string | null;
+  average?: number | null;
 }
 
 const appUrl = "https://tsmroofpro.com";
@@ -109,6 +122,140 @@ async function getLeadershipRecipients(
   return recipients;
 }
 
+async function getAdminRecipients(supabase: ReturnType<typeof createClient>) {
+  const { data: adminRoles } = await (supabase.from as any)("user_roles")
+    .select("user_id")
+    .eq("role", "admin");
+  const adminIds = (adminRoles ?? []).map((row: { user_id: string }) => row.user_id);
+  if (adminIds.length === 0) return [];
+  const { data: profiles } = await supabase
+    .from("profiles")
+    .select("id, full_name, email")
+    .in("id", adminIds);
+  return profiles ?? [];
+}
+
+async function handleNativeScorecardEvent(
+  supabase: ReturnType<typeof createClient>,
+  payload: ScorecardPayload,
+) {
+  const isAssignmentEvent =
+    payload.eventType === "native_scorecard_assignment_created" ||
+    payload.eventType === "native_scorecard_assignment_updated";
+  const isSubmissionEvent = payload.eventType === "native_scorecard_submitted";
+
+  if (!isAssignmentEvent && !isSubmissionEvent) return false;
+  if (!payload.assignmentId) return true;
+
+  const { data: assignment } = await (supabase.from as any)("scorecard_assignments")
+    .select("id, template_id, employee_id, reviewer_ids")
+    .eq("id", payload.assignmentId)
+    .maybeSingle();
+  if (!assignment) return true;
+
+  const { data: template } = await (supabase.from as any)("scorecard_templates")
+    .select("id, name")
+    .eq("id", assignment.template_id)
+    .maybeSingle();
+
+  const recipientIds = new Set<string>();
+  if (assignment.employee_id) recipientIds.add(assignment.employee_id);
+  for (const reviewerId of assignment.reviewer_ids ?? []) {
+    if (reviewerId) recipientIds.add(reviewerId);
+  }
+
+  const adminRecipients = await getAdminRecipients(supabase);
+  for (const admin of adminRecipients) {
+    if (admin.id) recipientIds.add(admin.id);
+  }
+
+  const recipientProfiles = recipientIds.size
+    ? (
+        await supabase
+          .from("profiles")
+          .select("id, full_name, email")
+          .in("id", [...recipientIds])
+      ).data ?? []
+    : [];
+
+  const actorProfile = payload.assignedByUserId
+    ? await getProfileById(supabase, payload.assignedByUserId)
+    : payload.submittedByUserId
+      ? await getProfileById(supabase, payload.submittedByUserId)
+      : null;
+  const actorName = actorProfile?.full_name ?? "A team member";
+  const templateName = template?.name ?? "KPI scorecard";
+
+  if (isAssignmentEvent) {
+    const verb =
+      payload.eventType === "native_scorecard_assignment_created" ? "assigned" : "updated";
+    const title =
+      payload.eventType === "native_scorecard_assignment_created"
+        ? "New KPI scorecard assignment"
+        : "KPI scorecard assignment updated";
+    const message = `${actorName} ${verb} ${templateName}.`;
+
+    for (const recipient of recipientProfiles) {
+      await createInAppNotification(
+        supabase,
+        recipient.id,
+        "scorecard_assignment",
+        title,
+        message,
+        "scorecard_assignment",
+        assignment.id,
+      );
+      if (recipient.email) {
+        await sendEmail(
+          recipient.email,
+          `${title} — ${templateName}`,
+          htmlShell(
+            title,
+            `<p>${message}</p><p>Open Roof Pro Hub to review details.</p>`,
+          ),
+        );
+      }
+    }
+    return true;
+  }
+
+  if (isSubmissionEvent) {
+    const title = "KPI scorecard submitted";
+    const periodLabel =
+      payload.periodStart && payload.periodEnd
+        ? `${payload.periodStart} to ${payload.periodEnd}`
+        : "this period";
+    const avgLabel =
+      typeof payload.average === "number" ? ` Average score: ${payload.average.toFixed(2)}.` : "";
+    const message = `${actorName} submitted ${templateName} for ${periodLabel}.${avgLabel}`;
+
+    for (const recipient of recipientProfiles) {
+      await createInAppNotification(
+        supabase,
+        recipient.id,
+        "scorecard_submission",
+        title,
+        message,
+        "scorecard_submission",
+        payload.submissionId ?? assignment.id,
+      );
+      if (recipient.email) {
+        await sendEmail(
+          recipient.email,
+          `${title} — ${templateName}`,
+          htmlShell(
+            title,
+            `<p>${message}</p><p>Open Roof Pro Hub to view score details.</p>`,
+          ),
+        );
+      }
+    }
+    return true;
+  }
+
+  return false;
+}
+
 function getFailedKpis(scores: Record<string, unknown> | undefined) {
   if (!scores) return [];
   return Object.entries(scores)
@@ -160,6 +307,14 @@ serve(async (req) => {
     );
 
     const payload = (await req.json()) as ScorecardPayload;
+    const handledNativeEvent = await handleNativeScorecardEvent(supabase, payload);
+    if (handledNativeEvent) {
+      return new Response(JSON.stringify({ success: true }), {
+        status: 200,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+
     const weekLabel = formatWeekLabel(payload.weekStartDate);
     const employeeProfile =
       (await getProfileById(supabase, payload.assignedUserId)) ??

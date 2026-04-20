@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Navigate } from "react-router-dom";
+import { Sparkles } from "lucide-react";
 
 import SalesRepScorecard from "@/components/scorecards/SalesRepScorecard";
 import SalesManagerScorecard from "@/components/scorecards/SalesManagerScorecard";
@@ -114,22 +115,31 @@ function SelectionCard({
   value,
   onChange,
   options,
+  helperText,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   options: Array<{ value: string; label: string }>;
+  helperText?: string;
 }) {
   return (
-    <Card className="max-w-3xl mx-auto border-border/70 bg-card/90">
+    <Card className="max-w-3xl mx-auto border-border/70 bg-card/90 card-lift">
       <CardContent className="p-4">
-        <label className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-          {label}
-        </label>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <label className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+            {label}
+          </label>
+          <span className="inline-flex items-center gap-1 rounded-full border border-[hsl(var(--highlight))]/40 bg-[hsl(var(--highlight))]/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-[hsl(var(--highlight-foreground))]">
+            <Sparkles className="h-3 w-3" />
+            Weekly focus
+          </span>
+        </div>
+        {helperText ? <p className="mt-2 text-sm text-muted-foreground">{helperText}</p> : null}
         <select
           value={value}
           onChange={(event) => onChange(event.target.value)}
-          className="mt-2 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/60"
+          className="mt-3 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-primary/60"
         >
           {options.map((option) => (
             <option key={option.value} value={option.value}>
@@ -189,6 +199,7 @@ export function SalesRepScorecardRoute() {
         value={selectedRepId}
         onChange={setSelectedRepId}
         options={selectOptions}
+        helperText="Pick a teammate to review this week's activity and compliance."
       />
       <SalesRepScorecard
         repId={selectedRep?.id}
@@ -236,6 +247,7 @@ export function SalesManagerScorecardRoute() {
           value: option,
           label: option,
         }))}
+        helperText="Choose a manager to score and submit this week's performance."
       />
       <SalesManagerScorecard
         managerName={managerName}
