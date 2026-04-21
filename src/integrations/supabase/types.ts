@@ -260,6 +260,156 @@ export type Database = {
           },
         ]
       }
+      chamber_assignments: {
+        Row: {
+          assigned_at: string
+          assigned_by: string | null
+          chamber_id: string
+          id: string
+          notes: string | null
+          user_id: string
+        }
+        Insert: {
+          assigned_at?: string
+          assigned_by?: string | null
+          chamber_id: string
+          id?: string
+          notes?: string | null
+          user_id: string
+        }
+        Update: {
+          assigned_at?: string
+          assigned_by?: string | null
+          chamber_id?: string
+          id?: string
+          notes?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chamber_assignments_chamber_id_fkey"
+            columns: ["chamber_id"]
+            isOneToOne: false
+            referencedRelation: "chambers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chamber_event_assignments: {
+        Row: {
+          assigned_at: string
+          assigned_by: string | null
+          event_id: string
+          id: string
+          note: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          assigned_at?: string
+          assigned_by?: string | null
+          event_id: string
+          id?: string
+          note?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          assigned_at?: string
+          assigned_by?: string | null
+          event_id?: string
+          id?: string
+          note?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chamber_event_assignments_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "chamber_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chamber_events: {
+        Row: {
+          chamber_id: string
+          created_at: string
+          event_date: string
+          event_time: string | null
+          event_type: string
+          id: string
+          is_manual: boolean
+          location: string | null
+          name: string
+        }
+        Insert: {
+          chamber_id: string
+          created_at?: string
+          event_date: string
+          event_time?: string | null
+          event_type: string
+          id?: string
+          is_manual?: boolean
+          location?: string | null
+          name: string
+        }
+        Update: {
+          chamber_id?: string
+          created_at?: string
+          event_date?: string
+          event_time?: string | null
+          event_type?: string
+          id?: string
+          is_manual?: boolean
+          location?: string | null
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chamber_events_chamber_id_fkey"
+            columns: ["chamber_id"]
+            isOneToOne: false
+            referencedRelation: "chambers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chambers: {
+        Row: {
+          created_at: string
+          has_portal: boolean
+          id: string
+          name: string
+          password: string | null
+          portal_label: string | null
+          portal_url: string | null
+          username: string | null
+        }
+        Insert: {
+          created_at?: string
+          has_portal?: boolean
+          id?: string
+          name: string
+          password?: string | null
+          portal_label?: string | null
+          portal_url?: string | null
+          username?: string | null
+        }
+        Update: {
+          created_at?: string
+          has_portal?: boolean
+          id?: string
+          name?: string
+          password?: string | null
+          portal_label?: string | null
+          portal_url?: string | null
+          username?: string | null
+        }
+        Relationships: []
+      }
       checklist_items: {
         Row: {
           app_id: string | null
@@ -472,6 +622,44 @@ export type Database = {
           },
         ]
       }
+      commission_comments: {
+        Row: {
+          comment_text: string
+          comment_type: string
+          commission_id: string
+          created_at: string
+          id: string
+          is_read: boolean
+          user_id: string
+        }
+        Insert: {
+          comment_text: string
+          comment_type?: string
+          commission_id: string
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          user_id: string
+        }
+        Update: {
+          comment_text?: string
+          comment_type?: string
+          commission_id?: string
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commission_comments_commission_id_fkey"
+            columns: ["commission_id"]
+            isOneToOne: false
+            referencedRelation: "commission_documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       commission_documents: {
         Row: {
           accounting_approved_at: string | null
@@ -488,12 +676,17 @@ export type Database = {
           contract_total_net: number
           created_at: string
           created_by: string
+          customer_address: string | null
+          customer_email: string | null
+          customer_name: string | null
+          customer_phone: string | null
           dollars_increased: number | null
           final_claim_amount: number | null
+          form_type: string
           gross_contract_total: number
           id: string
           install_date: string | null
-          is_friday_close: boolean
+          is_friday_close: boolean | null
           is_late_revision: boolean
           is_late_submission: boolean
           job_date: string
@@ -520,6 +713,11 @@ export type Database = {
           profit_split_label: string | null
           rep_commission: number
           rep_profit_percent: number | null
+          repair_commission_amount: number | null
+          repair_commission_rate: number | null
+          repair_date: string | null
+          repair_description: string | null
+          repair_photos: string[] | null
           review_completed_at: string | null
           review_completed_by: string | null
           review_completed_notes: string | null
@@ -540,6 +738,7 @@ export type Database = {
           submitter_email: string | null
           supplement_fee: number | null
           supplement_fees_expense: number
+          total_repair_amount: number | null
           updated_at: string
           workflow_submission_id: string | null
         }
@@ -558,12 +757,17 @@ export type Database = {
           contract_total_net?: number
           created_at?: string
           created_by: string
+          customer_address?: string | null
+          customer_email?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
           dollars_increased?: number | null
           final_claim_amount?: number | null
+          form_type?: string
           gross_contract_total?: number
           id?: string
           install_date?: string | null
-          is_friday_close?: boolean
+          is_friday_close?: boolean | null
           is_late_revision?: boolean
           is_late_submission?: boolean
           job_date: string
@@ -590,6 +794,11 @@ export type Database = {
           profit_split_label?: string | null
           rep_commission?: number
           rep_profit_percent?: number | null
+          repair_commission_amount?: number | null
+          repair_commission_rate?: number | null
+          repair_date?: string | null
+          repair_description?: string | null
+          repair_photos?: string[] | null
           review_completed_at?: string | null
           review_completed_by?: string | null
           review_completed_notes?: string | null
@@ -610,6 +819,7 @@ export type Database = {
           submitter_email?: string | null
           supplement_fee?: number | null
           supplement_fees_expense?: number
+          total_repair_amount?: number | null
           updated_at?: string
           workflow_submission_id?: string | null
         }
@@ -628,12 +838,17 @@ export type Database = {
           contract_total_net?: number
           created_at?: string
           created_by?: string
+          customer_address?: string | null
+          customer_email?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
           dollars_increased?: number | null
           final_claim_amount?: number | null
+          form_type?: string
           gross_contract_total?: number
           id?: string
           install_date?: string | null
-          is_friday_close?: boolean
+          is_friday_close?: boolean | null
           is_late_revision?: boolean
           is_late_submission?: boolean
           job_date?: string
@@ -660,6 +875,11 @@ export type Database = {
           profit_split_label?: string | null
           rep_commission?: number
           rep_profit_percent?: number | null
+          repair_commission_amount?: number | null
+          repair_commission_rate?: number | null
+          repair_date?: string | null
+          repair_description?: string | null
+          repair_photos?: string[] | null
           review_completed_at?: string | null
           review_completed_by?: string | null
           review_completed_notes?: string | null
@@ -680,6 +900,7 @@ export type Database = {
           submitter_email?: string | null
           supplement_fee?: number | null
           supplement_fees_expense?: number
+          total_repair_amount?: number | null
           updated_at?: string
           workflow_submission_id?: string | null
         }
@@ -3356,6 +3577,177 @@ export type Database = {
           is_active?: boolean | null
           updated_at?: string
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      scorecard_assignments: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          employee_id: string
+          id: string
+          reviewer_ids: string[]
+          status: string
+          template_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          employee_id: string
+          id?: string
+          reviewer_ids: string[]
+          status?: string
+          template_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          employee_id?: string
+          id?: string
+          reviewer_ids?: string[]
+          status?: string
+          template_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scorecard_assignments_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "scorecard_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scorecard_kpis: {
+        Row: {
+          created_at: string
+          description: string | null
+          full_name: string | null
+          id: string
+          name: string
+          scoring_guide: Json | null
+          sort_order: number
+          template_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          full_name?: string | null
+          id?: string
+          name: string
+          scoring_guide?: Json | null
+          sort_order?: number
+          template_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          full_name?: string | null
+          id?: string
+          name?: string
+          scoring_guide?: Json | null
+          sort_order?: number
+          template_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scorecard_kpis_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "scorecard_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scorecard_submissions: {
+        Row: {
+          assignment_id: string
+          average: number
+          id: string
+          notes: string | null
+          period_end: string
+          period_start: string
+          reviewer_id: string
+          scores: Json
+          submitted_at: string
+        }
+        Insert: {
+          assignment_id: string
+          average: number
+          id?: string
+          notes?: string | null
+          period_end: string
+          period_start: string
+          reviewer_id: string
+          scores: Json
+          submitted_at?: string
+        }
+        Update: {
+          assignment_id?: string
+          average?: number
+          id?: string
+          notes?: string | null
+          period_end?: string
+          period_start?: string
+          reviewer_id?: string
+          scores?: Json
+          submitted_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scorecard_submissions_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "scorecard_assignments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scorecard_templates: {
+        Row: {
+          bonus_period: string
+          bonus_tiers: Json | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          has_bonus: boolean
+          id: string
+          name: string
+          review_frequency: string
+          scoring_scale_max: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          bonus_period?: string
+          bonus_tiers?: Json | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          has_bonus?: boolean
+          id?: string
+          name: string
+          review_frequency?: string
+          scoring_scale_max?: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          bonus_period?: string
+          bonus_tiers?: Json | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          has_bonus?: boolean
+          id?: string
+          name?: string
+          review_frequency?: string
+          scoring_scale_max?: number
+          status?: string
+          updated_at?: string
         }
         Relationships: []
       }
