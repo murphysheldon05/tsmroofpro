@@ -357,6 +357,17 @@ export default function MyCommissions() {
             className="pl-9"
           />
         </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleExportCSV}
+          disabled={exportRows.length === 0}
+          className="gap-2 sm:ml-auto"
+          title={`Export ${exportRows.length} commission${exportRows.length === 1 ? "" : "s"} to CSV`}
+        >
+          <Download className="w-4 h-4" />
+          Export CSV ({exportRows.length})
+        </Button>
       </div>
 
       {/* Weekly View */}
