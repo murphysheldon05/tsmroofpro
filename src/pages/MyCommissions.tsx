@@ -351,7 +351,7 @@ export default function MyCommissions() {
 
       {/* Flat List View */}
       {viewMode === "flat" && (
-        <div className="glass-card rounded-xl overflow-hidden">
+        <div className="glass-card rounded-xl overflow-hidden overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>

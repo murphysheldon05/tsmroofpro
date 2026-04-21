@@ -181,7 +181,7 @@ export function ProductionScorecard({ assignedUserId = null }) {
           {failed > 0 && <div className="mt-2 text-xs text-red-600 font-medium">{failed} item{failed > 1 ? "s" : ""} failed this week</div>}
         </div>
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden mb-4">
-          <table className="w-full text-sm">
+          <div className="scroll-x-mobile"><table className="w-full text-sm">
             <thead><tr className="bg-gray-900 text-white"><th className="px-4 py-2.5 text-left text-xs font-bold uppercase">KPI</th><th className="px-4 py-2.5 text-center text-xs font-bold uppercase w-32">Target</th><th className="px-4 py-2.5 text-center text-xs font-bold uppercase w-36">Score</th></tr></thead>
             <tbody>
               {PRODUCTION_KPIS.map((kpi, i) => (
@@ -198,7 +198,7 @@ export function ProductionScorecard({ assignedUserId = null }) {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
         </div>
         <div className={`rounded-xl border p-4 mb-4 ${bonus.bg}`}>
           <div className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Monthly Bonus Projection</div>

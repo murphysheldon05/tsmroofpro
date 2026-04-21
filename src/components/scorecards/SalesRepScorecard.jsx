@@ -258,15 +258,16 @@ export default function SalesRepScorecard({ repName = "Sales Rep", repId }) {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
+    <div className="min-h-screen bg-background p-3 sm:p-4">
       <div className="max-w-3xl mx-auto">
 
         {/* Header */}
-        <div className="bg-gray-900 rounded-xl p-5 mb-4">
-          <h1 className="text-xl font-bold text-emerald-400 text-center">
+        <div className="branded-header rounded-2xl p-5 mb-4 animate-fade-in relative overflow-hidden">
+          <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-primary/20 blur-3xl pointer-events-none" />
+          <h1 className="text-lg sm:text-xl font-extrabold text-primary text-center tracking-tight relative">
             Weekly Sales Rep KPI Scorecard
           </h1>
-          <p className="text-gray-500 text-center text-xs mt-1">
+          <p className="text-muted-foreground text-center text-xs mt-1 relative">
             TSM Roofing • Roof Pro Hub
           </p>
         </div>
@@ -395,86 +396,88 @@ export default function SalesRepScorecard({ repName = "Sales Rep", repId }) {
         </div>
 
         {/* KPI Table */}
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden mb-4">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-gray-900 text-white">
-                <th className="px-4 py-2.5 text-left text-xs font-bold uppercase">
-                  KPI
-                </th>
-                <th className="px-4 py-2.5 text-center text-xs font-bold uppercase w-32">
-                  Target
-                </th>
-                <th className="px-4 py-2.5 text-center text-xs font-bold uppercase w-36">
-                  Score
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {KPIS.map((kpi, i) => (
-                <tr
-                  key={kpi.id}
-                  className={`border-b border-gray-100 ${
-                    i % 2 === 0 ? "bg-white" : "bg-gray-50"
-                  } ${scores[kpi.id] === false ? "bg-red-50" : ""}`}
-                >
-                  <td className="px-4 py-2.5">
-                    <div className="font-medium text-gray-900">{kpi.name}</div>
-                    <div className="text-xs text-gray-400 mt-0.5">
-                      {kpi.description}
-                    </div>
-                    {/* SalesRabbit color hint */}
-                    {kpi.id === "salesrabbit" && doors > 0 && (
-                      <div className={`text-xs font-bold mt-1 ${doorsColor}`}>
-                        {doorsLabel}
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden mb-4 animate-fade-in">
+          <div className="scroll-x-mobile">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-gradient-to-r from-gray-900 via-gray-800 to-emerald-900 text-white">
+                  <th className="px-4 py-2.5 text-left text-xs font-bold uppercase tracking-wider">
+                    KPI
+                  </th>
+                  <th className="px-4 py-2.5 text-center text-xs font-bold uppercase w-32 tracking-wider">
+                    Target
+                  </th>
+                  <th className="px-4 py-2.5 text-center text-xs font-bold uppercase w-36 tracking-wider">
+                    Score
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="row-stagger">
+                {KPIS.map((kpi, i) => (
+                  <tr
+                    key={kpi.id}
+                    className={`border-b border-gray-100 transition-colors hover:bg-emerald-50/40 ${
+                      i % 2 === 0 ? "bg-white" : "bg-gray-50"
+                    } ${scores[kpi.id] === false ? "bg-red-50" : ""}`}
+                  >
+                    <td className="px-4 py-2.5">
+                      <div className="font-medium text-gray-900">{kpi.name}</div>
+                      <div className="text-xs text-gray-400 mt-0.5">
+                        {kpi.description}
                       </div>
-                    )}
-                  </td>
-                  <td className="px-4 py-2.5 text-center">
-                    {kpi.type === "pass_fail" && (
-                      <span className="text-xs text-gray-400">Pass/Fail</span>
-                    )}
-                    {kpi.type === "number" && (
-                      <span className="text-xs font-mono text-gray-500">
-                        {kpi.target}/wk
-                      </span>
-                    )}
-                    {kpi.type === "currency" && (
-                      <span className="text-xs font-mono text-gray-500">
-                        ${kpi.target?.toLocaleString()}/wk
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-4 py-2.5">
-                    <div className="flex justify-center">
+                      {/* SalesRabbit color hint */}
+                      {kpi.id === "salesrabbit" && doors > 0 && (
+                        <div className={`text-xs font-bold mt-1 ${doorsColor}`}>
+                          {doorsLabel}
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-4 py-2.5 text-center">
                       {kpi.type === "pass_fail" && (
-                        <PassFail
-                          value={scores[kpi.id]}
-                          disabled={isReadOnly}
-                          onChange={(v) => updateScore(kpi.id, v)}
-                        />
+                        <span className="text-xs text-gray-400">Pass/Fail</span>
                       )}
                       {kpi.type === "number" && (
-                        <NumberInput
-                          value={scores[kpi.id]}
-                          disabled={isReadOnly}
-                          onChange={(v) => updateScore(kpi.id, v)}
-                        />
+                        <span className="text-xs font-mono text-gray-500">
+                          {kpi.target}/wk
+                        </span>
                       )}
                       {kpi.type === "currency" && (
-                        <NumberInput
-                          value={scores[kpi.id]}
-                          disabled={isReadOnly}
-                          onChange={(v) => updateScore(kpi.id, v)}
-                          prefix="$"
-                        />
+                        <span className="text-xs font-mono text-gray-500">
+                          ${kpi.target?.toLocaleString()}/wk
+                        </span>
                       )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                    </td>
+                    <td className="px-4 py-2.5">
+                      <div className="flex justify-center">
+                        {kpi.type === "pass_fail" && (
+                          <PassFail
+                            value={scores[kpi.id]}
+                            disabled={isReadOnly}
+                            onChange={(v) => updateScore(kpi.id, v)}
+                          />
+                        )}
+                        {kpi.type === "number" && (
+                          <NumberInput
+                            value={scores[kpi.id]}
+                            disabled={isReadOnly}
+                            onChange={(v) => updateScore(kpi.id, v)}
+                          />
+                        )}
+                        {kpi.type === "currency" && (
+                          <NumberInput
+                            value={scores[kpi.id]}
+                            disabled={isReadOnly}
+                            onChange={(v) => updateScore(kpi.id, v)}
+                            prefix="$"
+                          />
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
 
         {/* Vehicle Eligibility */}
@@ -541,7 +544,7 @@ export default function SalesRepScorecard({ repName = "Sales Rep", repId }) {
           <button
             onClick={handleSubmit}
             disabled={saveEntry.isPending}
-            className="w-full bg-gray-900 text-white font-bold py-3 rounded-xl hover:bg-gray-800 transition-all text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full bg-gradient-to-r from-emerald-600 via-emerald-500 to-emerald-600 text-white font-bold py-3 rounded-xl hover:shadow-[0_0_24px_hsl(142_72%_40%/0.45)] hover:-translate-y-0.5 active:translate-y-0 transition-all text-sm disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {saveEntry.isPending
               ? "Saving..."

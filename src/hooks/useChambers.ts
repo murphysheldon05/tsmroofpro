@@ -156,7 +156,7 @@ export function useChamberAssignments(chamberId?: string) {
       const { data, error } = await query;
       if (error) throw error;
 
-      const userIds = [...new Set((data || []).flatMap((a: any) => [a.user_id, a.assigned_by].filter(Boolean)))];
+      const userIds = [...new Set((data || []).flatMap((a: any) => [a.user_id, a.assigned_by].filter(Boolean)))] as string[];
       let profileMap: Record<string, string> = {};
       if (userIds.length > 0) {
         const { data: profiles } = await supabase.from("profiles").select("id, full_name, email").in("id", userIds);
@@ -360,7 +360,7 @@ export function useChamberEventAssignments(eventId?: string) {
       const { data, error } = await query;
       if (error) throw error;
 
-      const userIds = [...new Set((data || []).map((a: any) => a.user_id).filter(Boolean))];
+      const userIds = [...new Set((data || []).map((a: any) => a.user_id).filter(Boolean))] as string[];
       let profileMap: Record<string, string> = {};
       if (userIds.length > 0) {
         const { data: profiles } = await supabase.from("profiles").select("id, full_name, email").in("id", userIds);
@@ -450,7 +450,7 @@ export function useChamberActivityLogs() {
         .order("attended_on", { ascending: false });
       if (error) throw error;
 
-      const repIds = [...new Set((data ?? []).map((row: any) => row.rep_user_id).filter(Boolean))];
+      const repIds = [...new Set((data ?? []).map((row: any) => row.rep_user_id).filter(Boolean))] as string[];
       let profileMap: Record<string, any> = {};
       if (repIds.length > 0) {
         const { data: profiles } = await supabase

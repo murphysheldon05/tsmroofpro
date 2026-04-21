@@ -62,21 +62,27 @@ export function CommissionSummaryCards({
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-      {cards.map((card) => (
+      {cards.map((card, idx) => (
         <div
           key={card.label}
           className={cn(
-            "rounded-2xl border p-4 backdrop-blur-sm transition-all duration-200",
+            "group relative rounded-2xl border p-4 backdrop-blur-sm card-lift sheen animate-count-up",
             card.bgClass, card.borderClass
           )}
+          style={{ animationDelay: `${idx * 70}ms` }}
         >
           <div className="flex items-center gap-2 mb-2">
-            <span className={card.colorClass}>{card.icon}</span>
-            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+            <span className={cn(
+              "flex h-8 w-8 items-center justify-center rounded-xl ring-1 transition-transform duration-200 group-hover:scale-110",
+              card.bgClass, card.colorClass,
+            )}>
+              {card.icon}
+            </span>
+            <span className="text-[11px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider truncate">
               {card.label}
             </span>
           </div>
-          <p className={cn("text-2xl md:text-3xl font-bold tracking-tight", card.colorClass)}>
+          <p className={cn("text-xl sm:text-2xl md:text-3xl font-bold tracking-tight tabular-nums break-words", card.colorClass)}>
             {card.value}
           </p>
         </div>

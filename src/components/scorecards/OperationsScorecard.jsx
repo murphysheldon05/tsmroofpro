@@ -153,7 +153,7 @@ export function OperationsScorecard({ assignedUserId = null }) {
           </div>
         </div>
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden mb-4">
-          <table className="w-full text-sm">
+          <div className="scroll-x-mobile"><table className="w-full text-sm">
             <thead>
               <tr className="bg-gray-900 text-white">
                 <th className="px-4 py-2.5 text-left text-xs font-bold uppercase">KPI</th>
@@ -173,7 +173,7 @@ export function OperationsScorecard({ assignedUserId = null }) {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
         </div>
         <div className="bg-white rounded-xl border border-gray-200 p-4 mb-4">
           <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Notes</label>
