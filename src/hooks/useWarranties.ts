@@ -178,7 +178,7 @@ export function useCreateWarranty() {
         const { data: reviewerRoles } = await supabase
           .from("user_roles")
           .select("user_id, role")
-          .in("role", ["production_manager", "manager", "admin"]);
+          .in("role", ["production", "manager", "admin"] as any);
 
         const reviewerIds = [...new Set(
           (reviewerRoles || [])

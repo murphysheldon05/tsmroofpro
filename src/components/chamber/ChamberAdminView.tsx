@@ -111,7 +111,7 @@ export function ChamberAdminView() {
       const { data, error } = await (supabase.from as any)("chamber_event_assignments").select("*");
       if (error) throw error;
 
-      const userIds = [...new Set((data || []).map((a: any) => a.user_id).filter(Boolean))];
+      const userIds = [...new Set((data || []).map((a: any) => a.user_id).filter(Boolean))] as string[];
       let profileMap: Record<string, string> = {};
       if (userIds.length > 0) {
         const { data: profs } = await supabase.from("profiles").select("id, full_name, email").in("id", userIds);
