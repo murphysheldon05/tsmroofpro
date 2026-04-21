@@ -69,6 +69,7 @@ import { PayRunHoldingArea } from "@/components/commissions/PayRunHoldingArea";
 import { CommissionFilterBar, useFilteredCommissions, type FilterState } from "@/components/commissions/CommissionFilterBar";
 import { LateBadge } from "@/components/commissions/LateBadge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { exportRowsToCsv } from "@/lib/csvExport";
 
 const STATUS_MAP: Record<string, { label: string; color: string; bgClass: string }> = {
   submitted: { label: "Pending Compliance", color: "text-yellow-700 dark:text-yellow-400", bgClass: "bg-yellow-100 dark:bg-yellow-900/30 border-yellow-300 dark:border-yellow-700" },
@@ -362,16 +363,46 @@ export default function CommissionManager() {
       STATUS_MAP[c.status]?.label || c.status,
       c.paid_at ? new Date(c.paid_at).toLocaleDateString() : "",
     ]);
-
-    const csv = [headers, ...rows].map((row) => row.map((cell) => `"${cell}"`).join(",")).join("\n");
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `commissions-${new Date().toISOString().split("T")[0]}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    exportRowsToCsv("commissions-payment-history", headers, rows);
   };
+
+  const exportQueueCsv = (queue: any[], filenameBase: string) => {
+    const headers = [
+      "Rep",
+      "Job",
+      "Submitted",
+      "Completed Install",
+      "Pay Run",
+      "Amount",
+      "Status",
+      "Late Submission",
+      "Late Revision",
+    ];
+    const rows = queue.map((c: any) => {
+      const pr = (payRuns || []).find((p) => p.id === c.pay_run_id);
+      const payRunLabel = pr
+        ? pr.period_start && pr.period_end
+          ? formatPayRunRange(pr.period_start, pr.period_end)
+          : pr.run_date
+        : "";
+      return [
+        c.rep_name || c.sales_rep,
+        c.job_name_id,
+        c.submitted_at ? formatTimestampMST(c.submitted_at) : new Date(c.created_at).toLocaleDateString(),
+        c.install_date || "",
+        payRunLabel,
+        (c.rep_commission || 0).toFixed(2),
+        STATUS_MAP[c.status]?.label || c.status,
+        c.is_late_submission ? "Yes" : "No",
+        c.is_late_revision ? "Yes" : "No",
+      ];
+    });
+    exportRowsToCsv(filenameBase, headers, rows);
+  };
+
+  const handleExportCompliance = () => exportQueueCsv(complianceQueue, "commissions-compliance-queue");
+  const handleExportAccounting = () => exportQueueCsv(accountingQueue, "commissions-accounting-queue");
+
 
   const isLoading = summaryLoading || commissionsLoading;
 
@@ -551,6 +582,17 @@ export default function CommissionManager() {
                 </SelectContent>
               </Select>
             </div>
+            <div className="ml-auto">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExportCompliance}
+                disabled={complianceQueue.length === 0}
+                className="gap-2"
+              >
+                <Download className="w-4 h-4" /> Export CSV ({complianceQueue.length})
+              </Button>
+            </div>
           </div>
           <div className="glass-card rounded-xl overflow-hidden">
             <Table>
@@ -647,6 +689,17 @@ export default function CommissionManager() {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+            <div className="ml-auto">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExportAccounting}
+                disabled={accountingQueue.length === 0}
+                className="gap-2"
+              >
+                <Download className="w-4 h-4" /> Export CSV ({accountingQueue.length})
+              </Button>
             </div>
           </div>
           <div className="glass-card rounded-xl overflow-hidden">
