@@ -36,12 +36,14 @@ import {
   Wrench,
   FileText,
   ChevronDown,
+  Download,
 } from "lucide-react";
 import { LateBadge } from "@/components/commissions/LateBadge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PayRunWeekAccordion, type CommissionRow } from "@/components/commissions/PayRunWeekAccordion";
 import { PayRunHoldingArea } from "@/components/commissions/PayRunHoldingArea";
 import { formatTimestampMST, getCurrentPayRunPeriod } from "@/lib/commissionPayDateCalculations";
+import { exportRowsToCsv } from "@/lib/csvExport";
 
 type StatusFilter = "submitted" | "manager_approved" | "accounting_approved" | "paid" | null;
 type ViewMode = "weeks" | "flat";
@@ -198,6 +200,41 @@ export default function MyCommissions() {
   const handleCardClick = (filterKey: StatusFilter) => {
     setStatusFilter((prev) => (prev === filterKey ? null : filterKey));
     if (viewMode === "weeks") setViewMode("flat");
+  };
+
+  // Rows that get exported = whatever the user is currently viewing/filtering.
+  // In weeks view we still respect the form-type tab + status filter (which would be null in weeks view).
+  const exportRows = viewMode === "flat"
+    ? filteredCommissions
+    : [...holdingAreaDocs.map((r) => activeCommissions.find((c) => c.id === r.id)!).filter(Boolean),
+       ...repPayRuns.flatMap((pr) => (weeklyData[pr.id] || []).map((r) => activeCommissions.find((c) => c.id === r.id)!).filter(Boolean))];
+
+  const handleExportCSV = () => {
+    const headers = [
+      "Job Name",
+      "Form Type",
+      "Submitted",
+      "Completed Install",
+      "Amount",
+      "Status",
+      "Late Submission",
+      "Late Revision",
+      "Pay Date",
+    ];
+    const rows = exportRows.map((c: any) => [
+      c.job_name_id || "",
+      c.form_type === "repair" ? "Repair" : "Standard",
+      c.submitted_at
+        ? formatTimestampMST(c.submitted_at)
+        : new Date(c.created_at).toLocaleDateString(),
+      c.install_date || "",
+      (c.rep_commission || 0).toFixed(2),
+      STATUS_MAP[c.status]?.label || c.status,
+      c.is_late_submission ? "Yes" : "No",
+      c.is_late_revision ? "Yes" : "No",
+      c.paid_at ? new Date(c.paid_at).toLocaleDateString() : "",
+    ]);
+    exportRowsToCsv("my-commissions", headers, rows);
   };
 
   if (isLoading) {
