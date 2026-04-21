@@ -259,7 +259,7 @@ export default function SalesManagerScorecard({ managerName = "Sales Manager", a
         </div>
 
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden mb-4">
-          <table className="w-full text-sm">
+          <div className="scroll-x-mobile"><table className="w-full text-sm">
             <thead>
               <tr className="bg-gray-900 text-white">
                 <th className="px-4 py-2.5 text-left text-xs font-bold uppercase">KPI</th>
@@ -289,7 +289,7 @@ export default function SalesManagerScorecard({ managerName = "Sales Manager", a
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
         </div>
 
         {/* Monthly Bonus Projection */}
