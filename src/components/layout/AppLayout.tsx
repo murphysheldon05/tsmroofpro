@@ -214,7 +214,7 @@ export const AppLayout = forwardRef<HTMLDivElement, AppLayoutProps>(
     <div ref={ref} className="min-h-screen bg-background">
       <AppSidebar />
       <main className="lg:pl-64 min-h-screen">
-        <div className="p-4 lg:p-8">
+        <div className="px-3 py-4 sm:p-4 lg:p-8 max-w-full overflow-x-clip">
           {!isHome && (
             <nav className="mb-4 flex items-center gap-2 text-sm" aria-label="Breadcrumb">
               <Button
