@@ -176,6 +176,11 @@ export function SalesRepScorecardRoute() {
         }))
       : [{ value: "", label: "Sales Rep" }];
 
+  const selectedRep = useMemo(
+    () => visibleRepOptions.find((option) => option.id === selectedRepId) ?? null,
+    [visibleRepOptions, selectedRepId],
+  );
+
   useEffect(() => {
     if (!canAccess) return;
     if (!selectedRepId && visibleRepOptions.length > 0) {
@@ -186,11 +191,6 @@ export function SalesRepScorecardRoute() {
   if (!canAccess) {
     return <Navigate to="/command-center" replace />;
   }
-
-  const selectedRep = useMemo(
-    () => visibleRepOptions.find((option) => option.id === selectedRepId) ?? null,
-    [visibleRepOptions, selectedRepId]
-  );
 
   return (
     <div className="space-y-4">
