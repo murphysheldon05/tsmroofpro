@@ -4189,6 +4189,79 @@ export type Database = {
           },
         ]
       }
+      training_hub_custom_videos: {
+        Row: {
+          category_slug: string
+          created_at: string
+          created_by: string | null
+          embed_url: string
+          id: string
+          loom_video_id: string
+          share_url: string
+          sort_order: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          category_slug: string
+          created_at?: string
+          created_by?: string | null
+          embed_url: string
+          id?: string
+          loom_video_id: string
+          share_url: string
+          sort_order?: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          category_slug?: string
+          created_at?: string
+          created_by?: string | null
+          embed_url?: string
+          id?: string
+          loom_video_id?: string
+          share_url?: string
+          sort_order?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_hub_custom_videos_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      training_hub_suppressions: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          loom_video_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          loom_video_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          loom_video_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_hub_suppressions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_checklists: {
         Row: {
           checklist_type: Database["public"]["Enums"]["checklist_type"]
