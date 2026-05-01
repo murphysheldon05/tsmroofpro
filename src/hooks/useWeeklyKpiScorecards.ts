@@ -1,15 +1,41 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import {
+  computeSalesRepComplianceTotals,
+  defaultSalesRepNormalizedKpis,
   getCurrentWeekStartDate,
+  getSalesRepPayCycleWeekEndDate,
+  hydrateSalesRepKpisFromEntry,
+  type SalesRepNormalizedKpis,
   type WeeklyScorecardRole,
 } from "@/lib/weeklyScorecardConfig";
 
 const fromAny = (table: string) => (supabase.from as any)(table);
+
+const SUPPLEMENTAL_SALES_REP_SCORE_KEYS = [
+  "revenue_ytd",
+  "drug_test",
+  "mvd_submitted",
+] as const;
+
+function extractSupplementalSalesRepScores(
+  scores: Record<string, unknown>,
+): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const k of SUPPLEMENTAL_SALES_REP_SCORE_KEYS) {
+    if (
+      Object.prototype.hasOwnProperty.call(scores, k) &&
+      scores[k] !== undefined
+    ) {
+      out[k] = scores[k];
+    }
+  }
+  return out;
+}
 
 export interface WeeklyScorecardEntry {
   id: string;
@@ -25,6 +51,17 @@ export interface WeeklyScorecardEntry {
   updated_at?: string | null;
   last_updated_by_user_id?: string | null;
   override_count?: number | null;
+  /** Normalized sales_rep columns (optional until migration applied). */
+  rep_id?: string | null;
+  week_end_date?: string | null;
+  doors_knocked?: number | null;
+  one_to_ones?: boolean | null;
+  lead_gen_1_2?: boolean | null;
+  chamber_activities?: boolean | null;
+  social_media_posts?: number | null;
+  crm_hygiene?: boolean | null;
+  sales_meeting_huddles?: boolean | null;
+  logged_by?: string | null;
 }
 
 export interface MonthlyRollupRow {
@@ -131,11 +168,15 @@ export function useWeeklyScorecardForm(params: {
     !!params.assignedUserId && user?.id === params.assignedUserId && !isManagerLike;
 
   const [scores, setScores] = useState<Record<string, unknown>>({});
+  const [salesRepKpis, setSalesRepKpis] = useState<SalesRepNormalizedKpis>(() =>
+    defaultSalesRepNormalizedKpis(),
+  );
   const [notes, setNotes] = useState("");
   const [reviewerName, setReviewerName] = useState(
     params.reviewerOptions.length === 1 ? params.reviewerOptions[0] : "",
   );
   const [adminOverrideUnlocked, setAdminOverrideUnlocked] = useState(false);
+  const isSalesRepRole = params.scorecardRole === "sales_rep";
 
   const entryQuery = useWeeklyScorecardEntry({
     scorecardRole: params.scorecardRole,
@@ -153,7 +194,18 @@ export function useWeeklyScorecardForm(params: {
   useEffect(() => {
     const entry = entryQuery.data;
     if (entry) {
-      setScores((entry.scores as Record<string, unknown>) ?? {});
+      if (isSalesRepRole) {
+        setSalesRepKpis(
+          hydrateSalesRepKpisFromEntry(entry as unknown as Record<string, unknown>),
+        );
+        setScores(
+          extractSupplementalSalesRepScores(
+            (entry.scores as Record<string, unknown>) ?? {},
+          ),
+        );
+      } else {
+        setScores((entry.scores as Record<string, unknown>) ?? {});
+      }
       setNotes(entry.notes ?? "");
       setReviewerName(entry.reviewer_name ?? "");
       setAdminOverrideUnlocked(false);
@@ -161,14 +213,17 @@ export function useWeeklyScorecardForm(params: {
     }
 
     setScores({});
+    if (isSalesRepRole) {
+      setSalesRepKpis(defaultSalesRepNormalizedKpis());
+    }
     setNotes("");
     setReviewerName(params.reviewerOptions.length === 1 ? params.reviewerOptions[0] : "");
     setAdminOverrideUnlocked(false);
-  }, [entryQuery.data, params.reviewerOptions]);
+  }, [entryQuery.data, params.reviewerOptions, isSalesRepRole]);
 
   const saveEntry = useMutation({
     mutationFn: async (payload: {
-      scores: Record<string, unknown>;
+      scores?: Record<string, unknown>;
       notes: string;
       reviewerName: string;
     }) => {
@@ -185,6 +240,29 @@ export function useWeeklyScorecardForm(params: {
       }
 
       const existingEntry = entryQuery.data;
+
+      const scoresForRow = isSalesRepRole
+        ? {
+            ...extractSupplementalSalesRepScores(scores),
+            ...computeSalesRepComplianceTotals(salesRepKpis),
+          }
+        : (payload.scores ?? {});
+
+      const normalizedSalesRepRow = isSalesRepRole
+        ? {
+            rep_id: params.assignedUserId ?? null,
+            week_end_date: getSalesRepPayCycleWeekEndDate(params.weekStartDate),
+            logged_by: user.id,
+            doors_knocked: salesRepKpis.doors_knocked,
+            one_to_ones: salesRepKpis.one_to_ones,
+            lead_gen_1_2: salesRepKpis.lead_gen_1_2,
+            chamber_activities: salesRepKpis.chamber_activities,
+            social_media_posts: salesRepKpis.social_media_posts,
+            crm_hygiene: salesRepKpis.crm_hygiene,
+            sales_meeting_huddles: salesRepKpis.sales_meeting_huddles,
+          }
+        : {};
+
       const baseRow = {
         scorecard_role: params.scorecardRole,
         employee_name: params.employeeName,
@@ -193,8 +271,9 @@ export function useWeeklyScorecardForm(params: {
         assigned_user_id: params.assignedUserId ?? null,
         submitted_by_user_id: existingEntry?.submitted_by_user_id ?? user.id,
         last_updated_by_user_id: user.id,
-        scores: payload.scores,
+        scores: scoresForRow,
         notes: payload.notes.trim() ? payload.notes.trim() : null,
+        ...normalizedSalesRepRow,
       };
 
       if (existingEntry?.id) {
@@ -240,6 +319,7 @@ export function useWeeklyScorecardForm(params: {
         employeeName: entry.employee_name,
         reviewerName: entry.reviewer_name,
         weekStartDate: entry.week_start_date,
+        weekEndDate: (entry as WeeklyScorecardEntry).week_end_date ?? null,
         assignedUserId: entry.assigned_user_id,
         submittedByUserId: user?.id,
         scores: entry.scores,
@@ -288,6 +368,8 @@ export function useWeeklyScorecardForm(params: {
     saveEntry,
     scores,
     setScores,
+    salesRepKpis,
+    setSalesRepKpis,
     notes,
     setNotes,
     reviewerName,

@@ -135,6 +135,128 @@ export function getCurrentWeekEndDate(weekStartDate: string) {
   return sunday.toISOString().split("T")[0];
 }
 
+/** Local calendar `YYYY-MM-DD` (avoids UTC drift from `toISOString`). */
+export function toLocalDateString(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+/**
+ * TSM pay-cycle week: Saturday through Friday.
+ * Other weekly scorecard roles still use Monday-start via `getCurrentWeekStartDate`.
+ */
+export function getSalesRepPayCycleWeekStartDate(): string {
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  const day = now.getDay();
+  const diffToSaturday = day === 6 ? 0 : -(day + 1);
+  const saturday = new Date(now);
+  saturday.setDate(now.getDate() + diffToSaturday);
+  return toLocalDateString(saturday);
+}
+
+export function getSalesRepPayCycleWeekEndDate(weekStartDate: string): string {
+  const [y, mo, d] = weekStartDate.split("-").map(Number);
+  const start = new Date(y, mo - 1, d);
+  start.setHours(0, 0, 0, 0);
+  const friday = new Date(start);
+  friday.setDate(start.getDate() + 6);
+  return toLocalDateString(friday);
+}
+
+/** Normalized KPI fields stored on `kpi_scorecard_entries` for sales_rep rows. */
+export interface SalesRepNormalizedKpis {
+  doors_knocked: number;
+  one_to_ones: boolean;
+  lead_gen_1_2: boolean;
+  chamber_activities: boolean;
+  social_media_posts: number;
+  crm_hygiene: boolean;
+  sales_meeting_huddles: boolean;
+}
+
+export function defaultSalesRepNormalizedKpis(): SalesRepNormalizedKpis {
+  return {
+    doors_knocked: 0,
+    one_to_ones: false,
+    lead_gen_1_2: false,
+    chamber_activities: false,
+    social_media_posts: 0,
+    crm_hygiene: false,
+    sales_meeting_huddles: false,
+  };
+}
+
+function coerceNumber(value: unknown, fallback: number): number {
+  const n = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function coerceBoolean(value: unknown, fallback: boolean): boolean {
+  if (typeof value === "boolean") return value;
+  if (value === "true") return true;
+  if (value === "false") return false;
+  return fallback;
+}
+
+/** Hydrate from DB columns with legacy `scores` JSON fallback (pre-migration rows). */
+export function hydrateSalesRepKpisFromEntry(
+  row: Record<string, unknown> & { scores?: Record<string, unknown> | null },
+): SalesRepNormalizedKpis {
+  const s = (row.scores ?? {}) as Record<string, unknown>;
+
+  return {
+    doors_knocked: coerceNumber(
+      row.doors_knocked ?? s.doors_knocked ?? s.salesrabbit,
+      0,
+    ),
+    one_to_ones: coerceBoolean(
+      row.one_to_ones ?? s.one_to_ones ?? s.one_to_one,
+      false,
+    ),
+    lead_gen_1_2: coerceBoolean(row.lead_gen_1_2 ?? s.lead_gen_1_2, false),
+    chamber_activities: coerceBoolean(
+      row.chamber_activities ?? s.chamber_activities,
+      false,
+    ),
+    social_media_posts: coerceNumber(row.social_media_posts ?? s.social_media_posts, 0),
+    crm_hygiene: coerceBoolean(
+      row.crm_hygiene ?? s.crm_hygiene ?? s.acculynx_quality,
+      false,
+    ),
+    sales_meeting_huddles: coerceBoolean(
+      row.sales_meeting_huddles ?? s.sales_meeting_huddles ?? s.sales_meetings,
+      false,
+    ),
+  };
+}
+
+export function getSalesRepDoorsTierLabel(doorsKnocked: number): string {
+  if (doorsKnocked >= 300) return "Tier 3 (300+)";
+  if (doorsKnocked >= 150) return "Tier 2 (150+)";
+  if (doorsKnocked >= 50) return "Tier 1 (50+)";
+  return "Below Tier 1";
+}
+
+/** Drive `scores.compliance_*` for monthly rollups and dashboards. */
+export function computeSalesRepComplianceTotals(
+  kpis: SalesRepNormalizedKpis,
+): { compliance_passed: number; compliance_total: number } {
+  const checks = [
+    kpis.doors_knocked >= 50,
+    kpis.one_to_ones === true,
+    kpis.lead_gen_1_2 === true,
+    kpis.chamber_activities === true,
+    kpis.social_media_posts >= 1,
+    kpis.crm_hygiene === true,
+    kpis.sales_meeting_huddles === true,
+  ];
+  const passed = checks.filter(Boolean).length;
+  return { compliance_passed: passed, compliance_total: checks.length };
+}
+
 export function getCompliancePercent(scores: Record<string, unknown>) {
   const storedPct = Number(scores.compliance_pct ?? 0);
   if (!Number.isNaN(storedPct) && storedPct > 0) {

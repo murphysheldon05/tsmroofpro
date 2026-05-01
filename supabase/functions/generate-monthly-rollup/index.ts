@@ -65,6 +65,47 @@ function getCompliancePct(scores: Record<string, unknown>) {
   return total ? Math.round((passed / total) * 100) : 0;
 }
 
+/** Aligns with app `computeSalesRepComplianceTotals` (typed columns on `kpi_scorecard_entries`). */
+function getSalesRepComplianceFromNormalizedColumns(entry: Record<string, unknown>) {
+  const doors_knocked = Number(entry.doors_knocked ?? 0);
+  const one_to_ones = !!entry.one_to_ones;
+  const lead_gen_1_2 = !!entry.lead_gen_1_2;
+  const chamber_activities = !!entry.chamber_activities;
+  const social_media_posts = Number(entry.social_media_posts ?? 0);
+  const crm_hygiene = !!entry.crm_hygiene;
+  const sales_meeting_huddles = !!entry.sales_meeting_huddles;
+
+  const checks = [
+    doors_knocked >= 50,
+    one_to_ones,
+    lead_gen_1_2,
+    chamber_activities,
+    social_media_posts >= 1,
+    crm_hygiene,
+    sales_meeting_huddles,
+  ];
+  const compliance_passed = checks.filter(Boolean).length;
+  const compliance_total = checks.length;
+  return { compliance_passed, compliance_total };
+}
+
+function shouldUseNormalizedSalesRepCompliance(entry: Record<string, unknown>) {
+  return entry.scorecard_role === "sales_rep" && typeof entry.doors_knocked === "number";
+}
+
+function getCompliancePctForEntry(entry: Record<string, unknown>) {
+  if (shouldUseNormalizedSalesRepCompliance(entry)) {
+    const { compliance_passed, compliance_total } = getSalesRepComplianceFromNormalizedColumns(entry);
+    if (compliance_total > 0) {
+      return Math.round((compliance_passed / compliance_total) * 100);
+    }
+  }
+
+  const rawScores =
+    typeof entry.scores === "object" && entry.scores !== null ? (entry.scores as Record<string, unknown>) : {};
+  return getCompliancePct(rawScores);
+}
+
 function getRatingLabel(avg: number | null) {
   if (avg == null) return null;
   if (avg >= 3.5) return "Exceptional";
@@ -136,7 +177,7 @@ serve(async (req) => {
       const sample = groupEntries[0];
       const weeklyBreakdown = groupEntries.map((entry) => ({
         week_start_date: entry.week_start_date,
-        compliance_pct: getCompliancePct(entry.scores ?? {}),
+        compliance_pct: getCompliancePctForEntry(entry as Record<string, unknown>),
         average_score: Number(entry.scores?.average_score ?? 0) || null,
       }));
 
@@ -155,7 +196,9 @@ serve(async (req) => {
           : null;
         monthlyRatingLabel = getRatingLabel(monthlyAvgRating);
       } else {
-        const averages = groupEntries.map((entry) => getCompliancePct(entry.scores ?? {}));
+        const averages = groupEntries.map((entry) =>
+          getCompliancePctForEntry(entry as Record<string, unknown>),
+        );
         monthlyAvgPct = averages.length
           ? averages.reduce((sum, value) => sum + value, 0) / averages.length
           : null;

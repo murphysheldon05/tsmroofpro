@@ -2374,6 +2374,84 @@ export type Database = {
           },
         ]
       }
+      kpi_scorecard_entries: {
+        Row: {
+          id: string
+          scorecard_role: string
+          employee_name: string
+          reviewer_name: string
+          week_start_date: string
+          week_end_date: string | null
+          assigned_user_id: string | null
+          submitted_by_user_id: string
+          scores: Json
+          notes: string | null
+          submitted_at: string
+          updated_at: string
+          last_updated_by_user_id: string | null
+          override_count: number
+          rep_id: string | null
+          doors_knocked: number
+          one_to_ones: boolean
+          lead_gen_1_2: boolean
+          chamber_activities: boolean
+          social_media_posts: number
+          crm_hygiene: boolean
+          sales_meeting_huddles: boolean
+          logged_by: string | null
+        }
+        Insert: {
+          id?: string
+          scorecard_role: string
+          employee_name: string
+          reviewer_name: string
+          week_start_date: string
+          week_end_date?: string | null
+          assigned_user_id?: string | null
+          submitted_by_user_id: string
+          scores?: Json
+          notes?: string | null
+          submitted_at?: string
+          updated_at?: string
+          last_updated_by_user_id?: string | null
+          override_count?: number
+          rep_id?: string | null
+          doors_knocked?: number
+          one_to_ones?: boolean
+          lead_gen_1_2?: boolean
+          chamber_activities?: boolean
+          social_media_posts?: number
+          crm_hygiene?: boolean
+          sales_meeting_huddles?: boolean
+          logged_by?: string | null
+        }
+        Update: {
+          id?: string
+          scorecard_role?: string
+          employee_name?: string
+          reviewer_name?: string
+          week_start_date?: string
+          week_end_date?: string | null
+          assigned_user_id?: string | null
+          submitted_by_user_id?: string
+          scores?: Json
+          notes?: string | null
+          submitted_at?: string
+          updated_at?: string
+          last_updated_by_user_id?: string | null
+          override_count?: number
+          rep_id?: string | null
+          doors_knocked?: number
+          one_to_ones?: boolean
+          lead_gen_1_2?: boolean
+          chamber_activities?: boolean
+          social_media_posts?: number
+          crm_hygiene?: boolean
+          sales_meeting_huddles?: boolean
+          logged_by?: string | null
+        }
+        Relationships: []
+      }
       master_sop_acknowledgments: {
         Row: {
           acknowledged_at: string

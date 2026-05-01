@@ -27,6 +27,8 @@ interface ScorecardPayload {
   employeeName: string;
   reviewerName?: string;
   weekStartDate: string;
+  /** Pay-cycle Friday when using Sat–Fri weeks (sales rep). */
+  weekEndDate?: string | null;
   assignedUserId?: string | null;
   submittedByUserId?: string | null;
   scores?: Record<string, unknown>;
@@ -55,9 +57,11 @@ function addDays(dateString: string, days: number) {
   return date.toISOString().slice(0, 10);
 }
 
-function formatWeekLabel(weekStartDate: string) {
+function formatWeekLabel(weekStartDate: string, weekEndDate?: string | null) {
   const start = new Date(`${weekStartDate}T00:00:00`);
-  const end = new Date(`${addDays(weekStartDate, 6)}T00:00:00`);
+  const end = weekEndDate
+    ? new Date(`${weekEndDate}T00:00:00`)
+    : new Date(`${addDays(weekStartDate, 6)}T00:00:00`);
   return `${start.toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
@@ -315,7 +319,7 @@ serve(async (req) => {
       });
     }
 
-    const weekLabel = formatWeekLabel(payload.weekStartDate);
+    const weekLabel = formatWeekLabel(payload.weekStartDate, payload.weekEndDate);
     const employeeProfile =
       (await getProfileById(supabase, payload.assignedUserId)) ??
       (await getProfileByName(supabase, payload.employeeName));

@@ -171,7 +171,7 @@ export function getCurrentPeriod(frequency: string): { start: Date; end: Date } 
       : new Date(now.getFullYear(), now.getMonth() + 1, 0);
     return { start, end };
   }
-  // weekly (Mon-Sun)
+  // weekly (Mon–Sun) for native scorecard assignment periods
   const day = now.getDay();
   const diffToMon = day === 0 ? -6 : 1 - day;
   const monday = new Date(now);
