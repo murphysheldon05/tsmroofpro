@@ -39,6 +39,7 @@ const CommissionManager = lazy(() => import("./pages/CommissionManager"));
 const BuildSchedule = lazy(() => import("./pages/BuildSchedule"));
 const DeliverySchedule = lazy(() => import("./pages/DeliverySchedule"));
 const CommandCenter = lazy(() => import("./pages/CommandCenter"));
+const Training = lazy(() => import("./pages/Training"));
 const KpiScorecards = lazy(() => import("./pages/KpiScorecards"));
 const KpiScorecardTemplateEditor = lazy(() => import("./pages/KpiScorecardTemplateEditor"));
 const KpiScorecardScore = lazy(() => import("./pages/KpiScorecardScore"));
@@ -141,6 +142,8 @@ const App = () => (
               <Route path="/vendors/subcontractors" element={<Directory />} />
               <Route path="/vendors/contact-list" element={<ContactList />} />
               <Route path="/warranties" element={<Warranties />} />
+              <Route path="/training" element={<Training />} />
+              <Route path="/training/documents" element={<Training />} />
               <Route path="/build-schedule" element={<BuildSchedule />} />
               <Route path="/delivery-schedule" element={<DeliverySchedule />} />
               <Route path="/commissions" element={<MyCommissions />} />

@@ -43,6 +43,7 @@ import {
   Compass,
   BarChart3,
   Building2,
+  GraduationCap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -402,6 +403,7 @@ export function AppSidebar() {
   const isActive = (href: string) => {
     if (location.pathname === href) return true;
     if (href === "/kpi-scorecards" && location.pathname.startsWith("/kpi-scorecards/")) return true;
+    if (href === "/training" && location.pathname.startsWith("/training/")) return true;
     return false;
   };
   const isParentActive = (children?: { href: string }[]) =>
@@ -456,10 +458,19 @@ export function AppSidebar() {
       activeColor: "text-rose-600 dark:text-rose-400",
     };
 
+    const trainingItem: NavItem = {
+      title: "Training",
+      href: "/training",
+      icon: GraduationCap,
+      sectionKey: "training",
+      activeColor: "text-[#00D26A]",
+    };
+
     const allItems: NavItem[] = [
       baseNavigationItems[0], // Command Center
       commissionItem,
       ...(canAccessKpiScorecards ? [kpiScorecardsItem] : []),
+      trainingItem,
       chamberItem,
       ...baseNavigationItems.slice(1), // Production, Subs & Vendors
     ];

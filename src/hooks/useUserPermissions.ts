@@ -13,6 +13,7 @@ export const SIDEBAR_SECTIONS = [
   { key: "requests", label: "Forms & Requests", parent: null },
   { key: "commissions", label: "Commissions", parent: null },
   { key: "kpi-scorecards", label: "KPI Scorecards", parent: null },
+  { key: "training", label: "Training", parent: null },
   { key: "company", label: "Company", parent: null },
   { key: "directory", label: "Team Directory", parent: null },
   { key: "vendors", label: "Subs & Vendors", parent: null },
@@ -92,13 +93,16 @@ export function useUpdateUserPermissions() {
 // Sections that managers with custom visibility can be granted (no Commissions accounting, no OPS Compliance)
 export const MANAGER_ALLOWED_SECTION_KEYS = [
   "command-center", "dashboard", "production", "production-calendar",
-  "requests", "company", "directory", "vendors", "kpi-scorecards",
+  "requests", "company", "directory", "vendors", "kpi-scorecards", "training",
 ] as const;
 
 // Helper: check if a section should be visible based on permissions
 // If no permissions are set (empty array), all sections are visible (employees) or managers see all non-admin
 // If permissions are set, only those sections are visible
 export function isSectionVisible(sectionKey: string, permissions: string[] | null | undefined, role: string | null): boolean {
+  // Training stays available to every authenticated user.
+  if (sectionKey === "training") return true;
+
   // Admins see everything
   if (role === "admin") return true;
 

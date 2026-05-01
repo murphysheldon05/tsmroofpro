@@ -14,6 +14,7 @@ const routeModules: Record<string, () => Promise<unknown>> = {
   "/requests": () => import("@/pages/Requests"),
   "/pending-review": () => import("@/pages/PendingReview"),
   "/kpi-scorecards": () => import("@/pages/KpiScorecards"),
+  "/training": () => import("@/pages/Training"),
 };
 
 const prefetched = new Set<string>();
@@ -32,6 +33,7 @@ const PRIORITY_ROUTES = [
   "/commissions",
   "/commission-manager",
   "/build-schedule",
+  "/training",
   "/profile",
 ];
 

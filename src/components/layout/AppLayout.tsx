@@ -19,6 +19,7 @@ const routeHierarchy: Record<string, BreadcrumbItem[]> = {
     { label: "Resource", href: "" },
   ],
   "/training": [{ label: "Training", href: "/training" }],
+  "/training/documents": [{ label: "Training", href: "/training" }],
   "/build-schedule": [{ label: "Build Schedule", href: "/build-schedule" }],
   "/delivery-schedule": [{ label: "Delivery Schedule", href: "/delivery-schedule" }],
   "/warranties": [{ label: "Warranty Tracker", href: "/warranties" }],

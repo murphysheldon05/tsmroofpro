@@ -7,6 +7,7 @@ const DEFAULT_ORDER = [
   "Command Center",
   "Commissions",
   "KPI Scorecards",
+  "Training",
   "Production",
   "Subs & Vendors",
 ];
