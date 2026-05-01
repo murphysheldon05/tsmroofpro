@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -55,12 +56,16 @@ export default function Training() {
   const [addCategory, setAddCategory] = useState(categories[0]?.slug ?? "sales");
   const [addUrl, setAddUrl] = useState("");
   const [addTitle, setAddTitle] = useState("");
+  const [addDescription, setAddDescription] = useState("");
 
   const current = categories.find((c) => c.slug === activeCategory);
+  const q = searchQuery.toLowerCase();
   const filteredVideos = current
-    ? current.videos.filter((v) =>
-        v.title.toLowerCase().includes(searchQuery.toLowerCase())
-      )
+    ? current.videos.filter((v) => {
+        if (!q) return true;
+        if (v.title.toLowerCase().includes(q)) return true;
+        return (v.description ?? "").toLowerCase().includes(q);
+      })
     : [];
 
   const handleRemove = async (video: TrainingHubVideo, e?: React.MouseEvent) => {
@@ -93,11 +98,13 @@ export default function Training() {
         categorySlug: addCategory,
         loomUrlOrId: addUrl,
         title: addTitle,
+        description: addDescription.trim() || undefined,
       });
       toast.success("Video added");
       setAddOpen(false);
       setAddUrl("");
       setAddTitle("");
+      setAddDescription("");
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Could not add video";
       toast.error(message);
@@ -249,19 +256,17 @@ export default function Training() {
               >
                 <div
                   className="relative shrink-0 overflow-hidden rounded-lg bg-black"
-                  style={{
-                    aspectRatio: "16 / 9",
-                    width: selected ? 128 : 96,
-                  }}
+                  style={{ aspectRatio: "16 / 9", width: 128 }}
                 >
-                  {selected ? (
-                    <iframe
-                      src={video.embedUrl}
-                      title=""
-                      className="pointer-events-none absolute inset-0 h-full w-full border-0 scale-[1.02]"
+                  {video.thumbnailUrl ? (
+                    <img
+                      src={video.thumbnailUrl}
+                      alt=""
+                      className="absolute inset-0 h-full w-full object-cover"
                       loading="lazy"
                     />
-                  ) : (
+                  ) : null}
+                  {!video.thumbnailUrl && (
                     <div className="absolute inset-0 flex items-center justify-center">
                       <Play className="h-6 w-6 text-white opacity-90" fill="currentColor" />
                     </div>
@@ -269,6 +274,11 @@ export default function Training() {
                 </div>
                 <div className="flex min-w-0 flex-1 flex-col justify-center gap-1">
                   <span className="text-sm font-medium leading-snug line-clamp-3">{video.title}</span>
+                  {video.description ? (
+                    <span className="text-xs leading-snug line-clamp-2" style={{ color: BRAND.muted }}>
+                      {video.description}
+                    </span>
+                  ) : null}
                   {video.kind === "custom" && (
                     <span className="text-[11px] uppercase tracking-wide" style={{ color: BRAND.muted }}>
                       Added link
@@ -303,6 +313,11 @@ export default function Training() {
             style={{ borderColor: BRAND.border, backgroundColor: BRAND.white }}
           >
             <h2 className="text-lg font-semibold">{activeVideo.title}</h2>
+            {activeVideo.description ? (
+              <p className="text-sm leading-relaxed" style={{ color: BRAND.muted }}>
+                {activeVideo.description}
+              </p>
+            ) : null}
             <div className="relative pb-[56.25%] h-0 rounded-xl overflow-hidden bg-black shadow-lg">
               <iframe
                 src={activeVideo.embedUrl}
@@ -405,6 +420,17 @@ export default function Training() {
                 placeholder="Short label shown in the list"
                 value={addTitle}
                 onChange={(e) => setAddTitle(e.target.value)}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="training-desc">Description (optional)</Label>
+              <Textarea
+                id="training-desc"
+                placeholder="Shown under the title in the list and in the detail panel"
+                value={addDescription}
+                onChange={(e) => setAddDescription(e.target.value)}
+                rows={3}
+                className="resize-y min-h-[72px]"
               />
             </div>
           </div>

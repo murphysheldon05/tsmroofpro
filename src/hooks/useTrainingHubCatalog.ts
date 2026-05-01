@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import staticCatalog from "@/data/training-videos.json";
+import { fetchLoomOembedMeta, normalizeLoomThumbnailUrl } from "@/lib/loomOembed";
 import { buildLoomEmbedUrl, buildLoomShareUrl, extractLoomVideoId } from "@/lib/loomUrls";
 
 export type TrainingHubVideo = {
@@ -9,6 +10,8 @@ export type TrainingHubVideo = {
   title: string;
   shareUrl: string;
   embedUrl: string;
+  description: string | null;
+  thumbnailUrl: string | null;
   kind: "catalog" | "custom";
 };
 
@@ -25,7 +28,14 @@ const STATIC = staticCatalog as {
     slug: string;
     description: string;
     videoCount: number;
-    videos: Array<{ id: string; title: string; shareUrl: string; embedUrl: string }>;
+    videos: Array<{
+      id: string;
+      title: string;
+      shareUrl: string;
+      embedUrl: string;
+      description?: string;
+      thumbnailUrl?: string;
+    }>;
   }>;
 };
 
@@ -43,7 +53,7 @@ async function fetchSuppressions(): Promise<Set<string>> {
 async function fetchCustomVideos() {
   const { data, error } = await supabase
     .from("training_hub_custom_videos")
-    .select("id, category_slug, loom_video_id, title, share_url, embed_url, sort_order")
+    .select("id, category_slug, loom_video_id, title, share_url, embed_url, sort_order, description, thumbnail_url")
     .order("sort_order", { ascending: true })
     .order("created_at", { ascending: true });
   if (error) throw error;
@@ -80,6 +90,8 @@ export function useTrainingHubCatalog() {
             title: v.title,
             shareUrl: v.shareUrl,
             embedUrl: v.embedUrl,
+            description: v.description?.trim() ? v.description.trim() : null,
+            thumbnailUrl: normalizeLoomThumbnailUrl(v.thumbnailUrl),
             kind: "catalog",
           })
         );
@@ -92,6 +104,8 @@ export function useTrainingHubCatalog() {
             title: row.title,
             shareUrl: row.share_url,
             embedUrl: row.embed_url,
+            description: row.description?.trim() ? row.description.trim() : null,
+            thumbnailUrl: normalizeLoomThumbnailUrl(row.thumbnail_url),
             kind: "custom",
           })
         );
@@ -159,19 +173,37 @@ export function useTrainingHubCatalog() {
   });
 
   const addCustomMutation = useMutation({
-    mutationFn: async (input: { categorySlug: string; loomUrlOrId: string; title: string }) => {
+    mutationFn: async (input: {
+      categorySlug: string;
+      loomUrlOrId: string;
+      title: string;
+      description?: string;
+    }) => {
       const parsed = extractLoomVideoId(input.loomUrlOrId) ?? extractLoomVideoId(`https://www.loom.com/embed/${input.loomUrlOrId.trim()}`);
       if (!parsed) throw new Error("Could not read a Loom link. Paste a full share or embed URL.");
 
       const { data: auth } = await supabase.auth.getUser();
       const uid = auth.user?.id ?? null;
 
+      const shareUrl = buildLoomShareUrl(parsed);
+      let thumbnailUrl: string | null = null;
+      try {
+        const oembed = await fetchLoomOembedMeta(shareUrl);
+        thumbnailUrl = oembed.thumbnailUrl;
+      } catch {
+        thumbnailUrl = null;
+      }
+
+      const desc = input.description?.trim() ? input.description.trim() : null;
+
       const { error } = await supabase.from("training_hub_custom_videos").insert({
         category_slug: input.categorySlug,
         loom_video_id: parsed,
         title: input.title.trim(),
-        share_url: buildLoomShareUrl(parsed),
+        share_url: shareUrl,
         embed_url: buildLoomEmbedUrl(parsed),
+        description: desc,
+        thumbnail_url: thumbnailUrl,
         created_by: uid,
       });
       if (error) throw error;
@@ -215,7 +247,7 @@ export function useTrainingHubCatalog() {
     },
     removeVideo,
     restoreCatalogVideo,
-    addCustomVideo: (input: { categorySlug: string; loomUrlOrId: string; title: string }) =>
+    addCustomVideo: (input: { categorySlug: string; loomUrlOrId: string; title: string; description?: string }) =>
       addCustomMutation.mutateAsync(input),
     isMutating:
       suppressMutation.isPending ||
